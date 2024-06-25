@@ -32,3 +32,19 @@ certs
 # moon
 .moon/cache
 .moon/docker
+
+# venv
+.venv
+
+# PYC files
+*.pyc
+
+#Random
+apps/server/api/*.jpg
+apps/server/api/secrets.json
+.env
+.python-version
+
+#Docker
+docker/mysql-data
+docker/minio-data

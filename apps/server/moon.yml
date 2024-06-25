@@ -1,21 +1,22 @@
 language: typescript
 
 tasks:
-  build:
-    command: 'yarn run build'
-    inputs:
-      - 'src/**/*'
-    outputs:
-      - 'dist'
   run:
-    command: 'yarn run dev'
-    inputs:
-      - 'src/**/*'
-  lint:
-    command: 'yarn run lint'
+    command: '. .venv/bin/activate && python manage.py runserver'
+    description: Start Django server
+    env:
+      DJANGO_ENV_FILE: "~/loonar/apps/server/.env"
+  run-noreload:
+    command: '. .venv/bin/activate && python manage.py runserver --noreload'
+    description: Start Django server but prevent reload.
+    env:
+      DJANGO_ENV: development
+  install:
+    command: 'python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt'
+  
 
 project:
-  name: 'Loon'
+  name: 'Loon Backend'
   owner: 'University of Utah'
   maintainers: ['Dev-Lan','bbollen23']
-  description: 'Front end data visualization platform for cell microscopy data.'
+  description: 'Backend for the Loon project'

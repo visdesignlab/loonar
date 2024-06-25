@@ -1,16 +1,18 @@
 language: typescript
 
 tasks:
-  build:
+  build-docs:
     command: 'yarn build'
     inputs:
       - 'src/**/*'
     outputs:
       - 'dist'
-  run:
+  run-docs:
     command: 'yarn run start'
     inputs:
       - 'src/**/*'
+  install:
+    command: 'yarn'
 
 project:
   name: 'Loon Website'

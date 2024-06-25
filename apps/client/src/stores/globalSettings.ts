@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { v4 as uuidv4 } from 'uuid';
 import { useStorage } from '@vueuse/core';
+import { router } from '@/router';
 
 export interface SettingsPage {
     // properties expected by a gridstack item
@@ -9,7 +10,8 @@ export interface SettingsPage {
     faKey: string;
     id: string;
     show: boolean;
-    component: string;
+    component?: string;
+    url?: string;
 }
 
 export const useGlobalSettings = defineStore('globalSettings', () => {
@@ -34,6 +36,13 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             id: uuidv4(),
             show: false,
             component: 'GeneralSettings',
+        },
+        {
+            name: 'Upload',
+            faKey: 'fa-upload',
+            id: uuidv4(),
+            show: false,
+            url: '/upload',
         },
         // {
         //     name: 'Filter Data',
@@ -61,6 +70,12 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
         return settingsPages.value[lastActivePageIndex.value];
     });
     function toggleShown(setting: SettingsPage): void {
+        if (setting.url) {
+            router.push('/upload');
+
+            activePageIndex.value = null;
+            return;
+        }
         if (setting.show) {
             setting.show = false;
 

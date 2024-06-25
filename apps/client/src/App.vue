@@ -50,14 +50,11 @@ onBeforeMount(() => {
 </script>
 
 <template>
-    <div class="d-flex flex-row">
-        <div class="vh-100 sticky-top">
-            <GlobalSettingsView></GlobalSettingsView>
-        </div>
-        <div class="flex-grow-1">
-            <GridstackLayout></GridstackLayout>
-        </div>
-    </div>
+    <q-layout>
+        <q-page-container>
+            <router-view/>
+        </q-page-container>
+    </q-layout>
 </template>
 
 <style>

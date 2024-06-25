@@ -13,6 +13,8 @@ tasks:
       - 'src/**/*'
   lint:
     command: 'yarn run lint'
+  install:
+    command: 'yarn'
 
 project:
   name: 'Loon'

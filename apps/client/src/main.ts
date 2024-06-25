@@ -21,6 +21,7 @@ import AggregateLineChartSettingsSidebar from './components/AggregateLineChartSe
 import AggregateLineChartSettingsToolbar from './components/AggregateLineChartSettingsToolbar.vue';
 import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
+import { router } from './router';
 
 import { Quasar, Loading } from 'quasar';
 // Import icon libraries
@@ -60,6 +61,7 @@ library.add(fas);
 
 // @ts-ignore
 createApp(App)
+    .use(router)
     .use(createPinia())
     .use(vuetify)
     .use(Quasar, {
