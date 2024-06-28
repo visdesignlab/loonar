@@ -22,9 +22,16 @@ env = environ.Env(
 )
 DJANGO_ENV_FILE = os.getenv('DJANGO_ENV_FILE', '~/loonar/apps/server/.env')
 
+DJANGO_ENV_FILE = os.path.expanduser(DJANGO_ENV_FILE)
+
 # Load environment variables from appropriate .env file based on DJANGO_ENV
 print(DJANGO_ENV_FILE, flush=True)
 environ.Env.read_env(DJANGO_ENV_FILE)
+
+print("Environment variables:")
+for k, v in os.environ.items():
+    print(f"{k}: {v}")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
@@ -35,6 +42,9 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = [env('ALLOWED_HOST', default='')]
+
+
+MINIO_ENABLED = env.bool('MINIO_ENABLED', default=True)
 
 
 # Application definition
@@ -49,9 +59,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "api",
-    "minio_storage",
     "s3_file_field"
 ]
+
+if MINIO_ENABLED is True:
+    INSTALLED_APPS.push("minio_storage")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -147,8 +159,9 @@ CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:
 CELERY_TASK_TRACK_STARTED = True
 
 # Minio Storage
-DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
-STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
+if MINIO_ENABLED is True:
+    DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+    STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
 
 MINIO_STORAGE_ENDPOINT = env('MINIO_STORAGE_ENDPOINT', default='localhost:9000')
 MINIO_STORAGE_USE_HTTPS = False

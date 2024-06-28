@@ -52,7 +52,20 @@ onBeforeMount(() => {
 <template>
     <q-layout>
         <q-page-container>
-            <router-view/>
+                <q-page>
+                    <div class="d-flex flex-row">
+                        <div class="vh-100 sticky-top" style="margin-right:6px;">
+                            <GlobalSettingsView></GlobalSettingsView>
+                        </div>
+                        <div class="flex-grow-1">
+                            <router-view v-slot="{ Component }">
+                                <keep-alive>
+                                    <component :is="Component" />
+                                </keep-alive>
+                            </router-view>
+                        </div>
+                    </div>
+                </q-page>
         </q-page-container>
     </q-layout>
 </template>

@@ -48,3 +48,5 @@ apps/server/api/secrets.json
 #Docker
 docker/mysql-data
 docker/minio-data
+docker-local/mysql-data
+docker-local/local-data

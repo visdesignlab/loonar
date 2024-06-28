@@ -1,0 +1,15 @@
+# Use an official Python runtime as a parent image
+FROM node:20.11.1-alpine
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /usr/src/app
+RUN npm install -g http-server
+
+# Make port 8000 available to the world outside this container
+EXPOSE 9000
+
+# Run serve.py when the container launches
+# CMD ["http-server", "/app/data", "-p", "9000", "--cors", "-S", "-C", "ssl/cert.pem", "-K", "ssl/key.pem"]
+CMD ["http-server", "/app/data", "-p", "9000", "--cors"]

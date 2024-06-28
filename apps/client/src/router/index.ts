@@ -17,7 +17,7 @@ const routes: RouteRecordRaw[] = [
   // but you can also remove it
   {
     path: '/:catchAll(.*)*',
-    component: UploadPage,
+    component: IndexPage,
   },
 ];
 

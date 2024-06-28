@@ -12,6 +12,7 @@ export interface SettingsPage {
     show: boolean;
     component?: string;
     url?: string;
+    disableSidebar?:boolean;
 }
 
 export const useGlobalSettings = defineStore('globalSettings', () => {
@@ -22,6 +23,7 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             id: uuidv4(),
             show: true,
             component: 'DatasetSelector',
+            url: '/',
         },
         {
             name: 'Layout Configuration',
@@ -29,6 +31,7 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             id: uuidv4(),
             show: false,
             component: 'LayoutSelector',
+            url: '/',
         },
         {
             name: 'Settings',
@@ -36,6 +39,7 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             id: uuidv4(),
             show: false,
             component: 'GeneralSettings',
+            url: '/',
         },
         {
             name: 'Upload',
@@ -43,6 +47,7 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             id: uuidv4(),
             show: false,
             url: '/upload',
+            disableSidebar:true
         },
         // {
         //     name: 'Filter Data',
@@ -71,20 +76,22 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
     });
     function toggleShown(setting: SettingsPage): void {
         if (setting.url) {
-            router.push('/upload');
+            router.push(setting.url);
 
             activePageIndex.value = null;
-            return;
         }
         if (setting.show) {
             setting.show = false;
 
             activePageIndex.value = null;
         } else {
+            //Sets all to false
             for (const s of settingsPages.value) {
                 s.show = false;
             }
+            // Sets single chosen to true
             setting.show = true;
+            // Gets active index
             activePageIndex.value = settingsPages.value.findIndex(
                 (page) => page.id === setting.id
             );
