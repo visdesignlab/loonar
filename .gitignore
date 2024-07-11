@@ -45,6 +45,7 @@ apps/server/api/secrets.json
 .env
 .env.production
 .python-version
+.mosaic
 
 #Docker
 docker/mysql-data
