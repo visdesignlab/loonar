@@ -58,7 +58,7 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
         const frame = cellMetaData.getFrame(cell);
         const id = cell.trackId;
         return await cache.value.fetch(
-            `${datasetSelectionStore.segmentationFolderUrl}/cells/${frame}-${id}.json`
+            `${datasetSelectionStore.segmentationFolderUrl}/${frame}-${id}.json`
         );
     }
 

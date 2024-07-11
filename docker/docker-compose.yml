@@ -110,13 +110,13 @@ services:
     image: minio/minio:latest
     # When run with a TTY, minio prints credentials on startup
     tty: true
-    command: "server --address ':9000' --console-address ':9001' /data"
+    command: "server --address ':9000' --console-address ':9090' /data"
     environment:
       MINIO_ROOT_USER: ${MINIO_STORAGE_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_STORAGE_SECRET_KEY}
     ports:
       - 9000:9000
-      - 9001:9001
+      - 9090:9090
     healthcheck:
       test: ["CMD-SHELL", "/minio-healthcheck.sh"]
       interval: 10s
