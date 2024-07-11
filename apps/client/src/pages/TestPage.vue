@@ -22,7 +22,6 @@ async function createCharts() {
             { i: 7, u: 'H', v: 1 },
         ]),
     ]);
-    console.log('also here');
     charts.value = makePlot();
     if (vgPlotContainer.value) {
         vgPlotContainer.value.appendChild(charts.value!);
