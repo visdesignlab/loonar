@@ -62,6 +62,7 @@ onBeforeMount(() => {
                 <q-toolbar-title>Loon</q-toolbar-title>
                 <q-btn @click="router.push('/')" flat dense>Home</q-btn>
                 <q-btn @click="router.push('/upload')" flat dense>Upload</q-btn>
+                <q-btn @click="router.push('/test')" flat dense>TEST</q-btn>
             </q-toolbar>
         </q-header>
         <GlobalSettingsView></GlobalSettingsView>
