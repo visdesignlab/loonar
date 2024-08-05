@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { useStorage } from '@vueuse/core';
+import { useConfigStore } from '@/stores/configStore';
 
 export interface SelectedLocationIds {
     [index: string]: boolean;
@@ -9,7 +10,8 @@ export interface SelectedLocationIds {
 export const useDatasetSelectionTrrackedStore = defineStore(
     'datasetSelectionTrrackedStore',
     () => {
-        const serverUrl = useStorage<string | null>('serverUrl', null);
+        const configStore = useConfigStore();
+        const serverUrl = ref<string>(configStore.envServerUrl);
         const entryPointFilename = '/aa_index.json';
         const currentExperimentFilename = ref<string | null>(null);
         const selectedLocationIds = ref<SelectedLocationIds>({});

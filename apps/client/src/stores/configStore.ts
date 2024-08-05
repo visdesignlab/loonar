@@ -6,9 +6,11 @@ export const useConfigStore = defineStore('configStore', () => {
             ? import.meta.env.VITE_ENVIRONMENT
             : 'production';
     let useHttp = import.meta.env.VITE_USE_HTTP?.toLowerCase() === 'true';
+    let envServerUrl = import.meta.env.VITE_SERVER_URL;
 
     return {
         environment,
         useHttp,
+        envServerUrl,
     };
 });
