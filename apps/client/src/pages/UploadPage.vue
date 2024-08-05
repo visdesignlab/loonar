@@ -9,11 +9,13 @@ import type { QStepper } from 'quasar';
 import { useUploadStore } from '@/stores/uploadStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useGlobalSettings } from '@/stores/globalSettings';
+import { useQuasar } from 'quasar';
 
 import { router } from '@/router';
 const uploadStore = useUploadStore();
 const configStore = useConfigStore();
 const globalSettings = useGlobalSettings();
+const stepper = ref(null);
 
 // Function to determine if the create experiment button should be enabled.
 function disableUpload(): boolean {
@@ -25,7 +27,7 @@ function disableUpload(): boolean {
 }
 
 function experimentMetadataDone(): boolean {
-    return uploadStore.validExperimentName();
+    return uploadStore.experimentNameValid;
 }
 
 function fileSelectionDone(): boolean {
@@ -38,6 +40,34 @@ function columnNameMappingDone(): boolean {
 
 function returnHome(): void {
     router.push('/');
+}
+
+const $q = useQuasar();
+
+async function handleNextStep(): Promise<void> {
+    if (uploadStore.step === 'finalReview') {
+        uploadStore.uploadAll();
+    } else if (uploadStore.step === 'metadata') {
+        const verifyExperimentName = await uploadStore.verifyExperimentName();
+        if (verifyExperimentName) {
+            uploadStore.experimentNameValid = true;
+            (stepper.value as any).next();
+        } else {
+            $q.notify({
+                color: 'negative',
+                message: 'Experiment Name already in use.',
+                icon: 'report_problem',
+                position: 'top',
+            });
+            uploadStore.experimentNameValid = false;
+        }
+    } else {
+        (stepper.value as any).next();
+    }
+}
+
+function handlePreviousStep(): void {
+    (stepper.value as any).previous();
 }
 </script>
 <template>
@@ -114,16 +144,12 @@ function returnHome(): void {
                             v-if="uploadStore.step !== 'metadata'"
                             flat
                             color="primary"
-                            @click="($refs.stepper as any).previous()"
+                            @click="handlePreviousStep"
                             label="Back"
                             class="q-ml-sm"
                         />
                         <q-btn
-                            @click="
-                                uploadStore.step === 'finalReview'
-                                    ? uploadStore.uploadAll()
-                                    : ($refs.stepper as any).next()
-                            "
+                            @click="handleNextStep"
                             color="primary"
                             :label="
                                 uploadStore.step === 'finalReview'

@@ -23,7 +23,7 @@ import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
 import { router } from './router';
 
-import { Quasar, Loading } from 'quasar';
+import { Quasar, Loading, Notify } from 'quasar';
 // Import icon libraries
 import '@quasar/extras/material-icons/material-icons.css';
 
@@ -65,7 +65,7 @@ createApp(App)
     .use(createPinia())
     .use(vuetify)
     .use(Quasar, {
-        plugins: { Loading }, // import Quasar plugins and add here,
+        plugins: { Loading, Notify }, // import Quasar plugins and add here,
         config: {
             loading: {
                 delay: 0,

@@ -27,6 +27,9 @@ interface LoonAxiosInstance extends AxiosInstance {
         experiment_headers: string[] | null,
         experiment_transforms: Record<string, string> | null
     ): AxiosPromise<CreateExperimentResponseData>;
+    verifyExperimentName(
+        experiment_name: string
+    ): AxiosPromise<VerifyExperimentNameResponseData>;
 }
 
 export interface StatusResponseData {
@@ -44,6 +47,10 @@ export interface ProcessResponseData {
 export interface CreateExperimentResponseData {
     status: string;
     message?: string;
+}
+
+export interface VerifyExperimentNameResponseData {
+    status: string;
 }
 
 export function createLoonAxiosInstance(
@@ -118,6 +125,13 @@ export function createLoonAxiosInstance(
         );
     };
 
+    Proto.verifyExperimentName = async function (
+        experiment_name: string
+    ): AxiosPromise<VerifyExperimentNameResponseData> {
+        return this.get(
+            `${this.defaults.baseURL}/verifyExperimentName/${experiment_name}`
+        );
+    };
     axiosInstance.interceptors.response.use(
         (response) => response,
         (error) => {

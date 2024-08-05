@@ -155,3 +155,19 @@ class FinishExperimentView(APIView):
         default_storage.save(index_file_name, ContentFile(json_index_file_bytes))
 
         return Response({'status': 'SUCCESS'})
+
+
+class VerifyExperimentNameView(APIView):
+    def get(self, request, experiment_name):
+        with default_storage.open('aa_index.json', 'r') as file:
+            content = file.read()
+
+        experiment_list = json.loads(content)['experiments']
+
+        # Removes '.json' from both strings
+        experiment_list_stripped = [element.rstrip('.json') for element in experiment_list]
+
+        if experiment_name.rstrip('.json') in experiment_list_stripped:
+            return Response({'status': 'FAILED'})
+
+        return Response({'status': 'SUCCESS'})

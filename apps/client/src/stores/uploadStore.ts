@@ -5,6 +5,7 @@ import {
     type ProcessResponseData,
     type StatusResponseData,
     type CreateExperimentResponseData,
+    type VerifyExperimentNameResponseData,
 } from '@/util/axios';
 
 import type { ProgressRecord } from '@/components/upload/LoadingProgress.vue';
@@ -86,6 +87,7 @@ const initialState = () => ({
             },
         },
     ]),
+    experimentNameValid: ref<boolean>(true),
 });
 
 export const useUploadStore = defineStore('uploadStore', () => {
@@ -103,6 +105,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnMappings,
         columnNames,
         step,
+        experimentNameValid,
     } = initialState();
 
     function resetState(): void {
@@ -116,11 +119,20 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnMappings.value = newState.columnMappings.value;
         columnNames.value = newState.columnNames.value;
         step.value = newState.step.value;
+        experimentNameValid.value = newState.experimentNameValid.value;
     }
 
-    function validExperimentName(): boolean {
-        // TODO: this should maybe check if the name is already used?
-        return experimentName.value.length > 0;
+    async function verifyExperimentName(): Promise<boolean> {
+        const verifyExperimentName = await loonAxios.verifyExperimentName(
+            experimentName.value
+        );
+
+        const verifyExperimentNameData: VerifyExperimentNameResponseData =
+            verifyExperimentName.data;
+        if (verifyExperimentNameData.status === 'SUCCESS') {
+            return true;
+        }
+        return false;
     }
 
     const experimentConfig = computed<LocationConfig[] | null>(() => {
@@ -510,7 +522,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
     return {
         experimentCreated,
         experimentName,
-        validExperimentName,
+        verifyExperimentName,
         numberOfLocations,
         locationFileList,
         allFilesPopulated,
@@ -529,5 +541,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnNames,
         resetState,
         step,
+        experimentNameValid,
     };
 });

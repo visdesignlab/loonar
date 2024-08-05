@@ -20,7 +20,7 @@
         "@hms-dbmi/viv": "0.15.1",
         "@luma.gl/core": "^8.5.18",
         "@mdi/font": "^7.1.96",
-        "@quasar/extras": "^1.15.10",
+        "@quasar/extras": "^1.16.12",
         "@trrack/core": "^1.1.0",
         "@trrack/vis-react": "1.4.0",
         "@types/d3-hierarchy": "^3.1.1",
