@@ -30,6 +30,7 @@ const globalSettings = useGlobalSettings();
             v-model="locationFile.table.file"
             label="Table (csv)"
             :dark="globalSettings.darkMode"
+            @update:model-value="uploadStore.populateDefaultColumnMappings"
         />
 
         <q-file

@@ -13,39 +13,10 @@ const props = defineProps({
         required: true,
     },
 });
-const determineProgress = (subProgress: ProgressRecord[]) => {
-    const failed = subProgress.some((element) => element.progress === 'failed');
-    if (failed) {
-        // If any failed, set total to failed
-        return 'failed';
-    } else {
-        const running = subProgress.some(
-            (element) =>
-                element.progress === 'running' ||
-                element.progress === 'dispatched'
-        );
-        if (running) {
-            // If none failed but any are running/queued, set to running
-            return 'running';
-        } else {
-            const succeeded = subProgress.every(
-                (element) => element.progress === 'succeeded'
-            );
-            if (succeeded) {
-                // If none running, none failed, and all have succeeded, set to 3
-                return 'succeeded';
-            }
-        }
-    }
-    // If none running, none failed, and not all succeeded, then it's still starting. Return 0
-    return 'not_started';
-};
+
 const getProgresses = (progressStatus: ProgressRecord[]) => {
     let tempProgressStatus: [ProgressRecord, string][] = progressStatus.map(
         (entry: ProgressRecord) => {
-            if (entry.subProgress) {
-                return [entry, determineProgress(entry.subProgress)];
-            }
             return [entry, entry.progress];
         }
     );

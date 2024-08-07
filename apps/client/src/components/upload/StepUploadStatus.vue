@@ -41,12 +41,26 @@ function addNewExperiment(): void {
                 align-items: center;
             "
         >
-            <template v-if="uploadStore.overallProgress.status !== 2">
+            <template
+                v-if="
+                    uploadStore.overallProgress.status !== 2 &&
+                    uploadStore.overallProgress.status !== -1
+                "
+            >
                 <q-banner inline-actions class="text-white bg-blue">
                     Your data is currently being processed. Please do not exit
                     this page.
                     <template v-slot:avatar>
                         <q-icon name="mdi-alert" color="white" />
+                    </template>
+                </q-banner>
+            </template>
+            <template v-else-if="uploadStore.overallProgress.status === -1">
+                <q-banner inline-actions class="text-white bg-red">
+                    There was an error in one or more processing steps. Your
+                    experiment will need to be re-uploaded.
+                    <template v-slot:avatar>
+                        <q-icon name="mdi-alert-circle-outline" color="white" />
                     </template>
                 </q-banner>
             </template>
