@@ -13,7 +13,10 @@ tasks:
       DJANGO_ENV: development
   install:
     command: 'python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt'
-  
+  install-windows:
+    command: 'python -m venv .venv && .venv\\Scripts\\activate && pip install -r requirements.txt'
+  run-windows:
+    command: '.venv\\Scripts\\activate && python manage.py runserver'
 
 project:
   name: 'Loon Backend'

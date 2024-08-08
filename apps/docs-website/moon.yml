@@ -1,13 +1,13 @@
 language: typescript
 
 tasks:
-  build-docs:
+  build:
     command: 'yarn build'
     inputs:
       - 'src/**/*'
     outputs:
       - 'dist'
-  run-docs:
+  run:
     command: 'yarn run start'
     inputs:
       - 'src/**/*'

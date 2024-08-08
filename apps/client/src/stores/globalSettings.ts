@@ -40,21 +40,13 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
             component: 'GeneralSettings',
             url: '/',
         },
-        // {
-        //     name: 'Upload',
-        //     faKey: 'fa-upload',
-        //     id: 4,
-        //     show: false,
-        //     url: '/upload',
-        //     disableSidebar: true,
-        // },
-        // {
-        //     name: 'Filter Data',
-        //     faKey: 'fa-filter',
-        //     id: uuidv4(),
-        //     show: false,
-        //     component: 'StubView',
-        // },
+        {
+            name: 'Filter Data',
+            faKey: 'fa-filter',
+            id: 4,
+            show: false,
+            component: 'FilterSelector',
+        },
         // {
         //     name: 'Search',
         //     faKey: 'fa-magnifying-glass',

@@ -1,24 +1,16 @@
 language: typescript
 
 tasks:
-  build:
-    command: 'yarn run build'
-    inputs:
-      - 'src/**/*'
-    outputs:
-      - 'dist'
   run:
-    command: 'yarn run dev'
+    command: 'node server.js'
     inputs:
       - 'src/**/*'
-  lint:
-    command: 'yarn run lint'
   install:
     command: 'yarn'
   install-windows:
     command: 'yarn'
   run-windows:
-    command: 'yarn run dev'
+    command: 'node server.js'
     inputs:
       - 'src/**/*'
 
@@ -30,4 +22,3 @@ project:
 
 tags:
   - 'frontend'
-  - 'vue'

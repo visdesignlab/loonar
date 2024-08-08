@@ -75,9 +75,11 @@ onKeyStroke(['b', 'B'], (e: KeyboardEvent) => {
                                             </h5>
                                         </div>
                                         <hr />
-                                        <component
-                                            :is="setting.component"
-                                        ></component>
+                                        <keep-alive>
+                                            <component
+                                                :is="setting.component"
+                                            ></component>
+                                        </keep-alive>
                                     </div>
                                 </q-tab-panel>
                             </template>

@@ -6,6 +6,7 @@ import DatasetSelector from './components/globalSettings/DatasetSelector.vue';
 import LayoutSelector from './components/globalSettings/LayoutSelector.vue';
 import GeneralSettings from './components/globalSettings/GeneralSettings.vue';
 import StubView from './components/globalSettings/StubView.vue';
+import FilterSelector from './components/globalSettings/FilterSelector.vue';
 // import LooneageView from './components/LooneageView.vue';
 import CellTrackView from './components/CellTrackView.vue';
 import LooneageViewGL from './components/LooneageViewGL.vue';
@@ -101,4 +102,5 @@ createApp(App)
     .component('SimpleTable', SimpleTable)
     .component('NoDataSplash', NoDataSplash)
     .component('StubView', StubView)
+    .component('FilterSelector', FilterSelector)
     .mount('#app');
