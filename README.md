@@ -79,11 +79,21 @@ MINIO_STORAGE_MEDIA_URL=http://localhost/data
 MINIO_STORAGE_STATIC_URL=http://localhost/data
 ```
 
-Afterwards, run the following command:
+### Running with Docker
+
+Ensure that the docker application is running.
+
+Afterwards, run the following command from the docker directory:
 
 `docker compose up --build`
 
 This will create and run a docker container which will have Redis, MySQL, Django, Vue, Celery, and NGINX all running together.
+This also starts all the dev servers and will run indefinitely until closed.
+
+- Loon URL: http://localhost/
+- Minio URL: http://localhost:9001/
+  - login/password for minio are configured in the .env MINIO_STORAGE_ACCESS_KEY and MINIO_STORAGE_SECRET_KEY.
+
 
 ### Setting Up Moon
 
