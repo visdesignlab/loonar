@@ -17,6 +17,10 @@ from .serializers import (
 )
 from .models import LoonUpload, Location, Experiment
 from django.core.files.base import ContentFile  # type: ignore
+import csv
+import tempfile
+import io
+import os
 
 
 def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
@@ -30,12 +34,48 @@ def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
     return object_key
 
 
+def create_composite_tabular_data_file(experiment_name: str, experiment_settings: list) -> str:
+    composite_tabular_data_file_name = f"{experiment_name}/composite_tabular_data.csv"
+
+    # Step 1: Create a temporary file
+    with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as temp_file:
+        temp_file_name = temp_file.name
+
+        for idx, entry in enumerate(experiment_settings):
+            curr_tabular_data_file = entry['tabularDataFilename']
+            with default_storage.open(curr_tabular_data_file, 'rb') as curr_source_file:
+                text_stream = io.TextIOWrapper(curr_source_file, encoding='utf-8')
+                csv_reader = csv.reader(text_stream, delimiter=',')
+                csv_writer = csv.writer(temp_file, delimiter=',')
+
+                # Assuming first line is always a header
+                for row_idx, row in enumerate(csv_reader):
+                    if row_idx == 0:
+                        if idx == 0:
+                            row.insert(0, "Location")
+                            csv_writer.writerow(row)
+                    else:
+                        row.insert(0, entry["id"])
+                        csv_writer.writerow(row)
+
+    # Step 4: Upload the temporary file back to default storage
+    with open(temp_file_name, 'rb') as final_file:
+        # Save the temp file in default storage
+        default_storage.save(composite_tabular_data_file_name, final_file)
+
+    # Clean up the temp file from local disk
+    os.remove(temp_file_name)
+
+    return composite_tabular_data_file_name
+
+
 InvalidFieldValueResponse = Response(
     {'field_value': ['field_value is not a valid signed string.']},
     status=status.HTTP_400_BAD_REQUEST,
 )
 
 
+# Called on each individual upload
 class ProcessDataView(APIView):
     def post(self, request):
         serializer = LoonUploadCreateSerializer(data=request.data)
@@ -95,6 +135,7 @@ class ProcessDataView(APIView):
         return Response(response_data)
 
 
+# Called once all processing steps have finished and all data has been uploaded.
 class FinishExperimentView(APIView):
     def post(self, request):
         data = request.data
@@ -103,12 +144,19 @@ class FinishExperimentView(APIView):
         experiment_header_transforms = json.loads(data.get('experimentHeaderTransforms'))
 
         experiment_name = data.get('experimentName')
+
+        composite_tabular_data_file_name = create_composite_tabular_data_file(
+            experiment_name, experiment_settings
+            )
+
         experiment_data = {
             "name": experiment_name,
             "headers": "|".join(experiment_headers),
             "number_of_locations": len(experiment_settings),
+            "composite_tabular_data_file_name": composite_tabular_data_file_name,
             "header_transforms": experiment_header_transforms
         }
+
         experiment_serializer = ExperimentCreateSerializer(data=experiment_data)
         if not experiment_serializer.is_valid():
             print(experiment_serializer.errors, flush=True)
@@ -116,6 +164,7 @@ class FinishExperimentView(APIView):
 
         experiment_instance = experiment_serializer.save()
 
+        # Create individual Location table entries
         for i in range(len(experiment_settings)):
             location_data = {
                 "name": experiment_settings[i]['id'],
