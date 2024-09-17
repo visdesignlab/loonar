@@ -339,7 +339,7 @@ def cleanup_and_exit(signal=None, frame=None):
     sys.exit(0)
 
 
-def run_dev(buildConfig):
+def run_dev(buildConfig, generate_env_only=False):
     vite_server_url = f"{buildConfig.get('generalSettings.baseUrl')}/data"
     vite_use_http = f"{buildConfig.get('generalSettings.useHttp')}"
     vite_environment = f"{buildConfig.get('generalSettings.environment')}"
@@ -352,15 +352,17 @@ def run_dev(buildConfig):
     with open(fullEnvFileName, 'w') as outF:
         outF.write(outString)
     print("Created new .env file in apps/client/ directory.")
-    print("Starting dev server")
-    client_directory = 'apps/client'
-    subprocess.Popen(
-                     ['yarn', 'dev'],
-                     cwd=client_directory,
-                     stdout=subprocess.PIPE,
-                     stderr=subprocess.PIPE
-                    )
-    print("Started dev server at http://localhost:5173")
+
+    if not generate_env_only:
+        print("Starting dev server")
+        client_directory = 'apps/client'
+        subprocess.Popen(
+                        ['yarn', 'dev'],
+                        cwd=client_directory,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                        )
+        print("Started dev server at http://localhost:5173")
 
 
 def strip_ansi_escape_codes(text):
@@ -401,6 +403,8 @@ if __name__ == "__main__":
                         help="Disables spinner")
     parser.add_argument("--run-dev", action="store_true", required=False,
                         help="Runs additional client dev environment")
+    parser.add_argument("--prepare-dev", action="store_true", required=False,
+                        help="Generates .env file for client environment.")
 
     args = parser.parse_args()
 
@@ -462,7 +466,7 @@ if __name__ == "__main__":
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 
             if args.run_dev:
-                run_dev(buildConfig)
+                run_dev(buildConfig, generate_env_only=args.prepare_dev)
 
             check_containers_status(services, args.detached)
         else:
