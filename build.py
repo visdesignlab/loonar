@@ -339,6 +339,30 @@ def cleanup_and_exit(signal=None, frame=None):
     sys.exit(0)
 
 
+def run_dev(buildConfig):
+    vite_server_url = f"{buildConfig.get('generalSettings.baseUrl')}/data"
+    vite_use_http = f"{buildConfig.get('generalSettings.useHttp')}"
+    vite_environment = f"{buildConfig.get('generalSettings.environment')}"
+
+    outString = f"VITE_SERVER_URL={vite_server_url}\n" \
+                f"VITE_USE_HTTP={vite_use_http}\n" \
+                f"VITE_ENVIRONMENT={vite_environment}\n"
+
+    fullEnvFileName = 'apps/client/.env'
+    with open(fullEnvFileName, 'w') as outF:
+        outF.write(outString)
+    print("Created new .env file in apps/client/ directory.")
+    print("Starting dev server")
+    client_directory = 'apps/client'
+    subprocess.Popen(
+                     ['yarn', 'dev'],
+                     cwd=client_directory,
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.PIPE
+                    )
+    print("Started dev server at http://localhost:5173")
+
+
 def strip_ansi_escape_codes(text):
     # Regex to match ANSI escape codes
     ansi_escape = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
@@ -375,10 +399,16 @@ if __name__ == "__main__":
                         help="If present, overwrites chosen config with current env variables")
     parser.add_argument("-s", "--disable-spinner", action="store_true", required=False,
                         help="Disables spinner")
+    parser.add_argument("--run-dev", action="store_true", required=False,
+                        help="Runs additional client dev environment")
 
     args = parser.parse_args()
 
     config_file_name = args.config_file
+
+    if args.detached and args.run_dev:
+        print("Cannot run dev server in detached mode.")
+        sys.exit()
 
     if not args.validate_build:
         if not args.down:
@@ -430,6 +460,10 @@ if __name__ == "__main__":
             start_containers(f'.build-files/{args.env_file}', args.disable_spinner)
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
+
+            if args.run_dev:
+                run_dev(buildConfig)
+
             check_containers_status(services, args.detached)
         else:
             cleanup_and_exit()
