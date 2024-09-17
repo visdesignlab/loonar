@@ -357,7 +357,7 @@ def cleanup_and_exit(signal=None, frame=None):
     sys.exit(0)
 
 
-def prepare_dev(buildConfig):
+def run_dev(buildConfig):
     vite_server_url = f"{buildConfig.get('generalSettings.baseUrl')}/data"
     vite_use_http = f"{buildConfig.get('generalSettings.useHttp')}"
     vite_environment = f"{buildConfig.get('generalSettings.environment')}"
@@ -369,17 +369,14 @@ def prepare_dev(buildConfig):
     fullEnvFileName = 'apps/client/.env'
     with open(fullEnvFileName, 'w') as outF:
         outF.write(outString)
-
-
-def run_dev():
+    print("Created new .env file in apps/client/ directory.")
     print("Starting dev server")
     client_directory = 'apps/client'
     subprocess.Popen(
-                    ['yarn', 'dev'],
-                    cwd=client_directory,
-                    encoding='utf-8',
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
+                     ['yarn', 'dev'],
+                     cwd=client_directory,
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.PIPE
                     )
     print("Started dev server at http://localhost:5173")
 
@@ -422,8 +419,6 @@ if __name__ == "__main__":
                         help="Disables spinner")
     parser.add_argument("--run-dev", action="store_true", required=False,
                         help="Runs additional client dev environment")
-    parser.add_argument("--prepare-dev", action="store_true", required=False,
-                        help="Generates .env file for client environment.")
 
     args = parser.parse_args()
 
@@ -487,10 +482,8 @@ if __name__ == "__main__":
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 
-            if args.prepare_dev or args.run_dev:
-                prepare_dev(buildConfig)
             if args.run_dev:
-                run_dev()
+                run_dev(buildConfig)
 
             check_containers_status(services, args.detached)
         else:
