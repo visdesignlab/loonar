@@ -25,11 +25,7 @@ export const useDatasetSelectionTrrackedStore = defineStore(
         );
         // Location of websocket for DuckDb as specified in NGINX
         const duckDbWebsocketUrl = ref<string>(
-<<<<<<< HEAD
-            `${wsValue}${configStore.envServerUrl.replace('/data', '/ws')}`
-=======
             `${wsValue}${configStore.envServerUrl.replace('/data', '/ws/')}`
->>>>>>> 55b7a9b (Fixed websocket issue)
         );
 
         // Environment based location of data retrieval for DuckDb
