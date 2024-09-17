@@ -17,7 +17,7 @@ import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntr
 import { useSegmentationStore } from '@/stores/segmentationStore';
 import { useEventBusStore } from '@/stores/eventBusStore';
 import { clamp } from 'lodash-es';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/globalSettings';
 
@@ -40,6 +40,14 @@ import {
 import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
+
+import { addDecoder } from 'geotiff';
+import { Zstd } from 'numcodecs';
+addDecoder(50000, () => Zstd);
+console.log({ Zstd });
+
+console.log('BLARGEN FLARGEN');
+console.log('TESTING ADD DECODER');
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();

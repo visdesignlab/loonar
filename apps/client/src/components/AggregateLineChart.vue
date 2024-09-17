@@ -32,7 +32,7 @@ import {
     TextLayer,
 } from '@deck.gl/layers/typed';
 import type { PixelData, PixelSource } from '@vivjs/types';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import {
     loadOmeTiff,
     getChannelStats,

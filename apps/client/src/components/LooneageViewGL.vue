@@ -26,7 +26,7 @@ import {
 import { isEqual } from 'lodash-es';
 import { useGlobalSettings } from '@/stores/globalSettings';
 
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import type { Feature } from 'geojson';
 import { flextree, type LayoutNode } from 'd3-flextree';
 import { hierarchy } from 'd3-hierarchy';
