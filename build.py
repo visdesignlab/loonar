@@ -357,7 +357,7 @@ def cleanup_and_exit(signal=None, frame=None):
     sys.exit(0)
 
 
-def run_dev(buildConfig, generate_env_only=False):
+def prepare_dev(buildConfig):
     vite_server_url = f"{buildConfig.get('generalSettings.baseUrl')}/data"
     vite_use_http = f"{buildConfig.get('generalSettings.useHttp')}"
     vite_environment = f"{buildConfig.get('generalSettings.environment')}"
@@ -369,18 +369,18 @@ def run_dev(buildConfig, generate_env_only=False):
     fullEnvFileName = 'apps/client/.env'
     with open(fullEnvFileName, 'w') as outF:
         outF.write(outString)
-    print("Created new .env file in apps/client/ directory.")
 
-    if not generate_env_only:
-        print("Starting dev server")
-        client_directory = 'apps/client'
-        subprocess.Popen(
-                        ['yarn', 'dev'],
-                        cwd=client_directory,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE
-                        )
-        print("Started dev server at http://localhost:5173")
+
+def run_dev():
+    print("Starting dev server")
+    client_directory = 'apps/client'
+    subprocess.Popen(
+                    ['yarn', 'dev'],
+                    cwd=client_directory,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                    )
+    print("Started dev server at http://localhost:5173")
 
 
 def strip_ansi_escape_codes(text):
@@ -486,8 +486,10 @@ if __name__ == "__main__":
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 
+            if args.prepare_dev or args.run_dev:
+                prepare_dev(buildConfig)
             if args.run_dev:
-                run_dev(buildConfig, generate_env_only=args.prepare_dev)
+                run_dev()
 
             check_containers_status(services, args.detached)
         else:
