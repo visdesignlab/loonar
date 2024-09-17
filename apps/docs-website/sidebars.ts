@@ -18,26 +18,51 @@ const sidebars: SidebarsConfig = {
 
   tutorialSidebar: [
     "introduction",
+    // {
+    //   type: "category",
+    //   label: "Getting Started",
+    //   link: {
+    //     type: "doc",
+    //     id: "getting-started/index",
+    //   },
+    //   items: [
+    //     "getting-started/loon-wrappers",
+    //     "getting-started/building-loon",
+    //     "getting-started/data",
+    //   ],
+    // },
+    // {
+    //   type: "category",
+    //   label: "How-To-Guides",
+    //   link: {
+    //     type: "generated-index",
+    //   },
+    //   items: ["how-to-guides/working-with-minio"],
+    // },
     {
       type: "category",
-      label: "Getting Started",
+      label: "Loon For Scientists",
       link: {
         type: "doc",
-        id: "getting-started/index",
+        id: "loon-for-scientists/index",
       },
       items: [
-        "getting-started/loon-wrappers",
-        "getting-started/building-loon",
-        "getting-started/data",
+        "loon-for-scientists/quickstart",
+        "loon-for-scientists/data",
+        "loon-for-scientists/loon-wrappers",
       ],
     },
     {
       type: "category",
-      label: "How-To-Guides",
+      label: "Loon For Developers",
       link: {
-        type: "generated-index",
+        type: "doc",
+        id: "loon-for-developers/index",
       },
-      items: ["how-to-guides/working-with-minio"],
+      items: [
+        "loon-for-developers/quickstart",
+        "loon-for-developers/building-loon",
+      ],
     },
   ],
 };

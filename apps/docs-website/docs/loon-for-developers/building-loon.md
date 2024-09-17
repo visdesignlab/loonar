@@ -1,6 +1,6 @@
 # Building and Running Loon From Source
 
-The official Github repository for Loon has everything that is required to build the the docker any of the above docker images. Instead of building a single image, however, you can also use Docker Compose to build our multi-container application. Building the multi-container application instead of the single Docker image provides more insight when attempting to debug and allows for much more configuration. This is done through a build script with an accompanying JSON file.
+The official Github repository for Loon has everything that is required to build any of the above docker images. Instead of building a single image, however, you can also use Docker Compose to build our multi-container application. Building the multi-container application instead of the single Docker image provides more insight when attempting to debug and allows for much more configuration. This is done through a build script with an accompanying JSON file.
 
 ## Configuration File
 
@@ -17,13 +17,12 @@ Below is the base configuration file that is required to build Loon.
     "databaseName": "loon",
     "databaseUser": "user",
     "databasePassword": "user_pass",
-    "databaseRootPassword": "root_pass",
-    "sourceVolumeLocation": "/Users/bbollen23/loonar-data/mysql-data"
+    "databaseRootPassword": "root_pass"
   },
   "minioSettings": {
     "minioStorageAccessKey": "admin",
     "minioStorageSecretKey": "minioadmin",
-    "sourceVolumeLocation": "/Users/bbollen23/loonar-data/minio-data"
+    "sourceVolumeLocation": "path/to/data"
   }
 }
 ```
@@ -76,16 +75,19 @@ Local Data settings can be added by adding `"localDataSettings"` as a top level 
 
 The build script will do its best to validate each of these fields before starting the docker container. When running the build script, there are several inputs you can use
 
-| Argument             | Description                                                                                                                                      | Example               |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| -h, --help           | Outputs this information to terminal without running script.                                                                                     | -h                    |
-| -v, --verbose        | All output response is sent to the terminal and main log file. If not present, limited information will be passed to the terminal.               | -v                    |
-| -d, --detached       | Once all containers are started, program will exit and log in the background                                                                     | -d                    |
-| -e, --validate-build | When present, the script will not build or start any containers. Only the configuration file will be validated and the environment file created. | -e                    |
-| --env-file           | Name of env file to create.                                                                                                                      | .env, .env.production |
-| --config-file        | Name of config file to use as input                                                                                                              | config.json           |
-| -D, --down           | Stops all containers and removes all containers. Note that this will not build or start containers nor validate the configuration file.          | -D                    |
-| -o, --overwrite      | When set, any settings in your configuration file which are present as environment variables in the current session will be overwritten.         | -o                    |
+| Argument              | Description                                                                                                                                                                                             | Example               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| -h, --help            | Outputs this information to terminal without running script.                                                                                                                                            | -h                    |
+| -v, --verbose         | All output response is sent to the terminal and main log file. If not present, limited information will be passed to the terminal.                                                                      | -v                    |
+| -d, --detached        | Once all containers are started, program will exit and log in the background                                                                                                                            | -d                    |
+| -e, --validate-build  | When present, the script will not build or start any containers. Only the configuration file will be validated and the environment file created.                                                        | -e                    |
+| --env-file            | Name of env file to create.                                                                                                                                                                             | .env, .env.production |
+| --config-file         | Name of config file to use as input                                                                                                                                                                     | config.json           |
+| -D, --down            | Stops all containers and removes all containers. Note that this will not build or start containers nor validate the configuration file.                                                                 | -D                    |
+| -o, --overwrite       | When set, any settings in your configuration file which are present as environment variables in the current session will be overwritten.                                                                | -o                    |
+| -s, --disable-spinner | When set, disables inline spinner                                                                                                                                                                       | -s                    |
+| --run-dev             | When set, will launch a separate development client server running on http://localhost:5173. A `.env` file will be generated in the apps/client directory. This cannot be set when using detached mode. | --run-dev             |
+| --prepare-dev         | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server.                                                                  | --prepare-dev         |
 
 In the repository, you will see two docker directories: `docker` and `docker-local`. The main deployment will use the `docker` directory. The `docker-local` directory is a separate local version of Loon which we will discuss shortly. Below are some examples.
 
