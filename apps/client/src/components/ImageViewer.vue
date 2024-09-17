@@ -42,6 +42,14 @@ import { format } from 'd3-format';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
 
+import { addDecoder } from 'geotiff';
+import { Zstd } from 'numcodecs';
+addDecoder(50000, () => Zstd);
+console.log({ Zstd });
+
+console.log('BLARGEN FLARGEN');
+console.log('TESTING ADD DECODER');
+
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
 const configStore = useConfigStore();
