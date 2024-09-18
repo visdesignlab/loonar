@@ -32,6 +32,6 @@ async function decodeBuffer(e: MessageEvent<WorkerData>): Promise<void> {
 worker.addEventListener('message', (event: Event) => {
     const messageEvent = event as MessageEvent;
     decodeBuffer(messageEvent).catch((error: Error) => {
-        console.error(`Error during decompression: ${error.message}`)
+        console.error(`Error during decompression: ${error.message}`);
     });
 });
