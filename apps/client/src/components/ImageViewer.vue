@@ -41,14 +41,6 @@ import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
 
-import { addDecoder } from 'geotiff';
-import { Zstd } from 'numcodecs';
-addDecoder(50000, () => Zstd);
-console.log({ Zstd });
-
-console.log('BLARGEN FLARGEN');
-console.log('TESTING ADD DECODER');
-
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
 const { darkMode } = storeToRefs(globalSettings);
