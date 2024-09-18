@@ -16,7 +16,7 @@ import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrrack
 import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
 import { useEventBusStore } from '@/stores/eventBusStore';
 import { clamp } from 'lodash-es';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import type { Feature } from 'geojson';
 import {
     expandHeight,

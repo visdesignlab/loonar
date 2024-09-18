@@ -17,7 +17,7 @@ import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntr
 import { useSegmentationStore } from '@/stores/segmentationStore';
 import { useEventBusStore } from '@/stores/eventBusStore';
 import { clamp } from 'lodash-es';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/globalSettings';
 
