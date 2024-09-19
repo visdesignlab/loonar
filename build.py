@@ -190,6 +190,7 @@ def run_command(command, shell=True):
 
     process = subprocess.Popen(
         command,
+        encoding='utf-8',
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -212,6 +213,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
         subprocess.Popen(
             command,
             shell=True,
+            encoding='utf-8',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True
@@ -221,6 +223,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
         process = subprocess.Popen(
             command,
             shell=True,
+            encoding='utf-8',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
@@ -359,6 +362,7 @@ def run_dev():
     subprocess.Popen(
                     ['yarn', 'dev'],
                     cwd=client_directory,
+                    encoding='utf-8',
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
                     )
