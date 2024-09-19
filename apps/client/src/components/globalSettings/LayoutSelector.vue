@@ -2,8 +2,8 @@
 import {
     useGridstackLayoutStore,
     type Layout,
-} from '@/stores/gridstackLayoutStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+} from '@/stores/interactionStores/gridstackLayoutStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { nextTick } from 'vue';
 
 const gridstackLayoutStore = useGridstackLayoutStore();

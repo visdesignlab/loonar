@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useCellMetaData, type Lineage } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import {
+    useCellMetaData,
+    type Lineage,
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useElementSize } from '@vueuse/core';
 import NoDataSplash from './NoDataSplash.vue';
 

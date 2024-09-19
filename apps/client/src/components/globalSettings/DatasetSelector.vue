@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useDatasetSelectionTrrackedStore } from '@/stores/datasetSelectionTrrackedStore';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
-import { useDataPointSelection } from '@/stores/dataPointSelection';
-import { useConfigStore } from '@/stores/configStore';
-import { useSelectionStore } from '@/stores/selectionStore';
-import { useFilterStore } from '@/stores/filterStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useFilterStore } from '@/stores/componentStores/filterStore';
 
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
 const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const $q = useQuasar();
 
-const configStore = useConfigStore();
 const selectionStore = useSelectionStore();
 const filterStore = useFilterStore();
 

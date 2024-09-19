@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useUploadStore } from '@/stores/uploadStore';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
 const uploadStore = useUploadStore();
 </script>
 

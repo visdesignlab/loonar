@@ -55,14 +55,13 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
 
     const segmentationFolderUrl = computed<string>(() => {
         if (
-            datasetSelectionStore.currentLocationMetadata.value
+            datasetSelectionStore.currentLocationMetadata
                 ?.segmentationsFolder == null
         ) {
             return '';
         }
         return configStore.getFileUrl(
-            datasetSelectionStore.currentLocationMetadata.value
-                .segmentationsFolder
+            datasetSelectionStore.currentLocationMetadata.segmentationsFolder
         );
     });
 

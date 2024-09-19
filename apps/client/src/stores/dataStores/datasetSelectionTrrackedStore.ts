@@ -10,19 +10,10 @@ export const useDatasetSelectionTrrackedStore = defineStore(
     () => {
         const currentExperimentFilename = ref<string | null>(null);
         const selectedLocationIds = ref<SelectedLocationIds>({});
-        const selectedLocationId = computed<string | null>(() => {
-            for (const id in selectedLocationIds.value) {
-                if (selectedLocationIds.value[id]) {
-                    return id;
-                }
-            }
-            return null;
-        });
 
         return {
             currentExperimentFilename,
             selectedLocationIds,
-            selectedLocationId,
         };
     }
 );

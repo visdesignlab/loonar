@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useUploadStore } from '@/stores/uploadStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const uploadStore = useUploadStore();
 const globalSettings = useGlobalSettings();
 </script>

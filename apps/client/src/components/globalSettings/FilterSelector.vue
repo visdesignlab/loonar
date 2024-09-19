@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import PlotSelector from './PlotSelector.vue';
-import { useFilterStore } from '@/stores/filterStore';
-import { useSelectionStore } from '@/stores/selectionStore';
+import { useFilterStore } from '@/stores/componentStores/filterStore';
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
 

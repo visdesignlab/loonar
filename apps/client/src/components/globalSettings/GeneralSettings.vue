@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const globalSettings = useGlobalSettings();
 </script>
 

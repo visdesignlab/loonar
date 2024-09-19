@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { useCellMetaData, type AnyAttributes } from '@/stores/cellMetaData';
+import {
+    useCellMetaData,
+    type AnyAttributes,
+} from '@/stores/dataStores/cellMetaDataStore';
 
 const cellMetaData = useCellMetaData();
 </script>

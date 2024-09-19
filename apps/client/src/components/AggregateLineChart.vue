@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     useAggregateLineChartStore,
     type AggDataPoint,
     type AggLineData,
-} from '@/stores/aggregateLineChartStore';
+} from '@/stores/componentStores/aggregateLineChartStore';
 import { scaleLinear } from 'd3-scale';
 import { extent, max, min } from 'd3-array';
 import { area, line } from 'd3-shape';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { select } from 'd3-selection';
 import { format } from 'd3-format';
-import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntrracked';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
 import type { Selection } from './layers/CellSnippetsLayer';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
-import { useLooneageViewStore } from '@/stores/looneageViewStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
     GeoJsonLayer,
@@ -42,9 +42,11 @@ import { storeToRefs } from 'pinia';
 import { LRUCache } from 'lru-cache';
 import { getBBoxAroundPoint } from '@/util/imageSnippets';
 import colors from '@/util/colors';
+import { useConfigStore } from '@/stores/misc/configStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
+const configStore = useConfigStore();
 const aggregateLineChartStore = useAggregateLineChartStore();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const dataPointSelection = useDataPointSelection();
@@ -262,7 +264,7 @@ watch(currentLocationMetadata, async () => {
 
     pixelSource.value = null;
 
-    const fullImageUrl = datasetSelectionStore.getFileUrl(
+    const fullImageUrl = configStore.getFileUrl(
         currentLocationMetadata.value.imageDataFilename
     );
     loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });

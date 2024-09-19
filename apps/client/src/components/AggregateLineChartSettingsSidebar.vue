@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useAggregateLineChartStore } from '@/stores/aggregateLineChartStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useAggregateLineChartStore } from '@/stores/componentStores/aggregateLineChartStore';
 const cellMetaData = useCellMetaData();
 const aggregateLineChartStore = useAggregateLineChartStore();
 const globalSettings = useGlobalSettings();

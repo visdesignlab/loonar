@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue';
-import type { progress } from '@/stores/uploadStore';
+import type { progress } from '@/stores/componentStores/uploadStore';
 export interface ProgressRecord {
     label: string;
     progress: progress;

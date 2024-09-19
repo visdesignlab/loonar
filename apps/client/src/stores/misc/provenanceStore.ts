@@ -3,7 +3,7 @@ import { useGridstackLayoutStore } from '../interactionStores/gridstackLayoutSto
 import { useGlobalSettings } from '../componentStores/globalSettingsStore';
 import { useAggregateLineChartStore } from '../componentStores/aggregateLineChartStore';
 import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
-import { useImageViewerStore } from '../componentStores/imageViewerStoreTrrackedStore';
+import { useImageViewerStore } from '../componentStores/imageViewerTrrackedStore';
 import { useLooneageViewStore } from '../componentStores/looneageViewStore';
 import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
 import { useFilterStore } from '../componentStores/filterStore';

@@ -1,17 +1,17 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { asyncComputed } from '@vueuse/core';
-import { parse, type ParseResult } from 'papaparse';
 import * as vg from '@uwdata/vgplot';
 
 import { computedAsync } from '@vueuse/core';
 import {
     useCellMetaData,
-    type AnyAttributes,
     type TextTransforms,
 } from '@/stores/dataStores/cellMetaDataStore';
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
+
+import { type CsvParserResults, parseCsv } from '@/util/csvParser';
 
 export interface ExperimentMetadata {
     // name?: string; // user friendly name
@@ -92,6 +92,7 @@ export const useDatasetSelectionStore = defineStore(
             fetchingEntryFile.value = false;
         }
 
+        // Sets location Metadata
         const currentExperimentMetadata =
             computedAsync<ExperimentMetadata | null>(async () => {
                 if (
@@ -136,74 +137,68 @@ export const useDatasetSelectionStore = defineStore(
             }
         );
 
-        watch(
-            currentLocationMetadata,
-            () => {
-                if (!currentLocationMetadata.value?.tabularDataFilename) {
-                    cellMetaData.dataInitialized = false;
-                    return;
-                }
-                const tabularDataFileUrl = configStore.getFileUrl(
-                    currentLocationMetadata.value?.tabularDataFilename
-                );
+        function initializeLocationCsvFile(results: CsvParserResults) {
+            cellMetaData.init(
+                results.data,
+                results.meta.fields as string[],
+                currentExperimentMetadata.value?.headerTransforms
+            );
+            fetchingTabularData.value = false;
+        }
 
-                const tabularDataDuckDbFileUrl = configStore.getDuckDbFileUrl(
-                    currentLocationMetadata.value?.tabularDataFilename
-                );
+        async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
+            await parseCsv(tabularDataFileUrl, initializeLocationCsvFile);
+        }
 
-                fetchingTabularData.value = true;
-                parse(tabularDataFileUrl, {
-                    header: true,
-                    dynamicTyping: true,
-                    skipEmptyLines: true,
-                    download: true,
-                    worker: true,
-                    comments: '#',
-                    complete: async (results: ParseResult<AnyAttributes>) => {
-                        // If you need to use web based duckDb instance, you can use this.
-                        // vg.coordinator().databaseConnector(vg.wasmConnector());
-
-                        vg.coordinator().databaseConnector(
-                            vg.socketConnector(configStore.duckDbWebSocketUrl)
-                        );
-                        await vg
-                            .coordinator()
-                            .exec([
-                                vg.loadCSV(
-                                    'current_cell_metadata',
-                                    tabularDataDuckDbFileUrl
-                                ),
-                            ]);
-                        if (
-                            currentExperimentMetadata.value
-                                ?.compositeTabularDataFilename
-                        ) {
-                            let compositeTabularDataFileUrl =
-                                configStore.getDuckDbFileUrl(
-                                    currentExperimentMetadata.value
-                                        ?.compositeTabularDataFilename
-                                );
-                            await vg
-                                .coordinator()
-                                .exec([
-                                    vg.loadCSV(
-                                        'composite_cell_metadata',
-                                        compositeTabularDataFileUrl
-                                    ),
-                                ]);
-                        }
-
-                        cellMetaData.init(
-                            results.data,
-                            results.meta.fields as string[],
-                            currentExperimentMetadata.value?.headerTransforms
-                        );
-                        fetchingTabularData.value = false;
-                    },
-                });
+        watch(currentLocationMetadata, async () => {
+            if (!currentLocationMetadata.value?.tabularDataFilename) {
+                cellMetaData.dataInitialized = false;
+                return;
             }
-            // { deep: true }
-        );
+            const tabularDataFileUrl = configStore.getFileUrl(
+                currentLocationMetadata.value?.tabularDataFilename
+            );
+
+            // DuckDB uses different routing. Need a separate URL
+            const tabularDataDuckDbFileUrl: string =
+                configStore.getDuckDbFileUrl(
+                    currentLocationMetadata.value?.tabularDataFilename
+                );
+
+            fetchingTabularData.value = true;
+            await loadCurrentLocationCsvFile(tabularDataFileUrl);
+
+            vg.coordinator().databaseConnector(
+                vg.socketConnector(configStore.duckDbWebSocketUrl)
+            );
+
+            await vg
+                .coordinator()
+                .exec([
+                    vg.loadCSV(
+                        'current_cell_metadata',
+                        tabularDataDuckDbFileUrl
+                    ),
+                ]);
+
+            // If you need to use web based duckDb instance, you can use this.
+            // vg.coordinator().databaseConnector(vg.wasmConnector());
+
+            // if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
+            //     let compositeTabularDataFileUrl = configStore.getDuckDbFileUrl(
+            //         currentExperimentMetadata.value
+            //             ?.compositeTabularDataFilename
+            //     );
+            //     await vg
+            //         .coordinator()
+            //         .exec([
+            //             vg.loadCSV(
+            //                 'composite_cell_metadata',
+            //                 compositeTabularDataFileUrl
+            //             ),
+            //         ]);
+            // }
+        });
 
         function refreshFileNameList() {
             refreshTime.value = new Date().getTime().toString();
@@ -218,7 +213,6 @@ export const useDatasetSelectionStore = defineStore(
             currentLocationMetadata,
             fetchingTabularData,
             selectImagingLocation,
-            segmentationFolderUrl,
             refreshFileNameList,
         };
     }

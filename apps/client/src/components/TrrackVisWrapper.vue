@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useGlobalSettings, type SettingsPage } from '@/stores/globalSettings';
-import { useProvenanceStore } from '@/stores/provenanceStore';
+import {
+    useGlobalSettings,
+    type SettingsPage,
+} from '@/stores/componentStores/globalSettingsStore';
+import { useProvenanceStore } from '@/stores/misc/provenanceStore';
 import { ProvVisCreator } from '@trrack/vis-react';
 import type { NodeId } from '@trrack/core';
 const globalSettings = useGlobalSettings();

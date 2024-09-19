@@ -6,9 +6,9 @@ import StepReview from '@/components/upload/StepReview.vue';
 import StepUploadStatus from '@/components/upload/StepUploadStatus.vue';
 import StepColumnNameMapping from '@/components/upload/StepColumnNameMapping.vue';
 import type { QStepper } from 'quasar';
-import { useUploadStore } from '@/stores/uploadStore';
-import { useConfigStore } from '@/stores/configStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
+import { useConfigStore } from '@/stores/misc/configStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useQuasar } from 'quasar';
 
 import { router } from '@/router';

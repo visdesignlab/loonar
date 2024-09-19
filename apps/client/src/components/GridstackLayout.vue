@@ -4,8 +4,8 @@ import { onMounted } from 'vue';
 import { GridStack } from 'gridstack';
 import screenfull from 'screenfull';
 import 'gridstack/dist/gridstack.min.css';
-import { useGridstackLayoutStore } from '@/stores/gridstackLayoutStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGridstackLayoutStore } from '@/stores/interactionStores/gridstackLayoutStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const globalSettings = useGlobalSettings();
 const gridstackLayoutStore = useGridstackLayoutStore();
 // useful reference

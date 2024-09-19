@@ -4,9 +4,12 @@ import { QBtn, QDialog, QCard, QCardSection, QCardActions } from 'quasar';
 import * as vg from '@uwdata/vgplot';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
-import { useSelectionStore, emitter } from '@/stores/selectionStore';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import {
+    useSelectionStore,
+    emitter,
+} from '@/stores/interactionStores/selectionStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 
 const globalSettings = useGlobalSettings();
 const cellMetaData = useCellMetaData();

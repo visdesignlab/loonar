@@ -4,7 +4,7 @@ import HorizonChart from '@/components/HorizonChart.vue';
 import { scaleLinear } from 'd3-scale';
 import { format } from 'd3-format';
 
-import { useLooneageViewStore } from '@/stores/looneageViewStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 
 const looneageViewStore = useLooneageViewStore();
 

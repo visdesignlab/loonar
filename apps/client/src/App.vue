@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { watch, onBeforeMount, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import GridstackLayout from './components/GridstackLayout.vue';
 import GlobalSettingsView from './components/globalSettings/GlobalSettingsView.vue';
-import { useProvenanceStore } from '@/stores/provenanceStore';
+import { useProvenanceStore } from '@/stores/misc/provenanceStore';
 import { onKeyStroke } from '@vueuse/core';
 import { router } from '@/router';
 

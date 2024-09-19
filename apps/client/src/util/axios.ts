@@ -1,7 +1,4 @@
-import S3FileFieldClient, {
-    type S3FileFieldProgress,
-    S3FileFieldProgressState,
-} from 'django-s3-file-field';
+import S3FileFieldClient from 'django-s3-file-field';
 import axios, {
     type AxiosInstance,
     type AxiosPromise,

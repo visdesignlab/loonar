@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useLooneageViewStore } from '@/stores/looneageViewStore';
-import { useEventBusStore } from '@/stores/eventBusStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();

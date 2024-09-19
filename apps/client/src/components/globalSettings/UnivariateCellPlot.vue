@@ -2,11 +2,14 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import type { PropType } from 'vue';
 import * as vg from '@uwdata/vgplot';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useSelectionStore, type DataSelection } from '@/stores/selectionStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { QItemSection } from 'quasar';
 
 // Initialise Data

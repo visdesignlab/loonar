@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { onKeyStroke } from '@vueuse/core';
 const globalSettings = useGlobalSettings();
 onKeyStroke(['b', 'B'], (e: KeyboardEvent) => {

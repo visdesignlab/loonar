@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useUploadStore } from '@/stores/uploadStore';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
 import LoadingProgress from '@/components/upload/LoadingProgress.vue';
 import { router } from '@/router';
 const uploadStore = useUploadStore();
