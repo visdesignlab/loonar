@@ -450,6 +450,9 @@ if __name__ == "__main__":
 
             handlers = [logging.FileHandler(full_output_path)]
 
+            # Update the default encoding for stdout to utf-8
+            sys.stdout.reconfigure(encoding='utf-8')
+
             # If verbose, add additional handler to output info to terminal
             if args.verbose:
                 handlers.append(logging.StreamHandler(sys.stdout))
