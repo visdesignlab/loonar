@@ -21,6 +21,7 @@ export interface ExperimentMetadata {
     // can precompute min/max for each column across experiments
     // conditions?: string[]; // TODO: - does this need to be 2d?
     locationMetadataList: LocationMetadata[];
+    compositeTabularDataFilename?: string;
 }
 
 export interface LocationMetadata {
@@ -140,16 +141,16 @@ export const useDatasetSelectionStore = defineStore(
                     cellMetaData.dataInitialized = false;
                     return;
                 }
-                const url = getFileUrl(
+                const tabularDataFileUrl = getFileUrl(
                     currentLocationMetadata.value?.tabularDataFilename
                 );
 
-                const duckDbFileUrl = getDuckDbFileUrl(
+                const tabularDataDuckDbFileUrl = getDuckDbFileUrl(
                     currentLocationMetadata.value?.tabularDataFilename
                 );
 
                 fetchingTabularData.value = true;
-                parse(url, {
+                parse(tabularDataFileUrl, {
                     header: true,
                     dynamicTyping: true,
                     skipEmptyLines: true,
@@ -170,9 +171,27 @@ export const useDatasetSelectionStore = defineStore(
                             .exec([
                                 vg.loadCSV(
                                     'current_cell_metadata',
-                                    duckDbFileUrl
+                                    tabularDataDuckDbFileUrl
                                 ),
                             ]);
+                        if (
+                            currentExperimentMetadata.value
+                                ?.compositeTabularDataFilename
+                        ) {
+                            let compositeTabularDataFileUrl = getDuckDbFileUrl(
+                                currentExperimentMetadata.value
+                                    ?.compositeTabularDataFilename
+                            );
+                            await vg
+                                .coordinator()
+                                .exec([
+                                    vg.loadCSV(
+                                        'composite_cell_metadata',
+                                        compositeTabularDataFileUrl
+                                    ),
+                                ]);
+                        }
+
                         cellMetaData.init(
                             results.data,
                             results.meta.fields as string[],
