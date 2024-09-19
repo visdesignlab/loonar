@@ -198,9 +198,17 @@ def run_command(command, shell=True):
     )
 
     for line in iter(process.stdout.readline, ''):
-        logging.info(line.strip())  # Log each line as INFO
+        try:
+            logging.info(line.strip())  # Log the line
+        except UnicodeEncodeError:
+            # Replace invalid characters
+            logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
     for line in iter(process.stderr.readline, ''):
-        logging.info(line.strip())  # Log errors as ERROR
+        try:
+            logging.info(line.strip())  # Log the line
+        except UnicodeEncodeError:
+            # Replace invalid characters
+            logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
 
     return process
 
@@ -236,14 +244,21 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
                 f.write(clean_line)  # Clean line of ASCII characters
                 f.flush()
                 if verbose:
-                    logging.info(line.strip())
-
+                    try:
+                        logging.info(line.strip())  # Log the line
+                    except UnicodeEncodeError:
+                        # Replace invalid characters
+                        logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
             for line in iter(process.stderr.readline, ''):
                 clean_line = strip_ansi_escape_codes(line)
                 f.write(clean_line)  # Write cleaned line to file
                 f.flush()  # Ensure the line is written to the file immediately
                 if verbose:
-                    logging.info(line.strip())
+                    try:
+                        logging.info(line.strip())  # Log the line
+                    except UnicodeEncodeError:
+                        # Replace invalid characters
+                        logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
 
             process.stdout.close()
             process.stderr.close()
