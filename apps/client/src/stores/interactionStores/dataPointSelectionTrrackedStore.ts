@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, watch } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useDatasetSelectionTrrackedStore } from './datasetSelectionTrrackedStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useDatasetSelectionTrrackedStore } from '../dataStores/datasetSelectionTrrackedStore';
 
 export const useDataPointSelection = defineStore('dataPointSelection', () => {
     const cellMetaData = useCellMetaData();

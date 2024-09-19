@@ -9,3 +9,4 @@ const cellMetaData = useCellMetaData();
 </template>
 
 <style scoped lange="scss"></style>
+@/stores/dataStores/cellMetaData

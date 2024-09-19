@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { useDataPointSelection } from './dataPointSelection';
+import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
 
 export interface SelectionIndex {
     c: number;

@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { isEqual, every, sortBy } from 'lodash-es';
-import { useDataPointSelection } from './dataPointSelection';
+import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
 import { extent as d3Extent } from 'd3-array';
 
 export interface Lineage {

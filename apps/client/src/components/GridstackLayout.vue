@@ -146,3 +146,5 @@ async function toggleFullscreen(elementId: string) {
     visibility: visible;
 }
 </style>
+@/stores/componentStores/globalSettings
+@/stores/userInteraction/gridstackLayoutStore

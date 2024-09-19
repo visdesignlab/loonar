@@ -45,7 +45,6 @@ const specialVariables = ref<SpecialVariable[]>([
         description: 'Same, but for the Y coordinate.',
     },
 ]);
-
 </script>
 
 <template>
@@ -76,3 +75,4 @@ const specialVariables = ref<SpecialVariable[]>([
     </template>
 </template>
 <style scoped lang="scss"></style>
+@/stores/data/uploadStore @/stores/componentStores/globalSettings

@@ -193,3 +193,5 @@ const mutedTextClass = computed(() =>
 </template>
 
 <style scoped lange="scss"></style>
+@/stores/charts/filterStore @/stores/userInteraction/selectionStore
+@/stores/componentStores/globalSettings

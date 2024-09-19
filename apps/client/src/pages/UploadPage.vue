@@ -175,3 +175,5 @@ function handlePreviousStep(): void {
 </template>
 
 <style scoped></style>
+@/stores/initialization/configStore @/stores/data/uploadStore
+@/stores/componentStores/globalSettings @/stores/misc/configStore

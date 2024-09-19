@@ -8,7 +8,7 @@ import axios, {
     type AxiosRequestConfig,
     type AxiosResponse,
 } from 'axios';
-import type { LocationConfig } from '../stores/uploadStore';
+import type { LocationConfig } from '../stores/componentStores/uploadStore';
 
 interface LoonAxiosInstance extends AxiosInstance {
     upload(file: File): Promise<string>;

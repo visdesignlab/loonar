@@ -10,7 +10,6 @@ import { useConfigStore } from '@/stores/configStore';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useFilterStore } from '@/stores/filterStore';
 
-
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
 const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
@@ -19,7 +18,6 @@ const $q = useQuasar();
 const configStore = useConfigStore();
 const selectionStore = useSelectionStore();
 const filterStore = useFilterStore();
-
 
 watch(
     () => datasetSelectionStore.fetchingTabularData,
@@ -51,7 +49,6 @@ const shortExpName = computed<string>(() => {
     }
     return shortName;
 });
-
 
 function onSelectExperiment() {
     selectionStore.clearAllSelections();
@@ -111,3 +108,8 @@ function onSelectExperiment() {
 </template>
 
 <style scoped lange="scss"></style>
+@/stores/initialization/configStore @/stores/charts/filterStore
+@/stores/data/datasetSelectionTrrackedStore@/stores/data/datasetSelectionStore
+@/stores/userInteraction/selectionStore
+@/stores/userInteraction/dataPointSelection
+@/stores/componentStores/globalSettings @/stores/misc/configStore

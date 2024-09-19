@@ -1,12 +1,16 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
-import { useCellMetaData, type Cell, type Track } from '@/stores/cellMetaData';
-import { useSkipTrackingMap } from '@/stores/skipTrackingMap';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
+import {
+    useCellMetaData,
+    type Cell,
+    type Track,
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useLooneageViewStore } from './looneageViewStore';
 
 import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
-import { useDataPointSelectionUntrracked } from './dataPointSelectionUntrracked';
+import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
 
 export interface AggLine {
     data: AggLineData;

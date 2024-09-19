@@ -50,3 +50,4 @@ const uploadStore = useUploadStore();
 </template>
 
 <style scoped lang="scss"></style>
+@/stores/data/uploadStore

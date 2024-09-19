@@ -1,7 +1,10 @@
 import { ref, watch, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { useCellMetaData, type Cell } from '@/stores/cellMetaData';
-import { useSkipTrackingMap } from '@/stores/skipTrackingMap';
+import {
+    useCellMetaData,
+    type Cell,
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { schemeReds, schemeBlues } from 'd3-scale-chromatic';
 import { min as d3Min, max as d3Max } from 'd3-array';
 

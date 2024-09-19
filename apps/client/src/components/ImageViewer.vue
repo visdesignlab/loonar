@@ -679,3 +679,10 @@ function clearSelection() {
     cursor: default !important;
 }
 </style>
+@/stores/misc/eventBusStore @/stores/charts/looneageViewStore
+@/stores/userInteraction/imageViewerStore
+@/stores/userInteraction/imageViewerStoreUntrracked
+@/stores/data/datasetSelectionStore @/stores/userInteraction/dataPointSelection
+@/stores/userInteraction/dataPointSelectionUntrracked
+@/stores/componentStores/globalSettings @/stores/data/segmentationStore
+@/stores/dataStores/cellMetaData

@@ -69,3 +69,4 @@ watch(darkMode, () => {
     overflow: hidden !important;
 }
 </style>
+@/stores/componentStores/globalSettings @/stores/misc/provenanceStore

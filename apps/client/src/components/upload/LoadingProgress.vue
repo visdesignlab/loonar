@@ -143,3 +143,4 @@ const getProgresses = (progressStatus: ProgressRecord[]) => {
     color: red;
 }
 </style>
+@/stores/data/uploadStore

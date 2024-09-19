@@ -9,8 +9,9 @@ import {
     useCellMetaData,
     type AnyAttributes,
     type TextTransforms,
-} from '@/stores/cellMetaData';
-import { useDatasetSelectionTrrackedStore } from '@/stores/datasetSelectionTrrackedStore';
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
+import { useConfigStore } from '../misc/configStore';
 
 export interface ExperimentMetadata {
     // name?: string; // user friendly name
@@ -47,14 +48,15 @@ export const useDatasetSelectionStore = defineStore(
         const cellMetaData = useCellMetaData();
         const datasetSelectionTrrackedStore =
             useDatasetSelectionTrrackedStore();
+        const configStore = useConfigStore();
         const fetchingTabularData = ref(false);
         const refreshTime = ref<string>(new Date().getTime().toString());
         let controller: AbortController;
 
         const experimentFilenameList = asyncComputed<string[]>(async () => {
-            if (datasetSelectionTrrackedStore.serverUrl == null) return null;
-            const fullURL = getFileUrl(
-                datasetSelectionTrrackedStore.entryPointFilename
+            if (configStore.serverUrl == null) return null;
+            const fullURL = configStore.getFileUrl(
+                configStore.entryPointFilename
             );
             if (controller) {
                 controller.abort('stale request'); // cancel last fetch if it's still trying
@@ -97,7 +99,7 @@ export const useDatasetSelectionStore = defineStore(
                     null
                 )
                     return null;
-                const fullURL = getFileUrl(
+                const fullURL = configStore.getFileUrl(
                     datasetSelectionTrrackedStore.currentExperimentFilename
                 );
                 const response = await fetch(fullURL, {});
@@ -141,11 +143,11 @@ export const useDatasetSelectionStore = defineStore(
                     cellMetaData.dataInitialized = false;
                     return;
                 }
-                const tabularDataFileUrl = getFileUrl(
+                const tabularDataFileUrl = configStore.getFileUrl(
                     currentLocationMetadata.value?.tabularDataFilename
                 );
 
-                const tabularDataDuckDbFileUrl = getDuckDbFileUrl(
+                const tabularDataDuckDbFileUrl = configStore.getDuckDbFileUrl(
                     currentLocationMetadata.value?.tabularDataFilename
                 );
 
@@ -162,9 +164,7 @@ export const useDatasetSelectionStore = defineStore(
                         // vg.coordinator().databaseConnector(vg.wasmConnector());
 
                         vg.coordinator().databaseConnector(
-                            vg.socketConnector(
-                                datasetSelectionTrrackedStore.duckDbWebsocketUrl
-                            )
+                            vg.socketConnector(configStore.duckDbWebSocketUrl)
                         );
                         await vg
                             .coordinator()
@@ -178,10 +178,11 @@ export const useDatasetSelectionStore = defineStore(
                             currentExperimentMetadata.value
                                 ?.compositeTabularDataFilename
                         ) {
-                            let compositeTabularDataFileUrl = getDuckDbFileUrl(
-                                currentExperimentMetadata.value
-                                    ?.compositeTabularDataFilename
-                            );
+                            let compositeTabularDataFileUrl =
+                                configStore.getDuckDbFileUrl(
+                                    currentExperimentMetadata.value
+                                        ?.compositeTabularDataFilename
+                                );
                             await vg
                                 .coordinator()
                                 .exec([
@@ -204,27 +205,6 @@ export const useDatasetSelectionStore = defineStore(
             // { deep: true }
         );
 
-        function getFileUrl(path: string): string {
-            // Trims any leading slashes from path
-            let trimmedPath = path.replace(/^\/+/, '');
-            return `${datasetSelectionTrrackedStore.serverUrl}/${trimmedPath}`;
-        }
-
-        function getDuckDbFileUrl(path: string): string {
-            // Trims any leading slashes from path
-            let trimmedPath = path.replace(/^\/+/, '');
-            return `${datasetSelectionTrrackedStore.duckDbUrl}/${trimmedPath}`;
-        }
-
-        const segmentationFolderUrl = computed<string>(() => {
-            if (currentLocationMetadata.value?.segmentationsFolder == null) {
-                return '';
-            }
-            return getFileUrl(
-                currentLocationMetadata.value.segmentationsFolder
-            );
-        });
-
         function refreshFileNameList() {
             refreshTime.value = new Date().getTime().toString();
         }
@@ -238,7 +218,6 @@ export const useDatasetSelectionStore = defineStore(
             currentLocationMetadata,
             fetchingTabularData,
             selectImagingLocation,
-            getFileUrl,
             segmentationFolderUrl,
             refreshFileNameList,
         };

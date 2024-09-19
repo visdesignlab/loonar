@@ -726,3 +726,9 @@ const otherUnmuted = computed(() => {
 //     // pointer-events: none;
 // }
 </style>
+@/stores/charts/looneageViewStore @/stores/charts/aggregateLineChartStore
+@/stores/userInteraction/imageViewerStore
+@/stores/userInteraction/imageViewerStoreUntrracked
+@/stores/data/datasetSelectionStore @/stores/userInteraction/dataPointSelection
+@/stores/userInteraction/dataPointSelectionUntrracked
+@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

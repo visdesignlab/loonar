@@ -1,9 +1,14 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { useCellMetaData, type Cell, type Track } from '@/stores/cellMetaData';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
+import {
+    useCellMetaData,
+    type Cell,
+    type Track,
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import type { Feature } from 'geojson';
 import { LRUCache } from 'lru-cache';
+import { useConfigStore } from '../misc/configStore';
 
 /**
  * Custom store for managing segmentations.
@@ -12,6 +17,7 @@ import { LRUCache } from 'lru-cache';
 export const useSegmentationStore = defineStore('segmentationStore', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const cellMetaData = useCellMetaData();
+    const configStore = useConfigStore();
     const cache = ref(
         new LRUCache<string, Feature>({
             max: 25_000,
@@ -47,6 +53,19 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
     //     // Implementation goes here
     // }
 
+    const segmentationFolderUrl = computed<string>(() => {
+        if (
+            datasetSelectionStore.currentLocationMetadata.value
+                ?.segmentationsFolder == null
+        ) {
+            return '';
+        }
+        return configStore.getFileUrl(
+            datasetSelectionStore.currentLocationMetadata.value
+                .segmentationsFolder
+        );
+    });
+
     /**
      * Get segmentations for a specific cell.
      * @param cell - The cell object.
@@ -58,7 +77,7 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
         const frame = cellMetaData.getFrame(cell);
         const id = cell.trackId;
         return await cache.value.fetch(
-            `${datasetSelectionStore.segmentationFolderUrl}/cells/${frame}-${id}.json`
+            `${segmentationFolderUrl}/cells/${frame}-${id}.json`
         );
     }
 

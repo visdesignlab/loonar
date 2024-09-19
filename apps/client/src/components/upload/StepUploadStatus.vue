@@ -93,3 +93,4 @@ function addNewExperiment(): void {
 </template>
 
 <style scoped lang="scss"></style>
+@/stores/data/uploadStore

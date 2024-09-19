@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { useCellMetaData } from '@/stores/cellMetaData';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useDataPointSelectionUntrracked = defineStore(

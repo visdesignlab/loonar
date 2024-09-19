@@ -132,3 +132,5 @@ li:hover .hover-show {
     cursor: pointer;
 }
 </style>
+@/stores/componentStores/globalSettings
+@/stores/userInteraction/gridstackLayoutStore
