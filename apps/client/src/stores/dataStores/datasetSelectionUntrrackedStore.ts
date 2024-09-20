@@ -11,7 +11,11 @@ import {
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
 
-import { type CsvParserResults, parseCsv } from '@/util/csvParser';
+import {
+    type CsvParserResults,
+    parseCsv,
+    loadFileIntoDuckDb,
+} from '@/util/datasetLoader';
 
 export interface ExperimentMetadata {
     // name?: string; // user friendly name
@@ -53,6 +57,7 @@ export const useDatasetSelectionStore = defineStore(
         const refreshTime = ref<string>(new Date().getTime().toString());
         let controller: AbortController;
 
+        // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
             if (configStore.serverUrl == null) return null;
             const fullURL = configStore.getFileUrl(
@@ -82,15 +87,20 @@ export const useDatasetSelectionStore = defineStore(
             }
             fetchingEntryFile.value = false;
             serverUrlValid.value = true;
+
+            const connector = vg.socketConnector(
+                configStore.duckDbWebSocketUrl
+            );
+
+            // If you need to use web instance of duckdb instead, you can use this connector rather than the one above.
+            // const connector = vg.wasmConnector();
+
+            // Initialize Duckdb Socket Connection
+            vg.coordinator().databaseConnector(connector);
+
             const data = await response.json();
             return data.experiments;
         }, [refreshTime.value]);
-
-        function handleFetchEntryError(message: string): void {
-            errorMessage.value = message;
-            serverUrlValid.value = false;
-            fetchingEntryFile.value = false;
-        }
 
         // Sets location Metadata
         const currentExperimentMetadata =
@@ -107,6 +117,20 @@ export const useDatasetSelectionStore = defineStore(
                 const data = await response.json();
                 return data;
             });
+
+        watch(currentExperimentMetadata, async () => {
+            if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
+                let duckDbfileUrl = configStore.getDuckDbFileUrl(
+                    currentExperimentMetadata.value
+                        ?.compositeTabularDataFilename
+                );
+                await loadFileIntoDuckDb(
+                    duckDbfileUrl,
+                    'composite_experiment_cell_metadata',
+                    'csv'
+                );
+            }
+        });
 
         function selectImagingLocation(location: LocationMetadata): void {
             datasetSelectionTrrackedStore.$patch(() => {
@@ -137,6 +161,32 @@ export const useDatasetSelectionStore = defineStore(
             }
         );
 
+        watch(currentLocationMetadata, async () => {
+            if (!currentLocationMetadata.value?.tabularDataFilename) {
+                cellMetaData.dataInitialized = false;
+                return;
+            }
+            const tabularDataFileUrl = configStore.getFileUrl(
+                currentLocationMetadata.value?.tabularDataFilename
+            );
+
+            fetchingTabularData.value = true;
+            await loadCurrentLocationCsvFile(tabularDataFileUrl);
+
+            const duckDbFileUrl = configStore.getDuckDbFileUrl(
+                currentLocationMetadata.value?.tabularDataFilename
+            );
+            await loadFileIntoDuckDb(
+                duckDbFileUrl,
+                'current_cell_metadata',
+                'csv'
+            );
+        });
+
+        function refreshFileNameList() {
+            refreshTime.value = new Date().getTime().toString();
+        }
+
         function initializeLocationCsvFile(results: CsvParserResults) {
             cellMetaData.init(
                 results.data,
@@ -150,58 +200,10 @@ export const useDatasetSelectionStore = defineStore(
             await parseCsv(tabularDataFileUrl, initializeLocationCsvFile);
         }
 
-        watch(currentLocationMetadata, async () => {
-            if (!currentLocationMetadata.value?.tabularDataFilename) {
-                cellMetaData.dataInitialized = false;
-                return;
-            }
-            const tabularDataFileUrl = configStore.getFileUrl(
-                currentLocationMetadata.value?.tabularDataFilename
-            );
-
-            // DuckDB uses different routing. Need a separate URL
-            const tabularDataDuckDbFileUrl: string =
-                configStore.getDuckDbFileUrl(
-                    currentLocationMetadata.value?.tabularDataFilename
-                );
-
-            fetchingTabularData.value = true;
-            await loadCurrentLocationCsvFile(tabularDataFileUrl);
-
-            vg.coordinator().databaseConnector(
-                vg.socketConnector(configStore.duckDbWebSocketUrl)
-            );
-
-            await vg
-                .coordinator()
-                .exec([
-                    vg.loadCSV(
-                        'current_cell_metadata',
-                        tabularDataDuckDbFileUrl
-                    ),
-                ]);
-
-            // If you need to use web based duckDb instance, you can use this.
-            // vg.coordinator().databaseConnector(vg.wasmConnector());
-
-            // if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
-            //     let compositeTabularDataFileUrl = configStore.getDuckDbFileUrl(
-            //         currentExperimentMetadata.value
-            //             ?.compositeTabularDataFilename
-            //     );
-            //     await vg
-            //         .coordinator()
-            //         .exec([
-            //             vg.loadCSV(
-            //                 'composite_cell_metadata',
-            //                 compositeTabularDataFileUrl
-            //             ),
-            //         ]);
-            // }
-        });
-
-        function refreshFileNameList() {
-            refreshTime.value = new Date().getTime().toString();
+        function handleFetchEntryError(message: string): void {
+            errorMessage.value = message;
+            serverUrlValid.value = false;
+            fetchingEntryFile.value = false;
         }
 
         return {

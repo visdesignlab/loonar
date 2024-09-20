@@ -10,7 +10,7 @@ export const useConfigStore = defineStore('configStore', () => {
 
     let httpValue = 'http://';
     let wsValue = 'ws://';
-    if (useHttp) {
+    if (!useHttp) {
         httpValue = 'https://';
         wsValue = 'wss://';
     }
@@ -25,8 +25,9 @@ export const useConfigStore = defineStore('configStore', () => {
 
     // Environment based location of data retrieval for DuckDb
 
-    let duckDbDataLocation =
-        environment === 'local' ? 'data:9000' : 'minio:9000';
+    // let duckDbDataLocation =
+    //     environment === 'local' ? 'data:9000' : 'minio:9000/data';
+    let duckDbDataLocation = 'client/data';
     const duckDbUrl = `${httpValue}${duckDbDataLocation}`;
     const entryPointFilename = '/aa_index.json';
 

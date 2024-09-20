@@ -60,9 +60,10 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
         ) {
             return '';
         }
-        return configStore.getFileUrl(
+        const url = configStore.getFileUrl(
             datasetSelectionStore.currentLocationMetadata.segmentationsFolder
         );
+        return url;
     });
 
     /**
@@ -76,7 +77,7 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
         const frame = cellMetaData.getFrame(cell);
         const id = cell.trackId;
         return await cache.value.fetch(
-            `${segmentationFolderUrl}/cells/${frame}-${id}.json`
+            `${segmentationFolderUrl.value}/${frame}-${id}.json`
         );
     }
 
