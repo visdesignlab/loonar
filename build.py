@@ -438,6 +438,14 @@ if __name__ == "__main__":
             if args.overwrite:
                 config_file_name = overwrite_config(config_file_name)
 
+            # Clear env file
+            try:
+                os.remove('apps/client/.env')
+                print('Cleared old .env file.')
+            except FileNotFoundError:
+                print('No client .env file found.')
+                pass
+
             buildConfig = createEnvFile(config_file_name, args.env_file)
 
             use_http = buildConfig.get('generalSettings.useHttp')
