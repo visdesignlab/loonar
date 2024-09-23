@@ -9,7 +9,7 @@ type ParseCsvCompleteCallback = (results: CsvParserResults) => void;
 type FileType = 'csv' | 'parquet';
 
 // Parses CSV file. Accepts callback for additional processing.
-export function parseCsv(
+export function loadCsv(
     csvUrl: string,
     completeCallback: ParseCsvCompleteCallback
 ): Promise<void> {

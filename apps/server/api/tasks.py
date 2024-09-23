@@ -86,7 +86,7 @@ class Task(ABC):
         logger.info('Fake Cleaning')
 
     # Generic unpacking of a zip file with callback for additional processing.
-    def process_zip_file(self, base_file_location="", callback=None):
+    def process_zip_file(self, base_file_location="", callback=None, base_file_location_suffix=""):
         try:
             companion_ome = ""
             with zipfile.ZipFile(self.blob, 'r') as zip_ref:
@@ -115,7 +115,7 @@ class Task(ABC):
                                         "message": f"Failed at callback: {e.message}",
                                     }
 
-                            file_location = f"{base_file_location}/" \
+                            file_location = f"{base_file_location}/{base_file_location_suffix}/" \
                                             f"{corrected_curr_file_name}"
                             # Create a ContentFile object with the file contents
                             content_file = ContentFile(file_contents)
@@ -129,7 +129,6 @@ class Task(ABC):
 
                             default_storage.save(file_location, content_file)
 
-            # return {"process_zip_file_status": "SUCCEEDED"}
             return {"processed_zip_file_status": "SUCCESS",
                     "base_file_location": base_file_location,
                     "companion_ome": companion_ome}
@@ -217,8 +216,12 @@ class LiveCyteSegmentationsTask(Task):
         logger.info(f"Executing task: {self.record_id}")
         base_file_location = f"{self.experiment_name}/" \
                              f"location_{self.location}/" \
-                             "segmentations/cells"
-        data = self.process_zip_file(base_file_location=base_file_location, callback=roi_to_geojson)
+                             "segmentations"
+        data = self.process_zip_file(
+                                     base_file_location=base_file_location,
+                                     callback=roi_to_geojson,
+                                     base_file_location_suffix="cells"
+                                    )
         return data
 
     def cleanup(self):

@@ -13,7 +13,7 @@ import { useConfigStore } from '../misc/configStore';
 
 import {
     type CsvParserResults,
-    parseCsv,
+    loadCsv,
     loadFileIntoDuckDb,
 } from '@/util/datasetLoader';
 
@@ -197,7 +197,7 @@ export const useDatasetSelectionStore = defineStore(
         }
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
-            await parseCsv(tabularDataFileUrl, initializeLocationCsvFile);
+            await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
         }
 
         function handleFetchEntryError(message: string): void {
