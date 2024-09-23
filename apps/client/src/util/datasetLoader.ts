@@ -1,5 +1,4 @@
 import { parse, type ParseResult } from 'papaparse';
-import type { AnyAttributes } from '@/stores/dataStores/cellMetaDataStore';
 import * as vg from '@uwdata/vgplot';
 
 export type CsvParserResults = ParseResult<AnyAttributes>;
@@ -7,6 +6,22 @@ export type CsvParserResults = ParseResult<AnyAttributes>;
 type ParseCsvCompleteCallback = (results: CsvParserResults) => void;
 
 type FileType = 'csv' | 'parquet';
+
+export interface NumericalAttributes {
+    [index: string]: number;
+}
+
+export interface StringAttributes {
+    [index: string]: string;
+}
+
+export interface AnyAttributes {
+    [index: string]: any;
+}
+
+export interface TextTransforms {
+    [index: string]: string;
+}
 
 // Parses CSV file. Accepts callback for additional processing.
 export function loadCsv(

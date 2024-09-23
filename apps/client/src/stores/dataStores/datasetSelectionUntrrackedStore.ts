@@ -4,18 +4,17 @@ import { asyncComputed } from '@vueuse/core';
 import * as vg from '@uwdata/vgplot';
 
 import { computedAsync } from '@vueuse/core';
-import {
-    useCellMetaData,
-    type TextTransforms,
-} from '@/stores/dataStores/cellMetaDataStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
+import type { TextTransforms } from '@/util/datasetLoader';
 
 import {
     type CsvParserResults,
     loadCsv,
     loadFileIntoDuckDb,
 } from '@/util/datasetLoader';
+import { useExperimentCellMetaData } from './experimentCellMetaDataStore';
 
 export interface ExperimentMetadata {
     // name?: string; // user friendly name
@@ -50,6 +49,8 @@ export const useDatasetSelectionStore = defineStore(
         const errorMessage = ref('default error message');
 
         const cellMetaData = useCellMetaData();
+        const experimentCellMetaData = useExperimentCellMetaData();
+
         const datasetSelectionTrrackedStore =
             useDatasetSelectionTrrackedStore();
         const configStore = useConfigStore();
@@ -118,8 +119,17 @@ export const useDatasetSelectionStore = defineStore(
                 return data;
             });
 
+        // Initialize experiment cell metadata store and create duckdb table.
         watch(currentExperimentMetadata, async () => {
             if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
+                const tabularDataFileUrl = configStore.getFileUrl(
+                    currentExperimentMetadata.value
+                        ?.compositeTabularDataFilename
+                );
+
+                fetchingTabularData.value = true;
+                await loadCurrentLocationCsvFile(tabularDataFileUrl);
+
                 let duckDbfileUrl = configStore.getDuckDbFileUrl(
                     currentExperimentMetadata.value
                         ?.compositeTabularDataFilename
@@ -198,6 +208,18 @@ export const useDatasetSelectionStore = defineStore(
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
             await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
+        }
+
+        function initializeExperimentCsvFile(results: CsvParserResults) {
+            experimentCellMetaData.init(
+                results.data,
+                results.meta.fields as string[],
+                currentExperimentMetadata.value?.headerTransforms
+            );
+        }
+
+        async function loadExperimentCsvFile(tabularDataFileUrl: string) {
+            await loadCsv(tabularDataFileUrl, initializeExperimentCsvFile);
         }
 
         function handleFetchEntryError(message: string): void {
