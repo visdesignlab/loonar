@@ -8,12 +8,14 @@ import type { AnyAttributes, TextTransforms } from '@/util/datasetLoader';
 export const useExperimentCellMetaData = defineStore(
     'experimentCellMetaData',
     () => {
+        // Declare variables to expose here
+
         function init(
             rawData: AnyAttributes[],
             columnHeaders: string[],
             headerTransforms?: TextTransforms
         ) {
-            console.log('Initializing ExperimentData');
+            console.log('Initializing Experiment Data');
 
             // Initialize store with appropriate data
         }
