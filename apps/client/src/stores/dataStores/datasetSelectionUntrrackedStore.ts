@@ -14,7 +14,6 @@ import {
     loadCsv,
     loadFileIntoDuckDb,
 } from '@/util/datasetLoader';
-import { useExperimentCellMetaData } from './experimentCellMetaDataStore';
 import { useNotificationStore } from '../misc/notificationStore';
 
 export interface ExperimentMetadata {
@@ -50,12 +49,11 @@ export const useDatasetSelectionStore = defineStore(
         const errorMessage = ref('default error message');
 
         const cellMetaData = useCellMetaData();
-        const experimentCellMetaData = useExperimentCellMetaData();
 
         const datasetSelectionTrrackedStore =
             useDatasetSelectionTrrackedStore();
         const configStore = useConfigStore();
-        const notificationStore = useNotificationStore();
+        const { notify } = useNotificationStore();
         const fetchingTabularData = ref(false);
         const refreshTime = ref<string>(new Date().getTime().toString());
         let controller: AbortController;
@@ -118,35 +116,43 @@ export const useDatasetSelectionStore = defineStore(
                 );
                 const response = await fetch(fullURL, {});
                 const data = await response.json();
+                console.log(data);
                 return data;
             });
 
         // Initialize experiment cell metadata store and create duckdb table.
         watch(currentExperimentMetadata, async () => {
             if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
-                const tabularDataFileUrl = configStore.getFileUrl(
-                    currentExperimentMetadata.value
-                        ?.compositeTabularDataFilename
-                );
-
                 fetchingTabularData.value = true;
-                await loadCurrentLocationCsvFile(tabularDataFileUrl);
 
-                let duckDbfileUrl = configStore.getDuckDbFileUrl(
+                let duckDbFileUrl = configStore.getDuckDbFileUrl(
                     currentExperimentMetadata.value
                         ?.compositeTabularDataFilename
                 );
                 try {
                     await loadFileIntoDuckDb(
-                        duckDbfileUrl,
+                        duckDbFileUrl,
                         'composite_experiment_cell_metadata',
                         'csv'
                     );
+                    notify({
+                        type: 'success',
+                        message: `Created DuckDb Table for ${duckDbFileUrl}.`,
+                    });
                 } catch (error) {
                     const typedError = error as Error;
-                    notificationStore.notify({
+                    notify({
                         type: 'problem',
                         message: typedError.message,
+                    });
+                }
+                fetchingTabularData.value = false;
+            } else {
+                if (currentExperimentMetadata.value !== null) {
+                    notify({
+                        type: 'warning',
+                        message:
+                            'No composite dataset specified in Experiment file.',
                     });
                 }
             }
@@ -203,13 +209,13 @@ export const useDatasetSelectionStore = defineStore(
                     'current_cell_metadata',
                     'csv'
                 );
-                notificationStore.notify({
+                notify({
                     type: 'success',
-                    message: 'Created DuckDb Table',
+                    message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                 });
             } catch (error) {
                 const typedError = error as Error;
-                notificationStore.notify({
+                notify({
                     type: 'problem',
                     message: typedError.message,
                 });
@@ -231,18 +237,14 @@ export const useDatasetSelectionStore = defineStore(
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
             await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
-        }
-
-        function initializeExperimentCsvFile(results: CsvParserResults) {
-            experimentCellMetaData.init(
-                results.data,
-                results.meta.fields as string[],
-                currentExperimentMetadata.value?.headerTransforms
-            );
-        }
-
-        async function loadExperimentCsvFile(tabularDataFileUrl: string) {
-            await loadCsv(tabularDataFileUrl, initializeExperimentCsvFile);
+            try {
+                await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
+            } catch (error) {
+                notify({
+                    type: 'problem',
+                    message: 'Failed to load location CSV file.',
+                });
+            }
         }
 
         function handleFetchEntryError(message: string): void {
