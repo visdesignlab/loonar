@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {
-    useCellMetaData,
-    type AnyAttributes,
-} from '@/stores/dataStores/cellMetaDataStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 
 const cellMetaData = useCellMetaData();
 </script>
@@ -12,4 +9,3 @@ const cellMetaData = useCellMetaData();
 </template>
 
 <style scoped lange="scss"></style>
-@/stores/dataStores/cellMetaData

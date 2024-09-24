@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { type QNotifyCreateOptions, useQuasar } from 'quasar';
 
-type NotificationType = 'problem' | 'warning' | 'success';
+type NotificationType = 'problem' | 'warning' | 'success' | 'info';
 
 interface Notification {
     type: NotificationType;
@@ -31,6 +31,11 @@ export const useNotificationStore = defineStore('notificationStore', () => {
         success: {
             color: 'positive',
             icon: 'mdi-check-circle',
+            position: 'top',
+        },
+        info: {
+            color: 'info',
+            icon: 'mdi-information-outline',
             position: 'top',
         },
     };

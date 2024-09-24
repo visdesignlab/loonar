@@ -15,6 +15,7 @@ import {
     loadFileIntoDuckDb,
 } from '@/util/datasetLoader';
 import { useExperimentCellMetaData } from './experimentCellMetaDataStore';
+import { useNotificationStore } from '../misc/notificationStore';
 
 export interface ExperimentMetadata {
     // name?: string; // user friendly name
@@ -54,6 +55,7 @@ export const useDatasetSelectionStore = defineStore(
         const datasetSelectionTrrackedStore =
             useDatasetSelectionTrrackedStore();
         const configStore = useConfigStore();
+        const notificationStore = useNotificationStore();
         const fetchingTabularData = ref(false);
         const refreshTime = ref<string>(new Date().getTime().toString());
         let controller: AbortController;
@@ -134,11 +136,19 @@ export const useDatasetSelectionStore = defineStore(
                     currentExperimentMetadata.value
                         ?.compositeTabularDataFilename
                 );
-                await loadFileIntoDuckDb(
-                    duckDbfileUrl,
-                    'composite_experiment_cell_metadata',
-                    'csv'
-                );
+                try {
+                    await loadFileIntoDuckDb(
+                        duckDbfileUrl,
+                        'composite_experiment_cell_metadata',
+                        'csv'
+                    );
+                } catch (error) {
+                    const typedError = error as Error;
+                    notificationStore.notify({
+                        type: 'problem',
+                        message: typedError.message,
+                    });
+                }
             }
         });
 
@@ -186,11 +196,24 @@ export const useDatasetSelectionStore = defineStore(
             const duckDbFileUrl = configStore.getDuckDbFileUrl(
                 currentLocationMetadata.value?.tabularDataFilename
             );
-            await loadFileIntoDuckDb(
-                duckDbFileUrl,
-                'current_cell_metadata',
-                'csv'
-            );
+
+            try {
+                await loadFileIntoDuckDb(
+                    duckDbFileUrl,
+                    'current_cell_metadata',
+                    'csv'
+                );
+                notificationStore.notify({
+                    type: 'success',
+                    message: 'Created DuckDb Table',
+                });
+            } catch (error) {
+                const typedError = error as Error;
+                notificationStore.notify({
+                    type: 'problem',
+                    message: typedError.message,
+                });
+            }
         });
 
         function refreshFileNameList() {

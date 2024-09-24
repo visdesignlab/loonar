@@ -60,20 +60,22 @@ export async function loadFileIntoDuckDb(
             await vg.coordinator().exec([vg.loadCSV(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);
         } catch (error) {
-            console.error(
-                `Unexpected error when loading ${url} into DuckDb with file type ${type}`
-            );
+            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}`;
+            console.error(message);
+            throw new Error(message);
         }
     } else if (type === 'parquet') {
         try {
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);
         } catch (error) {
-            console.error(
-                `Unexpected error when loading ${url} into DuckDb with file type ${type}`
-            );
+            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}`;
+            console.error(message);
+            throw new Error(message);
         }
     } else {
-        console.error(`Invalid File Type passed into function.`);
+        const message = `Invalid File Type passed into function.`;
+        console.error(message);
+        throw new Error(message);
     }
 }
