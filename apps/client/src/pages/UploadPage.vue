@@ -10,11 +10,13 @@ import { useUploadStore } from '@/stores/componentStores/uploadStore';
 import { useConfigStore } from '@/stores/misc/configStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useQuasar } from 'quasar';
+import { useNotificationStore } from '@/stores/misc/notificationStore';
 
 import { router } from '@/router';
 const uploadStore = useUploadStore();
 const configStore = useConfigStore();
 const globalSettings = useGlobalSettings();
+const notificationStore = useNotificationStore();
 const stepper = ref(null);
 
 // Function to determine if the create experiment button should be enabled.
@@ -42,8 +44,6 @@ function returnHome(): void {
     router.push('/');
 }
 
-const $q = useQuasar();
-
 async function handleNextStep(): Promise<void> {
     if (uploadStore.step === 'finalReview' || uploadStore.step === 'metadata') {
         const verifyExperimentName = await uploadStore.verifyExperimentName();
@@ -55,11 +55,9 @@ async function handleNextStep(): Promise<void> {
                 uploadStore.uploadAll();
             }
         } else {
-            $q.notify({
-                color: 'negative',
+            notificationStore.notify({
                 message: 'Experiment Name already in use.',
-                icon: 'report_problem',
-                position: 'top',
+                type: 'problem',
             });
             uploadStore.experimentNameValid = false;
         }

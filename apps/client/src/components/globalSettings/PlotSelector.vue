@@ -10,9 +10,11 @@ import {
 } from '@/stores/interactionStores/selectionStore';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useNotificationStore } from '@/stores/misc/notificationStore';
 
 const globalSettings = useGlobalSettings();
 const cellMetaData = useCellMetaData();
+const notificationStore = useNotificationStore();
 const { dataInitialized } = storeToRefs(cellMetaData);
 
 interface Selection {
@@ -39,14 +41,17 @@ const selectionStore = useSelectionStore();
 
 const { dataSelections } = storeToRefs(selectionStore);
 
-const showErrorDialog = ref(false);
 const errorPlotName = ref('');
 
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
     // console.log('handlePlotError called with:', plotName);
     errorPlotName.value = plotName;
-    showErrorDialog.value = true;
+
+    notificationStore.notify({
+        type: 'problem',
+        message: `An Error occured while loading the plot ${errorPlotName}`,
+    });
 
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
@@ -182,20 +187,6 @@ window.addEventListener(
                 @plot-loaded="handlePlotLoaded"
                 @plot-error="handlePlotError"
             />
-            <q-dialog v-model="showErrorDialog">
-                <q-card>
-                    <q-card-section>
-                        <div class="text-h6">Error</div>
-                    </q-card-section>
-                    <q-card-section class="q-pt-none">
-                        An error occurred while loading the plot:
-                        {{ errorPlotName }}
-                    </q-card-section>
-                    <q-card-actions align="right">
-                        <q-btn flat label="OK" color="primary" v-close-popup />
-                    </q-card-actions>
-                </q-card>
-            </q-dialog>
         </div>
     </div>
 </template>
