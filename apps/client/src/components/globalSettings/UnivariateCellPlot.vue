@@ -60,7 +60,7 @@ function makePlot(column: string) {
             vg.width(268),
             vg.height(85),
             vg.style({ 'font-size': '.85em' }),
-            vg.xDomain(vg.toFixed),
+            vg.xDomain(vg.Fixed),
             vg.xLabelAnchor('center'),
             vg.xTickPadding(8),
             vg.xLabelOffset(38),
