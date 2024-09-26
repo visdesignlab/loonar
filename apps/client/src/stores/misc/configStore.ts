@@ -22,6 +22,7 @@ export const useConfigStore = defineStore('configStore', () => {
         '/data',
         '/ws/'
     )}`;
+    const apiUrl = `${httpValue}${envServerUrl.replace('/data', '/api')}`;
 
     // Environment based location of data retrieval for DuckDb
 
@@ -49,6 +50,7 @@ export const useConfigStore = defineStore('configStore', () => {
         envServerUrl,
         serverUrl,
         duckDbWebSocketUrl,
+        apiUrl,
         duckDbUrl,
         entryPointFilename,
         getFileUrl,

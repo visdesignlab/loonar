@@ -9,6 +9,7 @@ import {
 } from '@/util/axios';
 
 import type { ProgressRecord } from '@/components/upload/LoadingProgress.vue';
+import { useConfigStore } from '../misc/configStore';
 
 export type progress =
     | 'failed'
@@ -29,7 +30,9 @@ export interface FileToUpload {
     checkForUpdates?: boolean;
     uploading: progress;
     processing: progress;
+    uniqueId?: string;
     processedData?: Record<string, any>;
+    metadata?: Record<string, any>;
 }
 
 export interface LocationConfig {
@@ -72,18 +75,21 @@ const initialState = () => ({
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_table',
             },
             images: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_images',
             },
             segmentations: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_segmentations',
             },
         },
     ]),
@@ -92,8 +98,9 @@ const initialState = () => ({
 
 export const useUploadStore = defineStore('uploadStore', () => {
     // const currBaseUrl = window.location.origin;
+    const configStore = useConfigStore();
     const loonAxios = createLoonAxiosInstance({
-        baseURL: `${window.location.origin}/api`,
+        baseURL: configStore.apiUrl,
     });
 
     const {
@@ -202,25 +209,29 @@ export const useUploadStore = defineStore('uploadStore', () => {
     });
 
     function addLocation() {
+        const currId = locationFileList.value.length + 1;
         locationFileList.value.push({
-            locationId: (locationFileList.value.length + 1).toString(),
+            locationId: `${currId}`,
             table: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location-${currId}-table`,
             },
             images: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location-${currId}-images`,
             },
             segmentations: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location-${currId}-segmentations`,
             },
         });
     }
@@ -326,6 +337,12 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 // Make a request to your server to check for updates
                 const response = await loonAxios.checkForUpdates(task_id);
                 const responseData = response.data as StatusResponseData;
+
+                // Set metadata
+                if (responseData.data) {
+                    uploadingFile.metadata = responseData.data.metadata;
+                }
+
                 if (responseData.status === 'SUCCEEDED') {
                     updatesAvailable = true;
                     if (responseData.data) {
@@ -342,10 +359,10 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 } else if (responseData.status === 'RUNNING') {
                     // show running symbol like it normally does
                     uploadingFile.processing = 'running';
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    await new Promise((resolve) => setTimeout(resolve, 2500));
                 } else {
                     // show queued symbol
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    await new Promise((resolve) => setTimeout(resolve, 2500));
                 }
             }
         } catch (error) {
@@ -363,120 +380,24 @@ export const useUploadStore = defineStore('uploadStore', () => {
         progress: 'not_started',
     });
 
-    // Function to construct the Progress Status List
-    function initializeProgressStatusList(): ProgressRecord[] {
-        const keyList = ['Table', 'Images', 'Segmentations'];
-        let currentProgressStatusList: ProgressRecord[] = keyList.map((key) => {
-            return {
-                label: 'Uploading and Processing ' + key,
-                progress: 'not_started',
-                subProgress: [],
-            };
+    const progressList = computed<FileToUpload[]>((): FileToUpload[] => {
+        const tempProgressList: FileToUpload[] = [];
+        locationFileList.value.forEach((locationFile: LocationFiles) => {
+            tempProgressList.push(locationFile.table);
+            tempProgressList.push(locationFile.images);
+            tempProgressList.push(locationFile.segmentations);
         });
-        const tableListIndex = 0;
-        const imageListIndex = 1;
-        const segmentationListIndex = 2;
-        for (let i = 0; i < numberOfLocations.value; i++) {
-            const locationFiles = locationFileList.value[i];
-            addToSubProgressList(
-                currentProgressStatusList[tableListIndex].subProgress!,
-                locationFiles.table,
-                locationFiles.locationId
-            );
-            addToSubProgressList(
-                currentProgressStatusList[imageListIndex].subProgress!,
-                locationFiles.images,
-                locationFiles.locationId
-            );
-            addToSubProgressList(
-                currentProgressStatusList[segmentationListIndex].subProgress!,
-                locationFiles.segmentations,
-                locationFiles.locationId
-            );
-        }
-
-        currentProgressStatusList.push(createExperimentProgress.value);
-
-        return currentProgressStatusList;
-    }
-
-    // Computes the Progress Status list whenever individual FileToUpload objects change in their uploading/processing status
-    const rawProgressStatusList = computed<ProgressRecord[]>(() =>
-        initializeProgressStatusList()
-    );
-
-    //Once the raw progress status gets updated, we compute the overall statuses dependent on their subprogress.
-    const progressStatusList = computed((): ProgressRecord[] => {
-        const progressStatusResult: ProgressRecord[] = [];
-        for (let i = 0; i < rawProgressStatusList.value.length; i++) {
-            let currentProgress = rawProgressStatusList.value[i];
-            if (currentProgress.subProgress) {
-                // determine based on sub progress
-                const currentSubProgress = determineProgress(
-                    currentProgress.subProgress
-                );
-                currentProgress.progress = currentSubProgress;
-                progressStatusResult.push(currentProgress);
-            } else {
-                progressStatusResult.push(currentProgress);
-            }
-        }
-        return progressStatusResult;
+        return tempProgressList;
     });
 
-    const determineProgress = (subProgress: ProgressRecord[]) => {
-        const failed = subProgress.some(
-            (element) => element.progress === 'failed'
-        );
-        if (failed) {
-            // If any failed, set total to failed
-            return 'failed';
-        } else {
-            const running = subProgress.some(
-                (element) =>
-                    element.progress === 'running' ||
-                    element.progress === 'dispatched'
-            );
-            if (running) {
-                // If none failed but any are running/queued, set to running
-                return 'running';
-            } else {
-                const succeeded = subProgress.every(
-                    (element) => element.progress === 'succeeded'
-                );
-                if (succeeded) {
-                    // If none running, none failed, and all have succeeded, set to 3
-                    return 'succeeded';
-                }
-            }
-        }
-        // If none running, none failed, and not all succeeded, then it's still starting. Return 0
-        return 'not_started';
-    };
-
-    function addToSubProgressList(
-        subProgressList: ProgressRecord[],
-        uploadingFile: FileToUpload,
-        locationId: string
-    ) {
-        subProgressList.push({
-            label: 'Uploading ' + locationId,
-            progress: uploadingFile.uploading,
-        });
-        if (uploadingFile.checkForUpdates) {
-            subProgressList.push({
-                label: 'Processing ' + locationId,
-                progress: uploadingFile.processing,
-            });
-        }
-    }
-
     // Watches progress list for all successes or any failures. Sets overall status based on the findings.
+
     watch(
-        progressStatusList,
+        progressList,
         (newList) => {
             const anyFailed = newList.some(
-                (item: ProgressRecord) => item.progress == 'failed'
+                (item: FileToUpload) =>
+                    item.uploading === 'failed' || item.processing === 'failed'
             );
             if (anyFailed) {
                 overallProgress.value.status = -1;
@@ -484,7 +405,9 @@ export const useUploadStore = defineStore('uploadStore', () => {
                     'There was an error submitting this experiment.';
             }
             const allSucceeded = newList.every(
-                (item: ProgressRecord) => item.progress === 'succeeded'
+                (item: FileToUpload) =>
+                    item.uploading === 'succeeded' &&
+                    item.processing === 'succeeded'
             );
             if (allSucceeded) {
                 overallProgress.value.status = 2;
@@ -632,7 +555,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         addLocation,
         removeLocation,
         uploadAll,
-        progressStatusList,
         onSubmitExperiment,
         experimentConfig,
         experimentHeaders,
@@ -644,5 +566,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         resetState,
         step,
         experimentNameValid,
+        progressList,
     };
 });

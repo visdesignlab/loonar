@@ -6,9 +6,12 @@
         "paths": {
             "@/*": ["./src/*"]
         },
-        "types": ["vite/client"]
+        "types": ["vite/client"],
+        "lib":[
+            "dom",
+            "ES2021.String"
+        ]
     },
-
     "references": [
         {
             "path": "./tsconfig.config.json"

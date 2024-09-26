@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { PropType } from 'vue';
-import type { progress } from '@/stores/componentStores/uploadStore';
+import type {
+    progress,
+    FileToUpload,
+} from '@/stores/componentStores/uploadStore';
 export interface ProgressRecord {
     label: string;
     progress: progress;
@@ -9,105 +12,108 @@ export interface ProgressRecord {
 
 const props = defineProps({
     progressStatus: {
-        type: Array as PropType<ProgressRecord[]>,
+        type: Array as PropType<FileToUpload[]>,
         required: true,
     },
 });
 
-const getProgresses = (progressStatus: ProgressRecord[]) => {
-    let tempProgressStatus: [ProgressRecord, string][] = progressStatus.map(
-        (entry: ProgressRecord) => {
-            return [entry, entry.progress];
+const getLabel = (file: FileToUpload): string => {
+    // const type = file.uniqueId?.split("_")[-1]
+    const splitUniqueId = file.uniqueId?.split('_');
+    let fileType = '';
+    let locationId = '';
+    if (splitUniqueId) {
+        fileType = splitUniqueId[2];
+        locationId = splitUniqueId[1];
+    }
+    if (file.uploading !== 'succeeded' && file.uploading !== 'failed') {
+        return `Uploading Location ${locationId} ${fileType}... `;
+    } else if (
+        file.processing !== 'succeeded' &&
+        file.processing !== 'failed'
+    ) {
+        return `Processing Location ${locationId} ${fileType}... `;
+    } else {
+        return `Finished Location ${locationId} ${fileType}`;
+    }
+};
+
+const getCurrProgressValue = (file: FileToUpload): number => {
+    console.log(file.uniqueId);
+    if (file.uploading == 'succeeded') {
+        if (file.processing == 'running') {
+            if (file.metadata && file.metadata.total && file.metadata.current) {
+                const total = file.metadata.total;
+                const current = file.metadata.current;
+                const slope = 0.7 / total;
+                if (current === total) {
+                    console.log(1);
+                    console.log(total, current);
+                    return 1;
+                }
+                console.log(slope * current + 0.3);
+                return slope * current + 0.3;
+            } else {
+                console.log(0.3);
+                return 0.3;
+            }
+        } else if (file.processing === 'succeeded') {
+            console.log(1);
+            console.log('in succeeded');
+            return 1;
+        } else {
+            console.log('processing not started');
+            return 0.3;
         }
-    );
-    return tempProgressStatus;
+    }
+    console.log('returning 0');
+    return 0;
 };
 </script>
 
 <template>
-    <div class="column">
-        <template
-            v-for="(item, idx) in getProgresses(progressStatus)"
-            :key="item.label"
-        >
-            <div class="spinner-container">
-                <q-spinner v-if="item[1] == 'running'" size="20" />
+    <template v-for="(item, idx) in progressStatus" :key="item.label">
+        <div class="row q-ma-sm q-mt-lg justify-between items-center">
+            <div class="row items-center">
                 <q-icon
-                    v-if="item[1] == 'succeeded'"
-                    name="mdi-check-circle"
-                    color="green"
-                    size="20px"
-                />
-                <q-icon
-                    v-if="item[1] == 'not_started'"
-                    name="mdi-circle-outline"
-                    size="20px"
-                    color="grey"
-                />
-                <q-icon
-                    v-if="item[1] === 'failed'"
-                    name="mdi-alert-circle-outline"
-                    size="20px"
+                    v-if="
+                        item.uploading === 'failed' ||
+                        item.processing === 'failed'
+                    "
+                    class="q-mr-sm"
+                    name="mdi-alert-box"
                     color="red"
                 />
-                <span
-                    :class="{
-                        'progress-running': item[1] === 'running',
-                        'progress-not-started': item[1] === 'not_started',
-                        'progress-succeeded': item[1] === 'succeeded',
-                        'progress-failed': item[1] === 'failed',
-                    }"
-                    style="font-size: 1.1em"
-                    >{{ item[0].label }}</span
-                >
+                <q-spinner
+                    v-else-if="item.processing !== 'succeeded'"
+                    class="q-mr-sm"
+                />
+                <q-icon
+                    v-else
+                    name="check_circle"
+                    color="success"
+                    class="q-mr-sm"
+                />
+                <div>{{ getLabel(item) }}</div>
             </div>
-            <template v-for="subProgress in item[0].subProgress">
-                <div class="spinner-container" style="margin-left: 50px">
-                    <q-spinner-dots
-                        v-if="subProgress.progress == 'dispatched'"
-                        size="20"
-                    />
-                    <q-spinner
-                        v-if="subProgress.progress == 'running'"
-                        size="20"
-                    />
-                    <q-icon
-                        v-if="subProgress.progress == 'succeeded'"
-                        name="mdi-check-circle"
-                        color="green"
-                        size="20px"
-                    />
-                    <q-icon
-                        v-if="subProgress.progress == 'not_started'"
-                        name="mdi-circle-outline"
-                        size="20px"
-                        color="grey"
-                    />
-                    <q-icon
-                        v-if="subProgress.progress === 'failed'"
-                        name="mdi-alert-circle-outline"
-                        size="20px"
-                        color="red"
-                    />
-                    <span
-                        :class="{
-                            'progress-dispatched':
-                                subProgress.progress === 'dispatched',
-                            'progress-running':
-                                subProgress.progress === 'running',
-                            'progress-not-started':
-                                subProgress.progress === 'not_started',
-                            'progress-succeeded':
-                                subProgress.progress === 'succeeded',
-                            'progress-failed':
-                                subProgress.progress === 'failed',
-                        }"
-                        >{{ subProgress.label }}</span
-                    >
-                </div>
-            </template>
-        </template>
-    </div>
+
+            <div
+                v-if="item.metadata?.current && item.metadata?.total"
+                class="row"
+            >
+                {{ `${item.metadata?.current}/${item.metadata?.total}` }}
+            </div>
+        </div>
+        <div class="q-ma-sm q-mb-xl">
+            <q-linear-progress
+                size="5px"
+                :value="getCurrProgressValue(item)"
+                animation-speed="500"
+                color="success"
+            >
+            </q-linear-progress>
+        </div>
+    </template>
 </template>
 
 <style scoped>
@@ -143,4 +149,3 @@ const getProgresses = (progressStatus: ProgressRecord[]) => {
     color: red;
 }
 </style>
-@/stores/data/uploadStore

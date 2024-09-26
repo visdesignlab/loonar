@@ -112,10 +112,16 @@ class ProcessDataView(APIView):
 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
+
+        '''
+        Celery response:
+
+        May return 'current' and 'total'
+        Returns processed data when finished
+        '''
         response_data = {
-            "task_id": task_id
+            "task_id": task_id,
         }
-        print(result.state, flush=True)
         if result.state == 'PENDING':
             response_data['status'] = 'QUEUED'
         elif result.state == 'STARTED':
@@ -128,9 +134,8 @@ class ProcessDataView(APIView):
             response_data['status'] = 'ERROR'
             response_data['message'] = 'Unable to retrieve status'
 
-        if result.ready():
-            return_value = result.get()
-            response_data['data'] = return_value
+        print(result.info, flush=True)
+        response_data['data'] = result.info
 
         return Response(response_data)
 
