@@ -1,8 +1,50 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useUploadStore } from '@/stores/componentStores/uploadStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import LBtn from '../custom/LBtn.vue';
 const uploadStore = useUploadStore();
 const globalSettings = useGlobalSettings();
+
+const currentLocationIndex = ref<number>(0);
+
+function handleLocationIdInput(index: number) {
+    currentLocationIndex.value = index;
+}
+
+const dialog = ref(false);
+
+const tempTags = ref<[string, string][]>([['', '']]);
+
+const openTagModal = (index: number) => {
+    currentLocationIndex.value = index;
+    tempTags.value = JSON.parse(JSON.stringify(uploadStore.tags[index]));
+    dialog.value = true;
+};
+
+const closeTagModal = () => {
+    tempTags.value = [['', '']];
+    dialog.value = false;
+};
+
+// Saves current tags to the tags in upload store
+const saveTags = () => {
+    uploadStore.tags[currentLocationIndex.value] = JSON.parse(
+        JSON.stringify(tempTags.value)
+    );
+    dialog.value = false;
+    console.log(uploadStore.tags);
+};
+
+// Add new tag key-value pair in dialog
+const addTag = () => {
+    tempTags.value.push(['', '']);
+};
+
+// Remove tag key-value pair in dialog
+const removeTag = (idx: number) => {
+    tempTags.value.splice(idx, 1);
+};
 </script>
 
 <template>
@@ -23,6 +65,16 @@ const globalSettings = useGlobalSettings();
             v-model="locationFile.locationId"
             label="Location ID"
             :dark="globalSettings.darkMode"
+            :rules="[(val) => !!val || 'Field is required']"
+            :error="
+                !uploadStore.locationIdsUnique && currentLocationIndex === index
+            "
+            :error-message="
+                !uploadStore.locationIdsUnique && currentLocationIndex === index
+                    ? 'Id is already in use.'
+                    : 'Field is required'
+            "
+            @update:model-value="handleLocationIdInput(index)"
         />
         <q-file
             class="flex-grow-1"
@@ -47,28 +99,86 @@ const globalSettings = useGlobalSettings();
             label="Segmentations (zip)"
             :dark="globalSettings.darkMode"
         />
-        <q-btn
+        <l-btn
             @click="uploadStore.removeLocation(index)"
             icon="delete"
-            title="Remove Location"
-            outline
             :dark="globalSettings.darkMode"
+            class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-sm"
+            style="margin-bottom: 20px"
+            type="previous"
+            color="red"
+        />
+        <l-btn
+            @click="openTagModal(index)"
+            icon="mdi-tag"
+            :dark="globalSettings.darkMode"
+            class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-none"
+            style="margin-bottom: 20px"
+            type="previous"
+            color="blue"
         />
     </div>
-
-    <q-btn
-        class="q-mt-lg"
+    <l-btn
         @click="uploadStore.addLocation"
         label="Add Location"
-        outline
+        class="q-mt-lg"
+        type="action"
+        icon-right="mdi-plus"
     />
+    <q-dialog v-model="dialog" backdrop-filter="blur(4px)'">
+        <q-card>
+            <q-card-section class="row items-center q-pb-none text-h6">
+                Add Or Remove Tags
+            </q-card-section>
+            <q-card-section class="row items-center q-pt-sm q-pb-none">
+                Use the tags to allow for filtering on your data in the Loon UI.
+            </q-card-section>
 
-    <q-banner
-        v-if="!uploadStore.locationIdsUnique()"
-        class="q-mt-sm text-white bg-red"
-        >Location IDs must be Unique.</q-banner
-    >
+            <q-card-section>
+                <template v-for="(item, idx) in tempTags">
+                    <div class="row items-center q-mt-md">
+                        <q-input
+                            class="q-mr-md"
+                            v-model="item[0]"
+                            outlined
+                            dense
+                        ></q-input>
+                        <div style="font-size: 18pt; margin-bottom: 5px">=</div>
+                        <q-input
+                            outlined
+                            dense
+                            class="q-ml-md"
+                            v-model="item[1]"
+                        ></q-input>
+                        <l-btn
+                            @click="removeTag(idx)"
+                            icon="delete"
+                            :dark="globalSettings.darkMode"
+                            class="self-stretch"
+                            type="previous"
+                            color="red"
+                        />
+                    </div>
+                </template>
+                <l-btn
+                    label="Add tag"
+                    icon-right="mdi-plus"
+                    @click="addTag()"
+                    class="q-mt-lg"
+                    type="action"
+                />
+            </q-card-section>
+            <q-card-actions :align="'right'">
+                <l-btn
+                    type="cancel"
+                    color="red"
+                    @click="closeTagModal"
+                    label="Cancel"
+                />
+                <l-btn type="confirm" @click="saveTags" label="Save" />
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/data/uploadStore @/stores/componentStores/globalSettings

@@ -10,6 +10,7 @@ import { useUploadStore } from '@/stores/componentStores/uploadStore';
 import { useConfigStore } from '@/stores/misc/configStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
+import LBtn from '@/components/custom/LBtn.vue';
 
 import { router } from '@/router';
 const uploadStore = useUploadStore();
@@ -32,7 +33,7 @@ function experimentMetadataDone(): boolean {
 }
 
 function fileSelectionDone(): boolean {
-    return uploadStore.allFilesPopulated() && uploadStore.locationIdsUnique();
+    return uploadStore.allFilesPopulated() && uploadStore.locationIdsUnique;
 }
 
 function columnNameMappingDone(): boolean {
@@ -172,23 +173,19 @@ function handlePreviousStep(): void {
                             justify-content: flex-end;
                         "
                     >
-                        <q-btn
+                        <l-btn
                             v-if="
                                 uploadStore.step !== 'metadata' &&
                                 uploadStore.step !== 'uploading'
                             "
-                            flat
-                            @click="handlePreviousStep"
                             label="Back"
                             class="q-mr-sm"
-                            no-caps
+                            @click="handlePreviousStep"
+                            type="previous"
                         />
-                        <q-btn
+                        <l-btn
                             v-if="uploadStore.step !== 'uploading'"
                             @click="handleNextStep"
-                            no-caps
-                            unelevated
-                            color="info"
                             :label="
                                 uploadStore.step === 'finalReview'
                                     ? 'Begin Processing'
@@ -200,20 +197,18 @@ function handlePreviousStep(): void {
                                     : false
                             "
                         />
-                        <q-btn
+                        <l-btn
                             v-if="uploadStore.step == 'uploading'"
-                            flat
-                            color="primary"
                             @click="returnHome"
                             label="Return To Home"
-                            class="q-ml-sm"
+                            class="q-mr-sm"
                             :disabled="uploadStore.overallProgress.status !== 2"
+                            type="previous"
                         />
-                        <q-btn
+                        <l-btn
                             v-if="uploadStore.step == 'uploading'"
                             @click="addNewExperiment"
-                            color="primary"
-                            :label="'create new experiment'"
+                            label="Create New Experiment"
                             :disabled="uploadStore.overallProgress.status !== 2"
                         />
                     </q-stepper-navigation>

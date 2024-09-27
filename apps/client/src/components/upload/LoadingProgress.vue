@@ -18,7 +18,6 @@ const props = defineProps({
 });
 
 const getLabel = (file: FileToUpload): string => {
-    // const type = file.uniqueId?.split("_")[-1]
     const splitUniqueId = file.uniqueId?.split('_');
     let fileType = '';
     let locationId = '';
@@ -39,7 +38,6 @@ const getLabel = (file: FileToUpload): string => {
 };
 
 const getCurrProgressValue = (file: FileToUpload): number => {
-    console.log(file.uniqueId);
     if (file.uploading == 'succeeded') {
         if (file.processing == 'running') {
             if (file.metadata && file.metadata.total && file.metadata.current) {
@@ -47,26 +45,18 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                 const current = file.metadata.current;
                 const slope = 0.7 / total;
                 if (current === total) {
-                    console.log(1);
-                    console.log(total, current);
                     return 1;
                 }
-                console.log(slope * current + 0.3);
                 return slope * current + 0.3;
             } else {
-                console.log(0.3);
                 return 0.3;
             }
         } else if (file.processing === 'succeeded') {
-            console.log(1);
-            console.log('in succeeded');
             return 1;
         } else {
-            console.log('processing not started');
             return 0.3;
         }
     }
-    console.log('returning 0');
     return 0;
 };
 </script>

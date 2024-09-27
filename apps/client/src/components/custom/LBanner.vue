@@ -16,21 +16,6 @@ const props = defineProps({
     },
 });
 
-// Computed values for color and icon based on `type`
-const bannerColor = computed(() => {
-    switch (props.type) {
-        case 'success':
-            return 'green';
-        case 'error':
-            return 'red';
-        case 'warning':
-            return 'orange';
-        case 'info':
-        default:
-            return 'blue';
-    }
-});
-
 const bannerIcon = computed(() => {
     switch (props.type) {
         case 'success':

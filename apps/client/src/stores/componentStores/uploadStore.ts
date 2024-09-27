@@ -10,6 +10,7 @@ import {
 
 import type { ProgressRecord } from '@/components/upload/LoadingProgress.vue';
 import { useConfigStore } from '../misc/configStore';
+import { useNotificationStore } from '../misc/notificationStore';
 
 export type progress =
     | 'failed'
@@ -63,6 +64,7 @@ const initialState = () => ({
     overallProgress: ref<OverallProgress>({
         status: 1,
     }),
+    tags: ref<[string, string][][]>([[['', '']]]),
     experimentCreated: ref(false),
     columnMappings: ref<Record<string, string> | null>(null),
     columnNames: ref<string[]>([]),
@@ -99,6 +101,7 @@ const initialState = () => ({
 export const useUploadStore = defineStore('uploadStore', () => {
     // const currBaseUrl = window.location.origin;
     const configStore = useConfigStore();
+    const { notify } = useNotificationStore();
     const loonAxios = createLoonAxiosInstance({
         baseURL: configStore.apiUrl,
     });
@@ -113,6 +116,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnNames,
         step,
         experimentNameValid,
+        tags,
     } = initialState();
 
     function resetState(): void {
@@ -127,6 +131,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnNames.value = newState.columnNames.value;
         step.value = newState.step.value;
         experimentNameValid.value = newState.experimentNameValid.value;
+        tags.value = newState.tags.value;
     }
 
     async function verifyExperimentName(): Promise<boolean> {
@@ -234,10 +239,20 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 uniqueId: `location-${currId}-segmentations`,
             },
         });
+        // Add initial tags
+        tags.value.push([['', '']]);
     }
 
     function removeLocation(index: number) {
         locationFileList.value.splice(index, 1);
+    }
+
+    function addTag(locationIndex: number) {
+        tags.value[locationIndex].push(['', '']);
+    }
+
+    function removeTag(locationIndex: number, tagIndex: number) {
+        tags.value[locationIndex].splice(tagIndex, 1);
     }
 
     function allFilesPopulated(): boolean {
@@ -253,7 +268,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         return true;
     }
 
-    function locationIdsUnique(): boolean {
+    const locationIdsUnique = computed((): boolean => {
         const locationIds = new Set<string>();
         for (const locationFiles of locationFileList.value) {
             if (locationIds.has(locationFiles.locationId)) {
@@ -262,7 +277,27 @@ export const useUploadStore = defineStore('uploadStore', () => {
             locationIds.add(locationFiles.locationId);
         }
         return true;
-    }
+    });
+
+    watch(locationIdsUnique, () => {
+        if (!locationIdsUnique.value) {
+            notify({
+                type: 'problem',
+                message: 'Location ids must be unique.',
+            });
+        }
+    });
+
+    // function locationIdsUnique(): boolean {
+    //     const locationIds = new Set<string>();
+    //     for (const locationFiles of locationFileList.value) {
+    //         if (locationIds.has(locationFiles.locationId)) {
+    //             return false;
+    //         }
+    //         locationIds.add(locationFiles.locationId);
+    //     }
+    //     return true;
+    // }
 
     // Function to upload all necessary files in experiment.
     async function uploadAll() {
@@ -440,11 +475,14 @@ export const useUploadStore = defineStore('uploadStore', () => {
 
     async function onSubmitExperiment(): Promise<CreateExperimentResponseData> {
         if (experimentName.value && experimentConfig.value) {
+            let locationTags = convertTags();
+            console.log(locationTags);
             const submitExperimentResponse = await loonAxios.createExperiment(
                 experimentName.value,
                 experimentConfig.value,
                 experimentHeaders.value,
-                columnMappings.value
+                columnMappings.value,
+                locationTags
             );
 
             const submitExperimentResponseData: CreateExperimentResponseData =
@@ -453,6 +491,15 @@ export const useUploadStore = defineStore('uploadStore', () => {
             return submitExperimentResponseData;
         }
         return { status: 'failed', message: 'No experiment name given.' };
+    }
+
+    function convertTags(): Record<string, Record<string, string>> {
+        let locationBasedTags: Record<string, Record<string, string>> = {};
+        tags.value.forEach((location: [string, string][], idx: number) => {
+            let currentTags = Object.fromEntries(location);
+            locationBasedTags[`location_${idx}`] = currentTags;
+        });
+        return locationBasedTags;
     }
 
     function allColumnsMapped(): boolean {
@@ -567,5 +614,8 @@ export const useUploadStore = defineStore('uploadStore', () => {
         step,
         experimentNameValid,
         progressList,
+        tags,
+        addTag,
+        removeTag,
     };
 });

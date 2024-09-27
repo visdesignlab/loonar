@@ -68,3 +68,4 @@ class LocationCreateSerializer(serializers.Serializer):
     tabular_data_filename = serializers.CharField()
     images_data_filename = serializers.CharField()
     segmentations_folder = serializers.CharField()
+    tags = serializers.JSONField()

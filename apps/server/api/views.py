@@ -34,8 +34,24 @@ def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
     return object_key
 
 
-def create_composite_tabular_data_file(experiment_name: str, experiment_settings: list) -> str:
+def create_composite_tabular_data_file(
+        experiment_name: str,
+        experiment_settings: list,
+        location_tags: dict
+        ) -> str:
+
     composite_tabular_data_file_name = f"{experiment_name}/composite_tabular_data.csv"
+
+    # Get all new columns to append
+    tag_key_list = []
+    for entry in location_tags.values():
+        print(entry, flush=True)
+        for key in entry.keys():
+            tag_key_list.append(key)
+
+    print(tag_key_list, flush=True)
+    tag_key_list = list(set(tag_key_list))
+    print(tag_key_list, flush=True)
 
     # Step 1: Create a temporary file
     with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as temp_file:
@@ -53,9 +69,18 @@ def create_composite_tabular_data_file(experiment_name: str, experiment_settings
                     if row_idx == 0:
                         if idx == 0:
                             row.insert(0, "Location")
+
+                            for tag_column in tag_key_list:
+                                row.append(tag_column)
                             csv_writer.writerow(row)
                     else:
                         row.insert(0, entry["id"])
+                        for tag_column in tag_key_list:
+                            try:
+                                tag_value = location_tags[f'location_{idx}'][tag_column]
+                            except KeyError:
+                                tag_value = ''
+                            row.append(tag_value)
                         csv_writer.writerow(row)
 
     # Step 4: Upload the temporary file back to default storage
@@ -147,11 +172,13 @@ class FinishExperimentView(APIView):
         experiment_settings = json.loads(data.get('experimentSettings'))
         experiment_headers = json.loads(data.get('experimentHeaders'))
         experiment_header_transforms = json.loads(data.get('experimentHeaderTransforms'))
+        location_tags = json.loads(data.get('locationTags'))
+        print(location_tags, flush=True)
 
         experiment_name = data.get('experimentName')
 
         composite_tabular_data_file_name = create_composite_tabular_data_file(
-            experiment_name, experiment_settings
+            experiment_name, experiment_settings, location_tags
             )
 
         experiment_data = {
@@ -176,6 +203,7 @@ class FinishExperimentView(APIView):
                 "tabular_data_filename": experiment_settings[i]['tabularDataFilename'],
                 "images_data_filename": experiment_settings[i]['imageDataFilename'],
                 "segmentations_folder": experiment_settings[i]['segmentationsFolder'],
+                "tags": location_tags[f'location_{i}']
             }
             location_serializer = LocationCreateSerializer(data=location_data)
             if not location_serializer.is_valid():

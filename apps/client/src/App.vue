@@ -6,6 +6,7 @@ import GlobalSettingsView from './components/globalSettings/GlobalSettingsView.v
 import { useProvenanceStore } from '@/stores/misc/provenanceStore';
 import { onKeyStroke } from '@vueuse/core';
 import { router } from '@/router';
+import LBtn from './components/custom/LBtn.vue';
 
 const $q = useQuasar();
 const provenanceStore = useProvenanceStore();
@@ -59,10 +60,17 @@ onBeforeMount(() => {
         >
             <q-toolbar>
                 <q-toolbar-title>Loon</q-toolbar-title>
-                <q-btn @click="router.push('/')" flat no-caps>Home</q-btn>
-                <q-btn @click="router.push('/upload')" flat no-caps
-                    >Upload</q-btn
-                >
+                <l-btn
+                    @click="router.push('/')"
+                    type="basic"
+                    label="Home"
+                    class="q-mr-sm"
+                />
+                <l-btn
+                    @click="router.push('/upload')"
+                    type="basic"
+                    label="Upload"
+                />
             </q-toolbar>
         </q-header>
         <GlobalSettingsView></GlobalSettingsView>
