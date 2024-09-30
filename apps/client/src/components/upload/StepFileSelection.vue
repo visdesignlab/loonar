@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useUploadStore } from '@/stores/componentStores/uploadStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import LBtn from '../custom/LBtn.vue';
+import LChip from '../custom/LChip.vue';
 const uploadStore = useUploadStore();
 const globalSettings = useGlobalSettings();
 
@@ -32,8 +33,14 @@ const saveTags = () => {
     uploadStore.tags[currentLocationIndex.value] = JSON.parse(
         JSON.stringify(tempTags.value)
     );
+    for (let i = 0; i < tempTags.value.length; i++) {
+        if (!(tempTags.value[i][0] in uploadStore.tagColors)) {
+            uploadStore.tagColors[tempTags.value[i][0]] =
+                colors[currColorIndex.value];
+            currColorIndex.value = (currColorIndex.value + 1) % 6;
+        }
+    }
     dialog.value = false;
-    console.log(uploadStore.tags);
 };
 
 // Add new tag key-value pair in dialog
@@ -45,10 +52,13 @@ const addTag = () => {
 const removeTag = (idx: number) => {
     tempTags.value.splice(idx, 1);
 };
+
+const currColorIndex = ref<number>(0);
+const colors = ['red', 'blue', 'orange', 'green', 'yellow', 'pink'];
 </script>
 
 <template>
-    <div>
+    <div class="q-mb-lg">
         Select all files for the experiment. Location ID should be unique for
         each location. The table should be a CSV file. The images for a single
         location should be in a .zip files. The segmentations for a single
@@ -57,66 +67,79 @@ const removeTag = (idx: number) => {
     <div
         v-for="(locationFile, index) in uploadStore.locationFileList"
         :key="index"
-        class="row q-mt-lg q-gutter-sm"
+        class="column q-mt-none q-gutter-sm"
     >
-        <q-input
-            class="flex-grow-1"
-            outlined
-            v-model="locationFile.locationId"
-            label="Location ID"
-            :dark="globalSettings.darkMode"
-            :rules="[(val) => !!val || 'Field is required']"
-            :error="
-                !uploadStore.locationIdsUnique && currentLocationIndex === index
-            "
-            :error-message="
-                !uploadStore.locationIdsUnique && currentLocationIndex === index
-                    ? 'Id is already in use.'
-                    : 'Field is required'
-            "
-            @update:model-value="handleLocationIdInput(index)"
-        />
-        <q-file
-            class="flex-grow-1"
-            outlined
-            v-model="locationFile.table.file"
-            label="Table (csv)"
-            :dark="globalSettings.darkMode"
-            @update:model-value="uploadStore.populateDefaultColumnMappings"
-        />
+        <div class="row">
+            <template v-for="(tag, tagIndex) in uploadStore.tags[index]">
+                <l-chip
+                    v-if="tag[0] !== ''"
+                    :color="uploadStore.tagColors[tag[0]]"
+                    :label="`${tag[0]}: ${tag[1]}`"
+                />
+            </template>
+        </div>
+        <div class="row gap-10">
+            <q-input
+                class="flex-grow-1"
+                outlined
+                v-model="locationFile.locationId"
+                label="Location ID"
+                :dark="globalSettings.darkMode"
+                :rules="[(val) => !!val || 'Field is required']"
+                :error="
+                    !uploadStore.locationIdsUnique &&
+                    currentLocationIndex === index
+                "
+                :error-message="
+                    !uploadStore.locationIdsUnique &&
+                    currentLocationIndex === index
+                        ? 'Id is already in use.'
+                        : 'Field is required'
+                "
+                @update:model-value="handleLocationIdInput(index)"
+            />
+            <q-file
+                class="flex-grow-1"
+                outlined
+                v-model="locationFile.table.file"
+                label="Table (csv)"
+                :dark="globalSettings.darkMode"
+                @update:model-value="uploadStore.populateDefaultColumnMappings"
+            />
 
-        <q-file
-            class="flex-grow-1"
-            outlined
-            v-model="locationFile.images.file"
-            label="Images (zip)"
-            :dark="globalSettings.darkMode"
-        />
-        <q-file
-            class="flex-grow-1"
-            outlined
-            v-model="locationFile.segmentations.file"
-            label="Segmentations (zip)"
-            :dark="globalSettings.darkMode"
-        />
-        <l-btn
-            @click="uploadStore.removeLocation(index)"
-            icon="delete"
-            :dark="globalSettings.darkMode"
-            class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-sm"
-            style="margin-bottom: 20px"
-            type="previous"
-            color="red"
-        />
-        <l-btn
-            @click="openTagModal(index)"
-            icon="mdi-tag"
-            :dark="globalSettings.darkMode"
-            class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-none"
-            style="margin-bottom: 20px"
-            type="previous"
-            color="blue"
-        />
+            <q-file
+                class="flex-grow-1"
+                outlined
+                v-model="locationFile.images.file"
+                label="Images (zip)"
+                :dark="globalSettings.darkMode"
+            />
+            <q-file
+                class="flex-grow-1"
+                outlined
+                v-model="locationFile.segmentations.file"
+                label="Segmentations (zip)"
+                :dark="globalSettings.darkMode"
+            />
+            <l-btn
+                @click="uploadStore.removeLocation(index)"
+                icon="delete"
+                :dark="globalSettings.darkMode"
+                class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-sm"
+                style="margin-bottom: 20px"
+                type="previous"
+                color="red"
+            />
+            <l-btn
+                @click="openTagModal(index)"
+                icon="mdi-tag"
+                :dark="globalSettings.darkMode"
+                class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-none"
+                style="margin-bottom: 20px"
+                type="previous"
+                color="blue"
+            />
+        </div>
     </div>
     <l-btn
         @click="uploadStore.addLocation"
@@ -181,4 +204,11 @@ const removeTag = (idx: number) => {
     </q-dialog>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.row.gap-10 {
+    gap: 10px;
+}
+.row.gap-5 {
+    gap: 5px;
+}
+</style>
