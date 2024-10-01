@@ -65,6 +65,7 @@ const initialState = () => ({
         status: 1,
     }),
     tags: ref<[string, string][][]>([[['', '']]]),
+    tagColors: ref<Record<string, string>>({}),
     experimentCreated: ref(false),
     columnMappings: ref<Record<string, string> | null>(null),
     columnNames: ref<string[]>([]),
@@ -117,6 +118,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         step,
         experimentNameValid,
         tags,
+        tagColors,
     } = initialState();
 
     function resetState(): void {
@@ -132,6 +134,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         step.value = newState.step.value;
         experimentNameValid.value = newState.experimentNameValid.value;
         tags.value = newState.tags.value;
+        tagColors.value = newState.tagColors.value;
     }
 
     async function verifyExperimentName(): Promise<boolean> {
@@ -615,6 +618,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         experimentNameValid,
         progressList,
         tags,
+        tagColors,
         addTag,
         removeTag,
     };
