@@ -110,6 +110,7 @@ So, altogether a single experiment metadata file should look something like the 
       "tabularDataFilename": "experiment1/Table_C.csv",
       "imageDataFilename": "experiment1/images_C.companion.ome",
       "segmentationsFolder": "experiment1/segmentations_C/"
+
     }
   ]
 }
