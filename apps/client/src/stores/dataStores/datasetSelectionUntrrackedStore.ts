@@ -56,6 +56,10 @@ export const useDatasetSelectionStore = defineStore(
         const { notify } = useNotificationStore();
         const fetchingTabularData = ref(false);
         const refreshTime = ref<string>(new Date().getTime().toString());
+        const experimentDataLoaded = ref(false);
+        const experimentDataInitialized = computed(() => {
+            return experimentDataLoaded.value;
+        });
         let controller: AbortController;
 
         // Generate Experiment List
@@ -145,7 +149,9 @@ export const useDatasetSelectionStore = defineStore(
                         type: 'problem',
                         message: typedError.message,
                     });
+                    experimentDataLoaded.value = false;
                 }
+                experimentDataLoaded.value = true;
                 fetchingTabularData.value = false;
             } else {
                 if (currentExperimentMetadata.value !== null) {
@@ -258,6 +264,7 @@ export const useDatasetSelectionStore = defineStore(
             errorMessage,
             fetchingEntryFile,
             experimentFilenameList,
+            experimentDataInitialized,
             currentExperimentMetadata,
             currentLocationMetadata,
             fetchingTabularData,

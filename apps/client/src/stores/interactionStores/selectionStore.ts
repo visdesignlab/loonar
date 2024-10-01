@@ -124,7 +124,7 @@ export const useSelectionStore = defineStore('Selection', {
                     SELECT
                         MIN("${escapedPlotName}") AS min_value,
                         MAX("${escapedPlotName}") AS max_value
-                    FROM current_cell_metadata
+                    FROM composite_experiment_cell_metadata
                 `;
 
                 console.log('Constructed query:', query);

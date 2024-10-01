@@ -5,7 +5,6 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
-import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useFilterStore } from '@/stores/componentStores/filterStore';
 

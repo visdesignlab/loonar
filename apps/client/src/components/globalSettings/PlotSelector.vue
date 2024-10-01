@@ -8,18 +8,16 @@ import {
     useSelectionStore,
     emitter,
 } from '@/stores/interactionStores/selectionStore';
-import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+const datasetSelectionStore = useDatasetSelectionStore();
 
 const globalSettings = useGlobalSettings();
-const cellMetaData = useCellMetaData();
 const notificationStore = useNotificationStore();
-const { dataInitialized } = storeToRefs(cellMetaData);
-
-interface Selection {
-    [key: string]: [number, number] | undefined;
-}
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+    datasetSelectionStore
+);
 
 const menuOpen = ref(false);
 const loading = ref(true);
@@ -30,11 +28,43 @@ const displayedPlots = computed(() =>
 const totalPlots = computed(() => displayedPlots.value.length);
 
 // On any update, computes the plots to be shown.
+
+// Checks if specifically experiment metadata is already loaded.
 const allPlotNames = computed(() => {
-    return dataInitialized.value ? cellMetaData.headers : [];
+    if (
+        experimentDataInitialized.value &&
+        currentExperimentMetadata.value &&
+        currentExperimentMetadata.value.headers
+    ) {
+        return currentExperimentMetadata.value.headers;
+    } else {
+        return [];
+    }
 });
+
 const firstPlotName = computed(() => {
-    return dataInitialized.value ? cellMetaData.headerKeys.mass : '';
+    if (
+        experimentDataInitialized.value &&
+        currentExperimentMetadata.value &&
+        currentExperimentMetadata.value.headers &&
+        currentExperimentMetadata.value.headers.length > 0
+    ) {
+        // does headerTransforms['mass'] exist
+        const headerTransforms =
+            currentExperimentMetadata.value.headerTransforms;
+        if (
+            headerTransforms &&
+            headerTransforms['mass'] &&
+            headerTransforms['mass'] !== ''
+        ) {
+            return headerTransforms['mass'];
+        } else {
+            // otherwise return first header from headers
+            return currentExperimentMetadata.value.headers[0];
+        }
+    } else {
+        return '';
+    }
 });
 
 const selectionStore = useSelectionStore();
@@ -67,7 +97,7 @@ function handlePlotError(plotName: string) {
 onMounted(() => {
     emitter.on('plot-error', handlePlotError);
     watch(
-        dataInitialized,
+        experimentDataInitialized,
         (isInitialized) => {
             if (isInitialized && firstPlotName.value) {
                 selectionStore.addPlot(firstPlotName.value);
@@ -138,7 +168,7 @@ window.addEventListener(
 </script>
 <template>
     <div>
-        <div v-if="!dataInitialized" class="flex justify-center">
+        <div v-if="!experimentDataInitialized" class="flex justify-center">
             <div class="text-h6 q-m-lg">Loading...</div>
         </div>
         <div v-else>
