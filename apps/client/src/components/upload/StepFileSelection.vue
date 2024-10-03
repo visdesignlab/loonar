@@ -37,7 +37,7 @@ const saveTags = () => {
         if (!(tempTags.value[i][0] in uploadStore.tagColors)) {
             uploadStore.tagColors[tempTags.value[i][0]] =
                 colors[currColorIndex.value];
-            currColorIndex.value = (currColorIndex.value + 1) % 6;
+            currColorIndex.value = (currColorIndex.value + 1) % colors.length;
         }
     }
     dialog.value = false;
