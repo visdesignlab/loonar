@@ -74,7 +74,7 @@ const colors = [
     <div
         v-for="(locationFile, index) in uploadStore.locationFileList"
         :key="index"
-        class="column q-mt-none q-gutter-sm"
+        class="column"
     >
         <div class="row">
             <template
@@ -88,7 +88,7 @@ const colors = [
                 />
             </template>
         </div>
-        <div class="row gap-10">
+        <div class="row q-col-gutter-x-sm">
             <q-input
                 class="flex-grow-1"
                 outlined
@@ -214,11 +214,4 @@ const colors = [
     </q-dialog>
 </template>
 
-<style scoped lang="scss">
-.row.gap-10 {
-    gap: 10px;
-}
-.row.gap-5 {
-    gap: 5px;
-}
-</style>
+<style scoped lang="scss"></style>
