@@ -42,5 +42,3 @@ const eventBusStore = useEventBusStore();
     min-width: 75px;
 }
 </style>
-@/stores/misc/eventBusStore @/stores/charts/looneageViewStore
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

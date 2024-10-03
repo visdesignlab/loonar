@@ -115,4 +115,3 @@ $panel-width: 300px;
     left: -$panel-width;
 }
 </style>
-@/stores/componentStores/globalSettings

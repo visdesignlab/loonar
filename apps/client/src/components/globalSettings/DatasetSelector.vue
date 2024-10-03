@@ -105,8 +105,3 @@ function onSelectExperiment() {
 </template>
 
 <style scoped lange="scss"></style>
-@/stores/initialization/configStore @/stores/charts/filterStore
-@/stores/data/datasetSelectionTrrackedStore@/stores/data/datasetSelectionStore
-@/stores/userInteraction/selectionStore
-@/stores/userInteraction/dataPointSelection
-@/stores/componentStores/globalSettings @/stores/misc/configStore

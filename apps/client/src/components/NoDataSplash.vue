@@ -13,4 +13,3 @@ const globalSettings = useGlobalSettings();
         >Select dataset to visualize.</q-banner
     >
 </template>
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

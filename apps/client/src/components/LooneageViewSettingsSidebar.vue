@@ -295,5 +295,3 @@ const horizonSettingsModal = ref(false);
     min-width: 200px;
 }
 </style>
-@/stores/misc/eventBusStore @/stores/charts/looneageViewStore
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

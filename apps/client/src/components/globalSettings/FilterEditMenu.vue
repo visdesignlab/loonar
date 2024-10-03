@@ -151,5 +151,3 @@ const minMaxFormValid = computed<boolean>(() => {
         </q-card>
     </q-dialog>
 </template>
-@/stores/charts/filterStore @/stores/userInteraction/selectionStore
-@/stores/componentStores/globalSettings

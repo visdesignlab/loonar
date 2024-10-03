@@ -2093,11 +2093,3 @@ function renderLoadingDeckGL(): void {
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/misc/eventBusStore @/stores/charts/looneageViewStore
-@/stores/userInteraction/imageViewerStore
-@/stores/userInteraction/imageViewerStoreUntrracked
-@/stores/data/datasetSelectionStore@/stores/data/datasetSelectionTrrackedStore
-@/stores/userInteraction/dataPointSelection
-@/stores/userInteraction/dataPointSelectionUntrracked
-@/stores/componentStores/globalSettings @/stores/data/segmentationStore
-@/stores/dataStores/cellMetaData

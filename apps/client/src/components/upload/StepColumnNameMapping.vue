@@ -75,4 +75,3 @@ const specialVariables = ref<SpecialVariable[]>([
     </template>
 </template>
 <style scoped lang="scss"></style>
-@/stores/data/uploadStore @/stores/componentStores/globalSettings

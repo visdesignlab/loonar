@@ -63,5 +63,3 @@ const currentKey = computed({
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/charts/aggregateLineChartStore @/stores/componentStores/globalSettings
-@/stores/dataStores/cellMetaData

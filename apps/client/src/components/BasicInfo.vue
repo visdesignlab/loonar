@@ -76,5 +76,3 @@ const displayList = computed<DisplayInfo[]>(() => {
     border-radius: 30px;
 }
 </style>
-@/stores/userInteraction/imageViewerStoreUntrracked
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

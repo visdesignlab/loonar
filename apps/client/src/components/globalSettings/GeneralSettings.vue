@@ -78,4 +78,3 @@ const globalSettings = useGlobalSettings();
 </template>
 
 <style scoped lange="scss"></style>
-@/stores/componentStores/globalSettings

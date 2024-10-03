@@ -133,6 +133,3 @@ watch(
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/misc/eventBusStore @/stores/userInteraction/imageViewerStore
-@/stores/userInteraction/imageViewerStoreUntrracked
-@/stores/componentStores/globalSettings

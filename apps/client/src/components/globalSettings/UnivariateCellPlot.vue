@@ -198,5 +198,3 @@ function handleRangeUpdate(newRange: { min: number; max: number }) {
     right: 0;
 }
 </style>
-@/stores/userInteraction/selectionStore @/stores/componentStores/globalSettings
-@/stores/dataStores/cellMetaData

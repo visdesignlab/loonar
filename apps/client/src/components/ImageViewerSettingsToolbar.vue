@@ -64,6 +64,3 @@ const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
     white-space: pre;
 }
 </style>
-@/stores/misc/eventBusStore @/stores/userInteraction/imageViewerStore
-@/stores/userInteraction/imageViewerStoreUntrracked
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData

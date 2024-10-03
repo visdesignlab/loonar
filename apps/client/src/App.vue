@@ -99,4 +99,3 @@ onBeforeMount(() => {
     user-select: none;
 }
 </style>
-@/stores/componentStores/globalSettings @/stores/misc/provenanceStore

@@ -232,5 +232,3 @@ window.addEventListener(
     color: black;
 }
 </style>
-@/stores/userInteraction/selectionStore @/stores/componentStores/globalSettings
-@/stores/dataStores/cellMetaData

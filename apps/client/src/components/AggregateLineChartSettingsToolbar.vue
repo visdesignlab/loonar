@@ -23,5 +23,3 @@ const globalSettings = useGlobalSettings();
     min-width: 75px;
 }
 </style>
-@/stores/charts/aggregateLineChartStore @/stores/componentStores/globalSettings
-@/stores/dataStores/cellMetaData

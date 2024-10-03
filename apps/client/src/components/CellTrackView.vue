@@ -323,8 +323,3 @@ watch(contrastLimitSlider, renderDeckGL);
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/misc/eventBusStore.js @/stores/userInteraction/imageViewerStore.js
-@/stores/userInteraction/imageViewerStoreUntrracked.js
-@/stores/data/datasetSelectionStore.js
-@/stores/userInteraction/dataPointSelection.js
-@/stores/data/segmentationStore.js @/stores/dataStores/cellMetaData.js

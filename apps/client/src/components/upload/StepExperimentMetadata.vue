@@ -33,4 +33,3 @@ function onInput() {
 </template>
 
 <style scoped lang="scss"></style>
-@/stores/data/uploadStore @/stores/componentStores/globalSettings

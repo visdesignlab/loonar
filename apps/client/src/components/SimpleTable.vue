@@ -132,4 +132,3 @@ th:first-child {
     left: 0;
 }
 </style>
-@/stores/componentStores/globalSettings @/stores/dataStores/cellMetaData
