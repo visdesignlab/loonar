@@ -67,25 +67,27 @@ const bannerTypeClass = computed(() => {
 <style lang="scss" scoped>
 .q-banner.banner {
     color: white;
+    border-style: solid;
+    border-width: 2px;
 
     &.banner-success {
         background-color: $green-7;
-        border: 2px solid $green-8;
+        border-color: $green-8;
     }
 
     &.banner-warning {
         background-color: $yellow-9;
-        border: 2px solid $yellow-9;
+        border-color: $yellow-9;
     }
 
     &.banner-info {
         background-color: $blue-7;
-        border: 2px solid $blue-9;
+        border-color: $blue-9;
     }
 
     &.banner-error {
         background-color: $red-7;
-        border: 2px solid $red-10;
+        border-color: $red-10;
     }
 }
 </style>
