@@ -43,7 +43,13 @@ const bannerTypeClass = computed(() => {
 
 <template>
     <q-banner
-        :class="['banner', 'q-pa-md', bannerTypeClass, $attrs.class]"
+        :class="[
+            'banner',
+            'q-pa-md',
+            'rounded-borders',
+            bannerTypeClass,
+            $attrs.class,
+        ]"
         :icon="bannerIcon"
         dense
     >
@@ -60,7 +66,6 @@ const bannerTypeClass = computed(() => {
 
 <style lang="scss" scoped>
 .q-banner.banner {
-    border-radius: 4px;
     color: white;
 
     &.banner-success {
