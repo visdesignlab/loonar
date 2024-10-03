@@ -132,15 +132,6 @@ const colors = [
                 :dark="globalSettings.darkMode"
             />
             <l-btn
-                @click="uploadStore.removeLocation(index)"
-                icon="delete"
-                :dark="globalSettings.darkMode"
-                class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-sm"
-                style="margin-bottom: 20px"
-                type="previous"
-                color="red"
-            />
-            <l-btn
                 @click="openTagModal(index)"
                 icon="mdi-tag"
                 :dark="globalSettings.darkMode"
@@ -148,6 +139,15 @@ const colors = [
                 style="margin-bottom: 20px"
                 type="previous"
                 color="blue"
+            />
+            <l-btn
+                @click="uploadStore.removeLocation(index)"
+                icon="delete"
+                :dark="globalSettings.darkMode"
+                class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-sm"
+                style="margin-bottom: 20px"
+                type="previous"
+                color="red"
             />
         </div>
     </div>
