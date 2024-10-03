@@ -87,11 +87,5 @@ const bannerTypeClass = computed(() => {
         background-color: $red-7;
         border: 2px solid $red-10;
     }
-    .banner-icon {
-        font-size: 30px !important;
-    }
-    .q-banner__content > div {
-        font-size: 12pt;
-    }
 }
 </style>
