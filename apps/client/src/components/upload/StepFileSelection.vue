@@ -70,7 +70,10 @@ const colors = ['red', 'blue', 'orange', 'green', 'yellow', 'pink'];
         class="column q-mt-none q-gutter-sm"
     >
         <div class="row">
-            <template v-for="(tag, tagIndex) in uploadStore.tags[index]">
+            <template
+                v-for="(tag, tagIndex) in uploadStore.tags[index]"
+                :key="tagIndex"
+            >
                 <l-chip
                     v-if="tag[0] !== ''"
                     :color="uploadStore.tagColors[tag[0]]"
@@ -158,7 +161,7 @@ const colors = ['red', 'blue', 'orange', 'green', 'yellow', 'pink'];
             </q-card-section>
 
             <q-card-section>
-                <template v-for="(item, idx) in tempTags">
+                <template v-for="(item, idx) in tempTags" :key="idx">
                     <div class="row items-center q-mt-md">
                         <q-input
                             class="q-mr-md"
