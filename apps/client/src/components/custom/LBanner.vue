@@ -31,18 +31,22 @@ const bannerIcon = computed(() => {
 });
 
 // Define dynamic classes based on `type`
-const bannerClasses = computed(() => {
+const bannerTypeClass = computed(() => {
     return {
-        'banner banner-success q-pa-md': props.type === 'success',
-        'banner banner-error q-pa-md': props.type === 'error',
-        'banner banner-warning q-pa-md': props.type === 'warning',
-        'banner banner-info q-pa-md ': props.type === 'info',
+        'banner-success': props.type === 'success',
+        'banner-error': props.type === 'error',
+        'banner-warning': props.type === 'warning',
+        'banner-info ': props.type === 'info',
     };
 });
 </script>
 
 <template>
-    <q-banner :class="[bannerClasses, $attrs.class]" :icon="bannerIcon" dense>
+    <q-banner
+        :class="['banner', 'q-pa-md', bannerTypeClass, $attrs.class]"
+        :icon="bannerIcon"
+        dense
+    >
         <template v-slot:avatar>
             <q-icon :name="bannerIcon" class="banner-icon" />
         </template>
