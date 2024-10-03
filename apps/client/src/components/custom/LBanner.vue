@@ -65,7 +65,7 @@ const bannerTypeClass = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.q-banner.banner {
+.banner {
     color: white;
     border-style: solid;
     border-width: 2px;
