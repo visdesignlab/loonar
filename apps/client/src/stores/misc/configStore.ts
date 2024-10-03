@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
 
 export const useConfigStore = defineStore('configStore', () => {
-    let environment =
+    const environment =
         import.meta.env.VITE_ENVIRONMENT !== undefined
             ? import.meta.env.VITE_ENVIRONMENT
             : 'production';
-    let useHttp = import.meta.env.VITE_USE_HTTP?.toLowerCase() === 'true';
-    let envServerUrl = import.meta.env.VITE_SERVER_URL;
+    const useHttp = import.meta.env.VITE_USE_HTTP?.toLowerCase() === 'true';
+    const envServerUrl = import.meta.env.VITE_SERVER_URL;
 
     let httpValue = 'http://';
     let wsValue = 'ws://';
@@ -28,19 +28,19 @@ export const useConfigStore = defineStore('configStore', () => {
 
     // let duckDbDataLocation =
     //     environment === 'local' ? 'data:9000' : 'minio:9000/data';
-    let duckDbDataLocation = 'client/data';
+    const duckDbDataLocation = 'client/data';
     const duckDbUrl = `${httpValue}${duckDbDataLocation}`;
     const entryPointFilename = '/aa_index.json';
 
     function getFileUrl(path: string): string {
         // Trims any leading slashes from path
-        let trimmedPath = path.replace(/^\/+/, '');
+        const trimmedPath = path.replace(/^\/+/, '');
         return `${serverUrl}/${trimmedPath}`;
     }
 
     function getDuckDbFileUrl(path: string): string {
         // Trims any leading slashes from path
-        let trimmedPath = path.replace(/^\/+/, '');
+        const trimmedPath = path.replace(/^\/+/, '');
         return `${duckDbUrl}/${trimmedPath}`;
     }
 
