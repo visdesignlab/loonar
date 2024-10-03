@@ -54,52 +54,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
-.q-btn { 
-    border-radius:6px;
+.q-btn {
+    border-radius: 6px;
 }
-.q-stepper{
-    box-shadow:none;
-    border:2px solid $grey-3;
-}
-
-/*---------------------------------------*/
-/*--------------- BANNERS ---------------*/
-/*---------------------------------------*/
-.q-banner.banner{
-    border-radius:4px;
-    color:white;
-
-    &.banner-success {
-        background-color: $green-7;
-        border: 2px solid $green-8;
-    }
-    
-    &.banner-warning{
-        background-color: $yellow-9;
-        border: 2px solid $yellow-9;
-    }
-    
-    &.banner-info{
-        background-color: $blue-7;
-        border: 2px solid $blue-9;
-    }
-    
-    &.banner-error {
-        background-color: $red-7;
-        border: 2px solid $red-10;
-    }
-    .banner-icon{
-        font-size:30px !important;
-    }
-    .q-banner__content > div {
-        font-size: 12pt;
-    }
+.q-stepper {
+    box-shadow: none;
+    border: 2px solid $grey-3;
 }
 
-/*---------------------------------------*/
-/*---------------------------------------*/
-/*---------------------------------------*/
-
-:root, [data-bs-theme=light]{
-    --bs-font-sans-serif:'Inter', sans-serif;
+:root,
+[data-bs-theme='light'] {
+    --bs-font-sans-serif: 'Inter', sans-serif;
 }
