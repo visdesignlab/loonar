@@ -45,6 +45,8 @@ const buttonColor = computed(() => {
             return 'standard';
         case 'basic':
             return 'standard';
+        default:
+            return 'standard';
     }
 });
 </script>
