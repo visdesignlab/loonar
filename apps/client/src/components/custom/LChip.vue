@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-
 // Props
-const props = defineProps({
+defineProps({
     label: {
         type: String,
         required: true,
@@ -10,12 +8,6 @@ const props = defineProps({
 });
 </script>
 <template>
-    <q-chip color="primary" class="l-chip" :label="label" />
+    <q-chip color="primary" square dense outline :label="label" />
 </template>
-<style scoped lang="scss">
-.l-chip {
-    border: 1px solid black;
-    font-size: 0.6rem;
-    border-radius: 6px;
-}
-</style>
+<style scoped lang="scss"></style>
