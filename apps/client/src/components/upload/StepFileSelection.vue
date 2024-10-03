@@ -54,7 +54,14 @@ const removeTag = (idx: number) => {
 };
 
 const currColorIndex = ref<number>(0);
-const colors = ['red', 'blue', 'orange', 'green', 'yellow', 'pink'];
+const colors = [
+    'indigo-10',
+    'teal-10',
+    'purple-10',
+    'red-10',
+    'blue-grey-10',
+    'brown-9',
+];
 </script>
 
 <template>
