@@ -88,7 +88,7 @@ const colors = ['red', 'blue', 'orange', 'green', 'yellow', 'pink'];
                 v-model="locationFile.locationId"
                 label="Location ID"
                 :dark="globalSettings.darkMode"
-                :rules="[(val) => !!val || 'Field is required']"
+                :rules="[(val: any) => !!val || 'Field is required']"
                 :error="
                     !uploadStore.locationIdsUnique &&
                     currentLocationIndex === index
