@@ -54,8 +54,4 @@ const bannerClasses = computed(() => {
     </q-banner>
 </template>
 
-<style scoped>
-.q-mb-md {
-    margin-bottom: 16px;
-}
-</style>
+<style scoped></style>
