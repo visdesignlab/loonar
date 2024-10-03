@@ -66,28 +66,31 @@ const bannerTypeClass = computed(() => {
 
 <style lang="scss" scoped>
 .banner {
-    color: white;
     border-style: solid;
     border-width: 2px;
 
     &.banner-success {
-        background-color: $green-7;
+        background-color: $green-1;
         border-color: $green-8;
+        color: $green-10;
     }
 
     &.banner-warning {
-        background-color: $yellow-9;
-        border-color: $yellow-9;
+        background-color: $yellow-1;
+        border-color: $orange-7;
+        color: $deep-orange-10;
     }
 
     &.banner-info {
-        background-color: $blue-7;
+        background-color: $blue-1;
         border-color: $blue-9;
+        color: $blue-10;
     }
 
     &.banner-error {
-        background-color: $red-7;
+        background-color: $red-1;
         border-color: $red-10;
+        color: $red-10;
     }
 }
 </style>
