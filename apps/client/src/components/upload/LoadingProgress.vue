@@ -62,7 +62,7 @@ const getCurrProgressValue = (file: FileToUpload): number => {
 </script>
 
 <template>
-    <template v-for="(item, idx) in progressStatus" :key="item.label">
+    <template v-for="item in progressStatus" :key="item.uniqueId">
         <div class="row q-ma-sm q-mt-lg justify-between items-center">
             <div class="row items-center">
                 <q-icon
