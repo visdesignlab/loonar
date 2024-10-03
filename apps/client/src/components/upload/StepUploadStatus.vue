@@ -36,8 +36,7 @@ const uploadStore = useUploadStore();
                     message="All your data has been processed and your experiment has
                     been successfully added. You can now navigate away from this
                     page."
-                >
-                </l-banner>
+                />
             </template>
         </div>
         <div class="flex-row q-mt-md">
