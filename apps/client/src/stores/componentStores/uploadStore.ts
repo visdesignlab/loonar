@@ -478,7 +478,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
 
     async function onSubmitExperiment(): Promise<CreateExperimentResponseData> {
         if (experimentName.value && experimentConfig.value) {
-            let locationTags = convertTags();
+            const locationTags = convertTags();
             console.log(locationTags);
             const submitExperimentResponse = await loonAxios.createExperiment(
                 experimentName.value,
@@ -497,9 +497,9 @@ export const useUploadStore = defineStore('uploadStore', () => {
     }
 
     function convertTags(): Record<string, Record<string, string>> {
-        let locationBasedTags: Record<string, Record<string, string>> = {};
+        const locationBasedTags: Record<string, Record<string, string>> = {};
         tags.value.forEach((location: [string, string][], idx: number) => {
-            let currentTags = Object.fromEntries(location);
+            const currentTags = Object.fromEntries(location);
             locationBasedTags[`location_${idx}`] = currentTags;
         });
         return locationBasedTags;
@@ -547,7 +547,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
             text += decoder.decode(chunk, { stream: true });
             const lines = text.split('\n');
             if (lines.length > 1) {
-                let headerIndex = currentWorkflowConfig.value.skip_lines;
+                const headerIndex = currentWorkflowConfig.value.skip_lines;
                 firstLine = lines[headerIndex];
                 break;
             }
