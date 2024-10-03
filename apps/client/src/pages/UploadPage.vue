@@ -105,6 +105,8 @@ function handlePreviousStep(): void {
                 ref="stepper"
                 color="primary"
                 animated
+                flat
+                bordered
                 keep-alive
                 header-nav
                 :dark="globalSettings.darkMode"
