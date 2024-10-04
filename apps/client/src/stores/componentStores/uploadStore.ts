@@ -291,16 +291,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         }
     });
 
-    // function locationIdsUnique(): boolean {
-    //     const locationIds = new Set<string>();
-    //     for (const locationFiles of locationFileList.value) {
-    //         if (locationIds.has(locationFiles.locationId)) {
-    //             return false;
-    //         }
-    //         locationIds.add(locationFiles.locationId);
-    //     }
-    //     return true;
-    // }
 
     // Function to upload all necessary files in experiment.
     async function uploadAll() {

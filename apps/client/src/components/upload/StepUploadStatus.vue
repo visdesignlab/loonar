@@ -48,9 +48,4 @@ const uploadStore = useUploadStore();
 </template>
 
 <style scoped lang="scss">
-.my-banner {
-    border: 5px solid blue;
-    background-color: rgba(0, 0, 255, 0.6);
-    border-radius: 20px;
-}
 </style>
