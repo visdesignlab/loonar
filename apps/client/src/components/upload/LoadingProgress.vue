@@ -25,6 +25,11 @@ const getLabel = (file: FileToUpload): string => {
         fileType = splitUniqueId[2];
         locationId = splitUniqueId[1];
     }
+
+    if(file.uploading === 'not_started'){
+        return `Waiting to upload Location ${locationId} ${fileType}...`
+    }
+
     if (file.uploading !== 'succeeded' && file.uploading !== 'failed') {
         return `Uploading Location ${locationId} ${fileType}... `;
     } else if (
@@ -74,14 +79,26 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                     name="mdi-alert-box"
                     color="red"
                 />
+                <q-icon
+                    v-if="item.uploading === 'not_started'"
+                    name="mdi-circle-outline"
+                    color="grey"
+                    class="q-mr-sm"
+                />
                 <q-spinner
                     v-else-if="item.processing !== 'succeeded'"
                     class="q-mr-sm"
                 />
                 <q-icon
-                    v-else
+                    v-else-if="item.processing === 'succeeded' && item.uploading === 'succeeded'"
                     name="check_circle"
                     color="success"
+                    class="q-mr-sm"
+                />
+                <q-icon
+                    v-else
+                    name="mdi-circle-outline"
+                    color="grey"
                     class="q-mr-sm"
                 />
                 <div>{{ getLabel(item) }}</div>

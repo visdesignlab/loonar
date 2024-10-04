@@ -453,7 +453,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
     watch(experimentConfig, async (newVal) => {
         if (newVal !== null) {
             // This only triggers when everything is done since experimentConfig is only computed once all has finished.
-            if (experimentConfig && experimentHeaders) {
+            if (experimentConfig.value && experimentHeaders.value) {
                 createExperimentProgress.value.progress = 'running';
                 const submitExperimentResponse: CreateExperimentResponseData =
                     await onSubmitExperiment();

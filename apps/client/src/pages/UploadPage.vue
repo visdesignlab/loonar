@@ -108,7 +108,6 @@ function handlePreviousStep(): void {
                 flat
                 bordered
                 keep-alive
-                header-nav
                 :dark="globalSettings.darkMode"
             >
                 <q-step
