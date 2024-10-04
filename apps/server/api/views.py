@@ -44,13 +44,10 @@ def create_composite_tabular_data_file(
     # Get all new columns to append
     tag_key_list = []
     for entry in location_tags.values():
-        print(entry, flush=True)
         for key in entry.keys():
             tag_key_list.append(key)
 
-    print(tag_key_list, flush=True)
     tag_key_list = list(set(tag_key_list))
-    print(tag_key_list, flush=True)
 
     with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as temp_file:
         temp_file_name = temp_file.name
@@ -155,7 +152,6 @@ class ProcessDataView(APIView):
             response_data['status'] = 'ERROR'
             response_data['message'] = 'Unable to retrieve status'
 
-        print(result.info, flush=True)
         response_data['data'] = result.info
 
         return Response(response_data)
@@ -169,7 +165,6 @@ class FinishExperimentView(APIView):
         experiment_headers = json.loads(data.get('experimentHeaders'))
         experiment_header_transforms = json.loads(data.get('experimentHeaderTransforms'))
         location_tags = json.loads(data.get('locationTags'))
-        print(location_tags, flush=True)
 
         experiment_name = data.get('experimentName')
 
