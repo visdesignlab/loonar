@@ -65,6 +65,7 @@ export async function loadFileIntoDuckDb(
             throw new Error(message);
         }
     } else if (type === 'parquet') {
+        console.log('im here')
         try {
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);

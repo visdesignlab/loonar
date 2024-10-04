@@ -17,10 +17,9 @@ from .serializers import (
 )
 from .models import LoonUpload, Location, Experiment
 from django.core.files.base import ContentFile  # type: ignore
-import csv
 import tempfile
-import io
 import os
+import pandas as pd
 
 
 def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
@@ -40,7 +39,7 @@ def create_composite_tabular_data_file(
         location_tags: dict
         ) -> str:
 
-    composite_tabular_data_file_name = f"{experiment_name}/composite_tabular_data.csv"
+    composite_tabular_data_file_name = f"{experiment_name}/composite_tabular_data.parquet"
 
     # Get all new columns to append
     tag_key_list = []
@@ -53,40 +52,37 @@ def create_composite_tabular_data_file(
     tag_key_list = list(set(tag_key_list))
     print(tag_key_list, flush=True)
 
-    # Step 1: Create a temporary file
     with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as temp_file:
         temp_file_name = temp_file.name
-
         for idx, entry in enumerate(experiment_settings):
+
             curr_tabular_data_file = entry['tabularDataFilename']
+
             with default_storage.open(curr_tabular_data_file, 'rb') as curr_source_file:
-                text_stream = io.TextIOWrapper(curr_source_file, encoding='utf-8')
-                csv_reader = csv.reader(text_stream, delimiter=',')
-                csv_writer = csv.writer(temp_file, delimiter=',')
 
-                # Assuming first line is always a header
-                for row_idx, row in enumerate(csv_reader):
-                    if row_idx == 0:
-                        if idx == 0:
-                            row.insert(0, "Location")
+                # Read CSV
+                df = pd.read_csv(curr_source_file)
 
-                            for tag_column in tag_key_list:
-                                row.append(tag_column)
-                            csv_writer.writerow(row)
-                    else:
-                        row.insert(0, entry["id"])
-                        for tag_column in tag_key_list:
-                            try:
-                                tag_value = location_tags[f'location_{idx}'][tag_column]
-                            except KeyError:
-                                tag_value = ''
-                            row.append(tag_value)
-                        csv_writer.writerow(row)
+                # First column is location
+                df.insert(0, "location", entry['id'])
 
-    # Step 4: Upload the temporary file back to default storage
-    with open(temp_file_name, 'rb') as final_file:
-        # Save the temp file in default storage
-        default_storage.save(composite_tabular_data_file_name, final_file)
+                # Insert all tags
+                for tag_column in tag_key_list:
+                    # Using get -- much easier to get defaults with dictionaries
+                    df[tag_column] = location_tags.get(f'location_{idx}',{}).get(tag_column, '')
+
+                # Add current data_frame to data_frames list
+
+            if idx == 0:
+                # Write the first DataFrame
+                df.to_parquet(temp_file_name, index=False, engine='fastparquet')
+            else:
+                # Append subsequent DataFrames
+                df.to_parquet(temp_file_name, index=False, engine='fastparquet', append=True)
+                
+    # Store
+    with open(temp_file_name, 'rb') as composite_temp_file:
+        default_storage.save(composite_tabular_data_file_name, composite_temp_file)
 
     # Clean up the temp file from local disk
     os.remove(temp_file_name)

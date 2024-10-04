@@ -134,10 +134,11 @@ export const useDatasetSelectionStore = defineStore(
                         ?.compositeTabularDataFilename
                 );
                 try {
+                    console.log('here')
                     await loadFileIntoDuckDb(
                         duckDbFileUrl,
                         'composite_experiment_cell_metadata',
-                        'csv'
+                        'parquet'
                     );
                     notify({
                         type: 'success',
@@ -183,7 +184,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                            location.id
+                        location.id
                         ]
                     ) {
                         return location;
@@ -242,7 +243,6 @@ export const useDatasetSelectionStore = defineStore(
         }
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
-            await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
             try {
                 await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
             } catch (error) {
