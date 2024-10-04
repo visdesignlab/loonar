@@ -8,7 +8,6 @@ import {
     type VerifyExperimentNameResponseData,
 } from '@/util/axios';
 
-import type { ProgressRecord } from '@/components/upload/LoadingProgress.vue';
 import { useConfigStore } from '../misc/configStore';
 import { useNotificationStore } from '../misc/notificationStore';
 
@@ -44,8 +43,8 @@ export interface LocationConfig {
 }
 
 export interface OverallProgress {
-    status: -1 | 0 | 1 | 2; // Failed, not started, running, succeeded
-    message?: string;
+    status: 'failed' | 'not_started' | 'running' | 'succeeded'; // Failed, not started, running, succeeded
+    message: string;
 }
 
 export interface WorkflowConfiguration {
@@ -62,7 +61,8 @@ const initialState = () => ({
     }),
     experimentName: ref<string>(''),
     overallProgress: ref<OverallProgress>({
-        status: 1,
+        status: 'not_started',
+        message: 'Waiting to upload and process data.'
     }),
     tags: ref<[string, string][][]>([[['', '']]]),
     tagColors: ref<Record<string, string>>({}),
@@ -225,21 +225,21 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
-                uniqueId: `location-${currId}-table`,
+                uniqueId: `location_${currId}_table`,
             },
             images: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
-                uniqueId: `location-${currId}-images`,
+                uniqueId: `location_${currId}_images`,
             },
             segmentations: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
-                uniqueId: `location-${currId}-segmentations`,
+                uniqueId: `location_${currId}_segmentations`,
             },
         });
         // Add initial tags
@@ -403,10 +403,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
     // --------------------------------------------------------
     // --------------------------------------------------------
 
-    const createExperimentProgress = ref<ProgressRecord>({
-        label: 'Create Experiment',
-        progress: 'not_started',
-    });
+    const createExperimentProgress = ref<progress>('not_started')
 
     const progressList = computed<FileToUpload[]>((): FileToUpload[] => {
         const tempProgressList: FileToUpload[] = [];
@@ -420,26 +417,45 @@ export const useUploadStore = defineStore('uploadStore', () => {
 
     // Watches progress list for all successes or any failures. Sets overall status based on the findings.
 
+    // Starts as 'not_started', so if anyRunning, anyFailed, allSucceeded all are false, will indicate it is not running and will, by default, be displayed as such.
+
     watch(
-        progressList,
-        (newList) => {
+        [progressList, createExperimentProgress],
+        ([newList, newCreateExperimentProgress]) => {
+
+            const anyRunning = newList.some(
+                (item: FileToUpload) =>
+                    item.uploading === 'running' || item.processing === 'running'
+
+            );
+
             const anyFailed = newList.some(
                 (item: FileToUpload) =>
                     item.uploading === 'failed' || item.processing === 'failed'
             );
-            if (anyFailed) {
-                overallProgress.value.status = -1;
-                overallProgress.value.message =
-                    'There was an error submitting this experiment.';
-            }
+
             const allSucceeded = newList.every(
                 (item: FileToUpload) =>
                     item.uploading === 'succeeded' &&
                     item.processing === 'succeeded'
             );
-            if (allSucceeded) {
-                overallProgress.value.status = 2;
-                overallProgress.value.message = 'Succeeded.';
+
+            if (anyFailed) {
+                overallProgress.value.status = 'failed';
+                overallProgress.value.message =
+                    'There was an processing one or more datasets. This experiment will need to be re-submitted.';
+            } else if (allSucceeded) {
+                if (newCreateExperimentProgress === 'succeeded') {
+                    overallProgress.value.status = 'succeeded';
+                    overallProgress.value.message = 'All your data has been processed and your experiment has been successfully added. You can now navigate away from this page.';
+                } else if (newCreateExperimentProgress === 'failed') {
+                    overallProgress.value.status = 'failed';
+                    overallProgress.value.message = 'There was an error when creating the final experiment. Please contact an administrator or re-try the experiment.'
+                }
+            } else if (anyRunning) {
+                overallProgress.value.status = 'running';
+                overallProgress.value.message =
+                    'Your data is currently being processed. Please do not exit this page.';
             }
         },
         { deep: true }
@@ -454,13 +470,13 @@ export const useUploadStore = defineStore('uploadStore', () => {
         if (newVal !== null) {
             // This only triggers when everything is done since experimentConfig is only computed once all has finished.
             if (experimentConfig.value && experimentHeaders.value) {
-                createExperimentProgress.value.progress = 'running';
+                createExperimentProgress.value = 'running';
                 const submitExperimentResponse: CreateExperimentResponseData =
                     await onSubmitExperiment();
                 if (submitExperimentResponse.status === 'SUCCESS') {
-                    createExperimentProgress.value.progress = 'succeeded';
+                    createExperimentProgress.value = 'succeeded';
                 } else {
-                    createExperimentProgress.value.progress = 'failed';
+                    createExperimentProgress.value = 'failed';
                 }
             }
         }

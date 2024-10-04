@@ -152,16 +152,16 @@ function handlePreviousStep(): void {
                     name="uploading"
                     icon="upload"
                     :active-icon="
-                        uploadStore.overallProgress.status == 2
+                        uploadStore.overallProgress.status == 'succeeded'
                             ? 'mdi-check'
                             : 'upload'
                     "
                     :active-color="
-                        uploadStore.overallProgress.status == 2
+                        uploadStore.overallProgress.status == 'succeeded'
                             ? 'green'
                             : '#1976d2'
                     "
-                    :done="uploadStore.overallProgress.status == 2"
+                    :done="uploadStore.overallProgress.status == 'succeeded'"
                 >
                     <StepUploadStatus />
                 </q-step>
@@ -203,14 +203,14 @@ function handlePreviousStep(): void {
                             @click="returnHome"
                             label="Return To Home"
                             class="q-mr-sm"
-                            :disabled="uploadStore.overallProgress.status !== 2"
+                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
                             type="previous"
                         />
                         <l-btn
                             v-if="uploadStore.step == 'uploading'"
                             @click="addNewExperiment"
                             label="Create New Experiment"
-                            :disabled="uploadStore.overallProgress.status !== 2"
+                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
                         />
                     </q-stepper-navigation>
                 </template>

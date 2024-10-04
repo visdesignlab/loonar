@@ -11,31 +11,27 @@ const uploadStore = useUploadStore();
         <div class="flex-row q-mt-md">
             <template
                 v-if="
-                    uploadStore.overallProgress.status !== 2 &&
-                    uploadStore.overallProgress.status !== -1
+                    uploadStore.overallProgress.status === 'not_started' || uploadStore.overallProgress.status === 'running'
                 "
             >
                 <l-banner
                     class="q-mb-md"
                     type="info"
-                    message="Your data is currently being processed. Please do not exit
-                    this page."
+                    :message="uploadStore.overallProgress.message"
                 />
             </template>
-            <template v-else-if="uploadStore.overallProgress.status === -1">
+            <template v-else-if="uploadStore.overallProgress.status === 'failed'">
                 <l-banner
                     type="error"
-                    message="There was an error in one or more processing steps. Your
-                    experiment will need to be re-uploaded."
+                    class="q-mb-md"
+                    :message="uploadStore.overallProgress.message"
                 />
             </template>
             <template v-else>
                 <l-banner
                     class="q-mb-md"
                     type="success"
-                    message="All your data has been processed and your experiment has
-                    been successfully added. You can now navigate away from this
-                    page."
+                    :message="uploadStore.overallProgress.message"
                 />
             </template>
         </div>

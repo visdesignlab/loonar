@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import type { PropType } from 'vue';
 import type {
-    progress,
     FileToUpload,
 } from '@/stores/componentStores/uploadStore';
-export interface ProgressRecord {
-    label: string;
-    progress: progress;
-    subProgress?: ProgressRecord[];
-}
 
 const props = defineProps({
     progressStatus: {
