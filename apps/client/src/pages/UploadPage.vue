@@ -1,20 +1,22 @@
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref } from 'vue';
 import StepExperimentMetadata from '@/components/upload/StepExperimentMetadata.vue';
 import StepFileSelection from '@/components/upload/StepFileSelection.vue';
 import StepReview from '@/components/upload/StepReview.vue';
 import StepUploadStatus from '@/components/upload/StepUploadStatus.vue';
 import StepColumnNameMapping from '@/components/upload/StepColumnNameMapping.vue';
 import type { QStepper } from 'quasar';
-import { useUploadStore } from '@/stores/uploadStore';
-import { useConfigStore } from '@/stores/configStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useQuasar } from 'quasar';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
+import { useConfigStore } from '@/stores/misc/configStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useNotificationStore } from '@/stores/misc/notificationStore';
+import LBtn from '@/components/custom/LBtn.vue';
 
 import { router } from '@/router';
 const uploadStore = useUploadStore();
 const configStore = useConfigStore();
 const globalSettings = useGlobalSettings();
+const notificationStore = useNotificationStore();
 const stepper = ref(null);
 
 // Function to determine if the create experiment button should be enabled.
@@ -31,7 +33,7 @@ function experimentMetadataDone(): boolean {
 }
 
 function fileSelectionDone(): boolean {
-    return uploadStore.allFilesPopulated() && uploadStore.locationIdsUnique();
+    return uploadStore.allFilesPopulated() && uploadStore.locationIdsUnique;
 }
 
 function columnNameMappingDone(): boolean {
@@ -42,24 +44,23 @@ function returnHome(): void {
     router.push('/');
 }
 
-const $q = useQuasar();
+function addNewExperiment(): void {
+    uploadStore.resetState();
+}
 
 async function handleNextStep(): Promise<void> {
     if (uploadStore.step === 'finalReview' || uploadStore.step === 'metadata') {
         const verifyExperimentName = await uploadStore.verifyExperimentName();
         if (verifyExperimentName) {
             uploadStore.experimentNameValid = true;
-            if (uploadStore.step === 'metadata') {
-                (stepper.value as any).next();
-            } else {
+            if (uploadStore.step === 'finalReview') {
                 uploadStore.uploadAll();
             }
+            (stepper.value as any).next();
         } else {
-            $q.notify({
-                color: 'negative',
+            notificationStore.notify({
                 message: 'Experiment Name already in use.',
-                icon: 'report_problem',
-                position: 'top',
+                type: 'problem',
             });
             uploadStore.experimentNameValid = false;
         }
@@ -92,14 +93,21 @@ function handlePreviousStep(): void {
                 </template>
             </q-banner>
         </template>
-        <template v-else-if="!uploadStore.experimentCreated">
+        <template v-else>
+            <div class="row">
+                <div class="row" style="justify-content: space-between">
+                    <span class="text-h4">Uploading An Experiment</span>
+                </div>
+            </div>
+            <div class="row"></div>
             <q-stepper
                 v-model="uploadStore.step"
                 ref="stepper"
                 color="primary"
                 animated
+                flat
+                bordered
                 keep-alive
-                header-nav
                 :dark="globalSettings.darkMode"
             >
                 <q-step
@@ -130,8 +138,32 @@ function handlePreviousStep(): void {
                     <StepColumnNameMapping />
                 </q-step>
 
-                <q-step title="Review" name="finalReview" icon="settings">
+                <q-step
+                    title="Review"
+                    name="finalReview"
+                    icon="settings"
+                    :done="uploadStore.step == 'uploading'"
+                    done-color="green"
+                >
                     <StepReview />
+                </q-step>
+                <q-step
+                    title="Uploading"
+                    name="uploading"
+                    icon="upload"
+                    :active-icon="
+                        uploadStore.overallProgress.status == 'succeeded'
+                            ? 'mdi-check'
+                            : 'upload'
+                    "
+                    :active-color="
+                        uploadStore.overallProgress.status == 'succeeded'
+                            ? 'green'
+                            : '#1976d2'
+                    "
+                    :done="uploadStore.overallProgress.status == 'succeeded'"
+                >
+                    <StepUploadStatus />
                 </q-step>
 
                 <template v-slot:navigation>
@@ -142,17 +174,19 @@ function handlePreviousStep(): void {
                             justify-content: flex-end;
                         "
                     >
-                        <q-btn
-                            v-if="uploadStore.step !== 'metadata'"
-                            flat
-                            color="primary"
-                            @click="handlePreviousStep"
+                        <l-btn
+                            v-if="
+                                uploadStore.step !== 'metadata' &&
+                                uploadStore.step !== 'uploading'
+                            "
                             label="Back"
-                            class="q-ml-sm"
+                            class="q-mr-sm"
+                            @click="handlePreviousStep"
+                            type="previous"
                         />
-                        <q-btn
+                        <l-btn
+                            v-if="uploadStore.step !== 'uploading'"
                             @click="handleNextStep"
-                            color="primary"
                             :label="
                                 uploadStore.step === 'finalReview'
                                     ? 'Begin Processing'
@@ -164,12 +198,23 @@ function handlePreviousStep(): void {
                                     : false
                             "
                         />
+                        <l-btn
+                            v-if="uploadStore.step == 'uploading'"
+                            @click="returnHome"
+                            label="Return To Home"
+                            class="q-mr-sm"
+                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
+                            type="previous"
+                        />
+                        <l-btn
+                            v-if="uploadStore.step == 'uploading'"
+                            @click="addNewExperiment"
+                            label="Create New Experiment"
+                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
+                        />
                     </q-stepper-navigation>
                 </template>
             </q-stepper>
-        </template>
-        <template v-else>
-            <StepUploadStatus />
         </template>
     </q-page>
 </template>

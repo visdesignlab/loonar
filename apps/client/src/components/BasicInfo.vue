@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCellMetaData, type Lineage } from '@/stores/cellMetaData';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
+import {
+    useCellMetaData,
+    type Lineage,
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { storeToRefs } from 'pinia';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
 

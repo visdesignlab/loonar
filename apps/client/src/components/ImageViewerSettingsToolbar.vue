@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
-import { useCellMetaData } from '@/stores/cellMetaData';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
-import { useEventBusStore } from '@/stores/eventBusStore';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const cellMetaData = useCellMetaData();

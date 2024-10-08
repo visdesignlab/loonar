@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useUploadStore } from '@/stores/uploadStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useUploadStore } from '@/stores/componentStores/uploadStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const uploadStore = useUploadStore();
 const globalSettings = useGlobalSettings();
 
@@ -45,7 +45,6 @@ const specialVariables = ref<SpecialVariable[]>([
         description: 'Same, but for the Y coordinate.',
     },
 ]);
-
 </script>
 
 <template>

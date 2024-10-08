@@ -7,19 +7,20 @@ import {
     type Lineage,
     type Track,
     type Cell,
-} from '@/stores/cellMetaData';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 
-import { useImageViewerStore } from '@/stores/imageViewerStore';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
-import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntrracked';
-import { useSegmentationStore } from '@/stores/segmentationStore';
-import { useEventBusStore } from '@/stores/eventBusStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
 import { clamp } from 'lodash-es';
 import Pool from '../util/Pool';
-import { useLooneageViewStore } from '@/stores/looneageViewStore';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+
 
 import {
     loadOmeTiff,
@@ -40,9 +41,11 @@ import {
 import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
+import { useConfigStore } from '@/stores/misc/configStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
+const configStore = useConfigStore();
 const { darkMode } = storeToRefs(globalSettings);
 const segmentationStore = useSegmentationStore();
 const dataPointSelection = useDataPointSelection();
@@ -159,7 +162,7 @@ watch(currentLocationMetadata, async () => {
     // imageViewerStore.frameIndex = 0;
     pixelSource.value = null;
 
-    const fullImageUrl = datasetSelectionStore.getFileUrl(
+    const fullImageUrl = configStore.getFileUrl(
         currentLocationMetadata.value.imageDataFilename
     );
     loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
@@ -201,7 +204,7 @@ function createBaseImageLayer(): typeof ImageLayer {
 }
 
 function createSegmentationsLayer(): typeof GeoJsonLayer {
-    const folderUrl = datasetSelectionStore.getFileUrl(
+    const folderUrl = configStore.getFileUrl(
         datasetSelectionStore.currentLocationMetadata?.segmentationsFolder ??
             'UNKNOWN'
     );

@@ -86,7 +86,6 @@ The build script will do its best to validate each of these fields before starti
 | -D, --down            | Stops all containers and removes all containers. Note that this will not build or start containers nor validate the configuration file.                                                                 | -D                             |
 | -o, --overwrite       | When set, any settings in your configuration file which are present as environment variables in the current session will be overwritten.                                                                | -o                             |
 | -s, --disable-spinner | When set, disables inline spinner                                                                                                                                                                       | -s                             |
-| --run-dev             | When set, will launch a separate development client server running on http://localhost:5173. A `.env` file will be generated in the apps/client directory. This cannot be set when using detached mode. | --run-dev                      |
 | --prepare-dev         | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server.                                                                  | --prepare-dev                  |
 
 In the repository, you will see two docker directories: `docker` and `docker-local`. The main deployment will use the `docker` directory. The `docker-local` directory is a separate local version of Loon which we will discuss shortly. Below are some examples.
@@ -95,7 +94,22 @@ In the repository, you will see two docker directories: `docker` and `docker-loc
 python3 build.py
 ```
 
-The above script will build and then run all containers using a default of "config.json" as the configuration file and creating a ".env" file in the `.build-files` directory.
+
+**Running Development Server**
+
+If you'd like to have access to all the development server functionality when working with Loon, you can run a separate development server that connects to the running Docker container. We start by building and running the docker container with the additional flag `--prepare-dev`. This will generate the necessary `.env` file in the `apps/client` directory that will be used by the client.
+
+```bash
+python3 build.py --prepare-dev
+```
+Once that has started, navigate to the `apps/client` directory and run the development server.
+
+```bash
+cd apps/client
+yarn run dev
+```
+
+This will start a separate development server at `http://localhost:5173`. The standard client will still be available as well. 
 
 **Specifying the env file name and configuration file name**
 
@@ -117,7 +131,7 @@ This will enable verbose mode so that we can see the build process as it runs. I
 
 ```bash
 export LOCALDATASETTINGS_SOURCEVOLUMELOCATION=/Users/MyUser/my-loon-data
-python3 build -o
+python3 build.py -o
 ```
 
 This will take your current config (in this case `config.json` in the root directory since no file name was specified) and overwrite the `localDataSettings.sourceVolumeLocation` value to be `/Users/MyUser/my-loon-data`. The original `config.json` will not be altered. Instead, a temporary file (in this case named `config.json.temp`) will be created and then used.

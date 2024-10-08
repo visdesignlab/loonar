@@ -37,8 +37,6 @@ class BuildValidationError(Exception):
         # Now for your custom code...
 
 
-
-
 class BuildConfig:
     def __init__(self, configFile, envFile):
         try:

@@ -1515,7 +1515,7 @@
 
 "@uwdata/vgplot@^0.9.0":
   version "0.9.0"
-  resolved "https://registry.npmjs.org/@uwdata/vgplot/-/vgplot-0.9.0.tgz"
+  resolved "https://registry.yarnpkg.com/@uwdata/vgplot/-/vgplot-0.9.0.tgz#e78a97f533312c525c8cac1c71024ebc16516c9e"
   integrity sha512-NQbqPXYCqsE8gILISx77GZx4QW7A9pWu/OtZhiKq2M9t5UNYyWW4B7zRl2l4L20+Xcb8WhKmAL7aFilS2y5h3w==
   dependencies:
     "@uwdata/mosaic-core" "^0.9.0"

@@ -1,9 +1,9 @@
 from django.db import models  # type: ignore
 from s3_file_field import S3FileField  # type: ignore
 import uuid
-# Create your models here.
 
 
+# Upload model for uploading files to MinIO
 class LoonUpload(models.Model):
 
     def upload_path(instance, filename):
@@ -25,6 +25,7 @@ class LoonUpload(models.Model):
     blob = S3FileField(upload_to=upload_path)
 
 
+# Experiment Model. Contains all information regarding a specific experiment.
 class Experiment(models.Model):
 
     def to_json(self):
@@ -33,6 +34,7 @@ class Experiment(models.Model):
         data = {
             "name": self.name,
             "headers": self.headers.split("|"),
+            "compositeTabularDataFilename": self.composite_tabular_data_file_name,
             "headerTransforms": {
                 "time": self.header_time,
                 "frame": self.header_frame,
@@ -56,6 +58,7 @@ class Experiment(models.Model):
     header_x = models.CharField(max_length=255)
     header_y = models.CharField(max_length=255)
     number_of_locations = models.IntegerField()
+    composite_tabular_data_file_name = models.CharField(max_length=255, default='')
 
 
 class Location(models.Model):
@@ -65,7 +68,8 @@ class Location(models.Model):
             "id": self.name,
             "tabularDataFilename": self.tabular_data_filename,
             "imageDataFilename": self.images_data_filename,
-            "segmentationsFolder": self.segmentations_folder
+            "segmentationsFolder": self.segmentations_folder,
+            "tags": self.tags
         }
         return data
 
@@ -74,6 +78,7 @@ class Location(models.Model):
     tabular_data_filename = models.CharField(max_length=255)
     images_data_filename = models.CharField(max_length=255)
     segmentations_folder = models.CharField(max_length=255)
+    tags = models.JSONField(default={})
 
     def __str__(self):
         return f"{self.experiment}_{self.name}"

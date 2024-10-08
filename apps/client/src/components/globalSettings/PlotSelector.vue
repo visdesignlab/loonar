@@ -4,17 +4,20 @@ import { QBtn, QDialog, QCard, QCardSection, QCardActions } from 'quasar';
 import * as vg from '@uwdata/vgplot';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
-import { useSelectionStore, emitter } from '@/stores/selectionStore';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import {
+    useSelectionStore,
+    emitter,
+} from '@/stores/interactionStores/selectionStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useNotificationStore } from '@/stores/misc/notificationStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+const datasetSelectionStore = useDatasetSelectionStore();
 
 const globalSettings = useGlobalSettings();
-const cellMetaData = useCellMetaData();
-const { dataInitialized } = storeToRefs(cellMetaData);
-
-interface Selection {
-    [key: string]: [number, number] | undefined;
-}
+const notificationStore = useNotificationStore();
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+    datasetSelectionStore
+);
 
 const menuOpen = ref(false);
 const loading = ref(true);
@@ -25,25 +28,60 @@ const displayedPlots = computed(() =>
 const totalPlots = computed(() => displayedPlots.value.length);
 
 // On any update, computes the plots to be shown.
+
+// Checks if specifically experiment metadata is already loaded.
 const allPlotNames = computed(() => {
-    return dataInitialized.value ? cellMetaData.headers : [];
+    if (
+        experimentDataInitialized.value &&
+        currentExperimentMetadata.value &&
+        currentExperimentMetadata.value.headers
+    ) {
+        return currentExperimentMetadata.value.headers;
+    } else {
+        return [];
+    }
 });
+
 const firstPlotName = computed(() => {
-    return dataInitialized.value ? cellMetaData.headerKeys.mass : '';
+    if (
+        experimentDataInitialized.value &&
+        currentExperimentMetadata.value &&
+        currentExperimentMetadata.value.headers &&
+        currentExperimentMetadata.value.headers.length > 0
+    ) {
+        // does headerTransforms['mass'] exist
+        const headerTransforms =
+            currentExperimentMetadata.value.headerTransforms;
+        if (
+            headerTransforms &&
+            headerTransforms['mass'] &&
+            headerTransforms['mass'] !== ''
+        ) {
+            return headerTransforms['mass'];
+        } else {
+            // otherwise return first header from headers
+            return currentExperimentMetadata.value.headers[0];
+        }
+    } else {
+        return '';
+    }
 });
 
 const selectionStore = useSelectionStore();
 
 const { dataSelections } = storeToRefs(selectionStore);
 
-const showErrorDialog = ref(false);
 const errorPlotName = ref('');
 
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
     // console.log('handlePlotError called with:', plotName);
     errorPlotName.value = plotName;
-    showErrorDialog.value = true;
+
+    notificationStore.notify({
+        type: 'problem',
+        message: `An Error occured while loading the plot ${errorPlotName}`,
+    });
 
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
@@ -59,7 +97,7 @@ function handlePlotError(plotName: string) {
 onMounted(() => {
     emitter.on('plot-error', handlePlotError);
     watch(
-        dataInitialized,
+        experimentDataInitialized,
         (isInitialized) => {
             if (isInitialized && firstPlotName.value) {
                 selectionStore.addPlot(firstPlotName.value);
@@ -130,7 +168,7 @@ window.addEventListener(
 </script>
 <template>
     <div>
-        <div v-if="!dataInitialized" class="flex justify-center">
+        <div v-if="!experimentDataInitialized" class="flex justify-center">
             <div class="text-h6 q-m-lg">Loading...</div>
         </div>
         <div v-else>
@@ -179,20 +217,6 @@ window.addEventListener(
                 @plot-loaded="handlePlotLoaded"
                 @plot-error="handlePlotError"
             />
-            <q-dialog v-model="showErrorDialog">
-                <q-card>
-                    <q-card-section>
-                        <div class="text-h6">Error</div>
-                    </q-card-section>
-                    <q-card-section class="q-pt-none">
-                        An error occurred while loading the plot:
-                        {{ errorPlotName }}
-                    </q-card-section>
-                    <q-card-actions align="right">
-                        <q-btn flat label="OK" color="primary" v-close-popup />
-                    </q-card-actions>
-                </q-card>
-            </q-dialog>
         </div>
     </div>
 </template>

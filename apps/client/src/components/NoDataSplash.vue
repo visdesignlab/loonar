@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
 </script>

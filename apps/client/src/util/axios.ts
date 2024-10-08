@@ -1,14 +1,11 @@
-import S3FileFieldClient, {
-    type S3FileFieldProgress,
-    S3FileFieldProgressState,
-} from 'django-s3-file-field';
+import S3FileFieldClient from 'django-s3-file-field';
 import axios, {
     type AxiosInstance,
     type AxiosPromise,
     type AxiosRequestConfig,
     type AxiosResponse,
 } from 'axios';
-import type { LocationConfig } from '../stores/uploadStore';
+import type { LocationConfig } from '../stores/componentStores/uploadStore';
 
 interface LoonAxiosInstance extends AxiosInstance {
     upload(file: File): Promise<string>;
@@ -25,7 +22,8 @@ interface LoonAxiosInstance extends AxiosInstance {
         experiment_name: string,
         experiment_settings: LocationConfig[],
         experiment_headers: string[] | null,
-        experiment_transforms: Record<string, string> | null
+        experiment_transforms: Record<string, string> | null,
+        location_tags: Record<string, Record<string, string>>
     ): AxiosPromise<CreateExperimentResponseData>;
     verifyExperimentName(
         experiment_name: string
@@ -102,7 +100,8 @@ export function createLoonAxiosInstance(
         experiment_name: string,
         experiment_settings: LocationConfig[],
         experiment_headers: string[],
-        experiment_header_transforms: Record<string, string>
+        experiment_header_transforms: Record<string, string>,
+        location_tags: Record<string, Record<string, string>>
     ): AxiosPromise<CreateExperimentResponseData> {
         const formData = new FormData();
         formData.append('experimentName', experiment_name);
@@ -118,6 +117,7 @@ export function createLoonAxiosInstance(
             'experimentHeaderTransforms',
             JSON.stringify(experiment_header_transforms)
         );
+        formData.append('locationTags', JSON.stringify(location_tags));
 
         return this.post(
             `${this.defaults.baseURL}/createExperiment/`,

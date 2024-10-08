@@ -2,17 +2,21 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import type { PropType } from 'vue';
 import * as vg from '@uwdata/vgplot';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useSelectionStore, type DataSelection } from '@/stores/selectionStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { QItemSection } from 'quasar';
 
 // Initialise Data
+const datasetSelectionStore = useDatasetSelectionStore();
+const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+
 const globalSettings = useGlobalSettings();
-const cellMetaData = useCellMetaData();
-const { dataInitialized } = storeToRefs(cellMetaData);
 const selectionStore = useSelectionStore();
 
 // Define Plot Emits and Props
@@ -33,7 +37,7 @@ function makePlot(column: string) {
     try {
         return vg.plot(
             // Background grey data
-            vg.rectY(vg.from('current_cell_metadata'), {
+            vg.rectY(vg.from('composite_experiment_cell_metadata'), {
                 x: vg.bin(column),
                 y: vg.count(),
                 fill: '#cccccc',
@@ -41,7 +45,9 @@ function makePlot(column: string) {
             }),
             // Currently Selected Data
             vg.rectY(
-                vg.from('current_cell_metadata', { filterBy: props.plotBrush }),
+                vg.from('composite_experiment_cell_metadata', {
+                    filterBy: props.plotBrush,
+                }),
                 {
                     x: vg.bin(column),
                     y: vg.count(),
@@ -57,7 +63,7 @@ function makePlot(column: string) {
             vg.width(268),
             vg.height(85),
             vg.style({ 'font-size': '.85em' }),
-            vg.xDomain(vg.toFixed),
+            vg.xDomain(vg.Fixed),
             vg.xLabelAnchor('center'),
             vg.xTickPadding(8),
             vg.xLabelOffset(38),
@@ -110,13 +116,13 @@ async function handlePlotLoading() {
 
 // Handle Rendering
 onMounted(() => {
-    if (dataInitialized.value) {
+    if (experimentDataInitialized.value) {
         createCharts();
     }
 });
 
 // Waits for data to be initialized before creating charts
-watch(dataInitialized, createCharts);
+watch(experimentDataInitialized, createCharts);
 
 const plotContainer = ref<HTMLDivElement | null>(null);
 

@@ -190,6 +190,7 @@ def run_command(command, shell=True):
 
     process = subprocess.Popen(
         command,
+        encoding='utf-8',
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -197,9 +198,17 @@ def run_command(command, shell=True):
     )
 
     for line in iter(process.stdout.readline, ''):
-        logging.info(line.strip())  # Log each line as INFO
+        try:
+            logging.info(line.strip())  # Log the line
+        except UnicodeEncodeError:
+            # Replace invalid characters
+            logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
     for line in iter(process.stderr.readline, ''):
-        logging.info(line.strip())  # Log errors as ERROR
+        try:
+            logging.info(line.strip())  # Log the line
+        except UnicodeEncodeError:
+            # Replace invalid characters
+            logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
 
     return process
 
@@ -212,6 +221,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
         subprocess.Popen(
             command,
             shell=True,
+            encoding='utf-8',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True
@@ -221,6 +231,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
         process = subprocess.Popen(
             command,
             shell=True,
+            encoding='utf-8',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
@@ -233,14 +244,21 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
                 f.write(clean_line)  # Clean line of ASCII characters
                 f.flush()
                 if verbose:
-                    logging.info(line.strip())
-
+                    try:
+                        logging.info(line.strip())  # Log the line
+                    except UnicodeEncodeError:
+                        # Replace invalid characters
+                        logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
             for line in iter(process.stderr.readline, ''):
                 clean_line = strip_ansi_escape_codes(line)
                 f.write(clean_line)  # Write cleaned line to file
                 f.flush()  # Ensure the line is written to the file immediately
                 if verbose:
-                    logging.info(line.strip())
+                    try:
+                        logging.info(line.strip())  # Log the line
+                    except UnicodeEncodeError:
+                        # Replace invalid characters
+                        logging.info(line.encode('utf-8', 'replace').decode('utf-8').strip())
 
             process.stdout.close()
             process.stderr.close()
@@ -351,18 +369,7 @@ def prepare_dev(buildConfig):
     fullEnvFileName = 'apps/client/.env'
     with open(fullEnvFileName, 'w') as outF:
         outF.write(outString)
-
-
-def run_dev():
-    print("Starting dev server")
-    client_directory = 'apps/client'
-    subprocess.Popen(
-                    ['yarn', 'dev'],
-                    cwd=client_directory,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                    )
-    print("Started dev server at http://localhost:5173")
+    print("Dev server can now be run by using 'yarn run dev' in the apps/client directory.")
 
 
 def strip_ansi_escape_codes(text):
@@ -401,18 +408,12 @@ if __name__ == "__main__":
                         help="If present, overwrites chosen config with current env variables")
     parser.add_argument("-s", "--disable-spinner", action="store_true", required=False,
                         help="Disables spinner")
-    parser.add_argument("--run-dev", action="store_true", required=False,
-                        help="Runs additional client dev environment")
     parser.add_argument("--prepare-dev", action="store_true", required=False,
                         help="Generates .env file for client environment.")
 
     args = parser.parse_args()
 
     config_file_name = args.config_file
-
-    if args.detached and args.run_dev:
-        print("Cannot run dev server in detached mode.")
-        sys.exit()
 
     if not args.validate_build:
         if not args.down:
@@ -454,6 +455,9 @@ if __name__ == "__main__":
 
             handlers = [logging.FileHandler(full_output_path)]
 
+            # Update the default encoding for stdout to utf-8
+            sys.stdout.reconfigure(encoding='utf-8')
+
             # If verbose, add additional handler to output info to terminal
             if args.verbose:
                 handlers.append(logging.StreamHandler(sys.stdout))
@@ -473,10 +477,8 @@ if __name__ == "__main__":
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 
-            if args.prepare_dev or args.run_dev:
+            if args.prepare_dev:
                 prepare_dev(buildConfig)
-            if args.run_dev:
-                run_dev()
 
             check_containers_status(services, args.detached)
         else:

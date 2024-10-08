@@ -8,7 +8,8 @@ import {
     type VerifyExperimentNameResponseData,
 } from '@/util/axios';
 
-import type { ProgressRecord } from '@/components/upload/LoadingProgress.vue';
+import { useConfigStore } from '../misc/configStore';
+import { useNotificationStore } from '../misc/notificationStore';
 
 export type progress =
     | 'failed'
@@ -29,7 +30,9 @@ export interface FileToUpload {
     checkForUpdates?: boolean;
     uploading: progress;
     processing: progress;
+    uniqueId?: string;
     processedData?: Record<string, any>;
+    metadata?: Record<string, any>;
 }
 
 export interface LocationConfig {
@@ -40,8 +43,8 @@ export interface LocationConfig {
 }
 
 export interface OverallProgress {
-    status: -1 | 0 | 1 | 2; // Failed, not started, running, succeeded
-    message?: string;
+    status: 'failed' | 'not_started' | 'running' | 'succeeded'; // Failed, not started, running, succeeded
+    message: string;
 }
 
 export interface WorkflowConfiguration {
@@ -58,8 +61,11 @@ const initialState = () => ({
     }),
     experimentName: ref<string>(''),
     overallProgress: ref<OverallProgress>({
-        status: 1,
+        status: 'not_started',
+        message: 'Waiting to upload and process data.'
     }),
+    tags: ref<[string, string][][]>([[['', '']]]),
+    tagColors: ref<Record<string, string>>({}),
     experimentCreated: ref(false),
     columnMappings: ref<Record<string, string> | null>(null),
     columnNames: ref<string[]>([]),
@@ -72,18 +78,21 @@ const initialState = () => ({
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_table',
             },
             images: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_images',
             },
             segmentations: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: 'location_1_segmentations',
             },
         },
     ]),
@@ -92,8 +101,10 @@ const initialState = () => ({
 
 export const useUploadStore = defineStore('uploadStore', () => {
     // const currBaseUrl = window.location.origin;
+    const configStore = useConfigStore();
+    const { notify } = useNotificationStore();
     const loonAxios = createLoonAxiosInstance({
-        baseURL: `${window.location.origin}/api`,
+        baseURL: configStore.apiUrl,
     });
 
     const {
@@ -106,6 +117,8 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnNames,
         step,
         experimentNameValid,
+        tags,
+        tagColors,
     } = initialState();
 
     function resetState(): void {
@@ -120,6 +133,8 @@ export const useUploadStore = defineStore('uploadStore', () => {
         columnNames.value = newState.columnNames.value;
         step.value = newState.step.value;
         experimentNameValid.value = newState.experimentNameValid.value;
+        tags.value = newState.tags.value;
+        tagColors.value = newState.tagColors.value;
     }
 
     async function verifyExperimentName(): Promise<boolean> {
@@ -202,31 +217,45 @@ export const useUploadStore = defineStore('uploadStore', () => {
     });
 
     function addLocation() {
+        const currId = locationFileList.value.length + 1;
         locationFileList.value.push({
-            locationId: (locationFileList.value.length + 1).toString(),
+            locationId: `${currId}`,
             table: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location_${currId}_table`,
             },
             images: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location_${currId}_images`,
             },
             segmentations: {
                 file: null,
                 checkForUpdates: true,
                 uploading: 'not_started',
                 processing: 'not_started',
+                uniqueId: `location_${currId}_segmentations`,
             },
         });
+        // Add initial tags
+        tags.value.push([['', '']]);
     }
 
     function removeLocation(index: number) {
         locationFileList.value.splice(index, 1);
+    }
+
+    function addTag(locationIndex: number) {
+        tags.value[locationIndex].push(['', '']);
+    }
+
+    function removeTag(locationIndex: number, tagIndex: number) {
+        tags.value[locationIndex].splice(tagIndex, 1);
     }
 
     function allFilesPopulated(): boolean {
@@ -242,7 +271,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
         return true;
     }
 
-    function locationIdsUnique(): boolean {
+    const locationIdsUnique = computed((): boolean => {
         const locationIds = new Set<string>();
         for (const locationFiles of locationFileList.value) {
             if (locationIds.has(locationFiles.locationId)) {
@@ -251,7 +280,17 @@ export const useUploadStore = defineStore('uploadStore', () => {
             locationIds.add(locationFiles.locationId);
         }
         return true;
-    }
+    });
+
+    watch(locationIdsUnique, () => {
+        if (!locationIdsUnique.value) {
+            notify({
+                type: 'problem',
+                message: 'Location ids must be unique.',
+            });
+        }
+    });
+
 
     // Function to upload all necessary files in experiment.
     async function uploadAll() {
@@ -326,6 +365,12 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 // Make a request to your server to check for updates
                 const response = await loonAxios.checkForUpdates(task_id);
                 const responseData = response.data as StatusResponseData;
+
+                // Set metadata
+                if (responseData.data) {
+                    uploadingFile.metadata = responseData.data.metadata;
+                }
+
                 if (responseData.status === 'SUCCEEDED') {
                     updatesAvailable = true;
                     if (responseData.data) {
@@ -342,10 +387,10 @@ export const useUploadStore = defineStore('uploadStore', () => {
                 } else if (responseData.status === 'RUNNING') {
                     // show running symbol like it normally does
                     uploadingFile.processing = 'running';
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    await new Promise((resolve) => setTimeout(resolve, 2500));
                 } else {
                     // show queued symbol
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    await new Promise((resolve) => setTimeout(resolve, 2500));
                 }
             }
         } catch (error) {
@@ -358,137 +403,59 @@ export const useUploadStore = defineStore('uploadStore', () => {
     // --------------------------------------------------------
     // --------------------------------------------------------
 
-    const createExperimentProgress = ref<ProgressRecord>({
-        label: 'Create Experiment',
-        progress: 'not_started',
-    });
+    const createExperimentProgress = ref<progress>('not_started')
 
-    // Function to construct the Progress Status List
-    function initializeProgressStatusList(): ProgressRecord[] {
-        const keyList = ['Table', 'Images', 'Segmentations'];
-        let currentProgressStatusList: ProgressRecord[] = keyList.map((key) => {
-            return {
-                label: 'Uploading and Processing ' + key,
-                progress: 'not_started',
-                subProgress: [],
-            };
+    const progressList = computed<FileToUpload[]>((): FileToUpload[] => {
+        const tempProgressList: FileToUpload[] = [];
+        locationFileList.value.forEach((locationFile: LocationFiles) => {
+            tempProgressList.push(locationFile.table);
+            tempProgressList.push(locationFile.images);
+            tempProgressList.push(locationFile.segmentations);
         });
-        const tableListIndex = 0;
-        const imageListIndex = 1;
-        const segmentationListIndex = 2;
-        for (let i = 0; i < numberOfLocations.value; i++) {
-            const locationFiles = locationFileList.value[i];
-            addToSubProgressList(
-                currentProgressStatusList[tableListIndex].subProgress!,
-                locationFiles.table,
-                locationFiles.locationId
-            );
-            addToSubProgressList(
-                currentProgressStatusList[imageListIndex].subProgress!,
-                locationFiles.images,
-                locationFiles.locationId
-            );
-            addToSubProgressList(
-                currentProgressStatusList[segmentationListIndex].subProgress!,
-                locationFiles.segmentations,
-                locationFiles.locationId
-            );
-        }
-
-        currentProgressStatusList.push(createExperimentProgress.value);
-
-        return currentProgressStatusList;
-    }
-
-    // Computes the Progress Status list whenever individual FileToUpload objects change in their uploading/processing status
-    const rawProgressStatusList = computed<ProgressRecord[]>(() =>
-        initializeProgressStatusList()
-    );
-
-    //Once the raw progress status gets updated, we compute the overall statuses dependent on their subprogress.
-    const progressStatusList = computed((): ProgressRecord[] => {
-        const progressStatusResult: ProgressRecord[] = [];
-        for (let i = 0; i < rawProgressStatusList.value.length; i++) {
-            let currentProgress = rawProgressStatusList.value[i];
-            if (currentProgress.subProgress) {
-                // determine based on sub progress
-                const currentSubProgress = determineProgress(
-                    currentProgress.subProgress
-                );
-                currentProgress.progress = currentSubProgress;
-                progressStatusResult.push(currentProgress);
-            } else {
-                progressStatusResult.push(currentProgress);
-            }
-        }
-        return progressStatusResult;
+        return tempProgressList;
     });
-
-    const determineProgress = (subProgress: ProgressRecord[]) => {
-        const failed = subProgress.some(
-            (element) => element.progress === 'failed'
-        );
-        if (failed) {
-            // If any failed, set total to failed
-            return 'failed';
-        } else {
-            const running = subProgress.some(
-                (element) =>
-                    element.progress === 'running' ||
-                    element.progress === 'dispatched'
-            );
-            if (running) {
-                // If none failed but any are running/queued, set to running
-                return 'running';
-            } else {
-                const succeeded = subProgress.every(
-                    (element) => element.progress === 'succeeded'
-                );
-                if (succeeded) {
-                    // If none running, none failed, and all have succeeded, set to 3
-                    return 'succeeded';
-                }
-            }
-        }
-        // If none running, none failed, and not all succeeded, then it's still starting. Return 0
-        return 'not_started';
-    };
-
-    function addToSubProgressList(
-        subProgressList: ProgressRecord[],
-        uploadingFile: FileToUpload,
-        locationId: string
-    ) {
-        subProgressList.push({
-            label: 'Uploading ' + locationId,
-            progress: uploadingFile.uploading,
-        });
-        if (uploadingFile.checkForUpdates) {
-            subProgressList.push({
-                label: 'Processing ' + locationId,
-                progress: uploadingFile.processing,
-            });
-        }
-    }
 
     // Watches progress list for all successes or any failures. Sets overall status based on the findings.
+
+    // Starts as 'not_started', so if anyRunning, anyFailed, allSucceeded all are false, will indicate it is not running and will, by default, be displayed as such.
+
     watch(
-        progressStatusList,
-        (newList) => {
+        [progressList, createExperimentProgress],
+        ([newList, newCreateExperimentProgress]) => {
+
+            const anyRunning = newList.some(
+                (item: FileToUpload) =>
+                    item.uploading === 'running' || item.processing === 'running'
+
+            );
+
             const anyFailed = newList.some(
-                (item: ProgressRecord) => item.progress == 'failed'
+                (item: FileToUpload) =>
+                    item.uploading === 'failed' || item.processing === 'failed'
             );
-            if (anyFailed) {
-                overallProgress.value.status = -1;
-                overallProgress.value.message =
-                    'There was an error submitting this experiment.';
-            }
+
             const allSucceeded = newList.every(
-                (item: ProgressRecord) => item.progress === 'succeeded'
+                (item: FileToUpload) =>
+                    item.uploading === 'succeeded' &&
+                    item.processing === 'succeeded'
             );
-            if (allSucceeded) {
-                overallProgress.value.status = 2;
-                overallProgress.value.message = 'Succeeded.';
+
+            if (anyFailed) {
+                overallProgress.value.status = 'failed';
+                overallProgress.value.message =
+                    'There was an processing one or more datasets. This experiment will need to be re-submitted.';
+            } else if (allSucceeded) {
+                if (newCreateExperimentProgress === 'succeeded') {
+                    overallProgress.value.status = 'succeeded';
+                    overallProgress.value.message = 'All your data has been processed and your experiment has been successfully added. You can now navigate away from this page.';
+                } else if (newCreateExperimentProgress === 'failed') {
+                    overallProgress.value.status = 'failed';
+                    overallProgress.value.message = 'There was an error when creating the final experiment. Please contact an administrator or re-try the experiment.'
+                }
+            } else if (anyRunning) {
+                overallProgress.value.status = 'running';
+                overallProgress.value.message =
+                    'Your data is currently being processed. Please do not exit this page.';
             }
         },
         { deep: true }
@@ -502,14 +469,14 @@ export const useUploadStore = defineStore('uploadStore', () => {
     watch(experimentConfig, async (newVal) => {
         if (newVal !== null) {
             // This only triggers when everything is done since experimentConfig is only computed once all has finished.
-            if (experimentConfig && experimentHeaders) {
-                createExperimentProgress.value.progress = 'running';
+            if (experimentConfig.value && experimentHeaders.value) {
+                createExperimentProgress.value = 'running';
                 const submitExperimentResponse: CreateExperimentResponseData =
                     await onSubmitExperiment();
                 if (submitExperimentResponse.status === 'SUCCESS') {
-                    createExperimentProgress.value.progress = 'succeeded';
+                    createExperimentProgress.value = 'succeeded';
                 } else {
-                    createExperimentProgress.value.progress = 'failed';
+                    createExperimentProgress.value = 'failed';
                 }
             }
         }
@@ -517,11 +484,14 @@ export const useUploadStore = defineStore('uploadStore', () => {
 
     async function onSubmitExperiment(): Promise<CreateExperimentResponseData> {
         if (experimentName.value && experimentConfig.value) {
+            const locationTags = convertTags();
+            console.log(locationTags);
             const submitExperimentResponse = await loonAxios.createExperiment(
                 experimentName.value,
                 experimentConfig.value,
                 experimentHeaders.value,
-                columnMappings.value
+                columnMappings.value,
+                locationTags
             );
 
             const submitExperimentResponseData: CreateExperimentResponseData =
@@ -530,6 +500,15 @@ export const useUploadStore = defineStore('uploadStore', () => {
             return submitExperimentResponseData;
         }
         return { status: 'failed', message: 'No experiment name given.' };
+    }
+
+    function convertTags(): Record<string, Record<string, string>> {
+        const locationBasedTags: Record<string, Record<string, string>> = {};
+        tags.value.forEach((location: [string, string][], idx: number) => {
+            const currentTags = Object.fromEntries(location);
+            locationBasedTags[`location_${idx}`] = currentTags;
+        });
+        return locationBasedTags;
     }
 
     function allColumnsMapped(): boolean {
@@ -574,7 +553,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
             text += decoder.decode(chunk, { stream: true });
             const lines = text.split('\n');
             if (lines.length > 1) {
-                let headerIndex = currentWorkflowConfig.value.skip_lines;
+                const headerIndex = currentWorkflowConfig.value.skip_lines;
                 firstLine = lines[headerIndex];
                 break;
             }
@@ -632,7 +611,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         addLocation,
         removeLocation,
         uploadAll,
-        progressStatusList,
         onSubmitExperiment,
         experimentConfig,
         experimentHeaders,
@@ -644,5 +622,10 @@ export const useUploadStore = defineStore('uploadStore', () => {
         resetState,
         step,
         experimentNameValid,
+        progressList,
+        tags,
+        tagColors,
+        addTag,
+        removeTag,
     };
 });

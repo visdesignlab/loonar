@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useGlobalSettings } from '@/stores/globalSettings';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useEventBusStore } from '@/stores/eventBusStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
 
 import { storeToRefs } from 'pinia';
 import { watch } from 'vue';

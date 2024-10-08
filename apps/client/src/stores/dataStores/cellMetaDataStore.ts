@@ -1,8 +1,14 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { isEqual, every, sortBy } from 'lodash-es';
-import { useDataPointSelection } from './dataPointSelection';
+import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
 import { extent as d3Extent } from 'd3-array';
+import type {
+    NumericalAttributes,
+    StringAttributes,
+    AnyAttributes,
+    TextTransforms,
+} from '@/util/datasetLoader';
 
 export interface Lineage {
     lineageId: string; // should be equal to the founder trackId
@@ -25,22 +31,6 @@ export interface Cell {
     trackId: string;
     attrNum: NumericalAttributes;
     attrStr: StringAttributes;
-}
-
-export interface NumericalAttributes {
-    [index: string]: number;
-}
-
-export interface StringAttributes {
-    [index: string]: string;
-}
-
-export interface AnyAttributes {
-    [index: string]: any;
-}
-
-export interface TextTransforms {
-    [index: string]: string;
 }
 
 export interface SpecialHeaders {

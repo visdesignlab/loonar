@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     QMenu,
     QItem,
@@ -13,8 +13,8 @@ import {
     QBtn,
     QBanner,
 } from 'quasar';
-import { useSelectionStore } from '@/stores/selectionStore';
-import { useFilterStore } from '@/stores/filterStore';
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useFilterStore } from '@/stores/componentStores/filterStore';
 
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
