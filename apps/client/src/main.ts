@@ -22,7 +22,7 @@ import AggregateLineChartSettingsSidebar from './components/AggregateLineChartSe
 import AggregateLineChartSettingsToolbar from './components/AggregateLineChartSettingsToolbar.vue';
 import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
-import ConditionSelector from './components/ConditionSelector.vue';
+import ConditionSelector from './components/conditionSelector/ConditionSelector.vue';
 import { router } from './router';
 
 import { Quasar, Loading, Notify } from 'quasar';
