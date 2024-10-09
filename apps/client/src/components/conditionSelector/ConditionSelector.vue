@@ -1,27 +1,71 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {useConditionSelector, type Axis} from '@/stores/componentStores/conditionSelectorStore';
-import LBtn from '../custom/LBtn.vue';
 import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue'
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelector();
 
+
+
+const container = ref(null);
+const gridWidth = ref(0);
+const gridHeight = ref(0);
+let resizeObserver: ResizeObserver|null = null;
+
+const observeContainerSize = () => {
+  if (!container.value) return;
+
+  resizeObserver = new ResizeObserver((entries) => {
+    for (let entry of entries) {
+      gridWidth.value = entry.contentRect.width;
+      gridHeight.value = entry.contentRect.height;
+    }
+  });
+
+  resizeObserver.observe(container.value);
+};
+
+onMounted(() => {
+  observeContainerSize();
+});
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+});
+
+
+
 const hoveredColumn = ref<number|null>(null);
 const hoveredRow = ref<number|null>(null);
 
+const size = computed(() => Math.min((gridWidth.value / conditionSelector.xLabels.length - 40),gridHeight.value / conditionSelector.yLabels.length - 40));
+
+const baseWidth = computed(() => gridWidth.value / conditionSelector.xLabels.length - 40);
+const baseHeight = computed(() => gridHeight.value / conditionSelector.yLabels.length - 40);
+
 
 const width = computed(() => {
+    console.log(width);
     return{
-        width : "100px"
+        width : `${size.value}px`
     }
 })
 
-const height = computed(() => {
+const maxHeight = computed(() => {
     return{
-        "max-height" : "100px"
+        "max-height" :  `${size.value}px`
     }
 })
+const heightWidth = computed(() => {
+    return{
+        "height" :  `${size.value}px`,
+        "width":  `${size.value}px`
+    }
+})
+
 
 const handleLabelMouseOver = (axis:Axis, index: number) => {
     if(axis === 'x-axis'){
@@ -53,7 +97,7 @@ const handleLabelMouseLeave = () => {
                                 @mouseover="() => handleLabelMouseOver('y-axis',idy)"
                                 @mouseleave="() => handleLabelMouseLeave()"
                                 class="row justify-center align-center y-label"
-                                :style="height"
+                                :style="maxHeight"
 
                             >
                                 <div 
@@ -65,13 +109,13 @@ const handleLabelMouseLeave = () => {
 
                         </template>
                     </div>
-                    <div class="q-pa-sm items-center justify-center column chart-area">
+                    <div ref="container" class="q-pa-sm items-center justify-center column chart-area">
                         <template v-for="(ely, idy) in conditionSelector.yLabels">
                             <div class="chart-row row justify-space-around align-center">
                                 <template v-for="(elx,idx) in conditionSelector.xLabels">
                                     <div 
                                         :class="`chart flex justify-center align-center ${idx === hoveredColumn || idy === hoveredRow ? 'hovered' : ''}`"
-                                        :style="width"
+                                        :style="heightWidth"
 
                                     >
                                         <div>test</div>
@@ -170,14 +214,14 @@ const handleLabelMouseLeave = () => {
             flex:1;
             width:100%;
             .chart{
-                width:100px;
-                height:100px;
                 box-sizing:border-box;
                 border-radius:4px;
                 cursor:pointer;
+                border:1px solid black;
                 &:hover,
                 &.hovered{
-                    border:1px solid black;
+                    // border:1px solid black;
+                    background-color:red;
                 }
             }
         }
