@@ -41,7 +41,7 @@ onBeforeUnmount(() => {
 const hoveredColumn = ref<number|null>(null);
 const hoveredRow = ref<number|null>(null);
 
-const size = computed(() => Math.min((gridWidth.value / conditionSelector.xLabels.length - 40),gridHeight.value / conditionSelector.yLabels.length - 40));
+const size = computed(() => Math.min((gridWidth.value / conditionSelector.xLabels.length - 20),gridHeight.value / conditionSelector.yLabels.length - 20));
 
 const baseWidth = computed(() => gridWidth.value / conditionSelector.xLabels.length - 40);
 const baseHeight = computed(() => gridHeight.value / conditionSelector.yLabels.length - 40);
