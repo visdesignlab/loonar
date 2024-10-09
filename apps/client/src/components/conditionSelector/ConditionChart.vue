@@ -1,31 +1,26 @@
 <script setup lang="ts">
-import { onMounted, ref, nextTick } from 'vue';
+import { computed, onMounted, ref, nextTick } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
-import { Query, min } from '@uwdata/mosaic-sql';
 
-// We won't use this block later.
-import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
-const cellMetaDataStore = useCellMetaData();
-const { dataInitialized } = storeToRefs(cellMetaDataStore);
-
+// Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
-// We will instead just check only if the experiment data is loaded.
+// Checks if experiment data is initialized
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
 
-// Only create charts if data is loaded and ready.
+// *** Change to watch statement
 onMounted(async () => {
+    // Waits for experiment data to be loaded
     if (experimentDataInitialized) {
-        // Wait for the DOM to update
         await nextTick();
-        createChart(tags, chartWidth, chartHeight);
+        createChart(tags, xAxisName, yAxisName, chartWidth, chartHeight);
     }
 });
 
@@ -33,52 +28,67 @@ onMounted(async () => {
 const lineColor = '#ff0000';
 const strokeWidth = 3;
 
-// These should be dynamic, not static values.
+// These are examples. These should be dynamic, not static values.
 const chartWidth = 500;
 const chartHeight = 500;
 const tags = { drug: 'drug1', concentration: 0.5 };
+const xAxisName = 'Frame';
+const yAxisName = 'Dry Mass (pg)';
 
 // Takes in tag names and values, width, height. Creates chart.
 function createChart(
     tags: { [key: string]: string | number },
+    xAxisName: string,
+    yAxisName: string,
     width: number,
     height: number
 ) {
     if (chartContainer.value) {
         // Soon to sort data based on tags (ex: only show data with drug: drug1 and concentration: 0.5)
+        const tagSelection = computed(() => vg.Selection.intersect());
+        // const query =
+        //    "SELECT * FROM current_experiment_cell_metadata WHERE drug = 'drug1' AND concentration = 0.5";
+        // const source = ;
+        // const predicate = query;
+        // const clause = { source, predicate };
+        // tagSelection.value.update(clause);
 
-        // Query
-        const query = vg
-            .Query()
-            .select('*')
-            .from('composite_experiment_cell_metadata');
-
+        // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
-            // Fills in area under line chart grey.
-            vg.areaY(vg.from(query), {
-                x: 'Frame',
-                y1: 0,
-                y2: 'Dry Mass (pg)',
-                fill: 'grey',
-                fillOpacity: 0.2,
-                stroke: null,
-            }),
+            // Fills in area under line chart grey (optional)
+            vg.areaY(
+                vg.from('composite_experiment_cell_metadata', {
+                    filterBy: tagSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y1: 0,
+                    y2: yAxisName,
+                    fill: 'grey',
+                    fillOpacity: 0.2,
+                    stroke: null,
+                }
+            ),
 
             // Plots Line Chart
-            vg.lineY(vg.from(query), {
-                x: 'Frame',
-                y: 'Dry Mass (pg)',
-                stroke: lineColor,
-                strokeWidth: strokeWidth,
-            }),
-
+            vg.lineY(
+                vg.from('composite_experiment_cell_metadata', {
+                    filterBy: tagSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y: yAxisName,
+                    stroke: lineColor,
+                    strokeWidth: strokeWidth,
+                }
+            ),
             // General settings.
             vg.width(width),
-            vg.height(height)
+            vg.height(height),
 
-            // Get rid of axes
-            // vg.axis(false),
-            // vg.margin(0)
+            // Gets rid of axes and margins!
+            vg.axis(false),
+            vg.margin(0)
         );
         chartContainer.value.appendChild(chart);
     }
