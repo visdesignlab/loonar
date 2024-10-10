@@ -17,7 +17,7 @@ import {
 import { useNotificationStore } from '../misc/notificationStore';
 
 export interface ExperimentMetadata {
-    // name?: string; // user friendly name
+    name: string; // user friendly name
     filename: string;
     headers: string[];
     headerTransforms?: TextTransforms; // maps things like "Time (h)" to "time"
@@ -134,10 +134,9 @@ export const useDatasetSelectionStore = defineStore(
                         ?.compositeTabularDataFilename
                 );
                 try {
-                    console.log('here')
                     await loadFileIntoDuckDb(
                         duckDbFileUrl,
-                        'composite_experiment_cell_metadata',
+                        `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
                         'parquet'
                     );
                     notify({
