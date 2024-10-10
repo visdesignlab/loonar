@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+
 
 export interface DataSelection {
     plotName: string;
@@ -108,6 +110,8 @@ export const useSelectionStore = defineStore('Selection', {
             this.setMaxRange(name);
         },
         async getMaxRange(plotName: string): Promise<[number, number]> {
+            const { currentExperimentMetadata } = useDatasetSelectionStore();
+
             try {
                 // Loading
                 let minVal = -Infinity;
@@ -124,7 +128,7 @@ export const useSelectionStore = defineStore('Selection', {
                     SELECT
                         MIN("${escapedPlotName}") AS min_value,
                         MAX("${escapedPlotName}") AS max_value
-                    FROM composite_experiment_cell_metadata
+                    FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
                 `;
 
                 console.log('Constructed query:', query);

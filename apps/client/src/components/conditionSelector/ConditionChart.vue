@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, nextTick } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
-import { storeToRefs } from 'pinia';
+// import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
 
@@ -9,8 +9,9 @@ import * as vg from '@uwdata/vgplot';
 const globalSettings = useGlobalSettings();
 
 // Checks if experiment data is initialized
-const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+// const datasetSelectionStore = useDatasetSelectionStore();
+// const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+const { experimentDataInitialized, currentExperimentMetadata } = useDatasetSelectionStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -32,8 +33,8 @@ const strokeWidth = 3;
 const chartWidth = 500;
 const chartHeight = 500;
 const tags = { drug: 'drug1', concentration: 0.5 };
-const xAxisName = 'Frame';
-const yAxisName = 'Dry Mass (pg)';
+const xAxisName = 'drug';
+const yAxisName = 'concentration';
 
 // Takes in tag names and values, width, height. Creates chart.
 function createChart(
@@ -44,36 +45,50 @@ function createChart(
     height: number
 ) {
     if (chartContainer.value) {
-        // Soon to sort data based on tags (ex: only show data with drug: drug1 and concentration: 0.5)
-        const tagSelection = computed(() => vg.Selection.intersect());
-        // const query =
-        //    "SELECT * FROM current_experiment_cell_metadata WHERE drug = 'drug1' AND concentration = 0.5";
-        // const source = ;
-        // const predicate = query;
-        // const clause = { source, predicate };
-        // tagSelection.value.update(clause);
+        // If experiment metadata not initialized, return. Change this??
 
+        /*
+        
+        Idea is that we want to filter our data for this chart based on the tag values. To do this, we mimic a user selection by first creating the selection, updating the selection clause with the appropriate filter, then filtering the data based on this clause.
+
+        Since no users directly interact with the selection, this will be enough to filter our data.
+
+         */
+
+        //Create a vg selection
+        const tagSelection = computed(() => vg.Selection.single());
+        // Set a unique source so we do not chain filters
+        const source = 'test_source';
+        // Create clause with filter predicate
+        const clause = { source, predicate:"drug = 'tylenol'" };
+        // Update selection
+        tagSelection.value.update(clause);
+
+
+        // vg.coordinator().exec("CREATE TEMP TABLE test_table_five AS (SELECT * FROM test_new_composite_experiment_cell_metadata)")
         // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)
-            vg.areaY(
-                vg.from('composite_experiment_cell_metadata', {
-                    filterBy: tagSelection,
-                }),
-                {
-                    x: xAxisName,
-                    y1: 0,
-                    y2: yAxisName,
-                    fill: 'grey',
-                    fillOpacity: 0.2,
-                    stroke: null,
-                }
-            ),
+            // vg.areaY(
+            //     vg.from('test_new_composite_experiment_cell_metadata',{
+            //         filterBy:tagSelection.value
+            //     }),
+            //     {
+            //         x: xAxisName,
+            //         y1: 0,
+            //         y2: yAxisName,
+            //         fill: 'grey',
+            //         fillOpacity: 0.2,
+            //         stroke: null,
+            //     }
+            // ),
 
             // Plots Line Chart
+            // Filter based on selection
+            
             vg.lineY(
-                vg.from('composite_experiment_cell_metadata', {
-                    filterBy: tagSelection,
+                vg.from(`${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,{
+                    filterBy:tagSelection.value
                 }),
                 {
                     x: xAxisName,

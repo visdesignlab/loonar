@@ -3,8 +3,10 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {useConditionSelector, type Axis} from '@/stores/componentStores/conditionSelectorStore';
 import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue'
+import ConditionChart from './ConditionChart.vue';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelector();
+
 
 
 
@@ -43,12 +45,7 @@ const hoveredRow = ref<number|null>(null);
 
 const size = computed(() => Math.min((gridWidth.value / conditionSelector.xLabels.length - 20),gridHeight.value / conditionSelector.yLabels.length - 20));
 
-const baseWidth = computed(() => gridWidth.value / conditionSelector.xLabels.length - 40);
-const baseHeight = computed(() => gridHeight.value / conditionSelector.yLabels.length - 40);
-
-
 const width = computed(() => {
-    console.log(width);
     return{
         width : `${size.value}px`
     }
@@ -118,7 +115,7 @@ const handleLabelMouseLeave = () => {
                                         :style="heightWidth"
 
                                     >
-                                        <div>test</div>
+                                        <div><ConditionChart :width="size" :height="size"/></div>
                                     </div>
                                 </template>
                             </div>

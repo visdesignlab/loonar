@@ -14,7 +14,7 @@ import { QItemSection } from 'quasar';
 
 // Initialise Data
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
@@ -34,10 +34,10 @@ const props = defineProps({
 
 // Vg Plot
 function makePlot(column: string) {
-    try {
+        try {
         return vg.plot(
             // Background grey data
-            vg.rectY(vg.from('composite_experiment_cell_metadata'), {
+            vg.rectY(vg.from(`${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`), {
                 x: vg.bin(column),
                 y: vg.count(),
                 fill: '#cccccc',
@@ -45,7 +45,7 @@ function makePlot(column: string) {
             }),
             // Currently Selected Data
             vg.rectY(
-                vg.from('composite_experiment_cell_metadata', {
+                vg.from(`${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`, {
                     filterBy: props.plotBrush,
                 }),
                 {
@@ -77,6 +77,8 @@ function makePlot(column: string) {
     } catch (error) {
         emit('plot-error', props.plotName);
     }
+
+
 }
 
 // Handle Loading of Everything
