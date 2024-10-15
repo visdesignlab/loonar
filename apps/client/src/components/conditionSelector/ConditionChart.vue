@@ -11,7 +11,8 @@ const globalSettings = useGlobalSettings();
 // Checks if experiment data is initialized
 // const datasetSelectionStore = useDatasetSelectionStore();
 // const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
-const { experimentDataInitialized, currentExperimentMetadata } = useDatasetSelectionStore();
+const { experimentDataInitialized, currentExperimentMetadata } =
+    useDatasetSelectionStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -33,8 +34,8 @@ const strokeWidth = 3;
 const chartWidth = 500;
 const chartHeight = 500;
 const tags = { drug: 'drug1', concentration: 0.5 };
-const xAxisName = 'drug';
-const yAxisName = 'concentration';
+const xAxisName = 'Pixel Position Y (pixels)';
+const yAxisName = 'Frame';
 
 // Takes in tag names and values, width, height. Creates chart.
 function createChart(
@@ -60,41 +61,45 @@ function createChart(
         // Set a unique source so we do not chain filters
         const source = 'test_source';
         // Create clause with filter predicate
-        const clause = { source, predicate:"drug = 'tylenol'" };
+        const clause = { source, predicate: "drug = 'tylenol'" };
         // Update selection
         tagSelection.value.update(clause);
-
 
         // vg.coordinator().exec("CREATE TEMP TABLE test_table_five AS (SELECT * FROM test_new_composite_experiment_cell_metadata)")
         // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)
-            // vg.areaY(
-            //     vg.from('test_new_composite_experiment_cell_metadata',{
-            //         filterBy:tagSelection.value
-            //     }),
-            //     {
-            //         x: xAxisName,
-            //         y1: 0,
-            //         y2: yAxisName,
-            //         fill: 'grey',
-            //         fillOpacity: 0.2,
-            //         stroke: null,
-            //     }
-            // ),
-
-            // Plots Line Chart
-            // Filter based on selection
-            
+            vg.areaY(
+                vg.from(
+                    `${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,
+                    {
+                        filterBy: tagSelection.value,
+                    }
+                ),
+                {
+                    x: xAxisName,
+                    y1: 0,
+                    y2: yAxisName,
+                    fill: 'grey',
+                    fillOpacity: 0.2,
+                    curve: 'basis',
+                    stroke: null,
+                }
+            ),
+            // Plots Line Chart based on selection.
             vg.lineY(
-                vg.from(`${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,{
-                    filterBy:tagSelection.value
-                }),
+                vg.from(
+                    `${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,
+                    {
+                        filterBy: tagSelection.value,
+                    }
+                ),
                 {
                     x: xAxisName,
                     y: yAxisName,
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
+                    curve: 'basis',
                 }
             ),
             // General settings.
