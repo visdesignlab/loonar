@@ -20,7 +20,8 @@ const props = defineProps({
 const tagVar = props.axis === 'x-axis' ? 'selectedXTag' : 'selectedYTag';
 
 const handleTagClick = (item:string) => {
-    conditionSelector.selectTag(item, props.axis);
+    const axis = props.axis as Axis
+    conditionSelector.selectTag(item, axis);
 }
 
 </script>
