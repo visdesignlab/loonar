@@ -5,6 +5,16 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
 
+// Props from parent component
+// Accept props from the parent component
+const props = defineProps<{
+    tags: { [key: string]: string | number };
+    xAxisName: string;
+    yAxisName: string;
+    width: number;
+    height: number;
+}>();
+
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
@@ -22,7 +32,13 @@ onMounted(async () => {
     // Waits for experiment data to be loaded
     if (experimentDataInitialized) {
         await nextTick();
-        createChart(tags, xAxisName, yAxisName, chartWidth, chartHeight);
+        createChart(
+            props.tags,
+            props.xAxisName,
+            props.yAxisName,
+            props.width,
+            props.height
+        );
     }
 });
 
@@ -31,11 +47,11 @@ const lineColor = '#ff0000';
 const strokeWidth = 3;
 
 // These are examples. These should be dynamic, not static values.
-const chartWidth = 500;
-const chartHeight = 500;
-const tags = { drug: 'drug1', concentration: 0.5 };
-const xAxisName = 'Pixel Position Y (pixels)';
-const yAxisName = 'Frame';
+// const chartWidth = 500;
+// const chartHeight = 500;
+// const tags = { drug: 'drug1', concentration: 0.5 };
+// const xAxisName = 'Pixel Position Y (pixels)';
+// const yAxisName = 'Frame';
 
 // Takes in tag names and values, width, height. Creates chart.
 function createChart(
@@ -55,7 +71,7 @@ function createChart(
         Since no users directly interact with the selection, this will be enough to filter our data.
 
          */
-
+        //console.log('Test');
         //Create a vg selection
         const tagSelection = computed(() => vg.Selection.single());
         // Set a unique source so we do not chain filters
