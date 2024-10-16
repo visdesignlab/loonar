@@ -146,8 +146,8 @@ const handleLabelMouseLeave = () => {
                                                 drug: 'drug1',
                                                 concentration: 0.5,
                                             }"
-                                            :xAxisName="'Pixel Position Y (pixels)'"
-                                            :yAxisName="'Frame'"
+                                            :xAxisName="'Frame'"
+                                            :yAxisName="'Dry Mass (pg)'"
                                         />
                                     </div>
                                 </div>

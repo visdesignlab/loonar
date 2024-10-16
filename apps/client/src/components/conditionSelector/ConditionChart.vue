@@ -71,7 +71,7 @@ function createChart(
         Since no users directly interact with the selection, this will be enough to filter our data.
 
          */
-        //console.log('Test');
+        console.log('Test');
         //Create a vg selection
         const tagSelection = computed(() => vg.Selection.single());
         // Set a unique source so we do not chain filters
