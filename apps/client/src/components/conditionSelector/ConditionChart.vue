@@ -77,7 +77,7 @@ function createChart(
         const source = 'test_source';
         // Create clause with filter predicate
 
-        let predicate = `${tags[0][0]} = '${tags[0][1]}' AND ${tags[1][0]} = '${tags[1][1]}'`;
+        const predicate = `${tags[0][0]} = '${tags[0][1]}' AND ${tags[1][0]} = '${tags[1][1]}'`;
 
         const clause = { source, predicate };
         // Update selection
