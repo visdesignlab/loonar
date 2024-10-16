@@ -3,8 +3,9 @@ import {
     useConditionSelector,
     type Axis,
 } from '@/stores/componentStores/conditionSelectorStore';
+import { storeToRefs } from 'pinia';
 const conditionSelector = useConditionSelector();
-
+const {currentExperimentTags} = storeToRefs(conditionSelector);
 const props = defineProps({
     axis: {
         type: String,
@@ -25,7 +26,7 @@ const handleTagClick = (item: string) => {
     <q-btn-dropdown flat no-caps :label="conditionSelector[tagVar]">
         <q-list>
             <template
-                v-for="(item, index) in conditionSelector.tags"
+                v-for="(item, index) in Object.keys(currentExperimentTags)"
                 :key="index"
             >
                 <q-item

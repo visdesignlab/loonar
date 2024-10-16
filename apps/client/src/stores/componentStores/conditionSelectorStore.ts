@@ -1,29 +1,46 @@
 import { ref, computed } from 'vue';
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
+import { useDatasetSelectionStore, type LocationMetadata } from '../dataStores/datasetSelectionUntrrackedStore';
 
 export type Axis = 'x-axis' | 'y-axis';
 
 export const useConditionSelector = defineStore('conditionSelector', () => {
-    const tags = ref<string[]>([
-        'drug',
-        'concentration',
-        'cancer_concentration',
-    ]);
+    const datasetSelectionStore = useDatasetSelectionStore();
+    const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
+
+    const currentExperimentTags = computed((): Record<string, string[]> => {
+        const tempTags: Record<string, string[]> = {};
+        currentExperimentMetadata.value?.locationMetadataList.forEach((locationMetadata: LocationMetadata) => {
+            if (locationMetadata.tags) {
+
+                Object.entries(locationMetadata.tags).forEach((entry: [string, string]) => {
+                    let tempTagKey = entry[0];
+                    let tempTagValue = entry[1];
+
+                    if (!(tempTagKey in tempTags)) {
+                        tempTags[tempTagKey] = [];
+                    }
+
+                    if (!(tempTags[tempTagKey].includes(tempTagValue))) {
+                        tempTags[tempTagKey].push(tempTagValue)
+                    }
+                })
+
+            }
+        });
+        return tempTags;
+    });
+
+
     const selectedXTag = ref<string>('drug');
     const selectedYTag = ref<string>('concentration');
 
-    const valuesFromTags = ref<Record<string, string[]>>({
-        drug: ['tylenol', 'advil', 'aspirin', 'ibuprofen'],
-        concentration: ['0.3', '0.4', '0.5', '0.6', '0.7'],
-        cancer_concentration: ['0.1', '0.2'],
-    });
-
     const xLabels = computed<string[]>(() => {
-        return valuesFromTags.value[selectedXTag.value];
+        return currentExperimentTags.value[selectedXTag.value];
     });
 
     const yLabels = computed<string[]>(() => {
-        return valuesFromTags.value[selectedYTag.value];
+        return currentExperimentTags.value[selectedYTag.value];
     });
 
     function selectTag(tag: string, axis: Axis) {
@@ -35,11 +52,11 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     }
 
     return {
-        tags,
         selectedXTag,
         selectedYTag,
         selectTag,
         xLabels,
         yLabels,
+        currentExperimentTags
     };
 });

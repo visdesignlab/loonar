@@ -28,12 +28,15 @@ export interface ExperimentMetadata {
     compositeTabularDataFilename?: string;
 }
 
+export type Tags = Record<string, string>;
+
 export interface LocationMetadata {
     // data related to a single imaging location
     id: string;
     tabularDataFilename: string;
     imageDataFilename?: string;
     segmentationsFolder?: string;
+    tags?: Tags;
     // name?: string; // user friendly name
     // condition?: string; // experimental condition // TODO: - does this need to be an array
     // plate?: string;

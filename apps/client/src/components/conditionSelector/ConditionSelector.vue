@@ -40,6 +40,7 @@ onBeforeUnmount(() => {
 
 const hoveredColumn = ref<number | null>(null);
 const hoveredRow = ref<number | null>(null);
+const hoveredAll = ref<boolean>(false);
 
 const size = computed(() =>
     Math.min(
@@ -78,6 +79,15 @@ const handleLabelMouseLeave = () => {
     hoveredColumn.value = null;
     hoveredRow.value = null;
 };
+
+const handleAllMouseOver = () => {
+    hoveredAll.value = true;
+}
+
+const handleAllMouseLeave = () => {
+    hoveredAll.value = false;
+}
+
 </script>
 
 <template>
@@ -87,13 +97,13 @@ const handleLabelMouseLeave = () => {
             :dark="globalSettings.darkMode"
             class="inner-card condition-selector-container"
         >
-            <div class="q-pa-sm items-center justify-center flex y-tag">
+            <div class="items-center justify-center flex y-tag">
                 <div><ConditionSelectorDropDown axis="y-axis" /></div>
             </div>
             <div
-                class="q-pa-sm items-center justify-center flex condition-charts-container"
+                class="items-center justify-center flex condition-charts-container"
             >
-                <div class="q-pa-sm justify-space-around align-center column">
+                <div class="justify-space-around align-center column">
                     <template
                         v-for="(labelY, idy) in conditionSelector.yLabels"
                         :key="idy"
@@ -103,7 +113,7 @@ const handleLabelMouseLeave = () => {
                                 () => handleLabelMouseOver('y-axis', idy)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
-                            class="row justify-center align-center y-label"
+                            :class="`row justify-center align-center y-label ${hoveredAll ? 'hovered' : ''}`"
                             :style="maxHeight"
                         >
                             <div
@@ -116,7 +126,7 @@ const handleLabelMouseLeave = () => {
                 </div>
                 <div
                     ref="container"
-                    class="q-pa-sm items-center justify-center column chart-area"
+                    class="items-center justify-center column chart-area"
                 >
                     <template
                         v-for="(ely, idy) in conditionSelector.yLabels"
@@ -132,7 +142,7 @@ const handleLabelMouseLeave = () => {
                                 <div
                                     :class="`chart flex justify-center align-center ${
                                         idx === hoveredColumn ||
-                                        idy === hoveredRow
+                                        idy === hoveredRow || hoveredAll
                                             ? 'hovered'
                                             : ''
                                     }`"
@@ -155,8 +165,8 @@ const handleLabelMouseLeave = () => {
                         </div>
                     </template>
                 </div>
-                <div class="q-pa-sm items-center justify-center flex">All</div>
-                <div class="q-pa-sm items-center justify-around row">
+                <div class="items-center justify-center flex all-section" @mouseover="handleAllMouseOver" @mouseleave="handleAllMouseLeave">All</div>
+                <div class="items-center justify-around row">
                     <template
                         v-for="(labelX, idx) in conditionSelector.xLabels"
                         :key="idx"
@@ -166,7 +176,7 @@ const handleLabelMouseLeave = () => {
                                 () => handleLabelMouseOver('x-axis', idx)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
-                            class="row justify-center align-center flex x-label"
+                            :class="`row justify-center align-center flex x-label ${hoveredAll ? 'hovered' : ''}`"
                         >
                             <div :style="width">
                                 {{ labelX }}
@@ -175,8 +185,8 @@ const handleLabelMouseLeave = () => {
                     </template>
                 </div>
             </div>
-            <div class="q-pa-sm items-center justify-center flex">Legend</div>
-            <div class="q-pa-sm items-center justify-center flex x-tag">
+            <div class="items-center justify-center flex">Legend</div>
+            <div class="items-center justify-center flex x-tag">
                 <ConditionSelectorDropDown axis="x-axis" />
             </div>
         </div>
@@ -185,14 +195,14 @@ const handleLabelMouseLeave = () => {
 
 <style scoped lang="scss">
 .condition-selector-container {
-    grid-template-columns: 80px 1fr;
-    grid-template-rows: 1fr 80px;
+    grid-template-columns: 60px 1fr;
+    grid-template-rows: 1fr 60px;
     font-size: 0.8rem;
     display: grid;
     width: 100%;
     height: 100%;
     & > div:not(.condition-charts-container) {
-        border: 1px solid black;
+        // border: 1px solid black;
         width: 100%;
         height: 100%;
     }
@@ -207,15 +217,15 @@ const handleLabelMouseLeave = () => {
     }
 
     .condition-charts-container {
-        grid-template-columns: 80px 1fr;
-        grid-template-rows: 1fr 80px;
+        grid-template-columns: 60px 1fr;
+        grid-template-rows: 1fr 60px;
         display: grid;
         width: 100%;
         height: 100%;
         & > div {
             width: 100%;
             height: 100%;
-            border: 1px solid black;
+            // border: 1px solid black;
         }
         .y-label {
             // transform:rotate(-90deg) translateY(-15px);
@@ -223,7 +233,7 @@ const handleLabelMouseLeave = () => {
             width: 100%;
             flex: 1;
             .y-label-text {
-                transform: rotate(-90deg);
+                // transform: rotate(-90deg);
             }
         }
         .x-label {
@@ -233,7 +243,8 @@ const handleLabelMouseLeave = () => {
         .x-label {
             cursor: pointer;
             text-align: center;
-            border-radius: 4px;
+            border-radius: 2px;
+            &.hovered,
             &:hover {
                 border: 1px solid black;
             }
@@ -246,18 +257,26 @@ const handleLabelMouseLeave = () => {
             width: 100%;
             .chart {
                 box-sizing: border-box;
-                border-radius: 4px;
+                padding:5px;
+                border-radius: 2px;
                 cursor: pointer;
-                border: 1px solid black;
+                // border: 1px solid black;
                 &:hover,
                 &.hovered {
-                    // border:1px solid black;
-                    background-color: red;
+                    border:1px solid black;
                 }
             }
         }
     }
 }
+
+.all-section{
+    border-radius:2px;
+    &:hover{
+        border:1px solid black;
+    }
+}
+
 
 .inner-card {
     border-radius: 30px;
