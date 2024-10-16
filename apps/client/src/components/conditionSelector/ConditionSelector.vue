@@ -7,8 +7,10 @@ import {
 } from '@/stores/componentStores/conditionSelectorStore';
 import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue';
 import ConditionChart from './ConditionChart.vue';
+import { storeToRefs } from 'pinia';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelector();
+const {xLabels, yLabels,currentExperimentTags,selectedXTag,selectedYTag } = storeToRefs(conditionSelector)
 
 const container = ref(null);
 const gridWidth = ref(0);
@@ -44,8 +46,8 @@ const hoveredAll = ref<boolean>(false);
 
 const size = computed(() =>
     Math.min(
-        gridWidth.value / conditionSelector.xLabels.length - 20,
-        gridHeight.value / conditionSelector.yLabels.length - 20
+        gridWidth.value / xLabels.value.length - 20,
+        gridHeight.value / yLabels.value.length - 20
     )
 );
 
@@ -87,9 +89,19 @@ const handleAllMouseOver = () => {
 const handleAllMouseLeave = () => {
     hoveredAll.value = false;
 }
-console.log(conditionSelector.currentExperimentTags);
-console.log(conditionSelector.xLabels);
+console.log(currentExperimentTags.value);
+console.log(xLabels.value);
 console.log('test')
+
+
+watch([selectedXTag, selectedYTag], () => {
+  console.log('Selected X Tag changed:', selectedXTag.value);
+  console.log('Selected Y Tag changed:', selectedYTag.value);
+  console.log('Updated xLabels:', xLabels.value);
+  console.log('Updated yLabels:', yLabels.value);
+});
+
+
 </script>
 
 <template>
@@ -107,7 +119,7 @@ console.log('test')
             >
                 <div class="justify-space-around align-center column">
                     <template
-                        v-for="(labelY, idy) in conditionSelector.yLabels"
+                        v-for="(labelY, idy) in yLabels"
                         :key="idy"
                     >
                         <div
@@ -131,15 +143,15 @@ console.log('test')
                     class="items-center justify-center column chart-area"
                 >
                     <template
-                        v-for="(ely, idy) in conditionSelector.yLabels"
-                        :key="idy"
+                        v-for="(ely, idy) in yLabels"
+                        :key="`${idy}-${yLabels.join(',')}`"
                     >
                         <div
                             class="chart-row row justify-space-around align-center"
                         >
                             <template
-                                v-for="(elx, idx) in conditionSelector.xLabels"
-                                :key="idx"
+                                v-for="(elx, idx) in xLabels"
+                                :key="`${idx}-${xLabels.join(',')}`"
                             >
                                 <div
                                     :class="`chart flex justify-center align-center ${
@@ -155,8 +167,8 @@ console.log('test')
                                             :width="size"
                                             :height="size"
                                             :tags="[
-                                                [`${conditionSelector.selectedXTag}`,`${elx.toString()}`],
-                                                [`${conditionSelector.selectedYTag}`,`${ely.toString()}`]
+                                                [`${selectedXTag}`,`${elx.toString()}`],
+                                                [`${selectedYTag}`,`${ely.toString()}`]
                                             ]"
                                             :xAxisName="'Frame'"
                                             :yAxisName="'Dry Mass (pg)'"
@@ -170,7 +182,7 @@ console.log('test')
                 <div class="items-center justify-center flex all-section" @mouseover="handleAllMouseOver" @mouseleave="handleAllMouseLeave">All</div>
                 <div class="items-center justify-around row">
                     <template
-                        v-for="(labelX, idx) in conditionSelector.xLabels"
+                        v-for="(labelX, idx) in xLabels"
                         :key="idx"
                     >
                         <div
