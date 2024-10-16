@@ -10,7 +10,7 @@ import { storeToRefs } from 'pinia';
 // Props from parent component
 // Accept props from the parent component
 const props = defineProps<{
-    tags: { [key: string]: string | number };
+    tags: [string,string][];
     xAxisName: string;
     yAxisName: string;
     width: number;
@@ -41,7 +41,7 @@ watch(experimentDataInitialized, async (isInitialized) => {
 
 // Styles
 const lineColor = '#ff0000';
-const strokeWidth = 3;
+const strokeWidth = 1;
 
 // These are examples. These should be dynamic, not static values.
 // const chartWidth = 500;
@@ -54,13 +54,14 @@ const strokeWidth = 3;
 
 
 function createChart(
-    tags: { [key: string]: string | number },
+    tags: [string,string][],
     xAxisName: string,
     yAxisName: string,
     width: number,
     height: number
 ) {
     if (chartContainer.value) {
+        console.log(tags);
         // If experiment metadata not initialized, return. Change this??
 
         /*
@@ -75,7 +76,10 @@ function createChart(
         // Set a unique source so we do not chain filters
         const source = 'test_source';
         // Create clause with filter predicate
-        const clause = { source, predicate: "drug = 'tylenol'" };
+
+        let predicate = `${tags[0][0]} = '${tags[0][1]}' AND ${tags[1][0]} = '${tags[1][1]}'`;
+
+        const clause = { source, predicate };
         // Update selection
         tagSelection.value.update(clause);
 

@@ -87,7 +87,9 @@ const handleAllMouseOver = () => {
 const handleAllMouseLeave = () => {
     hoveredAll.value = false;
 }
-
+console.log(conditionSelector.currentExperimentTags);
+console.log(conditionSelector.xLabels);
+console.log('test')
 </script>
 
 <template>
@@ -152,10 +154,10 @@ const handleAllMouseLeave = () => {
                                         <ConditionChart
                                             :width="size"
                                             :height="size"
-                                            :tags="{
-                                                drug: 'drug1',
-                                                concentration: 0.5,
-                                            }"
+                                            :tags="[
+                                                [`${conditionSelector.selectedXTag}`,`${elx.toString()}`],
+                                                [`${conditionSelector.selectedYTag}`,`${ely.toString()}`]
+                                            ]"
                                             :xAxisName="'Frame'"
                                             :yAxisName="'Dry Mass (pg)'"
                                         />
@@ -228,13 +230,9 @@ const handleAllMouseLeave = () => {
             // border: 1px solid black;
         }
         .y-label {
-            // transform:rotate(-90deg) translateY(-15px);
             // margin-right:80px;
             width: 100%;
             flex: 1;
-            .y-label-text {
-                // transform: rotate(-90deg);
-            }
         }
         .x-label {
             height: 100%;
