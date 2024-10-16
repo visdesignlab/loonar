@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, nextTick } from 'vue';
+import { computed, onMounted, ref, nextTick} from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 // import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
+import { watch } from 'vue';
+import { storeToRefs } from 'pinia';
 
 // Props from parent component
 // Accept props from the parent component
@@ -18,20 +20,14 @@ const props = defineProps<{
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
-// Checks if experiment data is initialized
-// const datasetSelectionStore = useDatasetSelectionStore();
-// const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
-const { experimentDataInitialized, currentExperimentMetadata } =
-    useDatasetSelectionStore();
+const datasetSelectionStore = useDatasetSelectionStore();
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
-
-// *** Change to watch statement
-onMounted(async () => {
-    // Waits for experiment data to be loaded
-    if (experimentDataInitialized) {
-        await nextTick();
+watch(experimentDataInitialized, async (isInitialized) => {
+    if(isInitialized){
+        await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
         createChart(
             props.tags,
             props.xAxisName,
@@ -40,7 +36,8 @@ onMounted(async () => {
             props.height
         );
     }
-});
+}, {immediate : true})
+
 
 // Styles
 const lineColor = '#ff0000';
@@ -54,6 +51,8 @@ const strokeWidth = 3;
 // const yAxisName = 'Frame';
 
 // Takes in tag names and values, width, height. Creates chart.
+
+
 function createChart(
     tags: { [key: string]: string | number },
     xAxisName: string,
@@ -71,7 +70,6 @@ function createChart(
         Since no users directly interact with the selection, this will be enough to filter our data.
 
          */
-        console.log('Test');
         //Create a vg selection
         const tagSelection = computed(() => vg.Selection.single());
         // Set a unique source so we do not chain filters
@@ -87,7 +85,7 @@ function createChart(
             // Fills in area under line chart grey (optional)
             vg.areaY(
                 vg.from(
-                    `${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,
+                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
                     {
                         filterBy: tagSelection.value,
                     }
@@ -105,7 +103,7 @@ function createChart(
             // Plots Line Chart based on selection.
             vg.lineY(
                 vg.from(
-                    `${currentExperimentMetadata?.name}_composite_experiment_cell_metadata`,
+                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
                     {
                         filterBy: tagSelection.value,
                     }
