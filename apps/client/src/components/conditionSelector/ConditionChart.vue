@@ -53,7 +53,7 @@ const strokeWidth = 1;
 // Takes in tag names and values, width, height. Creates chart.
 
 
-function createChart(
+async function createChart(
     tags: [string,string][],
     xAxisName: string,
     yAxisName: string,
@@ -83,7 +83,6 @@ function createChart(
         // Update selection
         tagSelection.value.update(clause);
 
-        // vg.coordinator().exec("CREATE TEMP TABLE test_table_five AS (SELECT * FROM test_new_composite_experiment_cell_metadata)")
         // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)
@@ -97,7 +96,7 @@ function createChart(
                 {
                     x: xAxisName,
                     y1: 0,
-                    y2: yAxisName,
+                    y: vg.avg(yAxisName),
                     fill: 'grey',
                     fillOpacity: 0.2,
                     curve: 'basis',
@@ -114,7 +113,7 @@ function createChart(
                 ),
                 {
                     x: xAxisName,
-                    y: yAxisName,
+                    y: vg.avg(yAxisName),
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
                     curve: 'basis',

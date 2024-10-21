@@ -1,0 +1,27 @@
+DuckDB Findings
+
+
+1. Can't use type:json if we have a big int, JSON can't serialize it (this is using coordinator.query())
+2. Can't do generic select by statement and pass data into VG plot
+3. Even if we do use a different plotting structure, cant seem to figure out how to grab results from query functionality
+    -> its using apache arrow -- we can probably install something to parse this if necessary
+
+
+    Queries for quantile:
+
+    
+        const res = await vg.coordinator().query(`
+            WITH cte AS (
+                SELECT approx_quantile("Dry Mass (pg)", 0.5) AS quantile_5
+                FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
+            )
+            SELECT 
+                CAST("Tracking ID" AS VARCHAR) as tracking_id,
+                cte.quantile_5
+            FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
+            CROSS JOIN cte
+            ORDER BY ABS("Dry Mass (pg)" - cte.quantile_5)
+            LIMIT 1;`,
+        {'type':'json'})
+        console.log(res);
+
