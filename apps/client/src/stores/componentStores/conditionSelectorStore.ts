@@ -12,6 +12,15 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     const selectedXTag = ref<string>('');
     const selectedYTag = ref<string>('');
 
+    const chartColorScheme = [
+        "#C026D3", // Fuchsia 600
+        "#0D9488", // teal 600
+        "#2563EB", //blue 600
+        "#65A30D", // lime 600
+        "#0EA5E9", // sky 500
+        "#E11D48", // rose 600
+    ]
+
 
     // Provides the set of tags
     const currentExperimentTags = computed((): Record<string, string[]> => {
@@ -69,6 +78,7 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
         selectTag,
         xLabels,
         yLabels,
-        currentExperimentTags
+        currentExperimentTags,
+        chartColorScheme
     };
 });

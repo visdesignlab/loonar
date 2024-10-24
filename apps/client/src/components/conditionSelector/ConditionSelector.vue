@@ -89,18 +89,6 @@ const handleAllMouseOver = () => {
 const handleAllMouseLeave = () => {
     hoveredAll.value = false;
 }
-console.log(currentExperimentTags.value);
-console.log(xLabels.value);
-console.log('test')
-
-
-watch([selectedXTag, selectedYTag], () => {
-  console.log('Selected X Tag changed:', selectedXTag.value);
-  console.log('Selected Y Tag changed:', selectedYTag.value);
-  console.log('Updated xLabels:', xLabels.value);
-  console.log('Updated yLabels:', yLabels.value);
-});
-
 
 </script>
 
@@ -164,6 +152,7 @@ watch([selectedXTag, selectedYTag], () => {
                                 >
                                     <div>
                                         <ConditionChart
+                                            :yIndex="idy"
                                             :width="size"
                                             :height="size"
                                             :tags="[

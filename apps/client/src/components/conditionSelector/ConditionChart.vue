@@ -2,10 +2,12 @@
 import { ref, nextTick} from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { useConditionSelector } from '@/stores/componentStores/conditionSelectorStore';
+
 import * as vg from '@uwdata/vgplot';
 import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 // Props from parent component
 // Accept props from the parent component
@@ -15,6 +17,7 @@ const props = defineProps<{
     yAxisName: string;
     width: number;
     height: number;
+    yIndex:number;
 }>();
 
 // Will use soon for dark mode.
@@ -23,6 +26,7 @@ const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 const { addConditionChartSelection } = useMosaicSelectionStore();
+const { chartColorScheme } = useConditionSelector();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -45,7 +49,8 @@ const {baseSelection, filteredSelection } = addConditionChartSelection(props.tag
 
 
 // Styles
-const lineColor = '#ff0000';
+console.log()
+const lineColor = chartColorScheme[props.yIndex % 6]
 const strokeWidth = 3;
 
 
