@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { QBtn, QDialog, QCard, QCardSection, QCardActions } from 'quasar';
+import { QBtn } from 'quasar';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
 import {
@@ -12,7 +12,7 @@ import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 const datasetSelectionStore = useDatasetSelectionStore();
-const {mosaicSelection, clearMosaicSource} = useMosaicSelectionStore();
+const { clearMosaicSource } = useMosaicSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
