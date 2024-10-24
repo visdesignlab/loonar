@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import { useDatasetSelectionStore, type LocationMetadata } from '../dataStores/datasetSelectionUntrrackedStore';
 
@@ -8,6 +8,12 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
 
+    // Initialize starting tags as empty strings
+    const selectedXTag = ref<string>('');
+    const selectedYTag = ref<string>('');
+
+
+    // Provides the set of tags
     const currentExperimentTags = computed((): Record<string, string[]> => {
         const tempTags: Record<string, string[]> = {};
         currentExperimentMetadata.value?.locationMetadataList.forEach((locationMetadata: LocationMetadata) => {
@@ -31,9 +37,14 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
         return tempTags;
     });
 
+    // When experimentTags change, initialize as values.
+    watch(currentExperimentTags, (newExperimentTags) => {
+        if (Object.keys(newExperimentTags).length > 1) {
+            selectedXTag.value = Object.keys(newExperimentTags)[0];
+            selectedYTag.value = Object.keys(newExperimentTags)[1];
+        }
+    }, { immediate: true })
 
-    const selectedXTag = ref<string>('start');
-    const selectedYTag = ref<string>('end');
 
     const xLabels = computed<string[]>(() => {
         return currentExperimentTags.value[selectedXTag.value];
@@ -50,6 +61,7 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
             selectedYTag.value = tag;
         }
     }
+
 
     return {
         selectedXTag,
