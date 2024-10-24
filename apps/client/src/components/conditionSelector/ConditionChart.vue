@@ -2,11 +2,9 @@
 import { ref, nextTick} from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
 import * as vg from '@uwdata/vgplot';
 import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 // Props from parent component
@@ -32,7 +30,6 @@ watch(experimentDataInitialized, async (isInitialized) => {
     if(isInitialized){
         await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
         createChart(
-            props.tags,
             props.xAxisName,
             props.yAxisName,
             props.width,
@@ -53,7 +50,6 @@ const strokeWidth = 3;
 
 
 async function createChart(
-    tags: [string,string][],
     xAxisName: string,
     yAxisName: string,
     width: number,
