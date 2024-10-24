@@ -10,7 +10,14 @@ import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelector();
-const {xLabels, yLabels, selectedXTag,selectedYTag } = storeToRefs(conditionSelector)
+const {
+    xLabels,
+    yLabels,
+    selectedXTag,
+    selectedYTag,
+    currentExperimentTags,
+    selectedGrid,
+ } = storeToRefs(conditionSelector)
 
 const container = ref(null);
 const gridWidth = ref(0);
@@ -115,6 +122,7 @@ const handleAllMouseLeave = () => {
                                 () => handleLabelMouseOver('y-axis', idy)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
+                            @click="() => conditionSelector.clickConditionChartRow(idy)"
                             :class="`row justify-center align-center y-label ${hoveredAll ? 'hovered' : ''}`"
                             :style="maxHeight"
                         >
@@ -147,8 +155,9 @@ const handleAllMouseLeave = () => {
                                         idy === hoveredRow || hoveredAll
                                             ? 'hovered'
                                             : ''
-                                    }`"
+                                    } ${selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected() ? 'selected' : 'unselected'}` "
                                     :style="heightWidth"
+                                    @click="() => conditionSelector.clickConditionChart(idx,idy)"
                                 >
                                     <div>
                                         <ConditionChart
@@ -159,6 +168,7 @@ const handleAllMouseLeave = () => {
                                             ]"
                                             :xAxisName="'Frame'"
                                             :yAxisName="'Dry Mass (pg)'"
+                                            :selected="selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected()"
                                         />
                                     </div>
                                 </div>
@@ -166,7 +176,14 @@ const handleAllMouseLeave = () => {
                         </div>
                     </template>
                 </div>
-                <div class="items-center justify-center flex all-section" @mouseover="handleAllMouseOver" @mouseleave="handleAllMouseLeave">All</div>
+                <div 
+                    class="items-center justify-center flex all-section" 
+                    @mouseover="handleAllMouseOver"
+                    @click="() => conditionSelector.clickConditionChartAll()"
+                    @mouseleave="handleAllMouseLeave"
+                >
+                    All
+                </div>
                 <div class="items-center justify-around row">
                     <template
                         v-for="(labelX, idx) in xLabels"
@@ -177,6 +194,8 @@ const handleAllMouseLeave = () => {
                                 () => handleLabelMouseOver('x-axis', idx)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
+                            @click="() => conditionSelector.clickConditionChartColumn(idx)"
+
                             :class="`row justify-center align-center flex x-label ${hoveredAll ? 'hovered' : ''}`"
                         >
                             <div :style="width">
@@ -258,6 +277,12 @@ $border: 1px solid #9ca3af;
                 &:hover,
                 &.hovered {
                     border: $border;
+                }
+                &.selected{
+                    // border: 5px solid blue;
+                }
+                &.unselected{
+                    opacity:0.8
                 }
             }
         }

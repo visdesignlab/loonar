@@ -16,6 +16,7 @@ const props = defineProps<{
     xAxisName: string;
     yAxisName: string;
     yIndex:number;
+    selected:boolean;
 }>();
 
 // Will use soon for dark mode.
@@ -41,7 +42,7 @@ watch(experimentDataInitialized, async (isInitialized) => {
 
 // Creates a new set of selections and adds them to an overall list that is updated whenever general mosaicSelection is updated.
 // Returns the "base" and "filtered". Base a constant selection which is never updated. This is only to filter based on the tags. The "filteredSelection" is updated by other general filters (i.e. mosaicSelection).
-const {baseSelection, filteredSelection } = addConditionChartSelection(props.tags)
+const {baseSelection, filteredSelection, opacityParam } = addConditionChartSelection(props.tags)
 
 
 // Styles
@@ -49,6 +50,8 @@ console.log()
 const lineColor = chartColorScheme[props.yIndex % 6]
 const strokeWidth = 5;
 
+// const $selected = vg.Param.value(0);
+// $selected.update()
 
 async function createChart(
     xAxisName: string,
@@ -110,6 +113,7 @@ async function createChart(
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
                     curve: 'basis',
+                    opacity:opacityParam
                 }
             ),
 

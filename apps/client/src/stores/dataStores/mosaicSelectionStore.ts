@@ -20,6 +20,7 @@ interface Clause {
 export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     let mosaicSelection = vg.Selection.intersect();
     const conditionChartSelections: Record<string, any> = {};
+    const conditionChartSelectedParams: Record<string, any> = {}
 
     function _escapeSource(source: string) {
         return `"${source.replace(/"/g, '""')}"`;
@@ -38,17 +39,24 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
 
     function addConditionChartSelection(tags: [string, string][]) {
         const conditionChartSelection = vg.Selection.intersect();
+        // Creates an opacity param
+        const conditionChartSelectedParam = vg.Param.value(1);
         const source = `${tags[0][0]}-${tags[0][1]}_${tags[1][0]}-${tags[1][1]}`;
         const clause: Clause = {
             source,
             predicate: `"${tags[0][0]}" = '${tags[0][1]}' AND "${tags[1][0]}" = '${tags[1][1]}'`
         }
         conditionChartSelection.update(clause)
+        // Add selection to record
         conditionChartSelections[source] = conditionChartSelection;
+        // Add parameter to record
+        conditionChartSelectedParams[source] = conditionChartSelectedParam;
+
         const conditionChartBaseSelection = conditionChartSelection.clone();
         return {
             baseSelection: conditionChartBaseSelection,
-            filteredSelection: conditionChartSelection
+            filteredSelection: conditionChartSelection,
+            opacityParam: conditionChartSelectedParam
         };
     }
 
@@ -62,11 +70,24 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
         updateMosaicSelection(source);
     }
 
+    function updateOpacityParam(source: string, value: number) {
+        conditionChartSelectedParams[source].update(value)
+    }
+
+    function updateOpacityParamAll(value: number) {
+        console.log(conditionChartSelectedParams);
+        Object.values(conditionChartSelectedParams).forEach((param: any) => {
+            param.update(value);
+        })
+    }
+
 
     return {
         mosaicSelection,
         updateMosaicSelection,
         addConditionChartSelection,
-        clearMosaicSource
+        clearMosaicSource,
+        updateOpacityParam,
+        updateOpacityParamAll
     }
 });

@@ -1,16 +1,20 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import { useDatasetSelectionStore, type LocationMetadata } from '../dataStores/datasetSelectionUntrrackedStore';
+import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 
 export type Axis = 'x-axis' | 'y-axis';
 
 export const useConditionSelector = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
+    const mosaicSelectionStore = useMosaicSelectionStore();
 
     // Initialize starting tags as empty strings
     const selectedXTag = ref<string>('');
     const selectedYTag = ref<string>('');
+    // Initialize as empty. Used to indicate what is selected.
+    const selectedGrid = ref<Record<string, boolean>>({});
 
     const chartColorScheme = [
         "#C026D3", // Fuchsia 600
@@ -55,6 +59,8 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     }, { immediate: true })
 
 
+
+
     const xLabels = computed<string[]>(() => {
         return currentExperimentTags.value[selectedXTag.value];
     });
@@ -62,6 +68,7 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     const yLabels = computed<string[]>(() => {
         return currentExperimentTags.value[selectedYTag.value];
     });
+
 
     function selectTag(tag: string, axis: Axis) {
         if (axis === 'x-axis') {
@@ -72,6 +79,121 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     }
 
 
+
+    function clickConditionChartColumn(idx: number) {
+
+        const allSelected = _checkAllSelected(idx, 'col');
+
+        currentExperimentTags.value[selectedYTag.value].forEach((value: string, idy: number) => {
+            clickConditionChart(idx, idy, allSelected)
+        })
+    }
+
+    function clickConditionChartRow(idy: number) {
+
+        const allSelected = _checkAllSelected(idy, 'row');
+
+        currentExperimentTags.value[selectedXTag.value].forEach((value: string, idx: number) => {
+            clickConditionChart(idx, idy, allSelected)
+        })
+    }
+
+    function clickConditionChartAll() {
+
+        const allSelected = _checkAllSelected(null, 'all');
+
+        currentExperimentTags.value[selectedXTag.value].forEach((xValue: string, idx: number) => {
+            currentExperimentTags.value[selectedYTag.value].forEach((yValue: string, idy: number) => {
+                clickConditionChart(idx, idy, allSelected)
+            })
+        })
+    }
+
+    function allSelected() {
+        return Object.keys(selectedGrid.value).length === 0;
+    }
+
+    function clickConditionChart(idx: number, idy: number, allSelected: boolean | null = null) {
+        const currentColumnVal = currentExperimentTags.value[selectedXTag.value][idx]
+        const currentRowVal = currentExperimentTags.value[selectedYTag.value][idy]
+
+        const currentValue = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`];
+
+        // If currently selected, new opacity will be 0 because we are 'de-selecting'.
+        let newOpacity = currentValue ? 0 : 1;
+        let newValue = !currentValue;
+        if (allSelected !== null) {
+            newOpacity = allSelected ? 0 : 1;
+            newValue = allSelected ? false : true;
+        }
+
+
+        if (!(`${currentColumnVal}-${currentRowVal}` in selectedGrid.value)) {
+            // If nothing has been selected, update all opacities to 0
+            if (Object.keys(selectedGrid.value).length === 0) {
+                mosaicSelectionStore.updateOpacityParamAll(0)
+            }
+        }
+
+        // Get Current Selection ID
+        const source = `${selectedXTag.value}-${currentColumnVal}_${selectedYTag.value}-${currentRowVal}`
+
+        // Update opacity to 1
+        mosaicSelectionStore.updateOpacityParam(source, newOpacity);
+
+        // Set 'Selected' on current selection
+        selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] = newValue;
+
+    }
+    type allSelectedType = 'row' | 'col' | 'all'
+
+    //Helper function to determine if all objects in a row or column are selected (or if all are selected)
+    function _checkAllSelected(index: number | null, type: allSelectedType = 'all') {
+        if (type === 'col') {
+            if (index !== null) {
+                const currentColumnVal: string = currentExperimentTags.value[selectedXTag.value][index]
+                let allSelected = true;
+
+                currentExperimentTags.value[selectedYTag.value].forEach((value: string) => {
+                    const currentRowVal: string = value;
+                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    allSelected = allSelected && selected;
+                })
+                return allSelected
+            }
+            return false
+
+        } else if (type === 'row') {
+            if (index !== null) {
+
+                const currentRowVal: string = currentExperimentTags.value[selectedYTag.value][index]
+                let allSelected = true;
+
+                currentExperimentTags.value[selectedXTag.value].forEach((value: string) => {
+                    const currentColumnVal: string = value;
+                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    allSelected = allSelected && selected;
+                })
+                return allSelected
+            }
+            return false
+        } else {
+            let allSelected = true;
+            currentExperimentTags.value[selectedXTag.value].forEach((xValue: string) => {
+                const currentColumnVal: string = xValue;
+                currentExperimentTags.value[selectedYTag.value].forEach((yValue: string) => {
+                    const currentRowVal: string = yValue;
+                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    allSelected = allSelected && selected;
+                })
+            })
+            return allSelected;
+        }
+
+    }
+
+
+
     return {
         selectedXTag,
         selectedYTag,
@@ -79,6 +201,12 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
         xLabels,
         yLabels,
         currentExperimentTags,
-        chartColorScheme
+        chartColorScheme,
+        clickConditionChart,
+        clickConditionChartAll,
+        clickConditionChartColumn,
+        clickConditionChartRow,
+        selectedGrid,
+        allSelected
     };
 });
