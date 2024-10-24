@@ -15,8 +15,6 @@ const props = defineProps<{
     tags: [string,string][];
     xAxisName: string;
     yAxisName: string;
-    width: number;
-    height: number;
     yIndex:number;
 }>();
 
@@ -36,8 +34,6 @@ watch(experimentDataInitialized, async (isInitialized) => {
         createChart(
             props.xAxisName,
             props.yAxisName,
-            props.width,
-            props.height
         );
     }
 }, {immediate : true, deep:true})
@@ -51,14 +47,12 @@ const {baseSelection, filteredSelection } = addConditionChartSelection(props.tag
 // Styles
 console.log()
 const lineColor = chartColorScheme[props.yIndex % 6]
-const strokeWidth = 3;
+const strokeWidth = 5;
 
 
 async function createChart(
     xAxisName: string,
     yAxisName: string,
-    width: number,
-    height: number
 ) {
     if (chartContainer.value) {
 
@@ -118,11 +112,8 @@ async function createChart(
                     curve: 'basis',
                 }
             ),
-            // General settings.
-            vg.width(width),
-            vg.height(height),
 
-            // Gets rid of axes and margins!
+            // Gets rid of axes and margins
             vg.axis(false),
             vg.margin(0)
         );

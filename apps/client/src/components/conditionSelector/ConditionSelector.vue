@@ -10,7 +10,7 @@ import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelector();
-const {xLabels, yLabels,currentExperimentTags,selectedXTag,selectedYTag } = storeToRefs(conditionSelector)
+const {xLabels, yLabels, selectedXTag,selectedYTag } = storeToRefs(conditionSelector)
 
 const container = ref(null);
 const gridWidth = ref(0);
@@ -142,7 +142,7 @@ const handleAllMouseLeave = () => {
                                 :key="`${idx}-${xLabels.join(',')}`"
                             >
                                 <div
-                                    :class="`chart flex justify-center align-center ${
+                                    :class="`chart flex justify-center align-end ${
                                         idx === hoveredColumn ||
                                         idy === hoveredRow || hoveredAll
                                             ? 'hovered'
@@ -153,8 +153,6 @@ const handleAllMouseLeave = () => {
                                     <div>
                                         <ConditionChart
                                             :yIndex="idy"
-                                            :width="size"
-                                            :height="size"
                                             :tags="[
                                                 [`${selectedXTag}`,`${elx.toString()}`],
                                                 [`${selectedYTag}`,`${ely.toString()}`]
@@ -197,6 +195,8 @@ const handleAllMouseLeave = () => {
 </template>
 
 <style scoped lang="scss">
+
+$border: 1px solid #9ca3af;
 .condition-selector-container {
     grid-template-columns: 60px 1fr;
     grid-template-rows: 1fr 60px;
@@ -205,7 +205,6 @@ const handleAllMouseLeave = () => {
     width: 100%;
     height: 100%;
     & > div:not(.condition-charts-container) {
-        // border: 1px solid black;
         width: 100%;
         height: 100%;
     }
@@ -228,10 +227,8 @@ const handleAllMouseLeave = () => {
         & > div {
             width: 100%;
             height: 100%;
-            // border: 1px solid black;
         }
         .y-label {
-            // margin-right:80px;
             width: 100%;
             flex: 1;
         }
@@ -245,7 +242,7 @@ const handleAllMouseLeave = () => {
             border-radius: 2px;
             &.hovered,
             &:hover {
-                border: 1px solid black;
+                border: $border;
             }
         }
     }
@@ -256,13 +253,11 @@ const handleAllMouseLeave = () => {
             width: 100%;
             .chart {
                 box-sizing: border-box;
-                padding:5px;
                 border-radius: 2px;
                 cursor: pointer;
-                // border: 1px solid black;
                 &:hover,
                 &.hovered {
-                    border:1px solid black;
+                    border: $border;
                 }
             }
         }
@@ -272,7 +267,7 @@ const handleAllMouseLeave = () => {
 .all-section{
     border-radius:2px;
     &:hover{
-        border:1px solid black;
+        border: $border;
     }
 }
 
