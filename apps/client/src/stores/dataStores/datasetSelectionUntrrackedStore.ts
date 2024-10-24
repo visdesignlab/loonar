@@ -17,7 +17,7 @@ import {
 import { useNotificationStore } from '../misc/notificationStore';
 
 export interface ExperimentMetadata {
-    // name?: string; // user friendly name
+    name: string; // user friendly name
     filename: string;
     headers: string[];
     headerTransforms?: TextTransforms; // maps things like "Time (h)" to "time"
@@ -28,12 +28,15 @@ export interface ExperimentMetadata {
     compositeTabularDataFilename?: string;
 }
 
+export type Tags = Record<string, string>;
+
 export interface LocationMetadata {
     // data related to a single imaging location
     id: string;
     tabularDataFilename: string;
     imageDataFilename?: string;
     segmentationsFolder?: string;
+    tags?: Tags;
     // name?: string; // user friendly name
     // condition?: string; // experimental condition // TODO: - does this need to be an array
     // plate?: string;
@@ -134,10 +137,9 @@ export const useDatasetSelectionStore = defineStore(
                         ?.compositeTabularDataFilename
                 );
                 try {
-                    console.log('here')
                     await loadFileIntoDuckDb(
                         duckDbFileUrl,
-                        'composite_experiment_cell_metadata',
+                        `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
                         'parquet'
                     );
                     notify({
