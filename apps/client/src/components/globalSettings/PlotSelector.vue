@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { QBtn, QDialog, QCard, QCardSection, QCardActions } from 'quasar';
-import * as vg from '@uwdata/vgplot';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
 import {
@@ -11,8 +10,9 @@ import {
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 const datasetSelectionStore = useDatasetSelectionStore();
-
+const {mosaicSelection, clearMosaicSource} = useMosaicSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
@@ -75,7 +75,6 @@ const errorPlotName = ref('');
 
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
-    // console.log('handlePlotError called with:', plotName);
     errorPlotName.value = plotName;
 
     notificationStore.notify({
@@ -86,11 +85,7 @@ function handlePlotError(plotName: string) {
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
 
-    mosaicSelection.value.update({
-        source: plotName,
-        value: null,
-        predicate: null,
-    });
+    clearMosaicSource(plotName);
 }
 
 // Adds a plot initially when first loading.
@@ -109,33 +104,11 @@ onMounted(() => {
 
 function handlePlotLoaded() {
     loadedPlots.value++;
-    // console.log('Plot loaded');
     if (loadedPlots.value === totalPlots.value) {
         loading.value = false;
     }
 }
 
-// Mosaic selections within plots gets computed
-const mosaicSelection = computed(() => vg.Selection.intersect());
-const plotBrush = computed(() => {
-    // console.log('plotBrush computed');
-
-    for (let selection of dataSelections.value) {
-        const source = selection.plotName;
-        const min = Number(selection.range[0]);
-        const max = Number(selection.range[1]);
-        const value = [min, max];
-
-        // Escape the source name to handle multi-word column names
-        const escapedSource = `"${source.replace(/"/g, '""')}"`;
-
-        const predicate = `${escapedSource} BETWEEN ${min} AND ${max}`;
-        const clause = { source, value, predicate };
-        mosaicSelection.value.update(clause);
-    }
-
-    return mosaicSelection.value;
-});
 
 // Selecting which plots to show
 function isPlotSelected(name: string): boolean {
@@ -153,12 +126,7 @@ function togglePlotSelection(name: string) {
 }
 
 function handleSelectionRemoved(event: CustomEvent) {
-    // console.log('handleSelectionRemoved reached');
-    mosaicSelection.value.update({
-        source: event.detail,
-        value: null,
-        predicate: null,
-    });
+    clearMosaicSource(event.detail);
 }
 
 window.addEventListener(
@@ -213,7 +181,6 @@ window.addEventListener(
                 v-for="dataSelection in displayedPlots"
                 :key="dataSelection.plotName"
                 :plot-name="dataSelection.plotName"
-                :plot-brush="plotBrush"
                 @plot-loaded="handlePlotLoaded"
                 @plot-error="handlePlotError"
             />

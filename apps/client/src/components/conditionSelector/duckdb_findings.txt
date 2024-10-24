@@ -7,21 +7,31 @@ DuckDB Findings
     -> its using apache arrow -- we can probably install something to parse this if necessary
 
 
-    Queries for quantile:
+    Queries for quantile -- finds average mass of every tracking id. takes the quantile of the average mass:
 
     
         const res = await vg.coordinator().query(`
-            WITH cte AS (
-                SELECT approx_quantile("Dry Mass (pg)", 0.5) AS quantile_5
+        WITH cte AS (
+            SELECT approx_quantile(avg_mass, 0.5) as quantile_5
+            FROM (
+                SELECT avg("Dry Mass (pg)") as avg_mass
                 FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
+                GROUP BY tracking_id, "Location"
             )
-            SELECT 
-                CAST("Tracking ID" AS VARCHAR) as tracking_id,
-                cte.quantile_5
+        )
+        SELECT 
+            CAST("Tracking ID" AS VARCHAR),
+            cte.quantile_5
             FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
             CROSS JOIN cte
             ORDER BY ABS("Dry Mass (pg)" - cte.quantile_5)
             LIMIT 1;`,
         {'type':'json'})
         console.log(res);
+
+
+
+
+
+    SELECT tracking_id, location, avg("Dry Mass (pg)") from table group by tracking_id, location;
 

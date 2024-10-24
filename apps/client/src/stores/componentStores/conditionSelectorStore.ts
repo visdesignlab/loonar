@@ -32,8 +32,8 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
     });
 
 
-    const selectedXTag = ref<string>('drug');
-    const selectedYTag = ref<string>('concentration');
+    const selectedXTag = ref<string>('start');
+    const selectedYTag = ref<string>('end');
 
     const xLabels = computed<string[]>(() => {
         return currentExperimentTags.value[selectedXTag.value];

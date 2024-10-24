@@ -11,6 +11,7 @@ import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { QItemSection } from 'quasar';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 // Initialise Data
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -18,6 +19,8 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(dat
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
+const { updateMosaicSelection, mosaicSelection } = useMosaicSelectionStore();
+
 
 // Define Plot Emits and Props
 const emit = defineEmits(['selectionChange', 'plot-loaded', 'plot-error']);
@@ -25,11 +28,7 @@ const props = defineProps({
     plotName: {
         type: String as PropType<string>,
         required: true,
-    },
-    plotBrush: {
-        type: Object as PropType<any>,
-        required: true,
-    },
+    }
 });
 
 // Vg Plot
@@ -46,7 +45,7 @@ function makePlot(column: string) {
             // Currently Selected Data
             vg.rectY(
                 vg.from(`${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`, {
-                    filterBy: props.plotBrush,
+                    filterBy: mosaicSelection,
                 }),
                 {
                     x: vg.bin(column),
@@ -147,6 +146,7 @@ const rangeModel = computed({
         return { min: selection.value.range[0], max: selection.value.range[1] };
     },
     set(newValue) {
+        updateMosaicSelection(selection.value.plotName, selection.value.range);
         selection.value.range[0] = newValue.min;
         selection.value.range[1] = newValue.max;
     },
