@@ -30,15 +30,16 @@ const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
-watch([experimentDataInitialized, conditionChartSelectionsInitialized], async ([isInitialized, isChartInitialized]) => {    
-    if(isInitialized && isChartInitialized){
+watch([experimentDataInitialized, conditionChartSelections], async ([isInitialized, newConditionChartSelections]) => {    
+    if(isInitialized){
         await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
+        console.log('Im here to make the chart')
         createChart(
             props.xAxisName,
             props.yAxisName,
         );
     }
-}, {immediate : true, deep:true})
+}, {immediate : true, deep : true })
 
 
 // Creates a new set of selections and adds them to an overall list that is updated whenever general mosaicSelection is updated.
@@ -57,7 +58,6 @@ async function createChart(
     if (chartContainer.value ) {
 
         const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`
-        console.log(conditionChartSelections)
         // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)

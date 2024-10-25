@@ -1,6 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
-import { watch, ref } from 'vue';
+import { watch, ref, computed } from 'vue';
 import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
 
 import _ from 'lodash-es'
@@ -30,7 +30,7 @@ interface ConditionChartSelection {
 export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
 
     let mosaicSelection = vg.Selection.intersect();
-    const conditionChartSelections: Record<string, ConditionChartSelection> = {};
+    // const conditionChartSelections: Record<string, ConditionChartSelection> = {};
     const conditionChartSelectedParams: Record<string, any> = {}
     const conditionChartSelectionsInitialized = ref<boolean>(false);
 
@@ -41,89 +41,92 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     // let previousDataSelections = _.cloneDeep(dataSelections.value);
     let previousDataSelections: DataSelection[] = []
 
-    // Subscribe to DataSelections
-    watch(dataSelections, (newDataSelections) => {
-        // Track Changes in number of plots
-        let previousPlots = previousDataSelections.map(entry => entry.plotName);
+    const conditionChartSelections = computed((): Record<string, ConditionChartSelection> => {
+        const keysList = Object.keys(conditionSelectorStore.currentExperimentTags);
+        let tempConditionChartSelections: Record<string, ConditionChartSelection> = {};
+        for (let i = 0; i < keysList.length; i++) {
+            const currKey = keysList[i];
+            const currValues = conditionSelectorStore.currentExperimentTags[currKey];
 
-        // In shared plots, get different ranges
-        newDataSelections.forEach((entry) => {
-            const currPlotName = entry.plotName;
-            if (entry.range[0] !== -Infinity && entry.range[1] !== -Infinity) {
-                if (previousPlots.includes(currPlotName)) {
-                    const previousSelection = previousDataSelections.find(tempPrevSelection => tempPrevSelection.plotName === currPlotName);
-                    if (previousSelection && !_.isEqual(previousSelection.range, entry.range)) {
-                        // Call update with new range
+            for (let j = i + 1; j < keysList.length; j++) {
+                //Compare currValues with all other lists
+                const compareKey = keysList[j];
+                const compareValues = conditionSelectorStore.currentExperimentTags[compareKey];
+
+                currValues.forEach((currValue: string) => {
+                    compareValues.forEach((compareValue: string) => {
+
+                        // Create new selection based on comparison
+                        const newSelection = vg.Selection.intersect();
+                        const newSource = `${currKey}-${currValue}_${compareKey}-${compareValue}`
+                        const reversedSource = `${compareKey}-${compareValue}_${currKey}-${currValue}`
+                        const clause: Clause = {
+                            source: newSource,
+                            predicate: `"${currKey}" = '${currValue}' AND "${currKey}" = '${currValue}'`
+                        }
+
+                        newSelection.update(clause);
+                        const conditionChartSelection: ConditionChartSelection = {
+                            baseSelection: newSelection,
+                            filteredSelection: newSelection.clone()
+                        }
+
+                        tempConditionChartSelections[newSource] = conditionChartSelection;
+                        tempConditionChartSelections[reversedSource] = conditionChartSelection;
+                    })
+                })
+            }
+        }
+
+        return tempConditionChartSelections;
+
+    });
+
+    // Subscribe to DataSelections. Waits for Condition Chart selections to be initialized.
+    watch([dataSelections, conditionChartSelections], ([newDataSelections, newConditionChartSelections]) => {
+        if (Object.keys(newConditionChartSelections).length > 0) {
+            // Track Changes in number of plots
+            let previousPlots = previousDataSelections.map(entry => entry.plotName);
+
+            // In shared plots, get different ranges
+            newDataSelections.forEach((entry) => {
+                const currPlotName = entry.plotName;
+                if (entry.range[0] !== -Infinity && entry.range[1] !== -Infinity) {
+                    if (previousPlots.includes(currPlotName)) {
+                        const previousSelection = previousDataSelections.find(tempPrevSelection => tempPrevSelection.plotName === currPlotName);
+                        if (previousSelection && !_.isEqual(previousSelection.range, entry.range)) {
+                            // Call update with new range
+                            updateMosaicSelection(currPlotName, entry.range)
+                        }
+                        // Remove Name from previousPlots
+                        previousPlots = previousPlots.filter(plotName => plotName !== currPlotName)
+                    } else {
+                        // Update with new plot source
+
                         updateMosaicSelection(currPlotName, entry.range)
                     }
-                    // Remove Name from previousPlots
-                    previousPlots = previousPlots.filter(plotName => plotName !== currPlotName)
-                } else {
-                    // Update with new plot source
-                    updateMosaicSelection(currPlotName, entry.range)
-                }
-            }
-        })
-
-        // If greater than 0, means previous dataSelections has a selection no longer around.
-        if (previousPlots.length > 0) {
-            previousPlots.forEach(prevPlotName => {
-                const previousSelection = previousDataSelections.find(tempPrevSelection => tempPrevSelection.plotName === prevPlotName);
-
-                // Update mosaic with the given max range
-                if (previousSelection) {
-
-                    updateMosaicSelection(previousSelection.plotName, previousSelection.maxRange);
                 }
             })
+
+            // If greater than 0, means previous dataSelections has a selection no longer around.
+            if (previousPlots.length > 0) {
+                previousPlots.forEach(prevPlotName => {
+                    const previousSelection = previousDataSelections.find(tempPrevSelection => tempPrevSelection.plotName === prevPlotName);
+
+                    // Update mosaic with the given max range
+                    if (previousSelection) {
+
+                        updateMosaicSelection(previousSelection.plotName, previousSelection.maxRange);
+                    }
+                })
+            }
+
+            previousDataSelections = _.cloneDeep(newDataSelections);
         }
 
-        previousDataSelections = _.cloneDeep(newDataSelections);
+        console.log('finished')
     }, { deep: true, immediate: true })
 
-
-    // Initialize Condition Chart Selections
-    watch(() => JSON.stringify(conditionSelectorStore.currentExperimentTags), (newTagsString, oldTagsString) => {
-        if (newTagsString !== oldTagsString) {
-            const newExperimentTags = JSON.parse(newTagsString);
-            const keysList = Object.keys(newExperimentTags);
-            for (let i = 0; i < keysList.length; i++) {
-                const currKey = keysList[i];
-                const currValues = newExperimentTags[currKey];
-
-                for (let j = i + 1; j < keysList.length; j++) {
-                    //Compare currValues with all other lists
-                    const compareKey = keysList[j];
-                    const compareValues = newExperimentTags[compareKey];
-
-                    currValues.forEach((currValue: string) => {
-                        compareValues.forEach((compareValue: string) => {
-
-                            // Create new selection based on comparison
-                            const newSelection = vg.Selection.intersect();
-                            const newSource = `${currKey}-${currValue}_${compareKey}-${compareValue}`
-                            const reversedSource = `${compareKey}-${compareValue}_${currKey}-${currValue}`
-                            const clause: Clause = {
-                                source: newSource,
-                                predicate: `"${currKey}" = '${currValue}' AND "${currKey}" = '${currValue}'`
-                            }
-
-                            newSelection.update(clause);
-                            const conditionChartSelection: ConditionChartSelection = {
-                                baseSelection: newSelection,
-                                filteredSelection: newSelection.clone()
-                            }
-
-                            conditionChartSelections[newSource] = conditionChartSelection;
-                            conditionChartSelections[reversedSource] = conditionChartSelection;
-                        })
-                    })
-                }
-
-            }
-            conditionChartSelectionsInitialized.value = true;
-        }
-    }, { immediate: true, deep: true })
 
 
     // Used to watch when selectedGrid changes
@@ -163,7 +166,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
         }
         conditionChartSelection.update(clause)
         // Add selection to record
-        conditionChartSelections[source] = conditionChartSelection;
+        conditionChartSelections.value[source] = conditionChartSelection;
         // Add parameter to record
         conditionChartSelectedParams[source] = conditionChartSelectedParam;
 
@@ -176,7 +179,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     }
 
     function _updateConditionChartSelections(clause: Clause) {
-        Object.values(conditionChartSelections).forEach((selectionObject: ConditionChartSelection) => {
+        Object.values(conditionChartSelections.value).forEach((selectionObject: ConditionChartSelection) => {
             selectionObject.filteredSelection.update(clause);
         })
     }
