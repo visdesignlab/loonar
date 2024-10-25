@@ -292,6 +292,13 @@ export const useGridstackLayoutStore = defineStore(
                 noPadding: true,
             },
             {
+                component: 'ExemplarView',
+                displayName: 'Exemplar View',
+                id: 'ExemplarView',
+                icon: 'table_chart',
+                noPadding: true,
+            },
+            {
                 component: 'LooneageViewGL',
                 displayName: 'Looneage',
                 id: 'LooneageViewGL',

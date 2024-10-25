@@ -1,14 +1,14 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import { useDatasetSelectionStore, type LocationMetadata } from '../dataStores/datasetSelectionUntrrackedStore';
-import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
+// import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 
 export type Axis = 'x-axis' | 'y-axis';
 
-export const useConditionSelector = defineStore('conditionSelector', () => {
+export const useConditionSelectorStore = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
-    const mosaicSelectionStore = useMosaicSelectionStore();
+    // const mosaicSelectionStore = useMosaicSelectionStore();
 
     // Initialize starting tags as empty strings
     const selectedXTag = ref<string>('');
@@ -52,11 +52,14 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
 
     // When experimentTags change, initialize as values.
     watch(currentExperimentTags, (newExperimentTags) => {
+        console.log(newExperimentTags);
         if (Object.keys(newExperimentTags).length > 1) {
             selectedXTag.value = Object.keys(newExperimentTags)[0];
             selectedYTag.value = Object.keys(newExperimentTags)[1];
         }
     }, { immediate: true })
+
+
 
 
 
@@ -131,7 +134,7 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
         if (!(`${currentColumnVal}-${currentRowVal}` in selectedGrid.value)) {
             // If nothing has been selected, update all opacities to 0
             if (Object.keys(selectedGrid.value).length === 0) {
-                mosaicSelectionStore.updateOpacityParamAll(0)
+                // mosaicSelectionStore.updateOpacityParamAll(0)
             }
         }
 
@@ -139,7 +142,7 @@ export const useConditionSelector = defineStore('conditionSelector', () => {
         const source = `${selectedXTag.value}-${currentColumnVal}_${selectedYTag.value}-${currentRowVal}`
 
         // Update opacity to 1
-        mosaicSelectionStore.updateOpacityParam(source, newOpacity);
+        // mosaicSelectionStore.updateOpacityParam(source, newOpacity);
 
         // Set 'Selected' on current selection
         selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] = newValue;

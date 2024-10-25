@@ -19,7 +19,7 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(dat
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const { updateMosaicSelection, mosaicSelection } = useMosaicSelectionStore();
+const { mosaicSelection, updateMosaicSelection } = useMosaicSelectionStore();
 
 
 // Define Plot Emits and Props
@@ -141,12 +141,13 @@ const selection = computed<DataSelection>(() => {
     return s;
 });
 
+// watch(selection, (newSelection) => updateMosaicSelection(newSelection.plotName, newSelection.range), {deep:true, immediate:true});
+
 const rangeModel = computed({
     get() {
         return { min: selection.value.range[0], max: selection.value.range[1] };
     },
     set(newValue) {
-        updateMosaicSelection(selection.value.plotName, selection.value.range);
         selection.value.range[0] = newValue.min;
         selection.value.range[1] = newValue.max;
     },

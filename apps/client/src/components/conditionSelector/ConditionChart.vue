@@ -3,7 +3,7 @@ import { ref, nextTick} from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
-import { useConditionSelector } from '@/stores/componentStores/conditionSelectorStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 import * as vg from '@uwdata/vgplot';
 import { watch } from 'vue';
@@ -24,13 +24,14 @@ const globalSettings = useGlobalSettings();
 
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
-const { addConditionChartSelection } = useMosaicSelectionStore();
-const { chartColorScheme } = useConditionSelector();
+const { conditionChartSelections  } = useMosaicSelectionStore();
+const { conditionChartSelectionsInitialized} = storeToRefs(useMosaicSelectionStore());
+const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
-watch(experimentDataInitialized, async (isInitialized) => {    
-    if(isInitialized){
+watch([experimentDataInitialized, conditionChartSelectionsInitialized], async ([isInitialized, isChartInitialized]) => {    
+    if(isInitialized && isChartInitialized){
         await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
         createChart(
             props.xAxisName,
@@ -42,27 +43,21 @@ watch(experimentDataInitialized, async (isInitialized) => {
 
 // Creates a new set of selections and adds them to an overall list that is updated whenever general mosaicSelection is updated.
 // Returns the "base" and "filtered". Base a constant selection which is never updated. This is only to filter based on the tags. The "filteredSelection" is updated by other general filters (i.e. mosaicSelection).
-const {baseSelection, filteredSelection, opacityParam } = addConditionChartSelection(props.tags)
-
 
 // Styles
-console.log()
 const lineColor = chartColorScheme[props.yIndex % 6]
 const strokeWidth = 5;
-
-// const $selected = vg.Param.value(0);
-// $selected.update()
 
 async function createChart(
     xAxisName: string,
     yAxisName: string,
 ) {
-    if (chartContainer.value) {
 
-        while (chartContainer.value.firstChild) {
-            chartContainer.value.removeChild(chartContainer.value.firstChild);
-        }
 
+    if (chartContainer.value ) {
+
+        const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`
+        console.log(conditionChartSelections)
         // Creates chart, filtered by the selection that uses the query.
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)
@@ -70,7 +65,7 @@ async function createChart(
                 vg.from(
                     `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
                     {
-                        filterBy: baseSelection
+                        filterBy: conditionChartSelections[source].baseSelection
                     }
                 ),
                 {
@@ -87,7 +82,7 @@ async function createChart(
                 vg.from(
                     `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
                     {
-                        filterBy: baseSelection,
+                        filterBy: conditionChartSelections[source].baseSelection
                     }
                 ),
                 {
@@ -96,7 +91,7 @@ async function createChart(
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
                     curve: 'basis',
-                    opacity:0.3
+                    opacity:0.5
                 }
             ),
             // Plots Line Chart based on selection.
@@ -104,7 +99,7 @@ async function createChart(
                 vg.from(
                     `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
                     {
-                        filterBy: filteredSelection,
+                        filterBy: conditionChartSelections[source].filteredSelection
                     }
                 ),
                 {
@@ -113,7 +108,7 @@ async function createChart(
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
                     curve: 'basis',
-                    opacity:opacityParam
+                    opacity:1
                 }
             ),
 

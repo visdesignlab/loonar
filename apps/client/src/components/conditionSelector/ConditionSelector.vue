@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
-    useConditionSelector,
+    useConditionSelectorStore,
     type Axis,
 } from '@/stores/componentStores/conditionSelectorStore';
 import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue';
 import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
 const globalSettings = useGlobalSettings();
-const conditionSelector = useConditionSelector();
+const conditionSelector = useConditionSelectorStore();
 const {
     xLabels,
     yLabels,
     selectedXTag,
     selectedYTag,
-    currentExperimentTags,
     selectedGrid,
  } = storeToRefs(conditionSelector)
 
@@ -278,11 +277,8 @@ $border: 1px solid #9ca3af;
                 &.hovered {
                     border: $border;
                 }
-                &.selected{
-                    // border: 5px solid blue;
-                }
                 &.unselected{
-                    opacity:0.8
+                    opacity:0.5
                 }
             }
         }

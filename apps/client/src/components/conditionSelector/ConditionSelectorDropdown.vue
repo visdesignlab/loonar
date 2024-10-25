@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-    useConditionSelector,
+    useConditionSelectorStore,
     type Axis,
 } from '@/stores/componentStores/conditionSelectorStore';
 import { storeToRefs } from 'pinia';
-const conditionSelector = useConditionSelector();
+const conditionSelector = useConditionSelectorStore();
 const {currentExperimentTags} = storeToRefs(conditionSelector);
 const props = defineProps({
     axis: {
