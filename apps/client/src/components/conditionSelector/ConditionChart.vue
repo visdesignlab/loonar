@@ -25,7 +25,6 @@ const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 const { conditionChartSelections  } = useMosaicSelectionStore();
-const { conditionChartSelectionsInitialized} = storeToRefs(useMosaicSelectionStore());
 const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
@@ -33,7 +32,6 @@ const chartContainer = ref<HTMLElement | null>(null);
 watch([experimentDataInitialized, conditionChartSelections], async ([isInitialized, newConditionChartSelections]) => {    
     if(isInitialized){
         await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-        console.log('Im here to make the chart')
         createChart(
             props.xAxisName,
             props.yAxisName,

@@ -135,7 +135,6 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
 
         // Whenever selected Grid Changes, change
 
-
     })
 
 
