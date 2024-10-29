@@ -80,3 +80,13 @@ export async function loadFileIntoDuckDb(
         throw new Error(message);
     }
 }
+
+
+export async function createAggregateTable(tableName: string) {
+    await vg.coordinator().exec([`
+        CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
+        SELECT AVG("Dry Mass (pg)") as avg_mass, COUNT("Tracking ID") as track_length, "Tracking ID" as tracking_id
+        FROM ${tableName}
+        GROUP BY "Tracking ID"
+    `]);
+}

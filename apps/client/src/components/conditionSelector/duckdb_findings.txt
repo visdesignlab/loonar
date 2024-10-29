@@ -35,3 +35,10 @@ DuckDB Findings
 
     SELECT tracking_id, location, avg("Dry Mass (pg)") from table group by tracking_id, location;
 
+
+
+const $test_selection = vg.Selection.intersect();
+$test_selection.update({
+    source:'test_source',
+    predicate:`"Tracking ID" IN (SELECT tracking_id FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate WHERE track_length between 0 and 100 )`
+})

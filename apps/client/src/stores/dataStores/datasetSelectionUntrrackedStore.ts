@@ -13,6 +13,7 @@ import {
     type CsvParserResults,
     loadCsv,
     loadFileIntoDuckDb,
+    createAggregateTable,
 } from '@/util/datasetLoader';
 import { useNotificationStore } from '../misc/notificationStore';
 
@@ -142,6 +143,7 @@ export const useDatasetSelectionStore = defineStore(
                         `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
                         'parquet'
                     );
+                    await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`)
                     notify({
                         type: 'success',
                         message: `Created DuckDb Table for ${duckDbFileUrl}.`,
