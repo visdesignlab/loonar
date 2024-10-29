@@ -104,7 +104,6 @@ function handlePlotError(plotName: string) {
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
 
-    clearMosaicSource(plotName);
 }
 
 // Adds a plot initially when first loading.
@@ -152,7 +151,7 @@ function onSubmit() {
 }
 
 function handleSelectionRemoved(event: CustomEvent) {
-    clearMosaicSource(event.detail);
+    // clearMosaicSource(event.detail);
 }
 
 window.addEventListener(

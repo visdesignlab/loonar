@@ -122,27 +122,10 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
 
         const currentValue = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`];
 
-        // If currently selected, new opacity will be 0 because we are 'de-selecting'.
-        let newOpacity = currentValue ? 0 : 1;
         let newValue = !currentValue;
         if (allSelected !== null) {
-            newOpacity = allSelected ? 0 : 1;
             newValue = allSelected ? false : true;
         }
-
-
-        if (!(`${currentColumnVal}-${currentRowVal}` in selectedGrid.value)) {
-            // If nothing has been selected, update all opacities to 0
-            if (Object.keys(selectedGrid.value).length === 0) {
-                // mosaicSelectionStore.updateOpacityParamAll(0)
-            }
-        }
-
-        // Get Current Selection ID
-        const source = `${selectedXTag.value}-${currentColumnVal}_${selectedYTag.value}-${currentRowVal}`
-
-        // Update opacity to 1
-        // mosaicSelectionStore.updateOpacityParam(source, newOpacity);
 
         // Set 'Selected' on current selection
         selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] = newValue;

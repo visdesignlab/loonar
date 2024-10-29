@@ -38,7 +38,6 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     const { dataSelections } = storeToRefs(selectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
 
-    // let previousDataSelections = _.cloneDeep(dataSelections.value);
     let previousDataSelections: DataSelection[] = []
 
     const conditionChartSelections = computed((): Record<string, ConditionChartSelection> => {
