@@ -33,6 +33,7 @@ function addFilter() {
 }
 
 const cellAttributesOpen = ref(true);
+const trackAttributesOpen = ref(true);
 
 const mutedTextClass = computed(() =>
     globalSettings.darkMode ? 'text-grey-5' : 'text-grey-8'
@@ -184,11 +185,21 @@ const mutedTextClass = computed(() =>
             label="Cell Attributes"
         >
             <q-card :dark="globalSettings.darkMode">
-                <PlotSelector></PlotSelector>
+                <PlotSelector selector-type="Cell"></PlotSelector>
             </q-card>
         </q-expansion-item>
 
-        <q-separator />
+        <q-separator class="q-my-sm" />
+
+        <q-expansion-item
+            v-model="trackAttributesOpen"
+            icon="linear_scale"
+            label="Track Attributes"
+        >
+            <q-card :dark="globalSettings.darkMode">
+                <PlotSelector selector-type="Track"></PlotSelector>
+            </q-card>
+        </q-expansion-item>
     </q-list>
 </template>
 

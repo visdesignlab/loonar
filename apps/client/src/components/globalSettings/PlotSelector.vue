@@ -19,13 +19,32 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
 
-const menuOpen = ref(false);
+const props = defineProps({
+    selectorType: {
+        type: String,
+        required: true,
+        validator: (value: string) => ['Track', 'Cell'].includes(value),
+    },
+});
+
+const cellPlotMenuOpen = ref(false);
+const trackPlotDialogOpen = ref(false);
+const selectedAttribute = ref('');
+const selectedAggregation = ref('');
 const loading = ref(true);
 const loadedPlots = ref(0);
 const displayedPlots = computed(() =>
     dataSelections.value.filter((d) => d.displayChart)
 );
 const totalPlots = computed(() => displayedPlots.value.length);
+
+const aggregationOptions = [
+    { label: 'Sum', value: 'sum' },
+    { label: 'Average', value: 'average' },
+    { label: 'Count', value: 'count' },
+    { label: 'Minimum', value: 'min' },
+    { label: 'Maximum', value: 'max' },
+];
 
 // On any update, computes the plots to be shown.
 
@@ -109,7 +128,6 @@ function handlePlotLoaded() {
     }
 }
 
-
 // Selecting which plots to show
 function isPlotSelected(name: string): boolean {
     const selection = selectionStore.getSelection(name);
@@ -123,6 +141,14 @@ function togglePlotSelection(name: string) {
         return;
     }
     selection.displayChart = !selection.displayChart;
+}
+
+function onMenuButtonClick() {
+    trackPlotDialogOpen.value = true;
+}
+
+function onSubmit() {
+    trackPlotDialogOpen.value = false;
 }
 
 function handleSelectionRemoved(event: CustomEvent) {
@@ -149,9 +175,12 @@ window.addEventListener(
                     round
                     icon="menu"
                     color="grey-7"
+                    @click="onMenuButtonClick"
                 >
+                    <!-- Q-Menu for 'Cell' Selector -->
                     <q-menu
-                        v-model="menuOpen"
+                        v-if="props.selectorType === 'Cell'"
+                        v-model="cellPlotMenuOpen"
                         fit
                         :dark="globalSettings.darkMode"
                     >
@@ -175,15 +204,70 @@ window.addEventListener(
                             </q-item>
                         </q-list>
                     </q-menu>
+
+                    <!-- Q-Dialog for 'Track' Selector -->
+                    <q-dialog
+                        v-if="props.selectorType === 'Track'"
+                        v-model="trackPlotDialogOpen"
+                        persistent
+                    >
+                        <q-card :dark="globalSettings.darkMode">
+                            <q-card-section>
+                                <div class="text-h6">
+                                    Add Track Attribute to Display
+                                </div>
+                                <q-separator class="q-my-sm" />
+                                <q-form
+                                    @submit="onSubmit"
+                                    class="q-gutter-md"
+                                    :dark="globalSettings.darkMode"
+                                >
+                                    <q-select
+                                        label="Select Attribute"
+                                        :options="allPlotNames"
+                                        v-model="selectedAttribute"
+                                        clickable
+                                    >
+                                    </q-select>
+                                    <q-select
+                                        label="Select Aggregation"
+                                        :options="aggregationOptions"
+                                        v-model="selectedAggregation"
+                                        clickable
+                                    >
+                                    </q-select>
+
+                                    <div>
+                                        <q-btn
+                                            label="Add"
+                                            type="submit"
+                                            color="primary"
+                                            :dark="globalSettings.darkMode"
+                                        />
+                                        <q-btn
+                                            label="Cancel"
+                                            color="primary"
+                                            flat
+                                            @click="trackPlotDialogOpen = false"
+                                            class="q-ml-sm"
+                                            :dark="globalSettings.darkMode"
+                                        />
+                                    </div>
+                                </q-form>
+                            </q-card-section>
+                        </q-card>
+                    </q-dialog>
                 </q-btn>
             </div>
-            <UnivariateCellPlot
-                v-for="dataSelection in displayedPlots"
-                :key="dataSelection.plotName"
-                :plot-name="dataSelection.plotName"
-                @plot-loaded="handlePlotLoaded"
-                @plot-error="handlePlotError"
-            />
+            <template v-if="props.selectorType === 'Cell'">
+                <UnivariateCellPlot
+                    v-for="dataSelection in displayedPlots"
+                    :key="dataSelection.plotName"
+                    :plot-name="dataSelection.plotName"
+                    @plot-loaded="handlePlotLoaded"
+                    @plot-error="handlePlotError"
+                />
+            </template>
         </div>
     </div>
 </template>
