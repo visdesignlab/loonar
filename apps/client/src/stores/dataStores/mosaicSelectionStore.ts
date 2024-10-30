@@ -2,6 +2,7 @@ import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import { watch, ref, computed } from 'vue';
 import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
+import { useDatasetSelectionStore } from './datasetSelectionUntrrackedStore';
 
 import _ from 'lodash-es'
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
@@ -37,6 +38,11 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     const selectionStore = useSelectionStore();
     const { dataSelections } = storeToRefs(selectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
+
+    const datasetSelectionStore = useDatasetSelectionStore();
+    const { currentExperimentMetadata } = storeToRefs(
+        datasetSelectionStore
+    );
 
     let previousDataSelections: DataSelection[] = []
 
@@ -95,14 +101,14 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
                         const previousSelection = previousDataSelections.find(tempPrevSelection => tempPrevSelection.plotName === currPlotName);
                         if (previousSelection && !_.isEqual(previousSelection.range, entry.range)) {
                             // Call update with new range
-                            updateMosaicSelection(currPlotName, entry.range)
+                            updateMosaicSelection(currPlotName, entry.range, entry.type)
                         }
                         // Remove Name from previousPlots
                         previousPlots = previousPlots.filter(plotName => plotName !== currPlotName)
                     } else {
                         // Update with new plot source
 
-                        updateMosaicSelection(currPlotName, entry.range)
+                        updateMosaicSelection(currPlotName, entry.range, entry.type)
                     }
                 }
             })
@@ -115,7 +121,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
                     // Update mosaic with the given max range
                     if (previousSelection) {
 
-                        updateMosaicSelection(previousSelection.plotName, previousSelection.maxRange);
+                        updateMosaicSelection(previousSelection.plotName, previousSelection.maxRange, previousSelection.type);
                     }
                 })
             }
@@ -143,11 +149,35 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     }
 
     // Called when a slider input needs to update selection
-    function updateMosaicSelection(plotName: string, range: [number, number] | null = null) {
+    function updateMosaicSelection(plotName: string, range: [number, number] | null = null, type: DataSelection['type']) {
+
+        //
+
+
         const escapedSource = _escapeSource(plotName)
+        let predicate;
+
+        if (type === 'cell') {
+            // If cell, base only on range
+            predicate = range ? `${escapedSource} BETWEEN ${range[0]} AND ${range[1]}` : null
+        } else if (type == 'track') {
+            // If track, we filter by tracking IDs
+
+            // Get ID Column
+            const id_column = currentExperimentMetadata.value?.headerTransforms?.['id']
+
+            // Aggregate Table Name
+            const table_name = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`
+
+            // Predicate has a subquery to pull IDs from aggregate table fitting the range
+            predicate = range ? `"${id_column}" IN (SELECT tracking_id FROM ${table_name} WHERE ${escapedSource} between ${range[0]} and ${range[1]} )` : null
+        } else {
+            predicate = null;
+        }
+
         const clause = {
             source: plotName,
-            predicate: range ? `${escapedSource} BETWEEN ${range[0]} AND ${range[1]}` : null
+            predicate
         }
         mosaicSelection.update(clause);
         _updateConditionChartSelections(clause)
@@ -183,7 +213,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     }
 
     function clearMosaicSource(source: string) {
-        updateMosaicSelection(source);
+        updateMosaicSelection(source, null, 'cell');
     }
 
     function updateOpacityParam(source: string, value: number) {

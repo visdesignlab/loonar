@@ -6,6 +6,8 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 import { storeToRefs } from 'pinia';
+import LBtn from '../custom/LBtn.vue';
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 
 
 
@@ -15,6 +17,10 @@ import { storeToRefs } from 'pinia';
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 const { chartColorScheme } = useConditionSelectorStore();
+const selectionStore = useSelectionStore();
+
+const { dataSelections } = storeToRefs(selectionStore);
+
 
 
 const chartContainer = ref<HTMLElement | null>(null);
@@ -26,6 +32,13 @@ watch(experimentDataInitialized, async (isInitialized) => {
 }, {immediate : true, deep:true})
 
 
+const handleOnClick = () => {
+    console.log('hello')
+    const plotName = "avg_mass"
+    // const range = [0,100];
+    selectionStore.updateSelection(plotName, [0,500], "track");
+    console.log(dataSelections.value);
+}
 
 
 async function createChart(){
@@ -63,7 +76,9 @@ async function createChart(){
 
 </script>
 <template>
-    <div style="width:100%;height:100%;" ref="chartContainer"></div>
+    <!-- <div style="width:100%;height:100%;" ref="chartContainer"></div> -->
+    <l-btn @click="handleOnClick" style="margin-left:20px" label="Click me!">Test</l-btn>
+    <div></div>
 </template>
 <style scoped lang="scss">
 </style>

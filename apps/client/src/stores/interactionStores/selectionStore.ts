@@ -50,7 +50,7 @@ export const useSelectionStore = defineStore('Selection', {
                 ...this.dataSelections[index].maxRange,
             ];
         },
-        updateSelection(plotName: string, range: [number, number]) {
+        updateSelection(plotName: string, range: [number, number], type?: DataSelection['type']) {
             const existingIndex = this.dataSelections.findIndex(
                 (s) => s.plotName === plotName
             );
@@ -60,7 +60,7 @@ export const useSelectionStore = defineStore('Selection', {
                 this.addSelection({
                     plotName,
                     range,
-                    type: 'cell', // Default value
+                    type: type ?? 'cell', // Default value
                     maxRange: [...range], // Using the provided range as maxRange
                     displayChart: true, // Default value
                 });
