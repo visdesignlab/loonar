@@ -10,9 +10,7 @@ import {
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 const datasetSelectionStore = useDatasetSelectionStore();
-const { clearMosaicSource } = useMosaicSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
