@@ -98,12 +98,11 @@ function handlePlotError(plotName: string) {
 
     notificationStore.notify({
         type: 'problem',
-        message: `An Error occured while loading the plot ${errorPlotName}`,
+        message: `An Error occured while loading the plot ${errorPlotName.value}`,
     });
 
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
-
 }
 
 // Adds a plot initially when first loading.
@@ -263,6 +262,16 @@ function handleSelectionRemoved(event: CustomEvent) {
                     v-for="dataSelection in displayedPlots"
                     :key="dataSelection.plotName"
                     :plot-name="dataSelection.plotName"
+                    :attribute-type="'Cell'"
+                    @plot-loaded="handlePlotLoaded"
+                    @plot-error="handlePlotError"
+                />
+            </template>
+            <template v-if="props.selectorType === 'Track'">
+                <UnivariateCellPlot
+                    :key="'avg_mass'"
+                    :plot-name="'avg_mass'"
+                    :attribute-type="'Track'"
                     @plot-loaded="handlePlotLoaded"
                     @plot-error="handlePlotError"
                 />

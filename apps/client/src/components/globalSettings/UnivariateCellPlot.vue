@@ -15,12 +15,13 @@ import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStor
 
 // Initialise Data
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+    datasetSelectionStore
+);
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
 const { mosaicSelection, updateMosaicSelection } = useMosaicSelectionStore();
-
 
 // Define Plot Emits and Props
 const emit = defineEmits(['selectionChange', 'plot-loaded', 'plot-error']);
@@ -28,33 +29,49 @@ const props = defineProps({
     plotName: {
         type: String as PropType<string>,
         required: true,
+    },
+    attributeType: {
+        type: String,
+        required: true,
+        validator: (value: string) => ['Track', 'Cell'].includes(value),
+    },
+});
+
+const datasetName = computed(() => {
+    const baseName = currentExperimentMetadata?.value?.name;
+    if (props.attributeType === 'Cell') {
+        return `${baseName}_composite_experiment_cell_metadata`;
+    } else {
+        return `${baseName}_composite_experiment_cell_metadata_aggregate`;
     }
 });
 
+let selectedDataOptions = {};
+
+// Conditionally add filterBy property when attributeType is 'Cell'
+if (props.attributeType === 'Cell') {
+    selectedDataOptions = { filterBy: mosaicSelection };
+}
+
 // Vg Plot
 function makePlot(column: string) {
-        try {
+    try {
         return vg.plot(
             // Background grey data
-            vg.rectY(vg.from(`${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`), {
+            vg.rectY(vg.from(datasetName.value), {
                 x: vg.bin(column),
                 y: vg.count(),
                 fill: '#cccccc',
                 inset: 1,
             }),
             // Currently Selected Data
-            vg.rectY(
-                vg.from(`${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`, {
-                    filterBy: mosaicSelection,
-                }),
-                {
-                    x: vg.bin(column),
-                    y: vg.count(),
-                    fill: '#377eb8',
-                    opacity: 1,
-                    inset: 1,
-                }
-            ),
+            vg.rectY(vg.from(datasetName.value, selectedDataOptions), {
+                x: vg.bin(column),
+                y: vg.count(),
+                fill: '#377eb8',
+                opacity: 1,
+                inset: 1,
+            }),
             vg.marginBottom(45),
             vg.marginTop(5),
             vg.marginLeft(20),
@@ -76,8 +93,6 @@ function makePlot(column: string) {
     } catch (error) {
         emit('plot-error', props.plotName);
     }
-
-
 }
 
 // Handle Loading of Everything
