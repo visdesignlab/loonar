@@ -32,6 +32,7 @@ interface ConditionChartSelection {
 
 export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     let mosaicSelection = vg.Selection.intersect();
+    let trackLevelSelection = vg.Selection.intersect();
     // const conditionChartSelections: Record<string, ConditionChartSelection> = {};
     const conditionChartSelectedParams: Record<string, any> = {};
     const conditionChartSelectionsInitialized = ref<boolean>(false);
@@ -64,7 +65,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
                     const compareKey = keysList[j];
                     const compareValues =
                         conditionSelectorStore.currentExperimentTags[
-                            compareKey
+                        compareKey
                         ];
 
                     currValues.forEach((currValue: string) => {
@@ -78,12 +79,13 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
                                 predicate: `"${currKey}" = '${currValue}' AND "${currKey}" = '${currValue}'`,
                             };
 
+                            // Update this for new track level attributes
                             newSelection.update(clause);
                             const conditionChartSelection: ConditionChartSelection =
-                                {
-                                    baseSelection: newSelection,
-                                    filteredSelection: newSelection.clone(),
-                                };
+                            {
+                                baseSelection: newSelection,
+                                filteredSelection: newSelection.clone(),
+                            };
 
                             tempConditionChartSelections[newSource] =
                                 conditionChartSelection;
@@ -217,6 +219,11 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
             predicate = range
                 ? `"${id_column}" IN (SELECT tracking_id FROM ${table_name} WHERE ${escapedSource} between ${range[0]} and ${range[1]} )`
                 : null;
+            const trackLevelClause = {
+                source: plotName,
+                predicate: range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null
+            }
+            trackLevelSelection.update(trackLevelClause);
         } else {
             predicate = null;
         }
@@ -276,6 +283,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
 
     return {
         mosaicSelection,
+        trackLevelSelection,
         conditionChartSelections,
         conditionChartSelectionsInitialized,
         updateMosaicSelection,

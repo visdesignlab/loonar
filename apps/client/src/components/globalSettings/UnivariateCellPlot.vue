@@ -21,7 +21,7 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const { mosaicSelection, updateMosaicSelection } = useMosaicSelectionStore();
+const { mosaicSelection,  trackLevelSelection } = useMosaicSelectionStore();
 
 // Define Plot Emits and Props
 const emit = defineEmits(['selectionChange', 'plot-loaded', 'plot-error']);
@@ -53,6 +53,8 @@ let selectedDataOptions = {};
 // Conditionally add filterBy property when attributeType is 'Cell'
 if (props.attributeType === 'Cell') {
     selectedDataOptions = { filterBy: mosaicSelection };
+} else {
+    selectedDataOptions = {filterBy: trackLevelSelection}
 }
 
 console.log(
