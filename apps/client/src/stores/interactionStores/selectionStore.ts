@@ -3,7 +3,6 @@ import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
-
 export interface DataSelection {
     plotName: string;
     type: 'cell' | 'track' | 'lineage'; // Unused, but will be needed if we have track-level and lineage-level attributes here
@@ -50,7 +49,11 @@ export const useSelectionStore = defineStore('Selection', {
                 ...this.dataSelections[index].maxRange,
             ];
         },
-        updateSelection(plotName: string, range: [number, number], type?: DataSelection['type']) {
+        updateSelection(
+            plotName: string,
+            range: [number, number],
+            type?: DataSelection['type']
+        ) {
             const existingIndex = this.dataSelections.findIndex(
                 (s) => s.plotName === plotName
             );
@@ -90,26 +93,36 @@ export const useSelectionStore = defineStore('Selection', {
             if (typeof s === 'undefined') return null;
             return s;
         },
-        addPlot(name: string) {
-            if (
-                this.dataSelections.some(
-                    (s: DataSelection) => s.plotName === name
-                )
-            ) {
-                // plot is already here, do not add again
+        addPlot(name: string, type: DataSelection['type']) {
+            const existingIndex = this.dataSelections.findIndex(
+                (s) => s.plotName === name
+            );
+            if (existingIndex !== -1) {
+                const existingPlot = this.dataSelections[existingIndex];
+                if (existingPlot.type !== type) {
+                    console.warn(
+                        `Changing type of plot "${name}" from "${existingPlot.type}" to "${type}"`
+                    );
+                    existingPlot.type = type;
+                    this.setMaxRange(name);
+                }
                 return;
             }
             const selection: DataSelection = {
                 plotName: name,
                 range: [-Infinity, Infinity],
                 maxRange: [-Infinity, Infinity],
-                type: 'cell',
+                type: type,
                 displayChart: true,
             };
             this.dataSelections.push(selection);
             this.setMaxRange(name);
         },
         async getMaxRange(plotName: string): Promise<[number, number]> {
+            const selection = this.getSelection(plotName);
+            if (!selection) {
+                throw new Error(`Selection "${plotName}" does not exist.`);
+            }
             const { currentExperimentMetadata } = useDatasetSelectionStore();
 
             try {
@@ -124,12 +137,26 @@ export const useSelectionStore = defineStore('Selection', {
                 // Escape the column name to handle spaces and special characters
                 const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
 
-                const query = `
-                    SELECT
-                        MIN("${escapedPlotName}") AS min_value,
-                        MAX("${escapedPlotName}") AS max_value
-                    FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
-                `;
+                let query = '';
+                if (selection.type === 'cell') {
+                    query = `
+                SELECT
+                    MIN("${escapedPlotName}") AS min_value,
+                    MAX("${escapedPlotName}") AS max_value
+                FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
+            `;
+                } else if (selection.type === 'track') {
+                    query = `
+                SELECT
+                    MIN("${escapedPlotName}") AS min_value,
+                    MAX("${escapedPlotName}") AS max_value
+                FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata_aggregate
+            `;
+                } else {
+                    throw new Error(
+                        `Unknown type "${selection.type}" for plot "${plotName}"`
+                    );
+                }
 
                 console.log('Constructed query:', query);
 

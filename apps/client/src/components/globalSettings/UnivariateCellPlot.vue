@@ -40,8 +40,10 @@ const props = defineProps({
 const datasetName = computed(() => {
     const baseName = currentExperimentMetadata?.value?.name;
     if (props.attributeType === 'Cell') {
+        console.log('using normal table');
         return `${baseName}_composite_experiment_cell_metadata`;
     } else {
+        console.log('using aggregate');
         return `${baseName}_composite_experiment_cell_metadata_aggregate`;
     }
 });
@@ -52,6 +54,10 @@ let selectedDataOptions = {};
 if (props.attributeType === 'Cell') {
     selectedDataOptions = { filterBy: mosaicSelection };
 }
+
+console.log(
+    props.plotName + ' ' + props.attributeType + ' ' + datasetName.value
+);
 
 // Vg Plot
 function makePlot(column: string) {
@@ -147,12 +153,13 @@ const selection = computed<DataSelection>(() => {
     if (!s) {
         return {
             plotName: 'not found',
-            type: 'cell',
+            type: props.attributeType.toLowerCase() as DataSelection['type'],
             range: [0, 0],
             maxRange: [0, 0],
             displayChart: true,
         };
     }
+    console.log(s.plotName);
     return s;
 });
 
@@ -160,9 +167,25 @@ const selection = computed<DataSelection>(() => {
 
 const rangeModel = computed({
     get() {
+        console.log(selection.value.range[1]);
         return { min: selection.value.range[0], max: selection.value.range[1] };
     },
+
     set(newValue) {
+        // if (props.attributeType === 'cell') {
+        //     selectionStore.updateSelection(
+        //         props.plotName,
+        //         [newValue.min, newValue.max],
+        //         'cell'
+        //     );
+        // }
+        // if (props.attributeType === 'track') {
+        //     selectionStore.updateSelection(
+        //         props.plotName,
+        //         [newValue.min, newValue.max],
+        //         'track'
+        //     );
+        // }
         selection.value.range[0] = newValue.min;
         selection.value.range[1] = newValue.max;
     },

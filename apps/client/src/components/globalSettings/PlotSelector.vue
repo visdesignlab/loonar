@@ -33,10 +33,15 @@ const selectedAttribute = ref('');
 const selectedAggregation = ref('');
 const loading = ref(true);
 const loadedPlots = ref(0);
-const displayedPlots = computed(() =>
-    dataSelections.value.filter((d) => d.displayChart)
-);
-const totalPlots = computed(() => displayedPlots.value.length);
+const displayedCellPlots = computed(() => {
+    const filtered = dataSelections.value.filter(
+        (d) => d.displayChart && d.type === 'cell'
+    );
+    console.log('Filtered Cell Plots:', filtered);
+    return filtered;
+});
+
+const totalCellPlots = computed(() => displayedCellPlots.value.length);
 
 const aggregationOptions = [
     { label: 'Sum', value: 'sum' },
@@ -112,7 +117,10 @@ onMounted(() => {
         experimentDataInitialized,
         (isInitialized) => {
             if (isInitialized && firstPlotName.value) {
-                selectionStore.addPlot(firstPlotName.value);
+                selectionStore.addPlot(firstPlotName.value, 'cell');
+
+                // For testing track attributes
+                selectionStore.addPlot('avg_mass', 'track');
             }
         },
         { immediate: true }
@@ -121,7 +129,7 @@ onMounted(() => {
 
 function handlePlotLoaded() {
     loadedPlots.value++;
-    if (loadedPlots.value === totalPlots.value) {
+    if (loadedPlots.value === totalCellPlots.value) {
         loading.value = false;
     }
 }
@@ -135,7 +143,7 @@ function isPlotSelected(name: string): boolean {
 function togglePlotSelection(name: string) {
     const selection = selectionStore.getSelection(name);
     if (selection === null) {
-        selectionStore.addPlot(name);
+        selectionStore.addPlot(name, 'cell');
         return;
     }
     selection.displayChart = !selection.displayChart;
@@ -259,7 +267,7 @@ function handleSelectionRemoved(event: CustomEvent) {
             </div>
             <template v-if="props.selectorType === 'Cell'">
                 <UnivariateCellPlot
-                    v-for="dataSelection in displayedPlots"
+                    v-for="dataSelection in displayedCellPlots"
                     :key="dataSelection.plotName"
                     :plot-name="dataSelection.plotName"
                     :attribute-type="'Cell'"
