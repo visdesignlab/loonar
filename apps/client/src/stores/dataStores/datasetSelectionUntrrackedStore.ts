@@ -143,11 +143,24 @@ export const useDatasetSelectionStore = defineStore(
                         `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
                         'parquet'
                     );
-                    await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`)
+                    try {
+                        await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headerTransforms)
+                        notify({
+                            type: 'success',
+                            message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
+                        });
+                    } catch (error) {
+                        const typedError = error as Error
+                        notify({
+                            type: 'problem',
+                            message: typedError.message
+                        })
+                    }
                     notify({
                         type: 'success',
                         message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                     });
+
                 } catch (error) {
                     const typedError = error as Error;
                     notify({

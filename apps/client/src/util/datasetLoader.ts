@@ -1,5 +1,7 @@
 import { parse, type ParseResult } from 'papaparse';
 import * as vg from '@uwdata/vgplot';
+// import type {ExperimentMetadata}
+import type { ExperimentMetadata } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
 export type CsvParserResults = ParseResult<AnyAttributes>;
 
@@ -19,8 +21,16 @@ export interface AnyAttributes {
     [index: string]: any;
 }
 
+// Any reason these shouldn't be specifically typed?
 export interface TextTransforms {
     [index: string]: string;
+    // frame:string,
+    // id:string,
+    // mass:string,
+    // parent:string,
+    // time: string,
+    // x:string,
+    // y:string
 }
 
 // Parses CSV file. Accepts callback for additional processing.
@@ -82,11 +92,33 @@ export async function loadFileIntoDuckDb(
 }
 
 
-export async function createAggregateTable(tableName: string) {
-    await vg.coordinator().exec([`
-        CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
-        SELECT AVG("Dry Mass (pg)") as avg_mass, COUNT("Tracking ID") as track_length, "Tracking ID" as tracking_id
-        FROM ${tableName}
-        GROUP BY "Tracking ID"
-    `]);
+export async function createAggregateTable(tableName: string, headerTransforms: ExperimentMetadata['headerTransforms']) {
+    if (headerTransforms) {
+        const { frame, id, mass, parent, time, x, y } = headerTransforms
+
+
+        try {
+            // Only for testing. Uncomment this to refresh table in cache
+            // try {
+            //     await vg.coordinator().exec([`
+            //     DROP TABLE IF EXISTS ${tableName}_aggregate
+            //     `]);
+            // } catch (error) {
+            //     console.error(error);
+            // }
+            await vg.coordinator().exec([`
+                CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
+                SELECT AVG("${mass}") as avg_mass, COUNT("${id}") as track_length, "${id}" as tracking_id
+                FROM ${tableName}
+                GROUP BY "${id}"
+            `]);
+        } catch (error) {
+            const message = `Unexpected error when creating aggregate table.`
+            console.error(message);
+            throw new Error(message);
+        }
+    }
+
+
+
 }
