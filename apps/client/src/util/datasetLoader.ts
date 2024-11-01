@@ -96,7 +96,7 @@ export async function loadFileIntoDuckDb(
 export async function createAggregateTable(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
     if (headers && headerTransforms) {
 
-        const { mass, id } = headerTransforms
+        const { id } = headerTransforms
 
         let selectString = ``;
 
@@ -106,19 +106,11 @@ export async function createAggregateTable(tableName: string, headers: string[],
             AVG("${header}") AS "AVG ${header}",
             SUM("${header}") AS "SUM ${header}",
             COUNT("${header}") AS "COUNT ${header}",
+            MEDIAN("${header}") AS "MEDIAN ${header}",
             MAX("${header}") AS "MAX ${header}",
             MIN("${header}") AS "MIN ${header}",
             `
         })
-
-        console.log(selectString)
-        const query = `
-                CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS SELECT ${selectString} "${id}" as tracking_id
-                    FROM ${tableName}
-                    GROUP BY "${id}"
-        `
-        console.log(query)
-
 
         try {
             // Only for testing.Uncomment this to refresh table in cache
@@ -140,7 +132,6 @@ export async function createAggregateTable(tableName: string, headers: string[],
         } catch (error) {
             console.error(error);
             const message = `Unexpected error when creating aggregate table.`
-            console.error(message);
             throw new Error(message);
         }
     }
