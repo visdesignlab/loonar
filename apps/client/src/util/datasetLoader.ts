@@ -2,6 +2,7 @@ import { parse, type ParseResult } from 'papaparse';
 import * as vg from '@uwdata/vgplot';
 // import type {ExperimentMetadata}
 import type { ExperimentMetadata } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import type { DataSelection } from '@/stores/interactionStores/selectionStore';
 
 export type CsvParserResults = ParseResult<AnyAttributes>;
 
@@ -92,9 +93,31 @@ export async function loadFileIntoDuckDb(
 }
 
 
-export async function createAggregateTable(tableName: string, headerTransforms: ExperimentMetadata['headerTransforms']) {
-    if (headerTransforms) {
-        const { frame, id, mass, parent, time, x, y } = headerTransforms
+export async function createAggregateTable(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
+    if (headers && headerTransforms) {
+
+        const { mass, id } = headerTransforms
+
+        let selectString = ``;
+
+        headers.forEach((header: string) => {
+            selectString = `
+            ${selectString}
+            AVG("${header}") AS "AVG ${header}",
+            SUM("${header}") AS "SUM ${header}",
+            COUNT("${header}") AS "COUNT ${header}",
+            MAX("${header}") AS "MAX ${header}",
+            MIN("${header}") AS "MIN ${header}",
+            `
+        })
+
+        console.log(selectString)
+        const query = `
+                CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS SELECT ${selectString} "${id}" as tracking_id
+                    FROM ${tableName}
+                    GROUP BY "${id}"
+        `
+        console.log(query)
 
 
         try {
@@ -109,17 +132,13 @@ export async function createAggregateTable(tableName: string, headerTransforms: 
             await vg.coordinator().exec([`
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
                     SELECT 
-                        AVG("${mass}") as "AVG ${mass}",
-                        MAX("${mass}") as "MAX ${mass}",
-                        MIN("${mass}") as "MIN ${mass}",
-                        COUNT("${id}") as track_length,
-                        MAX("${id}") as "MAX ${id}",
-                        MIN("${id}") as "MIN ${id}",
+                        ${selectString}
                         "${id}" as tracking_id
                     FROM ${tableName}
                     GROUP BY "${id}"
             `]);
         } catch (error) {
+            console.error(error);
             const message = `Unexpected error when creating aggregate table.`
             console.error(message);
             throw new Error(message);

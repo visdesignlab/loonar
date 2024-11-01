@@ -144,7 +144,7 @@ export const useDatasetSelectionStore = defineStore(
                         'parquet'
                     );
                     try {
-                        await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headerTransforms)
+                        await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
                         notify({
                             type: 'success',
                             message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
