@@ -211,6 +211,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
             // This filters out any data that DOESN'T have a max or min of the current value falling into the band.
             console.log(escapedSource);
+            // Need to make sure plotName is generated in aggregate
             trackPredicate = range
                 ? `NOT ( "MAX ${plotName}" <= ${range[0]} OR "MIN ${plotName}" >= ${range[1]} )`
                 : null;

@@ -109,10 +109,12 @@ export async function createAggregateTable(tableName: string, headerTransforms: 
             await vg.coordinator().exec([`
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
                     SELECT 
-                        AVG("${mass}") as avg_mass,
+                        AVG("${mass}") as "AVG ${mass}",
                         MAX("${mass}") as "MAX ${mass}",
                         MIN("${mass}") as "MIN ${mass}",
                         COUNT("${id}") as track_length,
+                        MAX("${id}") as "MAX ${id}",
+                        MIN("${id}") as "MIN ${id}",
                         "${id}" as tracking_id
                     FROM ${tableName}
                     GROUP BY "${id}"

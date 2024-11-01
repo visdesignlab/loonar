@@ -39,7 +39,18 @@ const displayedCellPlots = computed(() => {
     return filtered;
 });
 
+const displayedTrackPlots = computed(() => {
+    const filtered = dataSelections.value.filter(
+        (d) => d.displayChart && d.type === 'track'
+    );
+    // console.log('Filtered Track Plots:', filtered);
+    return filtered;
+});
+
+
+
 const totalCellPlots = computed(() => displayedCellPlots.value.length);
+const totalTrackPlots = computed(() => displayedTrackPlots.value.length);
 
 const aggregationOptions = [
     { label: 'Sum', value: 'sum' },
@@ -118,7 +129,7 @@ onMounted(() => {
                 selectionStore.addPlot(firstPlotName.value, 'cell');
 
                 // For testing track attributes
-                selectionStore.addPlot('avg_mass', 'track');
+                selectionStore.addPlot(`AVG ${firstPlotName.value}`, 'track');
             }
         },
         { immediate: true }
@@ -127,7 +138,7 @@ onMounted(() => {
 
 function handlePlotLoaded() {
     loadedPlots.value++;
-    if (loadedPlots.value === totalCellPlots.value) {
+    if (loadedPlots.value === (totalCellPlots.value + totalTrackPlots.value)) {
         loading.value = false;
     }
 }
@@ -275,8 +286,9 @@ function handleSelectionRemoved(event: CustomEvent) {
             </template>
             <template v-if="props.selectorType === 'Track'">
                 <UnivariateCellPlot
-                    :key="'avg_mass'"
-                    :plot-name="'avg_mass'"
+                    v-for="dataSelection in displayedTrackPlots"
+                    :key="dataSelection.plotName"
+                    :plot-name="dataSelection.plotName"
                     :attribute-type="'Track'"
                     @plot-loaded="handlePlotLoaded"
                     @plot-error="handlePlotError"
