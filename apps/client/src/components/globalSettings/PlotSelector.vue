@@ -35,7 +35,7 @@ const displayedCellPlots = computed(() => {
     const filtered = dataSelections.value.filter(
         (d) => d.displayChart && d.type === 'cell'
     );
-    console.log('Filtered Cell Plots:', filtered);
+    // console.log('Filtered Cell Plots:', filtered);
     return filtered;
 });
 

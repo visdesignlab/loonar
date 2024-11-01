@@ -33,11 +33,11 @@ watch(experimentDataInitialized, async (isInitialized) => {
 
 
 const handleOnClick = () => {
-    console.log('hello')
+    // console.log('hello')
     const plotName = "avg_mass"
     // const range = [0,100];
     selectionStore.updateSelection(plotName, [0,500], "track");
-    console.log(dataSelections.value);
+    // console.log(dataSelections.value);
 }
 
 

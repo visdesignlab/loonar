@@ -21,7 +21,7 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const { mosaicSelection,  trackLevelSelection } = useMosaicSelectionStore();
+const { cellLevelSelection,  trackLevelSelection } = useMosaicSelectionStore();
 
 // Define Plot Emits and Props
 const emit = defineEmits(['selectionChange', 'plot-loaded', 'plot-error']);
@@ -40,10 +40,10 @@ const props = defineProps({
 const datasetName = computed(() => {
     const baseName = currentExperimentMetadata?.value?.name;
     if (props.attributeType === 'Cell') {
-        console.log('using normal table');
+        // console.log('using normal table');
         return `${baseName}_composite_experiment_cell_metadata`;
     } else {
-        console.log('using aggregate');
+        // console.log('using aggregate');
         return `${baseName}_composite_experiment_cell_metadata_aggregate`;
     }
 });
@@ -52,14 +52,14 @@ let selectedDataOptions = {};
 
 // Conditionally add filterBy property when attributeType is 'Cell'
 if (props.attributeType === 'Cell') {
-    selectedDataOptions = { filterBy: mosaicSelection };
+    selectedDataOptions = { filterBy: cellLevelSelection };
 } else {
     selectedDataOptions = {filterBy: trackLevelSelection}
 }
 
-console.log(
-    props.plotName + ' ' + props.attributeType + ' ' + datasetName.value
-);
+// console.log(
+//     props.plotName + ' ' + props.attributeType + ' ' + datasetName.value
+// );
 
 // Vg Plot
 function makePlot(column: string) {
@@ -161,7 +161,7 @@ const selection = computed<DataSelection>(() => {
             displayChart: true,
         };
     }
-    console.log(s.plotName);
+    // console.log(s.plotName);
     return s;
 });
 
@@ -169,7 +169,7 @@ const selection = computed<DataSelection>(() => {
 
 const rangeModel = computed({
     get() {
-        console.log(selection.value.range[1]);
+        // console.log(selection.value.range[1]);
         return { min: selection.value.range[0], max: selection.value.range[1] };
     },
 

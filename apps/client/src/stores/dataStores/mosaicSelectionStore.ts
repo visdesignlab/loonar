@@ -30,8 +30,8 @@ interface ConditionChartSelection {
  * Clear Mosaic Selection: Helper function to clear by source.
  */
 
-export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
-    let mosaicSelection = vg.Selection.intersect();
+export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
+    let cellLevelSelection = vg.Selection.intersect();
     let trackLevelSelection = vg.Selection.intersect();
     // const conditionChartSelections: Record<string, ConditionChartSelection> = {};
     const conditionChartSelectedParams: Record<string, any> = {};
@@ -173,7 +173,6 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
                 previousDataSelections = _.cloneDeep(newDataSelections);
             }
 
-            console.log('finished');
         },
         { deep: true, immediate: true }
     );
@@ -198,13 +197,24 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
         //
 
         const escapedSource = _escapeSource(plotName);
-        let predicate;
+        let cellPredicate;
+        let trackPredicate;
+
 
         if (type === 'cell') {
             // If cell, base only on range
-            predicate = range
+            cellPredicate = range
                 ? `${escapedSource} BETWEEN ${range[0]} AND ${range[1]}`
                 : null;
+
+            trackPredicate = null;
+
+            // This filters out any data that DOESN'T have a max or min of the current value falling into the band.
+            console.log(escapedSource);
+            trackPredicate = range
+                ? `NOT ( "MAX ${plotName}" <= ${range[0]} OR "MIN ${plotName}" >= ${range[1]} )`
+                : null;
+
         } else if (type == 'track') {
             // If track, we filter by tracking IDs
 
@@ -216,24 +226,28 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
             const table_name = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`;
 
             // Predicate has a subquery to pull IDs from aggregate table fitting the range
-            predicate = range
+            cellPredicate = range
                 ? `"${id_column}" IN (SELECT tracking_id FROM ${table_name} WHERE ${escapedSource} between ${range[0]} and ${range[1]} )`
                 : null;
-            const trackLevelClause = {
-                source: plotName,
-                predicate: range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null
-            }
-            trackLevelSelection.update(trackLevelClause);
+
+            trackPredicate = range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null;
         } else {
-            predicate = null;
+            cellPredicate = null;
+            trackPredicate = null;
         }
 
-        const clause = {
+        const cellClause = {
             source: plotName,
-            predicate,
+            predicate: cellPredicate,
         };
-        mosaicSelection.update(clause);
-        _updateConditionChartSelections(clause);
+
+        const trackClause = {
+            source: plotName,
+            predicate: trackPredicate
+        }
+        trackLevelSelection.update(trackClause);
+        cellLevelSelection.update(cellClause);
+        _updateConditionChartSelections(cellClause);
     }
 
     function addConditionChartSelection(tags: [string, string][]) {
@@ -282,7 +296,7 @@ export const useMosaicSelectionStore = defineStore('mosaicSelection', () => {
     }
 
     return {
-        mosaicSelection,
+        cellLevelSelection,
         trackLevelSelection,
         conditionChartSelections,
         conditionChartSelectionsInitialized,

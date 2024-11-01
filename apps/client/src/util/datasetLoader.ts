@@ -98,19 +98,24 @@ export async function createAggregateTable(tableName: string, headerTransforms: 
 
 
         try {
-            // Only for testing. Uncomment this to refresh table in cache
-            // try {
-            //     await vg.coordinator().exec([`
-            //     DROP TABLE IF EXISTS ${tableName}_aggregate
-            //     `]);
-            // } catch (error) {
-            //     console.error(error);
-            // }
+            // Only for testing.Uncomment this to refresh table in cache
+            try {
+                await vg.coordinator().exec([`
+                DROP TABLE IF EXISTS ${tableName}_aggregate
+                `]);
+            } catch (error) {
+                console.error(error);
+            }
             await vg.coordinator().exec([`
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
-                SELECT AVG("${mass}") as avg_mass, COUNT("${id}") as track_length, "${id}" as tracking_id
-                FROM ${tableName}
-                GROUP BY "${id}"
+                    SELECT 
+                        AVG("${mass}") as avg_mass,
+                        MAX("${mass}") as "MAX ${mass}",
+                        MIN("${mass}") as "MIN ${mass}",
+                        COUNT("${id}") as track_length,
+                        "${id}" as tracking_id
+                    FROM ${tableName}
+                    GROUP BY "${id}"
             `]);
         } catch (error) {
             const message = `Unexpected error when creating aggregate table.`

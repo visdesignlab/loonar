@@ -42,8 +42,8 @@ watch(
     { immediate: true, deep: true }
 );
 
-// Creates a new set of selections and adds them to an overall list that is updated whenever general mosaicSelection is updated.
-// Returns the "base" and "filtered". Base a constant selection which is never updated. This is only to filter based on the tags. The "filteredSelection" is updated by other general filters (i.e. mosaicSelection).
+// Creates a new set of selections and adds them to an overall list that is updated whenever general cellLevelSelection is updated.
+// Returns the "base" and "filtered". Base a constant selection which is never updated. This is only to filter based on the tags. The "filteredSelection" is updated by other general filters (i.e. cellLevelSelection).
 
 // Styles
 const lineColor = chartColorScheme[props.yIndex % 6];
