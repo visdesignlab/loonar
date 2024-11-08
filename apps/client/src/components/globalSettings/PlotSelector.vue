@@ -47,17 +47,16 @@ const displayedTrackPlots = computed(() => {
     return filtered;
 });
 
-
-
 const totalCellPlots = computed(() => displayedCellPlots.value.length);
 const totalTrackPlots = computed(() => displayedTrackPlots.value.length);
 
 const aggregationOptions = [
-    { label: 'Sum', value: 'sum' },
-    { label: 'Average', value: 'average' },
-    { label: 'Count', value: 'count' },
-    { label: 'Minimum', value: 'min' },
-    { label: 'Maximum', value: 'max' },
+    { label: 'Sum', value: 'SUM' },
+    { label: 'Average', value: 'AVG' },
+    { label: 'Count', value: 'COUNT' },
+    { label: 'Minimum', value: 'MIN' },
+    { label: 'Maximum', value: 'MAX' },
+    { label: 'Median', value: 'MEDIAN' },
 ];
 
 // On any update, computes the plots to be shown.
@@ -138,7 +137,7 @@ onMounted(() => {
 
 function handlePlotLoaded() {
     loadedPlots.value++;
-    if (loadedPlots.value === (totalCellPlots.value + totalTrackPlots.value)) {
+    if (loadedPlots.value === totalCellPlots.value + totalTrackPlots.value) {
         loading.value = false;
     }
 }
@@ -162,8 +161,15 @@ function onMenuButtonClick() {
     trackPlotDialogOpen.value = true;
 }
 
-function onSubmit() {
+function addTrackPlotFromMenu(atr: string, agg: string) {
     trackPlotDialogOpen.value = false;
+    // Add plot of "selected attribute" and "selected aggregation" to displayedTrackPlots
+    //const selection = selectionStore.getSelection(selectedAttribute);
+    //if (selection === null) {
+    //selectionStore.addPlot(`${agg} ${atr}`, 'track');
+    selectionStore.addPlot(`${agg} ${atr}`, 'track');
+    return;
+    //}
 }
 
 function handleSelectionRemoved(event: CustomEvent) {
@@ -233,8 +239,13 @@ function handleSelectionRemoved(event: CustomEvent) {
                                 </div>
                                 <q-separator class="q-my-sm" />
                                 <q-form
-                                    @submit="onSubmit"
                                     class="q-gutter-md"
+                                    @submit="
+                                        addTrackPlotFromMenu(
+                                            selectedAttribute,
+                                            selectedAggregation
+                                        )
+                                    "
                                     :dark="globalSettings.darkMode"
                                 >
                                     <q-select
@@ -247,7 +258,10 @@ function handleSelectionRemoved(event: CustomEvent) {
                                     <q-select
                                         label="Select Aggregation"
                                         :options="aggregationOptions"
+                                        option-value="value"
+                                        option-label="label"
                                         v-model="selectedAggregation"
+                                        emit-value
                                         clickable
                                     >
                                     </q-select>
