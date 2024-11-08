@@ -173,13 +173,8 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
 }
 
 function handleSelectionRemoved(event: CustomEvent) {
-    // clearMosaicSource(event.detail);
 }
 
-// window.addEventListener(
-//     'selectionRemoved',
-//     handleSelectionRemoved as EventListener
-// );
 </script>
 <template>
     <div>

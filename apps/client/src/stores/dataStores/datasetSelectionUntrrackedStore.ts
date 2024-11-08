@@ -24,7 +24,6 @@ export interface ExperimentMetadata {
     headerTransforms?: TextTransforms; // maps things like "Time (h)" to "time"
     // valueRanges?: { string: { min: number; max: number } };
     // can precompute min/max for each column across experiments
-    // conditions?: string[]; // TODO: - does this need to be 2d?
     locationMetadataList: LocationMetadata[];
     compositeTabularDataFilename?: string;
 }
@@ -114,6 +113,8 @@ export const useDatasetSelectionStore = defineStore(
         // Sets location Metadata
         const currentExperimentMetadata =
             computedAsync<ExperimentMetadata | null>(async () => {
+                // If experiment data has changed, need to ensure that we set 'loaded' to false.
+                experimentDataLoaded.value = false;
                 if (
                     datasetSelectionTrrackedStore.currentExperimentFilename ==
                     null
@@ -124,7 +125,6 @@ export const useDatasetSelectionStore = defineStore(
                 );
                 const response = await fetch(fullURL, {});
                 const data = await response.json();
-                console.log(data);
                 return data;
             });
 

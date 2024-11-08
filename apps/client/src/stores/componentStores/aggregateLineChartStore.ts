@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import {
     useCellMetaData,
     type Cell,
@@ -11,14 +11,18 @@ import { useLooneageViewStore } from './looneageViewStore';
 
 import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
+import { useSelectionStore } from '../interactionStores/selectionStore';
+import { useFilterStore } from './filterStore';
 
 export interface AggLine {
     data: AggLineData;
     muted: boolean;
     relation: 'ancestor' | 'left' | 'right' | 'other';
     trackId: string;
+    selected?: boolean;
+    filtered?: boolean;
 }
-export interface AggLineData extends Array<AggDataPoint> {}
+export interface AggLineData extends Array<AggDataPoint> { }
 export interface AggDataPoint {
     time: number;
     value: number; // avg or total or median or ...
@@ -33,6 +37,12 @@ function storeSetup() {
     const dataPointSelection = useDataPointSelection();
     const looneageViewStore = useLooneageViewStore();
     const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+
+    const selectionStore = useSelectionStore();
+    const { dataSelections } = storeToRefs(selectionStore);
+
+    const filterStore = useFilterStore();
+    const { filters } = storeToRefs(filterStore);
 
     const aggregatorKey = ref<string>('average');
     const aggregatorOptions = ['average', 'total', 'min', 'median', 'max'];
@@ -290,6 +300,42 @@ function storeSetup() {
         };
     }
 
+    // Currently only for individual cell tracks
+    function _determineSelectedOrFiltered(track: Track) {
+        //Determine if selected.
+        let selected = true;
+        let filtered = false;
+        dataSelections.value.forEach(selection => {
+            if (selection.type === 'cell') {
+
+                // Below is a bit inefficient -- can just iterate once
+                const valuesForPlotName = track.cells.map(cell => cell.attrNum[selection.plotName])
+                const max_value = Math.max(...valuesForPlotName);
+                const min_value = Math.min(...valuesForPlotName);
+
+                // Intersects with selected
+                // Checks if max value and min value make track fall outside of range
+                selected = selected && !(max_value <= selection.range[0] || min_value >= selection.range[1])
+            }
+        })
+
+        filters.value.forEach(filter => {
+
+            // Below is a bit inefficient -- can just iterate once
+            const valuesForPlotName = track.cells.map(cell => cell.attrNum[filter.plotName])
+            const max_value = Math.max(...valuesForPlotName);
+            const min_value = Math.min(...valuesForPlotName);
+
+            // Essentially, you're doing the opposite of selected. However, since selections and filters come from different data (i.e. you have ot consciously change to a filter), this needs to be done separately.
+            filtered = filtered || (max_value <= filter.range[0] || min_value >= filter.range[1])
+        }
+        )
+
+        return {
+            selected, filtered
+        }
+    }
+
     const hoveredLineData = computed<{ data: AggLineData; trackId: string }>(
         () => {
             // if (targetKey.value !== 'selected lineage') {
@@ -447,17 +493,26 @@ function storeSetup() {
                 const result: AggLine[] = [];
                 for (const track of cellMetaData.trackArray) {
                     const aggLineData: AggLineData = [];
+
                     for (const cell of track.cells) {
                         const time = cellMetaData.getTime(cell);
                         const value = accessor.value(cell);
                         const count = 1;
                         aggLineData.push({ time, value, count });
                     }
+
+                    // Currently only for individual cell tracks
+                    const { selected, filtered } = _determineSelectedOrFiltered(track)
+
+
+
                     result.push({
                         data: medianFilterSmooth(aggLineData),
                         muted: true,
                         trackId: track.trackId,
                         relation: 'other',
+                        selected,
+                        filtered
                     });
                 }
                 return result;

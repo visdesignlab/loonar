@@ -522,7 +522,7 @@ const otherUnmuted = computed(() => {
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path
-                        :class="`muted agg-line ${globalSettings.normalizedDark}`"
+                        :class="`muted agg-line ${globalSettings.normalizedDark} ${aggLine.selected ? 'highlighted' : ''} ${aggLine.filtered ? 'filtered' : ''}`"
                         v-for="(
                             aggLine, index
                         ) in aggregateLineChartStore.aggLineDataList.filter(
@@ -645,6 +645,15 @@ const otherUnmuted = computed(() => {
 .muted.agg-line {
     stroke-width: 1px;
     opacity: 0.6;
+}
+
+.highlighted.agg-line{
+    stroke-width:3px;
+    opacity:1;
+}
+
+.filtered.agg-line{
+    opacity:0 !important;
 }
 .selected.agg-line {
     stroke-width: 4px;

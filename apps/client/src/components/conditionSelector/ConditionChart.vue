@@ -47,7 +47,7 @@ watch(
 
 // Styles
 const lineColor = chartColorScheme[props.yIndex % 6];
-const strokeWidth = 5;
+const strokeWidth = 15;
 
 async function createChart(xAxisName: string, yAxisName: string) {
     if (chartContainer.value) {
@@ -67,8 +67,8 @@ async function createChart(xAxisName: string, yAxisName: string) {
                     x: xAxisName,
                     y1: 0,
                     y: vg.avg(yAxisName),
-                    fill: '#f8f8f8',
-                    fillOpacity: 1,
+                    fill: 'grey',
+                    fillOpacity: 0.3,
                     curve: 'basis',
                     stroke: null,
                 }
@@ -87,26 +87,7 @@ async function createChart(xAxisName: string, yAxisName: string) {
                     stroke: lineColor,
                     strokeWidth: strokeWidth,
                     curve: 'basis',
-                    opacity: 0.2,
-                }
-            ),
-            // Plots Line Chart based on selection.
-            vg.areaY(
-                vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
-                    {
-                        filterBy:
-                            conditionChartSelections[source].filteredSelection,
-                    }
-                ),
-                {
-                    x: xAxisName,
-                    y1: 0,
-                    y: vg.avg(yAxisName),
-                    fill: 'grey',
-                    fillOpacity: 0.2,
-                    curve: 'basis',
-                    stroke: null,
+                    opacity: 0.6,
                 }
             ),
             vg.lineY(
@@ -121,7 +102,7 @@ async function createChart(xAxisName: string, yAxisName: string) {
                     x: xAxisName,
                     y: vg.avg(yAxisName),
                     stroke: lineColor,
-                    strokeWidth: strokeWidth,
+                    strokeWidth: 30,
                     curve: 'basis',
                     opacity: 1,
                 }

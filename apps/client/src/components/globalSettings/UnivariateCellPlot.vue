@@ -37,43 +37,45 @@ const props = defineProps({
     },
 });
 
-const datasetName = computed(() => {
-    const baseName = currentExperimentMetadata?.value?.name;
-    if (props.attributeType === 'Cell') {
-        // console.log('using normal table');
-        return `${baseName}_composite_experiment_cell_metadata`;
-    } else {
-        // console.log('using aggregate');
-        return `${baseName}_composite_experiment_cell_metadata_aggregate`;
+const plotContainer = ref<HTMLDivElement | null>(null);
+const charts = ref<null | HTMLElement>(null);
+const loaded = ref(false);
+
+// Creates charts when data initialized.
+watch([experimentDataInitialized, plotContainer], ([isInitialized,newPlotContainer]) => {
+    if(isInitialized && newPlotContainer) {
+        // Determine which selection to use
+        const mosaicSelection = props.attributeType === 'Cell' ? cellLevelSelection : trackLevelSelection;
+        // Determine which dataset to use
+        let dataSetName = `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`
+        if(props.attributeType === 'Track'){
+            dataSetName = `${dataSetName}_aggregate`
+        }
+
+        // Create the plot
+        charts.value = makePlot(props.plotName, mosaicSelection, dataSetName);
+
+        if(charts.value){
+            plotContainer.value?.appendChild(charts.value);
+            loaded.value = true;
+        }
+
     }
-});
-
-let selectedDataOptions = {};
-
-// Conditionally add filterBy property when attributeType is 'Cell'
-if (props.attributeType === 'Cell') {
-    selectedDataOptions = { filterBy: cellLevelSelection };
-} else {
-    selectedDataOptions = {filterBy: trackLevelSelection}
-}
-
-// console.log(
-//     props.plotName + ' ' + props.attributeType + ' ' + datasetName.value
-// );
+}, {immediate:true});
 
 // Vg Plot
-function makePlot(column: string) {
+function makePlot(column: string, mosaicSelection:any, datasetName:string) {
     try {
         return vg.plot(
             // Background grey data
-            vg.rectY(vg.from(datasetName.value), {
+            vg.rectY(vg.from(datasetName), {
                 x: vg.bin(column),
                 y: vg.count(),
                 fill: '#cccccc',
                 inset: 1,
             }),
             // Currently Selected Data
-            vg.rectY(vg.from(datasetName.value, selectedDataOptions), {
+            vg.rectY(vg.from(datasetName, {filterBy: mosaicSelection}), {
                 x: vg.bin(column),
                 y: vg.count(),
                 fill: '#377eb8',
@@ -103,23 +105,7 @@ function makePlot(column: string) {
     }
 }
 
-// Handle Loading of Everything
-const charts = ref<null | HTMLElement>(null);
-const loaded = ref(false);
 
-// Creates the Plots.
-async function createCharts() {
-    try {
-        charts.value = makePlot(props.plotName);
-        if (plotContainer.value) {
-            plotContainer.value.appendChild(charts.value!);
-            loaded.value = true;
-        }
-    } catch (error) {
-        console.error('Error creating charts:', error);
-        emit('plot-error', props.plotName);
-    }
-}
 
 // Checks when everything has loaded
 watch(loaded, () => {
@@ -138,18 +124,6 @@ async function handlePlotLoading() {
     }
 }
 
-// Handle Rendering
-onMounted(() => {
-    if (experimentDataInitialized.value) {
-        createCharts();
-    }
-});
-
-// Waits for data to be initialized before creating charts
-watch(experimentDataInitialized, createCharts);
-
-const plotContainer = ref<HTMLDivElement | null>(null);
-
 const selection = computed<DataSelection>(() => {
     const s = selectionStore.getSelection(props.plotName);
     if (!s) {
@@ -161,33 +135,16 @@ const selection = computed<DataSelection>(() => {
             displayChart: true,
         };
     }
-    // console.log(s.plotName);
     return s;
 });
 
-// watch(selection, (newSelection) => updateMosaicSelection(newSelection.plotName, newSelection.range), {deep:true, immediate:true});
 
 const rangeModel = computed({
     get() {
-        // console.log(selection.value.range[1]);
         return { min: selection.value.range[0], max: selection.value.range[1] };
     },
 
     set(newValue) {
-        // if (props.attributeType === 'cell') {
-        //     selectionStore.updateSelection(
-        //         props.plotName,
-        //         [newValue.min, newValue.max],
-        //         'cell'
-        //     );
-        // }
-        // if (props.attributeType === 'track') {
-        //     selectionStore.updateSelection(
-        //         props.plotName,
-        //         [newValue.min, newValue.max],
-        //         'track'
-        //     );
-        // }
         selection.value.range[0] = newValue.min;
         selection.value.range[1] = newValue.max;
     },

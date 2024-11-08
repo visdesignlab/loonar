@@ -8,8 +8,12 @@ import {
 import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue';
 import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelectorStore();
+const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
+const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionUntrrackedStore)
+
 const {
     xLabels,
     yLabels,
@@ -165,8 +169,8 @@ const handleAllMouseLeave = () => {
                                                 [`${selectedXTag}`,`${elx.toString()}`],
                                                 [`${selectedYTag}`,`${ely.toString()}`]
                                             ]"
-                                            :xAxisName="'Frame'"
-                                            :yAxisName="'Dry Mass (pg)'"
+                                            :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
+                                            :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
                                             :selected="selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected()"
                                         />
                                     </div>

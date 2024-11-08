@@ -1,6 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
-import { watch, ref, computed } from 'vue';
+import { watch, ref, type Ref, computed } from 'vue';
 import {
     useSelectionStore,
     type DataSelection,
@@ -9,6 +9,7 @@ import { useDatasetSelectionStore } from './datasetSelectionUntrrackedStore';
 
 import _ from 'lodash-es';
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
+import { debounce } from 'lodash-es';
 
 interface Clause {
     source: string;
@@ -30,21 +31,65 @@ interface ConditionChartSelection {
  * Clear Mosaic Selection: Helper function to clear by source.
  */
 
+
+interface MosaicSelectionState {
+    cellLevelSelection: Ref<any>,
+    trackLevelSelection: Ref<any>,
+    conditionChartSelectedParams: Record<string, any>,
+    previousDataSelections: DataSelection[],
+    conditionChartSelectionsInitialized: Ref<boolean>
+
+
+}
+
+const initialState = (): MosaicSelectionState => ({
+    cellLevelSelection: ref<any>(vg.Selection.intersect()),
+    trackLevelSelection: ref<any>(vg.Selection.intersect()),
+    conditionChartSelectedParams: {},
+    conditionChartSelectionsInitialized: ref<boolean>(false),
+    previousDataSelections: []
+})
+
+
 export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
-    let cellLevelSelection = vg.Selection.intersect();
-    let trackLevelSelection = vg.Selection.intersect();
-    // const conditionChartSelections: Record<string, ConditionChartSelection> = {};
-    const conditionChartSelectedParams: Record<string, any> = {};
-    const conditionChartSelectionsInitialized = ref<boolean>(false);
+
+
+    // const cellLevelSelection = ref<any>(vg.Selection.intersect());
+    // const trackLevelSelection = ref<any>(vg.Selection.intersect());
+
+    // Initial state
+    let {
+        cellLevelSelection,
+        trackLevelSelection,
+        conditionChartSelectedParams,
+        conditionChartSelectionsInitialized,
+        previousDataSelections
+    } = initialState()
+
+    function resetState(): void {
+        let newState = initialState();
+        cellLevelSelection.value = newState.cellLevelSelection.value;
+        trackLevelSelection.value = newState.trackLevelSelection.value;
+        conditionChartSelectedParams = newState.conditionChartSelectedParams;
+        conditionChartSelectionsInitialized.value = newState.conditionChartSelectionsInitialized.value
+        previousDataSelections = newState.previousDataSelections
+    }
 
     const selectionStore = useSelectionStore();
     const { dataSelections } = storeToRefs(selectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
 
     const datasetSelectionStore = useDatasetSelectionStore();
-    const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
+    const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 
-    let previousDataSelections: DataSelection[] = [];
+    watch(experimentDataInitialized, () => {
+        console.log('changed!!')
+
+        resetState();
+    })
+
+
+    // let previousDataSelections: DataSelection[] = [];
 
     const conditionChartSelections = computed(
         (): Record<string, ConditionChartSelection> => {
@@ -76,7 +121,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             const reversedSource = `${compareKey}-${compareValue}_${currKey}-${currValue}`;
                             const clause: Clause = {
                                 source: newSource,
-                                predicate: `"${currKey}" = '${currValue}' AND "${currKey}" = '${currValue}'`,
+                                predicate: `"${currKey}" = '${currValue}' AND "${compareKey}" = '${compareValue}'`,
                             };
 
                             // Update this for new track level attributes
@@ -103,7 +148,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     // Subscribe to DataSelections. Waits for Condition Chart selections to be initialized.
     watch(
         [dataSelections, conditionChartSelections],
-        ([newDataSelections, newConditionChartSelections]) => {
+
+        debounce(([newDataSelections, newConditionChartSelections]) => {
             if (Object.keys(newConditionChartSelections).length > 0) {
                 // Track Changes in number of plots
                 let previousPlots = previousDataSelections.map(
@@ -111,7 +157,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 );
 
                 // In shared plots, get different ranges
-                newDataSelections.forEach((entry) => {
+                newDataSelections.forEach((entry: any) => {
                     const currPlotName = entry.plotName;
                     if (
                         entry.range[0] !== -Infinity &&
@@ -173,13 +219,12 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 previousDataSelections = _.cloneDeep(newDataSelections);
             }
 
-        },
+        }, 0),
         { deep: true, immediate: true }
     );
 
     // Used to watch when selectedGrid changes
     watch(conditionSelectorStore.selectedGrid, (newSelectedGrid) => {
-        console.log(newSelectedGrid);
 
         // Whenever selected Grid Changes, change
     });
@@ -210,7 +255,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             trackPredicate = null;
 
             // This filters out any data that DOESN'T have a max or min of the current value falling into the band.
-            console.log(escapedSource);
             // Need to make sure plotName is generated in aggregate
             trackPredicate = range
                 ? `NOT ( "MAX ${plotName}" <= ${range[0]} OR "MIN ${plotName}" >= ${range[1]} )`
@@ -246,32 +290,9 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             source: plotName,
             predicate: trackPredicate
         }
-        trackLevelSelection.update(trackClause);
-        cellLevelSelection.update(cellClause);
+        trackLevelSelection.value.update(trackClause);
+        cellLevelSelection.value.update(cellClause);
         _updateConditionChartSelections(cellClause);
-    }
-
-    function addConditionChartSelection(tags: [string, string][]) {
-        const conditionChartSelection = vg.Selection.intersect();
-        // Creates an opacity param
-        const conditionChartSelectedParam = vg.Param.value(1);
-        const source = `${tags[0][0]}-${tags[0][1]}_${tags[1][0]}-${tags[1][1]}`;
-        const clause: Clause = {
-            source,
-            predicate: `"${tags[0][0]}" = '${tags[0][1]}' AND "${tags[1][0]}" = '${tags[1][1]}'`,
-        };
-        conditionChartSelection.update(clause);
-        // Add selection to record
-        conditionChartSelections.value[source] = conditionChartSelection;
-        // Add parameter to record
-        conditionChartSelectedParams[source] = conditionChartSelectedParam;
-
-        const conditionChartBaseSelection = conditionChartSelection.clone();
-        return {
-            baseSelection: conditionChartBaseSelection,
-            filteredSelection: conditionChartSelection,
-            opacityParam: conditionChartSelectedParam,
-        };
     }
 
     function _updateConditionChartSelections(clause: Clause) {
@@ -280,10 +301,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 selectionObject.filteredSelection.update(clause);
             }
         );
-    }
-
-    function clearMosaicSource(source: string) {
-        updateMosaicSelection(source, null, 'cell');
     }
 
     function updateOpacityParam(source: string, value: number) {
@@ -302,8 +319,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         conditionChartSelections,
         conditionChartSelectionsInitialized,
         updateMosaicSelection,
-        addConditionChartSelection,
-        clearMosaicSource,
         updateOpacityParam,
         updateOpacityParamAll,
     };

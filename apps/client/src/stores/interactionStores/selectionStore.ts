@@ -158,7 +158,6 @@ export const useSelectionStore = defineStore('Selection', {
                     );
                 }
 
-                console.log('Constructed query:', query);
 
                 const result = await vg.coordinator().query(query);
 
