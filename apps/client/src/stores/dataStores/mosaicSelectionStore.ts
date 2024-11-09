@@ -53,9 +53,7 @@ const initialState = (): MosaicSelectionState => ({
 
 export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
-
-    // const cellLevelSelection = ref<any>(vg.Selection.intersect());
-    // const trackLevelSelection = ref<any>(vg.Selection.intersect());
+    const $yAxisParam = vg.Param.value([0, 2000]);
 
     // Initial state
     let {
@@ -66,6 +64,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         previousDataSelections
     } = initialState()
 
+    // Reset state function
     function resetState(): void {
         let newState = initialState();
         cellLevelSelection.value = newState.cellLevelSelection.value;
@@ -83,13 +82,9 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 
     watch(experimentDataInitialized, () => {
-        console.log('changed!!')
-
         resetState();
     })
 
-
-    // let previousDataSelections: DataSelection[] = [];
 
     const conditionChartSelections = computed(
         (): Record<string, ConditionChartSelection> => {
@@ -105,7 +100,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 const currValues =
                     conditionSelectorStore.currentExperimentTags[currKey];
 
-                for (let j = i + 1; j < keysList.length; j++) {
+                for (let j = i; j < keysList.length; j++) {
                     //Compare currValues with all other lists
                     const compareKey = keysList[j];
                     const compareValues =
@@ -118,6 +113,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             // Create new selection based on comparison
                             const newSelection = vg.Selection.intersect();
                             const newSource = `${currKey}-${currValue}_${compareKey}-${compareValue}`;
+
                             const reversedSource = `${compareKey}-${compareValue}_${currKey}-${currValue}`;
                             const clause: Clause = {
                                 source: newSource,
@@ -255,7 +251,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             trackPredicate = null;
 
             // This filters out any data that DOESN'T have a max or min of the current value falling into the band.
-            // Need to make sure plotName is generated in aggregate
             trackPredicate = range
                 ? `NOT ( "MAX ${plotName}" <= ${range[0]} OR "MIN ${plotName}" >= ${range[1]} )`
                 : null;
@@ -321,5 +316,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         updateMosaicSelection,
         updateOpacityParam,
         updateOpacityParamAll,
+        $yAxisParam
     };
 });

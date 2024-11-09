@@ -22,7 +22,6 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
 const { cellLevelSelection,  trackLevelSelection } = useMosaicSelectionStore();
-
 // Define Plot Emits and Props
 const emit = defineEmits(['selectionChange', 'plot-loaded', 'plot-error']);
 const props = defineProps({
@@ -39,7 +38,10 @@ const props = defineProps({
 
 const plotContainer = ref<HTMLDivElement | null>(null);
 const charts = ref<null | HTMLElement>(null);
+let observer:MutationObserver|null = null;
 const loaded = ref(false);
+
+const isLoading = ref<boolean>(true);
 
 // Creates charts when data initialized.
 watch([experimentDataInitialized, plotContainer], ([isInitialized,newPlotContainer]) => {
@@ -54,10 +56,21 @@ watch([experimentDataInitialized, plotContainer], ([isInitialized,newPlotContain
 
         // Create the plot
         charts.value = makePlot(props.plotName, mosaicSelection, dataSetName);
-
         if(charts.value){
             plotContainer.value?.appendChild(charts.value);
-            loaded.value = true;
+            observer = new MutationObserver((mutationsList) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    loaded.value = true;
+                    isLoading.value = false;
+                    observer?.disconnect();
+                    break;
+                }
+            }
+        });
+
+        // Observe the SVG for changes to its child elements
+        observer.observe(charts.value, { childList: true, subtree: true });
         }
 
     }
@@ -82,6 +95,7 @@ function makePlot(column: string, mosaicSelection:any, datasetName:string) {
                 opacity: 1,
                 inset: 1,
             }),
+
             vg.marginBottom(45),
             vg.marginTop(5),
             vg.marginLeft(20),
@@ -159,15 +173,18 @@ function handleRangeUpdate(newRange: { min: number; max: number }) {
     <div>
         <q-item-section style="position: relative">
             <div ref="plotContainer" style="position: relative">
-                <FilterEditMenu
-                    :plot-name="props.plotName"
-                    :initial-min="rangeModel.min"
-                    :initial-max="rangeModel.max"
-                    type="selection"
-                    @update:range="handleRangeUpdate"
-                />
-
-                <div class="q-range-container">
+                    <FilterEditMenu
+                        :plot-name="props.plotName"
+                        :initial-min="rangeModel.min"
+                        :initial-max="rangeModel.max"
+                        type="selection"
+                        @update:range="handleRangeUpdate"
+                    />
+                <!-- Uses same width and height as single chart to replace the chart. -->
+                <div v-if="isLoading" style="width:268px;height:85px; gap:10px" class="flex justify-center align-center">
+                    <q-spinner/> <div class="text-caption">Loading chart</div>
+                </div>
+                <div v-if="!isLoading" class="q-range-container">
                     <q-range
                         v-model="rangeModel"
                         :min="selection.maxRange[0]"

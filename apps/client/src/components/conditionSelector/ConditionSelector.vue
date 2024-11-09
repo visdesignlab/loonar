@@ -12,7 +12,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelectorStore();
 const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionUntrrackedStore)
+const { currentExperimentMetadata } = storeToRefs(datasetSelectionUntrrackedStore)
 
 const {
     xLabels,
@@ -100,6 +100,11 @@ const handleAllMouseLeave = () => {
     hoveredAll.value = false;
 }
 
+// Basic function to just adjust stroke width of the charts based on the number of charts rendered.
+const chartLineWidth = computed(() => {
+    return Math.round(Math.max(yLabels.value.length,xLabels.value.length)*4);
+})
+
 </script>
 
 <template>
@@ -160,6 +165,7 @@ const handleAllMouseLeave = () => {
                                             : ''
                                     } ${selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected() ? 'selected' : 'unselected'}` "
                                     :style="heightWidth"
+                                    style="position: relative;"
                                     @click="() => conditionSelector.clickConditionChart(idx,idy)"
                                 >
                                     <div>
@@ -172,6 +178,7 @@ const handleAllMouseLeave = () => {
                                             :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
                                             :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
                                             :selected="selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected()"
+                                            :chartLineWidth="chartLineWidth"
                                         />
                                     </div>
                                 </div>

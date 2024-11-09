@@ -52,7 +52,6 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
 
     // When experimentTags change, initialize as values.
     watch(currentExperimentTags, (newExperimentTags) => {
-        console.log(newExperimentTags);
         if (Object.keys(newExperimentTags).length > 1) {
             selectedXTag.value = Object.keys(newExperimentTags)[0];
             selectedYTag.value = Object.keys(newExperimentTags)[1];

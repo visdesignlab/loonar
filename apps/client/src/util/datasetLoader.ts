@@ -76,17 +76,7 @@ export async function loadFileIntoDuckDb(
             throw new Error(message);
         }
     } else if (type === 'parquet') {
-        console.log('im here')
         try {
-            // Only for testing.Uncomment this to refresh table in cache
-            console.log('dropping')
-            try {
-                await vg.coordinator().exec([`
-                DROP TABLE IF EXISTS ${tableName}
-                `]);
-            } catch (error) {
-                console.error(error);
-            }
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);
         } catch (error) {
@@ -122,14 +112,6 @@ export async function createAggregateTable(tableName: string, headers: string[],
         })
 
         try {
-            // Only for testing.Uncomment this to refresh table in cache
-            try {
-                await vg.coordinator().exec([`
-                DROP TABLE IF EXISTS ${tableName}_aggregate
-                `]);
-            } catch (error) {
-                console.error(error);
-            }
             await vg.coordinator().exec([`
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
                     SELECT 

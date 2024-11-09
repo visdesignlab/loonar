@@ -17,6 +17,7 @@ const props = defineProps<{
     yAxisName: string;
     yIndex: number;
     selected: boolean;
+    chartLineWidth:number;
 }>();
 
 // Will use soon for dark mode.
@@ -26,17 +27,34 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
-const { conditionChartSelections } = useMosaicSelectionStore();
+const { conditionChartSelections, $yAxisParam } = useMosaicSelectionStore();
 const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
+let observer:MutationObserver|null = null;
+
+const isLoading = ref<boolean>(false);
+
 watch(
-    [experimentDataInitialized, conditionChartSelections],
-    async ([isInitialized, newConditionChartSelections]) => {
-        if (isInitialized) {
+    [experimentDataInitialized, conditionChartSelections, chartContainer],
+    async ([isInitialized, newConditionChartSelections, newChartContainer]) => {
+        if (isInitialized && newChartContainer) {
             await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            createChart(props.xAxisName, props.yAxisName);
+            const chart = createChart(props.xAxisName, props.yAxisName);
+
+            if(chart){
+                newChartContainer.appendChild(chart);
+                observer = new MutationObserver((mutationList) => {
+                    for(const mutation of mutationList) {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            observer?.disconnect();
+                            break;
+                        }
+                    }
+                })
+            }
+
         }
     },
     { immediate: true, deep: true }
@@ -47,9 +65,12 @@ watch(
 
 // Styles
 const lineColor = chartColorScheme[props.yIndex % 6];
-const strokeWidth = 15;
+const strokeWidth = props.chartLineWidth/2;
+const strokeWidthSelected = props.chartLineWidth;
 
-async function createChart(xAxisName: string, yAxisName: string) {
+// const $param = vg.Param.value([0,2000])
+
+function createChart(xAxisName: string, yAxisName: string) {
     if (chartContainer.value) {
         const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
         // Creates chart, filtered by the selection that uses the query.
@@ -102,7 +123,7 @@ async function createChart(xAxisName: string, yAxisName: string) {
                     x: xAxisName,
                     y: vg.avg(yAxisName),
                     stroke: lineColor,
-                    strokeWidth: 30,
+                    strokeWidth: strokeWidthSelected,
                     curve: 'basis',
                     opacity: 1,
                 }
@@ -110,14 +131,23 @@ async function createChart(xAxisName: string, yAxisName: string) {
 
             // Gets rid of axes and margins
             vg.axis(false),
+            // Below would allow us to adjust the yAxis based on all the charts
+            // vg.yDomain($yAxisParam),
             vg.margin(0)
         );
-        chartContainer.value.appendChild(chart);
+        return chart;
     }
 }
 </script>
 
 <template>
+    <div 
+        v-if="isLoading"
+        style="position:absolute;width:100%;height:100%;flex:1;display:flex;"
+        class="flex justify-center"
+    >
+        <q-spinner/>
+    </div>
     <div ref="chartContainer"></div>
 </template>
 

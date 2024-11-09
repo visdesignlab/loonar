@@ -6,7 +6,6 @@ import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrack
 import { useImageViewerStore } from '../componentStores/imageViewerTrrackedStore';
 import { useLooneageViewStore } from '../componentStores/looneageViewStore';
 import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
-import { useFilterStore } from '../componentStores/filterStore';
 import { useSelectionStore } from '../interactionStores/selectionStore';
 import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { defineStore } from 'pinia';
@@ -38,7 +37,6 @@ export const useProvenanceStore = defineStore('provenanceStore', () => {
         useDatasetSelectionTrrackedStore(),
         useLooneageViewStore(),
         useDataPointSelection(),
-        useFilterStore(),
         useSelectionStore(),
     ];
 

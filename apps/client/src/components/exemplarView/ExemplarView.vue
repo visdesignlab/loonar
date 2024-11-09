@@ -8,6 +8,7 @@ import { useConditionSelectorStore } from '@/stores/componentStores/conditionSel
 import { storeToRefs } from 'pinia';
 import LBtn from '../custom/LBtn.vue';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 
 
@@ -18,6 +19,9 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 const { chartColorScheme } = useConditionSelectorStore();
 const selectionStore = useSelectionStore();
+
+const mosaicSelectionStore = useMosaicSelectionStore();
+const { $yAxisParam } = storeToRefs(mosaicSelectionStore);
 
 const { dataSelections } = storeToRefs(selectionStore);
 
@@ -34,10 +38,12 @@ watch(experimentDataInitialized, async (isInitialized) => {
 
 const handleOnClick = () => {
     // console.log('hello')
-    const plotName = "avg_mass"
+    // const plotName = "avg_mass"
     // const range = [0,100];
-    selectionStore.updateSelection(plotName, [0,500], "track");
+    // selectionStore.updateSelection(plotName, [0,500], "track");
+    
     // console.log(dataSelections.value);
+    mosaicSelectionStore.$yAxisParam.update([0,1000])
 }
 
 
@@ -70,6 +76,30 @@ async function createChart(){
     // )
     // chartContainer.value.appendChild(chart);
     // }
+
+    // For univariate cell plot if we want to switch to density plot
+
+            // vg.densityY(
+            //     vg.from(
+            //         datasetName
+            //     ),{
+            //         x:`${column}`,
+            //         fill:'#cccccc',
+            //         curve: 'basis',
+            //         stroke:'black'
+            //     }
+            // ),
+            // vg.densityY(
+            //     vg.from(
+            //         datasetName, {filterBy: mosaicSelection}
+            //     ),{
+            //         x:`${column}`,
+            //         fill: '#377eb8',
+            //         curve: 'basis',
+            //         stroke:'black'
+            //     }
+            // ),
+
 
 }
 

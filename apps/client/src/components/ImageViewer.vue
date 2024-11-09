@@ -42,6 +42,8 @@ import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { select } from 'd3-selection';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -57,6 +59,9 @@ const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
+const selectionStore = useSelectionStore();
+const { selectedTrackingIds, unfilteredTrackingIds } = storeToRefs(selectionStore);
+
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
     useElementSize(deckGlContainer);
@@ -65,6 +70,13 @@ const colormapExtension = new AdditiveColormapExtension();
 const contrastLimit = computed<[number, number][]>(() => {
     return [[contrastLimitSlider.value.min, contrastLimitSlider.value.max]];
 });
+
+const _determineSelectedOrFiltered = (trackId:string) => {
+    return {
+        selected: selectedTrackingIds.value ? selectedTrackingIds.value.includes(trackId) : false,
+        filtered: unfilteredTrackingIds.value ? !(unfilteredTrackingIds.value.includes(trackId)) : false
+    }
+}
 
 let deckgl: any | null = null;
 onMounted(() => {
@@ -121,7 +133,6 @@ onMounted(() => {
         // onLoad: () => console.log('onLoad'),
 
         getTooltip: ({ object }) => {
-            console.log(object);
             if (!object) return null;
             let { id, frame } = object.properties;
             if (id == null) return null;
@@ -151,6 +162,8 @@ onMounted(() => {
     });
     eventBusStore.emitter.on('resetImageView', resetView);
 });
+
+
 
 const loader = ref<any | null>(null);
 const pixelSource = ref<any | null>(null);
@@ -228,6 +241,13 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return hoverColorWithAlpha;
             }
+            // if(!isSelected(info.properties?.id?.toString())){
+            //     return[0,0,0,255];
+            // }
+            const { filtered } = _determineSelectedOrFiltered(info.properties?.id?.toString())
+            if(filtered){
+                return[0,0,0,255];
+            }
             return [0, 0, 0, 0];
         },
         getLineColor: (info) => {
@@ -241,6 +261,18 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
                 dataPointSelectionUntrracked.hoveredTrackId
             ) {
                 return colors.hovered.rgb;
+            }
+            // if(!isSelected(info.properties?.id?.toString())){
+            //     return[0,0,0,255];
+            // }
+
+            const {selected,filtered} = _determineSelectedOrFiltered(info.properties?.id?.toString())
+            if(filtered){
+                return [0,0,0];
+            } else {
+                if(!selected){
+                    return [0,0,0];
+                }
             }
             return colors.unselectedBoundary.rgb;
         },
@@ -257,9 +289,9 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
         onHover: onHover,
         onClick: onClick,
         updateTriggers: {
-            getFillColor: dataPointSelectionUntrracked.hoveredTrackId,
-            getLineColor: dataPointSelection.selectedTrackId,
-            getLineWidth: dataPointSelection.selectedTrackId,
+            getFillColor: [dataPointSelectionUntrracked.hoveredTrackId],
+            getLineColor: [dataPointSelection.selectedTrackId],
+            getLineWidth: [dataPointSelection.selectedTrackId]
         },
     });
 }
@@ -453,17 +485,24 @@ function createCenterPointLayer(): ScatterplotLayer {
             if (d.trackId === dataPointSelection.selectedTrackId) {
                 return globalSettings.normalizedSelectedRgb;
             }
+
+            const { filtered } = _determineSelectedOrFiltered(d.trackId)
+
+            if(filtered){
+                return[0,0,0,0];
+            }
+
             return [228, 26, 28];
         },
         getStrokeWidth: 1,
         updateTriggers: {
             getFillColor: {
-                selected: dataPointSelection.selectedTrackId,
-                hovered: dataPointSelectionUntrracked.hoveredTrackId,
+                selected: [dataPointSelection.selectedTrackId],
+                hovered: [dataPointSelectionUntrracked.hoveredTrackId],
             },
             getLineColor: {
-                selected: dataPointSelection.selectedTrackId,
-                hovered: dataPointSelectionUntrracked.hoveredTrackId,
+                selected: [dataPointSelection.selectedTrackId],
+                hovered: [dataPointSelectionUntrracked.hoveredTrackId],
             },
         },
     });
@@ -652,6 +691,9 @@ watch(currentTrackArray, renderDeckGL);
 watch(dataPointSelection.$state, renderDeckGL);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
+watch(selectedTrackingIds, renderDeckGL);
+watch(unfilteredTrackingIds, renderDeckGL);
+
 
 function clearSelection() {
     dataPointSelection.selectedTrackId = null;

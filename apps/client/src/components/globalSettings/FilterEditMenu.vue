@@ -14,7 +14,6 @@ import {
     QBanner,
 } from 'quasar';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
 
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
@@ -27,7 +26,6 @@ const props = defineProps<{
 const emit = defineEmits(['update:range']);
 
 const selectionStore = useSelectionStore();
-const filterStore = useFilterStore();
 
 const showRangeDialog = ref(false);
 const minInput = ref(props.initialMin);
@@ -51,7 +49,7 @@ function onSubmit() {
     if (props.type === 'selection') {
         selectionStore.updateSelection(props.plotName, newRange);
     } else if (props.type === 'filter') {
-        filterStore.updateFilter(props.plotName, newRange);
+        selectionStore.updateFilter(props.plotName, newRange);
     }
 
     emit('update:range', { min: newRange[0], max: newRange[1] });

@@ -12,7 +12,6 @@ import { useLooneageViewStore } from './looneageViewStore';
 import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
 import { useSelectionStore } from '../interactionStores/selectionStore';
-import { useFilterStore } from './filterStore';
 
 export interface AggLine {
     data: AggLineData;
@@ -39,10 +38,8 @@ function storeSetup() {
     const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 
     const selectionStore = useSelectionStore();
-    const { dataSelections } = storeToRefs(selectionStore);
+    const { selectedTrackingIds, unfilteredTrackingIds } = storeToRefs(selectionStore);
 
-    const filterStore = useFilterStore();
-    const { filters } = storeToRefs(filterStore);
 
     const aggregatorKey = ref<string>('average');
     const aggregatorOptions = ['average', 'total', 'min', 'median', 'max'];
@@ -300,39 +297,11 @@ function storeSetup() {
         };
     }
 
-    // Currently only for individual cell tracks
+
     function _determineSelectedOrFiltered(track: Track) {
-        //Determine if selected.
-        let selected = true;
-        let filtered = false;
-        dataSelections.value.forEach(selection => {
-            if (selection.type === 'cell') {
-
-                // Below is a bit inefficient -- can just iterate once
-                const valuesForPlotName = track.cells.map(cell => cell.attrNum[selection.plotName])
-                const max_value = Math.max(...valuesForPlotName);
-                const min_value = Math.min(...valuesForPlotName);
-
-                // Intersects with selected
-                // Checks if max value and min value make track fall outside of range
-                selected = selected && !(max_value <= selection.range[0] || min_value >= selection.range[1])
-            }
-        })
-
-        filters.value.forEach(filter => {
-
-            // Below is a bit inefficient -- can just iterate once
-            const valuesForPlotName = track.cells.map(cell => cell.attrNum[filter.plotName])
-            const max_value = Math.max(...valuesForPlotName);
-            const min_value = Math.min(...valuesForPlotName);
-
-            // Essentially, you're doing the opposite of selected. However, since selections and filters come from different data (i.e. you have ot consciously change to a filter), this needs to be done separately.
-            filtered = filtered || (max_value <= filter.range[0] || min_value >= filter.range[1])
-        }
-        )
-
         return {
-            selected, filtered
+            selected: selectedTrackingIds.value ? selectedTrackingIds.value.includes(track.trackId) : false,
+            filtered: unfilteredTrackingIds.value ? !(unfilteredTrackingIds.value.includes(track.trackId)) : false
         }
     }
 

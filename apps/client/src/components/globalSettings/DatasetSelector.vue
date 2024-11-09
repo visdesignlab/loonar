@@ -6,7 +6,6 @@ import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSel
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
 
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -14,7 +13,6 @@ const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const $q = useQuasar();
 
 const selectionStore = useSelectionStore();
-const filterStore = useFilterStore();
 
 watch(
     () => datasetSelectionStore.fetchingTabularData,
@@ -30,9 +28,8 @@ watch(
 );
 
 function onClickLocation(location: any) {
-    //console.log('clicked location: ', location);
     selectionStore.clearAllSelections();
-    filterStore.clearAllFilters();
+    selectionStore.clearAllFilters();
     datasetSelectionStore.selectImagingLocation(location);
 }
 
@@ -49,7 +46,7 @@ const shortExpName = computed<string>(() => {
 
 function onSelectExperiment() {
     selectionStore.clearAllSelections();
-    filterStore.clearAllFilters();
+    selectionStore.clearAllFilters();
 }
 </script>
 

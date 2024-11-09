@@ -477,10 +477,10 @@ export const useCellMetaData = defineStore('cellMetaData', () => {
                         // a synonym for true/false, different capitalization may also work.
                         console.error(
                             'Unrecognized cell type' +
-                                `.\n\trow index: ${i}` +
-                                `.\n\tkey: ${key}` +
-                                `.\n\tvalue: ${val}` +
-                                `.\n\ttype: ${typeof val}`
+                            `.\n\trow index: ${i}` +
+                            `.\n\tkey: ${key}` +
+                            `.\n\tvalue: ${val}` +
+                            `.\n\ttype: ${typeof val}`
                         );
                         break;
                 }

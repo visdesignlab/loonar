@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, nextTick} from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
 import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
@@ -11,8 +10,6 @@ import { select } from 'd3-selection';
 import * as vg from '@uwdata/vgplot';
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
-const filterStore = useFilterStore();
-const { filters } = storeToRefs(filterStore);
 const selectionStore = useSelectionStore();
 const { dataSelections} = storeToRefs(selectionStore)
 

@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useCellMetaData } from '../dataStores/cellMetaDataStore';
+import type { Track } from '../dataStores/cellMetaDataStore';
 
 export interface DataSelection {
     plotName: string;
@@ -18,9 +20,77 @@ type Events = {
 export const emitter = mitt<Events>();
 //const emit = defineEmits(['plot-error']);
 
+function median(values: number[]) {
+    if (values.length === 0) return 0; // Handle empty array
+
+    // Sort the array in ascending order
+    values.sort((a, b) => a - b);
+
+    const middle = Math.floor(values.length / 2);
+
+    // If the length is odd, return the middle element
+    if (values.length % 2 !== 0) {
+        return values[middle];
+    }
+
+    // If the length is even, return the average of the two middle elements
+    return (values[middle - 1] + values[middle]) / 2;
+}
+
+function checkSelection(selection: DataSelection, track: Track) {
+    if (selection.type === 'cell') {
+        const valuesForPlotName = track.cells.map(cell => cell.attrNum[selection.plotName])
+        const max_value = Math.max(...valuesForPlotName);
+        const min_value = Math.min(...valuesForPlotName);
+
+        // Intersects with selected
+        // Checks if max value and min value make track fall outside of range
+        // This is the same logic used in the SQL query predicate for updating track level selection.
+        return !(max_value <= selection.range[0] || min_value >= selection.range[1])
+
+    } else if (selection.type === 'track') {
+        // Split plot name. Track level attributes come as 'AVG column name', so we get the first item in the split as the aggregate function
+        const [aggregate, ...rest] = selection.plotName.split(' ');
+        //Join the rest, which will be the original column name
+        const originalColumn = rest.join(' ')
+        //Get the values for that column
+        const valuesForPlotName = track.cells.map(cell => cell.attrNum[originalColumn])
+
+        let aggregateValue;
+        // Based on aggregate function, compute different aggregate values
+        switch (aggregate) {
+            case 'AVG':
+                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0) / valuesForPlotName.length;
+                break;
+            case 'MAX':
+                aggregateValue = Math.max(...valuesForPlotName);
+                break;
+            case 'MIN':
+                aggregateValue = Math.min(...valuesForPlotName);
+                break;
+            case 'SUM':
+                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0);
+                break;
+            case 'COUNT':
+                aggregateValue = valuesForPlotName.length;
+                break;
+            case 'MEDIAN':
+                aggregateValue = median(valuesForPlotName);
+                break;
+            default:
+                //Defaults to just average
+                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0) / valuesForPlotName.length;
+        }
+        return (aggregateValue <= selection.range[1] && aggregateValue >= selection.range[0])
+    }
+    return true
+}
+
+
 export const useSelectionStore = defineStore('Selection', {
     state: () => ({
         dataSelections: [] as DataSelection[],
+        dataFilters: [] as DataSelection[]
     }),
     getters: {
         modifiedSelections: (state) => {
@@ -29,6 +99,35 @@ export const useSelectionStore = defineStore('Selection', {
                     s.range[0] !== s.maxRange[0] || s.range[1] !== s.maxRange[1]
             );
         },
+        selectedTrackingIds: (state) => {
+            const cellMetaData = useCellMetaData();
+            const selectedTrackIds: string[] = [];
+            cellMetaData.trackArray?.forEach(track => {
+                let selected = true;
+                state.dataSelections.forEach(selection => {
+                    selected = selected && checkSelection(selection, track)
+                })
+                if (selected) {
+                    selectedTrackIds.push(track.trackId);
+                }
+            })
+            return state.dataSelections.length === 0 ? null : selectedTrackIds;
+        },
+        unfilteredTrackingIds: (state) => {
+            const cellMetaData = useCellMetaData();
+            const unfilteredTrackIds: string[] = [];
+            cellMetaData.trackArray?.forEach(track => {
+                let unfiltered = true;
+                state.dataFilters.forEach(filter => {
+                    unfiltered = unfiltered && checkSelection(filter, track)
+                })
+                if (unfiltered) {
+                    unfilteredTrackIds.push(track.trackId);
+                }
+            })
+            return state.dataFilters.length === 0 ? null : unfilteredTrackIds;
+        }
+
     },
     actions: {
         addSelection(selection: DataSelection) {
@@ -195,6 +294,40 @@ export const useSelectionStore = defineStore('Selection', {
             const [minVal, maxVal] = await this.getMaxRange(plotName);
             selection.range = [minVal, maxVal];
             selection.maxRange = [minVal, maxVal];
+        },
+        addFilter(filter: DataSelection) {
+            const existingIndex = this.dataFilters.findIndex(
+                (s) => s.plotName === filter.plotName
+            );
+            if (existingIndex !== -1) {
+                this.dataFilters[existingIndex] = filter;
+            } else {
+                this.dataFilters.push(filter);
+            }
+        },
+        removeFilter(index: number) {
+            this.dataFilters.splice(index, 1);
+        },
+        updateFilter(plotName: string, range: [number, number], type?: DataSelection['type']) {
+            const existingIndex = this.dataFilters.findIndex(
+                (s) => s.plotName === plotName
+            );
+            if (existingIndex !== -1) {
+                this.dataFilters[existingIndex].range = range;
+            } else {
+                this.addFilter(
+                    {
+                        plotName,
+                        range,
+                        type: type ?? 'cell',
+                        maxRange: [0, 1000],
+                        displayChart: true
+                    }
+                );
+            }
+        },
+        clearAllFilters() {
+            this.dataFilters = [];
         },
     },
 });

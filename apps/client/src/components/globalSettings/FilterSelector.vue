@@ -2,33 +2,32 @@
 import { computed, ref } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import PlotSelector from './PlotSelector.vue';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
 
 const globalSettings = useGlobalSettings();
-const filterStore = useFilterStore();
 const selectionStore = useSelectionStore();
-const { filters } = storeToRefs(filterStore);
+const {dataFilters} = storeToRefs(selectionStore);
 
 const selectionsCount = computed(
     () => selectionStore.modifiedSelections.length
 );
-const filtersCount = computed(() => filters.value.length);
+const filtersCount = computed(() => dataFilters.value.length);
 
 function removeFilter(index: number) {
-    filterStore.removeFilter(index);
+    selectionStore.removeFilter(index);
 }
 function removeSelection(plotName: string) {
     selectionStore.removeSelectionByPlotName(plotName);
 }
 function addFilter() {
     for (const selection of selectionStore.modifiedSelections) {
-        filterStore.addFilter({
-            plotName: selection.plotName,
-            range: [selection.range[0], selection.range[1]],
-        });
+
+        selectionStore.addFilter({
+            ...selection,
+            range: [...selection.range],
+        })
     }
 }
 
@@ -134,7 +133,7 @@ const mutedTextClass = computed(() =>
                 </q-item-section>
             </template>
             <q-list>
-                <q-item v-for="(filter, index) in filters" :key="index">
+                <q-item v-for="(filter, index) in dataFilters" :key="index">
                     <FilterEditMenu
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"

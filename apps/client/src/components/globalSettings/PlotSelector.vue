@@ -179,7 +179,7 @@ function handleSelectionRemoved(event: CustomEvent) {
 <template>
     <div>
         <div v-if="!experimentDataInitialized" class="flex justify-center">
-            <div class="text-h6 q-m-lg">Loading...</div>
+            <div class="text-caption q-m-lg">No experiment selected.</div>
         </div>
         <div v-else>
             <div class="q-item-section__right">
