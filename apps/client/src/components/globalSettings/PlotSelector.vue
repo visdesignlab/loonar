@@ -26,7 +26,7 @@ const props = defineProps({
     selectorType: {
         type: String,
         required: true,
-        validator: (value: string) => ['Track', 'Cell'].includes(value),
+        validator: (value: string) => ['track', 'cell'].includes(value),
     },
 });
 
@@ -163,9 +163,9 @@ function handlePlotLoaded() {
 // }
 
 function onMenuButtonClick() {
-    if (props.selectorType === 'Cell') {
+    if (props.selectorType === 'cell') {
         cellPlotDialogOpen.value = !cellPlotDialogOpen.value;
-    } else if (props.selectorType === 'Track') {
+    } else if (props.selectorType === 'track') {
         trackPlotDialogOpen.value = !trackPlotDialogOpen.value;
     }
 }
@@ -319,22 +319,22 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                     </q-dialog>
                 </q-btn>
             </div>
-            <template v-if="props.selectorType === 'Cell'">
+            <template v-if="props.selectorType === 'cell'">
                 <UnivariateCellPlot
                     v-for="dataSelection in displayedCellPlots"
                     :key="dataSelection.plotName"
                     :plot-name="dataSelection.plotName"
-                    :attribute-type="'Cell'"
+                    :attribute-type="'cell'"
                     @plot-loaded="handlePlotLoaded"
                     @plot-error="handlePlotError"
                 />
             </template>
-            <template v-if="props.selectorType === 'Track'">
+            <template v-if="props.selectorType === 'track'">
                 <UnivariateCellPlot
                     v-for="dataSelection in displayedTrackPlots"
                     :key="dataSelection.plotName"
                     :plot-name="dataSelection.plotName"
-                    :attribute-type="'Track'"
+                    :attribute-type="'track'"
                     @plot-loaded="handlePlotLoaded"
                     @plot-error="handlePlotError"
                 />

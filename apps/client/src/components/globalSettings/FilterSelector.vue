@@ -195,7 +195,7 @@ const mutedTextClass = computed(() =>
             label="Cell Attributes"
         >
             <q-card :dark="globalSettings.darkMode">
-                <PlotSelector selector-type="Cell"></PlotSelector>
+                <PlotSelector selector-type="cell"></PlotSelector>
             </q-card>
         </q-expansion-item>
 
@@ -207,7 +207,7 @@ const mutedTextClass = computed(() =>
             label="Track Attributes"
         >
             <q-card :dark="globalSettings.darkMode">
-                <PlotSelector selector-type="Track"></PlotSelector>
+                <PlotSelector selector-type="track"></PlotSelector>
             </q-card>
         </q-expansion-item>
     </q-list>
