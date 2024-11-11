@@ -8,7 +8,7 @@ import FilterEditMenu from './FilterEditMenu.vue';
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const {dataFilters} = storeToRefs(selectionStore);
+const { dataFilters } = storeToRefs(selectionStore);
 
 const selectionsCount = computed(
     () => selectionStore.modifiedSelections.length
@@ -23,11 +23,10 @@ function removeSelection(plotName: string) {
 }
 function addFilter() {
     for (const selection of selectionStore.modifiedSelections) {
-
         selectionStore.addFilter({
             ...selection,
             range: [...selection.range],
-        })
+        });
     }
 }
 
@@ -75,7 +74,13 @@ const mutedTextClass = computed(() =>
                         left
                         class="q-pa-none q-mr-xs flex-grow-0"
                     >
-                        <q-avatar icon="scatter_plot" />
+                        <q-avatar
+                            :icon="
+                                selection.type === 'cell'
+                                    ? 'scatter_plot'
+                                    : 'linear_scale'
+                            "
+                        />
                     </q-item-section>
 
                     <q-item-section>
@@ -146,7 +151,13 @@ const mutedTextClass = computed(() =>
                         left
                         class="q-pa-none q-mr-xs flex-grow-0"
                     >
-                        <q-avatar icon="scatter_plot" />
+                        <q-avatar
+                            :icon="
+                                filter.type === 'cell'
+                                    ? 'scatter_plot'
+                                    : 'linear_scale'
+                            "
+                        />
                     </q-item-section>
 
                     <q-item-section>
