@@ -19,7 +19,7 @@ function removeFilter(index: number) {
     selectionStore.removeFilter(index);
 }
 function removeSelection(plotName: string) {
-    selectionStore.removeSelectionByPlotName(plotName);
+    selectionStore.resetSelectionByPlotName(plotName);
 }
 function addFilter() {
     for (const selection of selectionStore.modifiedSelections) {

@@ -156,7 +156,7 @@ export const useSelectionStore = defineStore('Selection', {
         clearAllSelections() {
             this.dataSelections = [];
         },
-        removeSelection(index: number) {
+        resetSelection(index: number) {
             this.dataSelections[index].range = [
                 ...this.dataSelections[index].maxRange,
             ];
@@ -181,16 +181,6 @@ export const useSelectionStore = defineStore('Selection', {
                 });
             }
         },
-        removeSelectionByPlotName(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            // window.dispatchEvent(
-            //     new CustomEvent('selectionRemoved', { detail: plotName })
-            // );
-            this.removeSelection(index);
-        },
         removeFilterByPlotName(plotName: string) {
             const index = this.dataFilters.findIndex(
                 (s) => s.plotName === plotName
@@ -201,12 +191,30 @@ export const useSelectionStore = defineStore('Selection', {
             // );
             this.removeFilter(index);
         },
+        removeSelectionByPlotName(plotName: string) {
+            const index = this.dataSelections.findIndex(
+                (s) => s.plotName === plotName
+            );
+            if (index !== -1) {
+                this.dataSelections.splice(index, 1);
+            }
+        },
         removePlotWithErrors(plotName: string) {
             const index = this.dataSelections.findIndex(
                 (s) => s.plotName === plotName
             );
             if (index === -1) return;
             this.dataSelections.splice(index, 1);
+        },
+        resetSelectionByPlotName(plotName: string) {
+            const index = this.dataSelections.findIndex(
+                (s) => s.plotName === plotName
+            );
+            if (index === -1) return;
+            // window.dispatchEvent(
+            //     new CustomEvent('selectionRemoved', { detail: plotName })
+            // );
+            this.resetSelection(index);
         },
         getSelection(name: string): DataSelection | null {
             const s = this.dataSelections.find(

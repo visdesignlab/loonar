@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import LBtn from '../custom/LBtn.vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { defineEmits } from 'vue';
 import {
     QMenu,
     QItem,
