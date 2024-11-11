@@ -18,10 +18,10 @@ const notificationStore = useNotificationStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
-
 const selectionStore = useSelectionStore();
 const { dataSelections } = storeToRefs(selectionStore);
 
+// Are these plots track or cell level?
 const props = defineProps({
     selectorType: {
         type: String,
@@ -29,34 +29,19 @@ const props = defineProps({
         validator: (value: string) => ['track', 'cell'].includes(value),
     },
 });
-
 const cellPlotDialogOpen = ref(false);
 const trackPlotDialogOpen = ref(false);
 const selectedCellAttribute = ref('');
 const selectedTrackAttribute = ref('');
 const selectedAggregation = ref('');
-const loading = ref(true);
-const loadedPlots = ref(0);
 const errorPlotName = ref('');
 
-const displayedCellPlots = computed(() => {
-    const filtered = dataSelections.value.filter(
-        (d) => d.displayChart && d.type === 'cell'
+// Plots Displayed
+const displayedPlots = computed(() => {
+    return dataSelections.value.filter(
+        (d) => d.displayChart && d.type === props.selectorType
     );
-    // console.log('Filtered Cell Plots:', filtered);
-    return filtered;
 });
-
-const displayedTrackPlots = computed(() => {
-    const filtered = dataSelections.value.filter(
-        (d) => d.displayChart && d.type === 'track'
-    );
-    // console.log('Filtered Track Plots:', filtered);
-    return filtered;
-});
-
-const totalCellPlots = computed(() => displayedCellPlots.value.length);
-const totalTrackPlots = computed(() => displayedTrackPlots.value.length);
 
 const aggregationOptions = [
     { label: 'Sum', value: 'SUM' },
@@ -67,14 +52,13 @@ const aggregationOptions = [
     { label: 'Median', value: 'MEDIAN' },
 ];
 
-// On any update, computes the plots to be shown.
-
-// Checks if specifically experiment metadata is already loaded.
+// Collects all attribute names after the data is loaded.
 const allAttributeNames = computed(() => {
     if (
         experimentDataInitialized.value &&
         currentExperimentMetadata.value &&
-        currentExperimentMetadata.value.headers
+        currentExperimentMetadata.value.headers &&
+        currentExperimentMetadata.value.headers.length > 0
     ) {
         return currentExperimentMetadata.value.headers;
     } else {
@@ -82,6 +66,7 @@ const allAttributeNames = computed(() => {
     }
 });
 
+// Finds the first attribute name if data is loaded.
 const firstAttributeName = computed(() => {
     if (
         experimentDataInitialized.value &&
@@ -140,28 +125,6 @@ onMounted(() => {
     );
 });
 
-function handlePlotLoaded() {
-    loadedPlots.value++;
-    if (loadedPlots.value === totalCellPlots.value + totalTrackPlots.value) {
-        loading.value = false;
-    }
-}
-
-// Selecting which plots to show
-// function isPlotSelected(name: string): boolean {
-//     const selection = selectionStore.getSelection(name);
-//     if (selection === null) return false;
-//     return selection.displayChart;
-// }
-// function togglePlotSelection(name: string) {
-//     const selection = selectionStore.getSelection(name);
-//     if (selection === null) {
-//         selectionStore.addPlot(name, 'cell');
-//         return;
-//     }
-//     selection.displayChart = !selection.displayChart;
-// }
-
 function onMenuButtonClick() {
     if (props.selectorType === 'cell') {
         cellPlotDialogOpen.value = !cellPlotDialogOpen.value;
@@ -173,15 +136,11 @@ function onMenuButtonClick() {
 function addCellPlotFromMenu(atr: string) {
     cellPlotDialogOpen.value = false;
     selectionStore.addPlot(`${atr}`, 'cell');
-    return;
 }
 function addTrackPlotFromMenu(atr: string, agg: string) {
     trackPlotDialogOpen.value = false;
     selectionStore.addPlot(`${agg} ${atr}`, 'track');
-    return;
 }
-
-//function handleSelectionRemoved(event: CustomEvent) {}
 </script>
 <template>
     <div>
@@ -189,6 +148,7 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
             <div class="text-caption q-m-lg">No experiment selected.</div>
         </div>
         <div v-else>
+            <!-- Menu Icon -->
             <div class="q-item-section__right">
                 <q-btn
                     class="gt-xs q-mr-sm"
@@ -200,6 +160,7 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                     color="grey-7"
                     @click="onMenuButtonClick"
                 >
+                    <!-- Cell Attributes Dialog -->
                     <q-dialog v-model="cellPlotDialogOpen" persistent>
                         <q-card :dark="globalSettings.darkMode">
                             <q-card-section>
@@ -253,7 +214,7 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                         </q-card>
                     </q-dialog>
 
-                    <!-- Q-Dialog for 'Track' Selector -->
+                    <!-- Track Attributes Dialog -->
                     <q-dialog v-model="trackPlotDialogOpen" persistent>
                         <q-card :dark="globalSettings.darkMode">
                             <q-card-section>
@@ -319,26 +280,14 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                     </q-dialog>
                 </q-btn>
             </div>
-            <template v-if="props.selectorType === 'cell'">
-                <UnivariateCellPlot
-                    v-for="dataSelection in displayedCellPlots"
-                    :key="dataSelection.plotName"
-                    :plot-name="dataSelection.plotName"
-                    :attribute-type="'cell'"
-                    @plot-loaded="handlePlotLoaded"
-                    @plot-error="handlePlotError"
-                />
-            </template>
-            <template v-if="props.selectorType === 'track'">
-                <UnivariateCellPlot
-                    v-for="dataSelection in displayedTrackPlots"
-                    :key="dataSelection.plotName"
-                    :plot-name="dataSelection.plotName"
-                    :attribute-type="'track'"
-                    @plot-loaded="handlePlotLoaded"
-                    @plot-error="handlePlotError"
-                />
-            </template>
+            <!--Generate the Plots-->
+            <UnivariateCellPlot
+                v-for="dataSelection in displayedPlots"
+                :key="dataSelection.plotName"
+                :plot-name="dataSelection.plotName"
+                :attribute-type="props.selectorType"
+                @plot-error="handlePlotError"
+            />
         </div>
     </div>
 </template>
