@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import LBtn from '../custom/LBtn.vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     QMenu,
@@ -15,17 +16,37 @@ import {
 } from 'quasar';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+const mosaicSelectionStore = useMosaicSelectionStore(); // Initialize the store
+
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
     plotName: string;
     initialMin: number;
     initialMax: number;
-    type: 'selection' | 'filter';
+    filterType: 'selection' | 'filter';
+    attributeType: string;
 }>();
 
 const emit = defineEmits(['update:range']);
 
 const selectionStore = useSelectionStore();
+
+// Plot Deletion -----------------
+const deleteDialogOpen = ref(false);
+
+function confirmDeletePlot() {
+    deleteDialogOpen.value = true;
+}
+function deletePlot() {
+    selectionStore.removeSelectionByPlotName(props.plotName);
+    selectionStore.removeFilterByPlotName(props.plotName);
+    deleteDialogOpen.value = false;
+}
+
+function cancelDelete() {
+    deleteDialogOpen.value = false;
+}
 
 const showRangeDialog = ref(false);
 const minInput = ref(props.initialMin);
@@ -46,11 +67,18 @@ function onSubmit() {
 
     const newRange: [number, number] = [minInput.value, maxInput.value];
 
-    if (props.type === 'selection') {
+    if (props.filterType === 'selection') {
         selectionStore.updateSelection(props.plotName, newRange);
-    } else if (props.type === 'filter') {
+        //useMosaicSelectionStore.updateMosaicSelection();
+    } else if (props.filterType === 'filter') {
         selectionStore.updateFilter(props.plotName, newRange);
     }
+
+    // mosaicSelectionStore.updateMosaicSelection(
+    //     props.plotName,
+    //     newRange,
+    //     'cell'
+    // );
 
     emit('update:range', { min: newRange[0], max: newRange[1] });
     showRangeDialog.value = false;
@@ -78,6 +106,16 @@ const minMaxFormValid = computed<boolean>(() => {
         <q-item
             clickable
             v-close-popup
+            @click="confirmDeletePlot"
+            :dark="globalSettings.darkMode"
+        >
+            <q-item-section :dark="globalSettings.darkMode" class="text-red"
+                >Delete</q-item-section
+            >
+        </q-item>
+        <q-item
+            clickable
+            v-close-popup
             @click="openRangeDialog"
             :dark="globalSettings.darkMode"
         >
@@ -86,6 +124,23 @@ const minMaxFormValid = computed<boolean>(() => {
             >
         </q-item>
     </q-menu>
+    <!-- Confirmation Dialog -->
+    <q-dialog v-model="deleteDialogOpen" persistent>
+        <q-card :dark="globalSettings.darkMode">
+            <q-card-section>
+                <div class="text-h6">Delete "{{ props.plotName }}"?</div>
+            </q-card-section>
+            <q-card-actions align="right">
+                <l-btn
+                    flat
+                    label="Cancel"
+                    color="primary"
+                    @click="cancelDelete"
+                />
+                <l-btn flat label="Delete" color="red" @click="deletePlot" />
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
 
     <q-dialog v-model="showRangeDialog">
         <q-card :dark="globalSettings.darkMode">
@@ -123,19 +178,20 @@ const minMaxFormValid = computed<boolean>(() => {
                         v-if="minMaxFormError"
                         dense
                         class="text-white bg-red"
-                        >{{ minMaxFormError }}
                         :dark="globalSettings.darkMode"
+                    >
+                        {{ minMaxFormError }}
                     </q-banner>
 
                     <div>
-                        <q-btn
+                        <l-btn
                             label="Submit"
-                            type="submit"
+                            @click="onSubmit"
                             color="primary"
                             :disable="!minMaxFormValid"
                             :dark="globalSettings.darkMode"
                         />
-                        <q-btn
+                        <l-btn
                             label="Cancel"
                             color="primary"
                             flat

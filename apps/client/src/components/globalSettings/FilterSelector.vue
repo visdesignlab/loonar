@@ -66,7 +66,8 @@ const mutedTextClass = computed(() =>
                         :plot-name="selection.plotName"
                         :initial-min="selection.range[0]"
                         :initial-max="selection.range[1]"
-                        type="selection"
+                        filterType="selection"
+                        :attributeType="selection.type"
                     />
 
                     <q-item-section
@@ -143,7 +144,8 @@ const mutedTextClass = computed(() =>
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"
                         :initial-max="filter.range[1]"
-                        type="filter"
+                        filterType="filter"
+                        :attributeType="filter.type"
                     />
 
                     <q-item-section

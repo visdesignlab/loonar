@@ -39,28 +39,35 @@ function median(values: number[]) {
 
 function checkSelection(selection: DataSelection, track: Track) {
     if (selection.type === 'cell') {
-        const valuesForPlotName = track.cells.map(cell => cell.attrNum[selection.plotName])
+        const valuesForPlotName = track.cells.map(
+            (cell) => cell.attrNum[selection.plotName]
+        );
         const max_value = Math.max(...valuesForPlotName);
         const min_value = Math.min(...valuesForPlotName);
 
         // Intersects with selected
         // Checks if max value and min value make track fall outside of range
         // This is the same logic used in the SQL query predicate for updating track level selection.
-        return !(max_value <= selection.range[0] || min_value >= selection.range[1])
-
+        return !(
+            max_value <= selection.range[0] || min_value >= selection.range[1]
+        );
     } else if (selection.type === 'track') {
         // Split plot name. Track level attributes come as 'AVG column name', so we get the first item in the split as the aggregate function
         const [aggregate, ...rest] = selection.plotName.split(' ');
         //Join the rest, which will be the original column name
-        const originalColumn = rest.join(' ')
+        const originalColumn = rest.join(' ');
         //Get the values for that column
-        const valuesForPlotName = track.cells.map(cell => cell.attrNum[originalColumn])
+        const valuesForPlotName = track.cells.map(
+            (cell) => cell.attrNum[originalColumn]
+        );
 
         let aggregateValue;
         // Based on aggregate function, compute different aggregate values
         switch (aggregate) {
             case 'AVG':
-                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0) / valuesForPlotName.length;
+                aggregateValue =
+                    valuesForPlotName.reduce((sum, value) => sum + value, 0) /
+                    valuesForPlotName.length;
                 break;
             case 'MAX':
                 aggregateValue = Math.max(...valuesForPlotName);
@@ -69,7 +76,10 @@ function checkSelection(selection: DataSelection, track: Track) {
                 aggregateValue = Math.min(...valuesForPlotName);
                 break;
             case 'SUM':
-                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0);
+                aggregateValue = valuesForPlotName.reduce(
+                    (sum, value) => sum + value,
+                    0
+                );
                 break;
             case 'COUNT':
                 aggregateValue = valuesForPlotName.length;
@@ -79,18 +89,22 @@ function checkSelection(selection: DataSelection, track: Track) {
                 break;
             default:
                 //Defaults to just average
-                aggregateValue = valuesForPlotName.reduce((sum, value) => sum + value, 0) / valuesForPlotName.length;
+                aggregateValue =
+                    valuesForPlotName.reduce((sum, value) => sum + value, 0) /
+                    valuesForPlotName.length;
         }
-        return (aggregateValue <= selection.range[1] && aggregateValue >= selection.range[0])
+        return (
+            aggregateValue <= selection.range[1] &&
+            aggregateValue >= selection.range[0]
+        );
     }
-    return true
+    return true;
 }
-
 
 export const useSelectionStore = defineStore('Selection', {
     state: () => ({
         dataSelections: [] as DataSelection[],
-        dataFilters: [] as DataSelection[]
+        dataFilters: [] as DataSelection[],
     }),
     getters: {
         modifiedSelections: (state) => {
@@ -102,32 +116,31 @@ export const useSelectionStore = defineStore('Selection', {
         selectedTrackingIds: (state) => {
             const cellMetaData = useCellMetaData();
             const selectedTrackIds: string[] = [];
-            cellMetaData.trackArray?.forEach(track => {
+            cellMetaData.trackArray?.forEach((track) => {
                 let selected = true;
-                state.dataSelections.forEach(selection => {
-                    selected = selected && checkSelection(selection, track)
-                })
+                state.dataSelections.forEach((selection) => {
+                    selected = selected && checkSelection(selection, track);
+                });
                 if (selected) {
                     selectedTrackIds.push(track.trackId);
                 }
-            })
+            });
             return state.dataSelections.length === 0 ? null : selectedTrackIds;
         },
         unfilteredTrackingIds: (state) => {
             const cellMetaData = useCellMetaData();
             const unfilteredTrackIds: string[] = [];
-            cellMetaData.trackArray?.forEach(track => {
+            cellMetaData.trackArray?.forEach((track) => {
                 let unfiltered = true;
-                state.dataFilters.forEach(filter => {
-                    unfiltered = unfiltered && checkSelection(filter, track)
-                })
+                state.dataFilters.forEach((filter) => {
+                    unfiltered = unfiltered && checkSelection(filter, track);
+                });
                 if (unfiltered) {
                     unfilteredTrackIds.push(track.trackId);
                 }
-            })
+            });
             return state.dataFilters.length === 0 ? null : unfilteredTrackIds;
-        }
-
+        },
     },
     actions: {
         addSelection(selection: DataSelection) {
@@ -173,10 +186,20 @@ export const useSelectionStore = defineStore('Selection', {
                 (s) => s.plotName === plotName
             );
             if (index === -1) return;
-            window.dispatchEvent(
-                new CustomEvent('selectionRemoved', { detail: plotName })
-            );
+            // window.dispatchEvent(
+            //     new CustomEvent('selectionRemoved', { detail: plotName })
+            // );
             this.removeSelection(index);
+        },
+        removeFilterByPlotName(plotName: string) {
+            const index = this.dataFilters.findIndex(
+                (s) => s.plotName === plotName
+            );
+            if (index === -1) return;
+            // window.dispatchEvent(
+            //     new CustomEvent('filterRemoved', { detail: plotName })
+            // );
+            this.removeFilter(index);
         },
         removePlotWithErrors(plotName: string) {
             const index = this.dataSelections.findIndex(
@@ -257,7 +280,6 @@ export const useSelectionStore = defineStore('Selection', {
                     );
                 }
 
-
                 const result = await vg.coordinator().query(query);
 
                 if (
@@ -308,22 +330,24 @@ export const useSelectionStore = defineStore('Selection', {
         removeFilter(index: number) {
             this.dataFilters.splice(index, 1);
         },
-        updateFilter(plotName: string, range: [number, number], type?: DataSelection['type']) {
+        updateFilter(
+            plotName: string,
+            range: [number, number],
+            type?: DataSelection['type']
+        ) {
             const existingIndex = this.dataFilters.findIndex(
                 (s) => s.plotName === plotName
             );
             if (existingIndex !== -1) {
                 this.dataFilters[existingIndex].range = range;
             } else {
-                this.addFilter(
-                    {
-                        plotName,
-                        range,
-                        type: type ?? 'cell',
-                        maxRange: [0, 1000],
-                        displayChart: true
-                    }
-                );
+                this.addFilter({
+                    plotName,
+                    range,
+                    type: type ?? 'cell',
+                    maxRange: [0, 1000],
+                    displayChart: true,
+                });
             }
         },
         clearAllFilters() {

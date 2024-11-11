@@ -190,7 +190,8 @@ function handleRangeUpdate(newRange: { min: number; max: number }) {
                     :plot-name="props.plotName"
                     :initial-min="rangeModel.min"
                     :initial-max="rangeModel.max"
-                    type="selection"
+                    filterType="selection"
+                    :attributeType="props.attributeType"
                     @update:range="handleRangeUpdate"
                 />
                 <!-- Uses same width and height as single chart to replace the chart. -->

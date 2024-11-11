@@ -180,15 +180,6 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                                     >
                                     </q-select>
 
-                                    <q-expansion-item>
-                                        <template v-slot:header>
-                                            <q-item-section
-                                                >Current Cell
-                                                Attributes</q-item-section
-                                            >
-                                        </template>
-                                    </q-expansion-item>
-
                                     <div>
                                         <l-btn
                                             label="Add"
@@ -243,15 +234,6 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
                                         clickable
                                     >
                                     </q-select>
-
-                                    <q-expansion-item>
-                                        <template v-slot:header>
-                                            <q-item-section
-                                                >Current Track
-                                                Attributes</q-item-section
-                                            >
-                                        </template>
-                                    </q-expansion-item>
 
                                     <div>
                                         <l-btn
