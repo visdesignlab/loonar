@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { QBtn } from 'quasar';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
+import LBtn from '../custom/LBtn.vue';
+
 import {
     useSelectionStore,
     emitter,
@@ -17,6 +19,9 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
 
+const selectionStore = useSelectionStore();
+const { dataSelections } = storeToRefs(selectionStore);
+
 const props = defineProps({
     selectorType: {
         type: String,
@@ -25,12 +30,15 @@ const props = defineProps({
     },
 });
 
-const cellPlotMenuOpen = ref(false);
+const cellPlotDialogOpen = ref(false);
 const trackPlotDialogOpen = ref(false);
-const selectedAttribute = ref('');
+const selectedCellAttribute = ref('');
+const selectedTrackAttribute = ref('');
 const selectedAggregation = ref('');
 const loading = ref(true);
 const loadedPlots = ref(0);
+const errorPlotName = ref('');
+
 const displayedCellPlots = computed(() => {
     const filtered = dataSelections.value.filter(
         (d) => d.displayChart && d.type === 'cell'
@@ -62,7 +70,7 @@ const aggregationOptions = [
 // On any update, computes the plots to be shown.
 
 // Checks if specifically experiment metadata is already loaded.
-const allPlotNames = computed(() => {
+const allAttributeNames = computed(() => {
     if (
         experimentDataInitialized.value &&
         currentExperimentMetadata.value &&
@@ -74,7 +82,7 @@ const allPlotNames = computed(() => {
     }
 });
 
-const firstPlotName = computed(() => {
+const firstAttributeName = computed(() => {
     if (
         experimentDataInitialized.value &&
         currentExperimentMetadata.value &&
@@ -99,12 +107,6 @@ const firstPlotName = computed(() => {
     }
 });
 
-const selectionStore = useSelectionStore();
-
-const { dataSelections } = storeToRefs(selectionStore);
-
-const errorPlotName = ref('');
-
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
     errorPlotName.value = plotName;
@@ -124,11 +126,14 @@ onMounted(() => {
     watch(
         experimentDataInitialized,
         (isInitialized) => {
-            if (isInitialized && firstPlotName.value) {
-                selectionStore.addPlot(firstPlotName.value, 'cell');
+            if (isInitialized && firstAttributeName.value) {
+                selectionStore.addPlot(firstAttributeName.value, 'cell');
 
                 // For testing track attributes
-                selectionStore.addPlot(`AVG ${firstPlotName.value}`, 'track');
+                selectionStore.addPlot(
+                    `AVG ${firstAttributeName.value}`,
+                    'track'
+                );
             }
         },
         { immediate: true }
@@ -143,38 +148,40 @@ function handlePlotLoaded() {
 }
 
 // Selecting which plots to show
-function isPlotSelected(name: string): boolean {
-    const selection = selectionStore.getSelection(name);
-    if (selection === null) return false;
-    return selection.displayChart;
-}
-function togglePlotSelection(name: string) {
-    const selection = selectionStore.getSelection(name);
-    if (selection === null) {
-        selectionStore.addPlot(name, 'cell');
-        return;
-    }
-    selection.displayChart = !selection.displayChart;
-}
+// function isPlotSelected(name: string): boolean {
+//     const selection = selectionStore.getSelection(name);
+//     if (selection === null) return false;
+//     return selection.displayChart;
+// }
+// function togglePlotSelection(name: string) {
+//     const selection = selectionStore.getSelection(name);
+//     if (selection === null) {
+//         selectionStore.addPlot(name, 'cell');
+//         return;
+//     }
+//     selection.displayChart = !selection.displayChart;
+// }
 
 function onMenuButtonClick() {
-    trackPlotDialogOpen.value = true;
+    if (props.selectorType === 'Cell') {
+        cellPlotDialogOpen.value = !cellPlotDialogOpen.value;
+    } else if (props.selectorType === 'Track') {
+        trackPlotDialogOpen.value = !trackPlotDialogOpen.value;
+    }
 }
 
+function addCellPlotFromMenu(atr: string) {
+    cellPlotDialogOpen.value = false;
+    selectionStore.addPlot(`${atr}`, 'cell');
+    return;
+}
 function addTrackPlotFromMenu(atr: string, agg: string) {
     trackPlotDialogOpen.value = false;
-    // Add plot of "selected attribute" and "selected aggregation" to displayedTrackPlots
-    //const selection = selectionStore.getSelection(selectedAttribute);
-    //if (selection === null) {
-    //selectionStore.addPlot(`${agg} ${atr}`, 'track');
     selectionStore.addPlot(`${agg} ${atr}`, 'track');
     return;
-    //}
 }
 
-function handleSelectionRemoved(event: CustomEvent) {
-}
-
+//function handleSelectionRemoved(event: CustomEvent) {}
 </script>
 <template>
     <div>
@@ -193,40 +200,61 @@ function handleSelectionRemoved(event: CustomEvent) {
                     color="grey-7"
                     @click="onMenuButtonClick"
                 >
-                    <!-- Q-Menu for 'Cell' Selector -->
-                    <q-menu
-                        v-if="props.selectorType === 'Cell'"
-                        v-model="cellPlotMenuOpen"
-                        fit
-                        :dark="globalSettings.darkMode"
-                    >
-                        <q-list
-                            style="min-width: 100px; max-height: 300px"
-                            class="scroll"
-                        >
-                            <q-item
-                                v-for="name in allPlotNames"
-                                :key="name"
-                                clickable
-                                :class="{
-                                    'selected-item': isPlotSelected(name),
-                                }"
-                                @click.stop="togglePlotSelection(name)"
-                                dense
-                            >
-                                <q-item-section class="plot-name">{{
-                                    name
-                                }}</q-item-section>
-                            </q-item>
-                        </q-list>
-                    </q-menu>
+                    <q-dialog v-model="cellPlotDialogOpen" persistent>
+                        <q-card :dark="globalSettings.darkMode">
+                            <q-card-section>
+                                <div class="text-h6">
+                                    Add Cell Attribute to Display
+                                </div>
+                                <q-separator class="q-my-sm" />
+                                <q-form
+                                    class="q-gutter-md"
+                                    :dark="globalSettings.darkMode"
+                                >
+                                    <q-select
+                                        label="Select Attribute"
+                                        :options="allAttributeNames"
+                                        v-model="selectedCellAttribute"
+                                        clickable
+                                    >
+                                    </q-select>
+
+                                    <q-expansion-item>
+                                        <template v-slot:header>
+                                            <q-item-section
+                                                >Current Cell
+                                                Attributes</q-item-section
+                                            >
+                                        </template>
+                                    </q-expansion-item>
+
+                                    <div>
+                                        <l-btn
+                                            label="Add"
+                                            @click="
+                                                addCellPlotFromMenu(
+                                                    selectedCellAttribute
+                                                )
+                                            "
+                                            :dark="globalSettings.darkMode"
+                                            class="q-mr-sm"
+                                            color="blue"
+                                        />
+                                        <l-btn
+                                            label="Cancel"
+                                            flat
+                                            @click="onMenuButtonClick"
+                                            :dark="globalSettings.darkMode"
+                                            class="q-mr-sm"
+                                        />
+                                    </div>
+                                </q-form>
+                            </q-card-section>
+                        </q-card>
+                    </q-dialog>
 
                     <!-- Q-Dialog for 'Track' Selector -->
-                    <q-dialog
-                        v-if="props.selectorType === 'Track'"
-                        v-model="trackPlotDialogOpen"
-                        persistent
-                    >
+                    <q-dialog v-model="trackPlotDialogOpen" persistent>
                         <q-card :dark="globalSettings.darkMode">
                             <q-card-section>
                                 <div class="text-h6">
@@ -235,18 +263,12 @@ function handleSelectionRemoved(event: CustomEvent) {
                                 <q-separator class="q-my-sm" />
                                 <q-form
                                     class="q-gutter-md"
-                                    @submit="
-                                        addTrackPlotFromMenu(
-                                            selectedAttribute,
-                                            selectedAggregation
-                                        )
-                                    "
                                     :dark="globalSettings.darkMode"
                                 >
                                     <q-select
                                         label="Select Attribute"
-                                        :options="allPlotNames"
-                                        v-model="selectedAttribute"
+                                        :options="allAttributeNames"
+                                        v-model="selectedTrackAttribute"
                                         clickable
                                     >
                                     </q-select>
@@ -261,20 +283,34 @@ function handleSelectionRemoved(event: CustomEvent) {
                                     >
                                     </q-select>
 
+                                    <q-expansion-item>
+                                        <template v-slot:header>
+                                            <q-item-section
+                                                >Current Track
+                                                Attributes</q-item-section
+                                            >
+                                        </template>
+                                    </q-expansion-item>
+
                                     <div>
-                                        <q-btn
+                                        <l-btn
                                             label="Add"
-                                            type="submit"
-                                            color="primary"
+                                            @click="
+                                                addTrackPlotFromMenu(
+                                                    selectedTrackAttribute,
+                                                    selectedAggregation
+                                                )
+                                            "
                                             :dark="globalSettings.darkMode"
+                                            class="q-mr-sm"
+                                            color="blue"
                                         />
-                                        <q-btn
+                                        <l-btn
                                             label="Cancel"
-                                            color="primary"
                                             flat
-                                            @click="trackPlotDialogOpen = false"
-                                            class="q-ml-sm"
+                                            @click="onMenuButtonClick"
                                             :dark="globalSettings.darkMode"
+                                            class="q-mr-sm"
                                         />
                                     </div>
                                 </q-form>
