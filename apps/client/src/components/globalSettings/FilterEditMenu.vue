@@ -138,6 +138,8 @@ const minMaxFormValid = computed<boolean>(() => {
                     color="primary"
                     @click="cancelDelete"
                 />
+                <q-space />
+
                 <l-btn flat label="Delete" color="red" @click="deletePlot" />
             </q-card-actions>
         </q-card>
