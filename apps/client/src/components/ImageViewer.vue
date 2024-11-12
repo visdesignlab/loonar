@@ -231,7 +231,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
         ),
         lineWidthUnits: 'pixels',
         id: 'segmentations',
-        opacity: 0.4,
+        opacity: 1,
         stroked: true,
         filled: true,
         getFillColor: (info) => {
@@ -241,9 +241,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return hoverColorWithAlpha;
             }
-            // if(!isSelected(info.properties?.id?.toString())){
-            //     return[0,0,0,255];
-            // }
+
             const { filtered } = _determineSelectedOrFiltered(info.properties?.id?.toString())
             if(filtered){
                 return[0,0,0,255];
@@ -262,9 +260,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return colors.hovered.rgb;
             }
-            // if(!isSelected(info.properties?.id?.toString())){
-            //     return[0,0,0,255];
-            // }
+
 
             const {selected,filtered} = _determineSelectedOrFiltered(info.properties?.id?.toString())
             if(filtered){

@@ -52,6 +52,11 @@ function checkSelection(selection: DataSelection, track: Track) {
             max_value <= selection.range[0] || min_value >= selection.range[1]
         );
     } else if (selection.type === 'track') {
+
+        const { currentExperimentMetadata } = useDatasetSelectionStore();
+
+
+
         // Split plot name. Track level attributes come as 'AVG column name', so we get the first item in the split as the aggregate function
         const [aggregate, ...rest] = selection.plotName.split(' ');
         //Join the rest, which will be the original column name
