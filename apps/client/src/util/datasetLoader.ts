@@ -112,13 +112,21 @@ export async function createAggregateTable(tableName: string, headers: string[],
         })
 
         try {
+            try {
+                await vg.coordinator().exec([`
+                    DROP TABLE IF EXISTS ${tableName}_aggregate;
+                `])
+            } catch (error) {
+                console.error(error);
+            }
             await vg.coordinator().exec([`
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
                     SELECT 
                         ${selectString}
-                        "${id}" as tracking_id
+                        "${id}" as tracking_id,
+                        location
                     FROM ${tableName}
-                    GROUP BY "${id}"
+                    GROUP BY "${id}", location
             `]);
         } catch (error) {
             console.error(error);

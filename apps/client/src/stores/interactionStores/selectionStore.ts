@@ -1,9 +1,10 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useCellMetaData } from '../dataStores/cellMetaDataStore';
 import type { Track } from '../dataStores/cellMetaDataStore';
+import { ref, computed, watch } from 'vue';
+
 
 export interface DataSelection {
     plotName: string;
@@ -20,351 +21,331 @@ type Events = {
 export const emitter = mitt<Events>();
 //const emit = defineEmits(['plot-error']);
 
-function median(values: number[]) {
-    if (values.length === 0) return 0; // Handle empty array
 
-    // Sort the array in ascending order
-    values.sort((a, b) => a - b);
 
-    const middle = Math.floor(values.length / 2);
-
-    // If the length is odd, return the middle element
-    if (values.length % 2 !== 0) {
-        return values[middle];
-    }
-
-    // If the length is even, return the average of the two middle elements
-    return (values[middle - 1] + values[middle]) / 2;
-}
-
-function checkSelection(selection: DataSelection, track: Track) {
+function getPredicate(selection: DataSelection) {
     if (selection.type === 'cell') {
-        const valuesForPlotName = track.cells.map(
-            (cell) => cell.attrNum[selection.plotName]
-        );
-        const max_value = Math.max(...valuesForPlotName);
-        const min_value = Math.min(...valuesForPlotName);
-
-        // Intersects with selected
-        // Checks if max value and min value make track fall outside of range
-        // This is the same logic used in the SQL query predicate for updating track level selection.
-        return !(
-            max_value <= selection.range[0] || min_value >= selection.range[1]
-        );
+        return `NOT ("MAX ${selection.plotName}" <= ${selection.range[0]} OR "MIN ${selection.plotName}" >= ${selection.range[1]})`
     } else if (selection.type === 'track') {
-
-        const { currentExperimentMetadata } = useDatasetSelectionStore();
-
-
-
-        // Split plot name. Track level attributes come as 'AVG column name', so we get the first item in the split as the aggregate function
-        const [aggregate, ...rest] = selection.plotName.split(' ');
-        //Join the rest, which will be the original column name
-        const originalColumn = rest.join(' ');
-        //Get the values for that column
-        const valuesForPlotName = track.cells.map(
-            (cell) => cell.attrNum[originalColumn]
-        );
-
-        let aggregateValue;
-        // Based on aggregate function, compute different aggregate values
-        switch (aggregate) {
-            case 'AVG':
-                aggregateValue =
-                    valuesForPlotName.reduce((sum, value) => sum + value, 0) /
-                    valuesForPlotName.length;
-                break;
-            case 'MAX':
-                aggregateValue = Math.max(...valuesForPlotName);
-                break;
-            case 'MIN':
-                aggregateValue = Math.min(...valuesForPlotName);
-                break;
-            case 'SUM':
-                aggregateValue = valuesForPlotName.reduce(
-                    (sum, value) => sum + value,
-                    0
-                );
-                break;
-            case 'COUNT':
-                aggregateValue = valuesForPlotName.length;
-                break;
-            case 'MEDIAN':
-                aggregateValue = median(valuesForPlotName);
-                break;
-            default:
-                //Defaults to just average
-                aggregateValue =
-                    valuesForPlotName.reduce((sum, value) => sum + value, 0) /
-                    valuesForPlotName.length;
-        }
-        return (
-            aggregateValue <= selection.range[1] &&
-            aggregateValue >= selection.range[0]
-        );
+        return `"${selection.plotName}" >= ${selection.range[0]} AND "${selection.plotName}" <= ${selection.range[1]}`
     }
     return true;
 }
 
-export const useSelectionStore = defineStore('Selection', {
-    state: () => ({
-        dataSelections: [] as DataSelection[],
-        dataFilters: [] as DataSelection[],
-    }),
-    getters: {
-        modifiedSelections: (state) => {
-            return state.dataSelections.filter(
-                (s) =>
-                    s.range[0] !== s.maxRange[0] || s.range[1] !== s.maxRange[1]
-            );
-        },
-        selectedTrackingIds: (state) => {
-            const cellMetaData = useCellMetaData();
-            const selectedTrackIds: string[] = [];
-            cellMetaData.trackArray?.forEach((track) => {
-                let selected = true;
-                state.dataSelections.forEach((selection) => {
-                    selected = selected && checkSelection(selection, track);
-                });
-                if (selected) {
-                    selectedTrackIds.push(track.trackId);
-                }
-            });
-            return state.dataSelections.length === 0 ? null : selectedTrackIds;
-        },
-        unfilteredTrackingIds: (state) => {
-            const cellMetaData = useCellMetaData();
-            const unfilteredTrackIds: string[] = [];
-            cellMetaData.trackArray?.forEach((track) => {
-                let unfiltered = true;
-                state.dataFilters.forEach((filter) => {
-                    unfiltered = unfiltered && checkSelection(filter, track);
-                });
-                if (unfiltered) {
-                    unfilteredTrackIds.push(track.trackId);
-                }
-            });
-            return state.dataFilters.length === 0 ? null : unfilteredTrackIds;
-        },
-    },
-    actions: {
-        addSelection(selection: DataSelection) {
-            const existingIndex = this.dataSelections.findIndex(
-                (s) => s.plotName === selection.plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataSelections[existingIndex] = selection;
+export const useSelectionStore = defineStore('selectionStore', () => {
+
+    const dataSetSelectionStore = useDatasetSelectionStore();
+    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(dataSetSelectionStore);
+
+    // const aggregateTableName = `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate`
+
+
+    const dataSelections = ref<DataSelection[]>([]);
+    const dataFilters = ref<DataSelection[]>([]);
+    const selectedTrackingIds = ref<string[] | null>(null);
+    const unfilteredTrackingIds = ref<string[] | null>(null);
+
+    const modifiedSelections = computed<DataSelection[]>(() => {
+        return dataSelections.value.filter(
+            (s) =>
+                s.range[0] !== s.maxRange[0] || s.range[1] !== s.maxRange[1]
+        );
+    })
+
+    interface TrackingIdQueryResult {
+        id: string
+    }
+
+    // Watch variable for getting selections
+    watch([dataSelections, dataFilters], async ([newDataSelections, newDataFilters]) => {
+        const queryPrefix = `
+            SELECT CAST(tracking_id as VARCHAR) AS id
+            FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate
+            WHERE location = '${currentLocationMetadata?.value?.id}'
+        `;
+
+        const selectionPredicate = newDataSelections.map(selection => getPredicate(selection)).join(' AND ');
+
+        if (selectionPredicate.length > 0) {
+            const selectionQuery = `${queryPrefix} AND ${selectionPredicate}`;
+            const selectionRes: TrackingIdQueryResult[] = await vg.coordinator().query(selectionQuery, { 'type': 'json' });
+            selectedTrackingIds.value = selectionRes.map((entry: TrackingIdQueryResult) => entry.id);
+        } else {
+            selectedTrackingIds.value = null;
+        }
+
+
+        const filterPredicate = newDataFilters.map(filter => getPredicate(filter)).join(' AND ');
+
+        if (filterPredicate.length > 0) {
+            const filterQuery = `${queryPrefix} AND ${filterPredicate}`;
+            const filterRes: TrackingIdQueryResult[] = await vg.coordinator().query(filterQuery, { 'type': 'json' });
+            unfilteredTrackingIds.value = filterRes.map((entry: TrackingIdQueryResult) => entry.id);
+        } else {
+            unfilteredTrackingIds.value = null;
+        }
+
+
+    }, { deep: true })
+
+
+
+    // Private
+    function _resetSelection(index: number) {
+        dataSelections.value[index].range = [
+            ...dataSelections.value[index].maxRange,
+        ];
+    }
+
+    // Private
+    async function _getMaxRange(plotName: string): Promise<[number, number]> {
+        const selection = getSelection(plotName);
+        if (!selection) {
+            throw new Error(`Selection "${plotName}" does not exist.`);
+        }
+        const { currentExperimentMetadata } = useDatasetSelectionStore();
+
+        try {
+            // Loading
+            let minVal = -Infinity;
+            let maxVal = Infinity;
+
+            if (!plotName || plotName.trim() === '') {
+                throw new Error('Invalid or empty plot name');
+            }
+
+            // Escape the column name to handle spaces and special characters
+            const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
+
+            let query = '';
+            if (selection.type === 'cell') {
+                query = `
+            SELECT
+                MIN("${escapedPlotName}") AS min_value,
+                MAX("${escapedPlotName}") AS max_value
+            FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
+        `;
+            } else if (selection.type === 'track') {
+                query = `
+            SELECT
+                MIN("${escapedPlotName}") AS min_value,
+                MAX("${escapedPlotName}") AS max_value
+            FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata_aggregate
+        `;
             } else {
-                this.dataSelections.push(selection);
+                throw new Error(
+                    `Unknown type "${selection.type}" for plot "${plotName}"`
+                );
             }
-        },
-        clearAllSelections() {
-            this.dataSelections = [];
-        },
-        resetSelection(index: number) {
-            this.dataSelections[index].range = [
-                ...this.dataSelections[index].maxRange,
-            ];
-        },
-        updateSelection(
-            plotName: string,
-            range: [number, number],
-            type?: DataSelection['type']
-        ) {
-            const existingIndex = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataSelections[existingIndex].range = range;
-            } else {
-                this.addSelection({
-                    plotName,
-                    range,
-                    type: type ?? 'cell', // Default value
-                    maxRange: [...range], // Using the provided range as maxRange
-                    displayChart: true, // Default value
-                });
+
+            const result = await vg.coordinator().query(query);
+
+            if (
+                !result ||
+                !result.batches ||
+                result.batches.length === 0 ||
+                result.batches[0].numRows === 0
+            ) {
+                throw new Error('No data returned from query');
             }
-        },
-        removeFilterByPlotName(plotName: string) {
-            const index = this.dataFilters.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            // window.dispatchEvent(
-            //     new CustomEvent('filterRemoved', { detail: plotName })
-            // );
-            this.removeFilter(index);
-        },
-        removeSelectionByPlotName(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index !== -1) {
-                this.dataSelections.splice(index, 1);
-            }
-        },
-        removePlotWithErrors(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            this.dataSelections.splice(index, 1);
-        },
-        resetSelectionByPlotName(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            // window.dispatchEvent(
-            //     new CustomEvent('selectionRemoved', { detail: plotName })
-            // );
-            this.resetSelection(index);
-        },
-        getSelection(name: string): DataSelection | null {
-            const s = this.dataSelections.find(
-                (s: DataSelection) => s.plotName === name
-            );
-            if (typeof s === 'undefined') return null;
-            return s;
-        },
-        addPlot(name: string, type: DataSelection['type']) {
-            const existingIndex = this.dataSelections.findIndex(
-                (s) => s.plotName === name
-            );
-            if (existingIndex !== -1) {
-                const existingPlot = this.dataSelections[existingIndex];
-                if (existingPlot.type !== type) {
-                    console.warn(
-                        `Changing type of plot "${name}" from "${existingPlot.type}" to "${type}"`
-                    );
-                    existingPlot.type = type;
-                    this.setMaxRange(name);
-                }
-                return;
-            }
-            const selection: DataSelection = {
-                plotName: name,
-                range: [-Infinity, Infinity],
-                maxRange: [-Infinity, Infinity],
-                type: type,
-                displayChart: true,
-            };
-            this.dataSelections.push(selection);
-            this.setMaxRange(name);
-        },
-        async getMaxRange(plotName: string): Promise<[number, number]> {
-            const selection = this.getSelection(plotName);
-            if (!selection) {
-                throw new Error(`Selection "${plotName}" does not exist.`);
-            }
-            const { currentExperimentMetadata } = useDatasetSelectionStore();
 
-            try {
-                // Loading
-                let minVal = -Infinity;
-                let maxVal = Infinity;
+            minVal = Number(result.batches[0].get(0).min_value);
+            maxVal = Number(result.batches[0].get(0).max_value);
 
-                if (!plotName || plotName.trim() === '') {
-                    throw new Error('Invalid or empty plot name');
-                }
-
-                // Escape the column name to handle spaces and special characters
-                const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
-
-                let query = '';
-                if (selection.type === 'cell') {
-                    query = `
-                SELECT
-                    MIN("${escapedPlotName}") AS min_value,
-                    MAX("${escapedPlotName}") AS max_value
-                FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
-            `;
-                } else if (selection.type === 'track') {
-                    query = `
-                SELECT
-                    MIN("${escapedPlotName}") AS min_value,
-                    MAX("${escapedPlotName}") AS max_value
-                FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata_aggregate
-            `;
-                } else {
-                    throw new Error(
-                        `Unknown type "${selection.type}" for plot "${plotName}"`
-                    );
-                }
-
-                const result = await vg.coordinator().query(query);
-
-                if (
-                    !result ||
-                    !result.batches ||
-                    result.batches.length === 0 ||
-                    result.batches[0].numRows === 0
-                ) {
-                    throw new Error('No data returned from query');
-                }
-
-                minVal = Number(result.batches[0].get(0).min_value);
-                maxVal = Number(result.batches[0].get(0).max_value);
-
-                if (isNaN(minVal) || isNaN(maxVal)) {
-                    emitter.emit('plot-error', plotName);
-                    //throw new Error('NaN values detected in the data');
-                }
-
-                return [minVal, maxVal];
-            } catch (error) {
-                console.error('Error fetching data range:', error);
-                // TODO: can't emit from store
+            if (isNaN(minVal) || isNaN(maxVal)) {
                 emitter.emit('plot-error', plotName);
-                //throw error;
-                return [0, 0];
+                //throw new Error('NaN values detected in the data');
             }
-        },
-        async setMaxRange(plotName: string) {
-            const selection = this.getSelection(plotName);
-            if (selection === null) {
-                throw Error(`Selection ${plotName} does not exist`);
+
+            return [minVal, maxVal];
+        } catch (error) {
+            console.error('Error fetching data range:', error);
+            // TODO: can't emit from store
+            emitter.emit('plot-error', plotName);
+            //throw error;
+            return [0, 0];
+        }
+    }
+
+    // Private
+    async function _setMaxRange(plotName: string) {
+        const selection = getSelection(plotName);
+        if (selection === null) {
+            throw Error(`Selection ${plotName} does not exist`);
+        }
+        const [minVal, maxVal] = await _getMaxRange(plotName);
+        selection.range = [minVal, maxVal];
+        selection.maxRange = [minVal, maxVal];
+    }
+
+    function addSelection(selection: DataSelection) {
+        const existingIndex = dataSelections.value.findIndex(
+            (s) => s.plotName === selection.plotName
+        );
+        if (existingIndex !== -1) {
+            dataSelections.value[existingIndex] = selection;
+        } else {
+            dataSelections.value.push(selection);
+        }
+    }
+
+    function clearAllSelections() {
+        dataSelections.value = [];
+    }
+
+    function updateSelection(
+        plotName: string,
+        range: [number, number],
+        type?: DataSelection['type']
+    ) {
+        const existingIndex = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (existingIndex !== -1) {
+            dataSelections.value[existingIndex].range = range;
+        } else {
+            addSelection({
+                plotName,
+                range,
+                type: type ?? 'cell', // Default value
+                maxRange: [...range], // Using the provided range as maxRange
+                displayChart: true, // Default value
+            });
+        }
+    }
+
+    function removeFilterByPlotName(plotName: string) {
+        const index = dataFilters.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index === -1) return;
+
+        removeFilter(index);
+    }
+
+    function removeSelectionByPlotName(plotName: string) {
+        const index = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index !== -1) {
+            dataSelections.value.splice(index, 1);
+        }
+    }
+
+    function removePlotWithErrors(plotName: string) {
+        const index = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index === -1) return;
+        dataSelections.value.splice(index, 1);
+    }
+
+    function resetSelectionByPlotName(plotName: string) {
+        const index = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index === -1) return;
+        // window.dispatchEvent(
+        //     new CustomEvent('selectionRemoved', { detail: plotName })
+        // );
+        _resetSelection(index);
+    }
+
+    function getSelection(name: string): DataSelection | null {
+        const s = dataSelections.value.find(
+            (s: DataSelection) => s.plotName === name
+        );
+        if (typeof s === 'undefined') return null;
+        return s;
+    }
+
+    function addPlot(name: string, type: DataSelection['type']) {
+        const existingIndex = dataSelections.value.findIndex(
+            (s) => s.plotName === name
+        );
+        if (existingIndex !== -1) {
+            const existingPlot = dataSelections.value[existingIndex];
+            if (existingPlot.type !== type) {
+                console.warn(
+                    `Changing type of plot "${name}" from "${existingPlot.type}" to "${type}"`
+                );
+                existingPlot.type = type;
+                _setMaxRange(name);
             }
-            const [minVal, maxVal] = await this.getMaxRange(plotName);
-            selection.range = [minVal, maxVal];
-            selection.maxRange = [minVal, maxVal];
-        },
-        addFilter(filter: DataSelection) {
-            const existingIndex = this.dataFilters.findIndex(
-                (s) => s.plotName === filter.plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataFilters[existingIndex] = filter;
-            } else {
-                this.dataFilters.push(filter);
-            }
-        },
-        removeFilter(index: number) {
-            this.dataFilters.splice(index, 1);
-        },
-        updateFilter(
-            plotName: string,
-            range: [number, number],
-            type?: DataSelection['type']
-        ) {
-            const existingIndex = this.dataFilters.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataFilters[existingIndex].range = range;
-            } else {
-                this.addFilter({
-                    plotName,
-                    range,
-                    type: type ?? 'cell',
-                    maxRange: [0, 1000],
-                    displayChart: true,
-                });
-            }
-        },
-        clearAllFilters() {
-            this.dataFilters = [];
-        },
-    },
-});
+            return;
+        }
+        const selection: DataSelection = {
+            plotName: name,
+            range: [-Infinity, Infinity],
+            maxRange: [-Infinity, Infinity],
+            type: type,
+            displayChart: true,
+        };
+        dataSelections.value.push(selection);
+        _setMaxRange(name);
+    }
+
+
+    function addFilter(filter: DataSelection) {
+        const existingIndex = dataFilters.value.findIndex(
+            (s) => s.plotName === filter.plotName
+        );
+        if (existingIndex !== -1) {
+            dataFilters.value[existingIndex] = filter;
+        } else {
+            dataFilters.value.push(filter);
+        }
+    }
+
+    function removeFilter(index: number) {
+        dataFilters.value.splice(index, 1);
+    }
+
+    function updateFilter(
+        plotName: string,
+        range: [number, number],
+        type?: DataSelection['type']
+    ) {
+        const existingIndex = dataFilters.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (existingIndex !== -1) {
+            dataFilters.value[existingIndex].range = range;
+        } else {
+            addFilter({
+                plotName,
+                range,
+                type: type ?? 'cell',
+                maxRange: [0, 1000],
+                displayChart: true,
+            });
+        }
+    }
+
+    function clearAllFilters() {
+        dataFilters.value = [];
+    }
+
+    return {
+        dataSelections,
+        dataFilters,
+        modifiedSelections,
+        selectedTrackingIds,
+        unfilteredTrackingIds,
+        clearAllSelections,
+        updateSelection,
+        updateFilter,
+        clearAllFilters,
+        removeSelectionByPlotName,
+        removeFilterByPlotName,
+        removePlotWithErrors,
+        resetSelectionByPlotName,
+        addPlot,
+        getSelection,
+        addFilter,
+        removeFilter
+    }
+
+
+})
+
