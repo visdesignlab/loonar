@@ -42,8 +42,7 @@ import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { select } from 'd3-selection';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -59,8 +58,8 @@ const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
-const selectionStore = useSelectionStore();
-const { selectedTrackingIds, unfilteredTrackingIds } = storeToRefs(selectionStore);
+const mosaicSelectionStore = useMosaicSelectionStore();
+const { highlightedCellIds, unfilteredTrackIds} = storeToRefs(mosaicSelectionStore);
 
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
@@ -72,9 +71,19 @@ const contrastLimit = computed<[number, number][]>(() => {
 });
 
 const _determineSelectedOrFiltered = (trackId:string) => {
+
+    const frame = imageViewerStore.frameNumber;
+    const location = currentLocationMetadata.value?.id;
+    let selected = false;
+    if(frame && location && highlightedCellIds.value){
+        // Generate Unique String to compare against list
+        const unique_string = `${trackId}_${frame}_${location}`
+        selected = highlightedCellIds.value.includes(unique_string)
+    }
+
     return {
-        selected: selectedTrackingIds.value ? selectedTrackingIds.value.includes(trackId) : false,
-        filtered: unfilteredTrackingIds.value ? !(unfilteredTrackingIds.value.includes(trackId)) : false
+        selected,
+        filtered: unfilteredTrackIds.value ? !(unfilteredTrackIds.value.includes(trackId)) : false
     }
 }
 
@@ -260,7 +269,6 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return colors.hovered.rgb;
             }
-
 
             const {selected,filtered} = _determineSelectedOrFiltered(info.properties?.id?.toString())
             if(filtered){
@@ -482,7 +490,7 @@ function createCenterPointLayer(): ScatterplotLayer {
                 return globalSettings.normalizedSelectedRgb;
             }
 
-            const { filtered } = _determineSelectedOrFiltered(d.trackId)
+            const { filtered } = _determineSelectedOrFiltered(d.trackId);
 
             if(filtered){
                 return[0,0,0,0];
@@ -687,8 +695,8 @@ watch(currentTrackArray, renderDeckGL);
 watch(dataPointSelection.$state, renderDeckGL);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
-watch(selectedTrackingIds, renderDeckGL);
-watch(unfilteredTrackingIds, renderDeckGL);
+watch(highlightedCellIds, renderDeckGL);
+watch(unfilteredTrackIds, renderDeckGL);
 
 
 function clearSelection() {

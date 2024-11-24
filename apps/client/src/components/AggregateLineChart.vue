@@ -129,6 +129,19 @@ const areaGen = computed(() => {
         );
 });
 
+
+const areaGenHighlighted = computed(() => {
+    return area<AggDataPoint>()
+        .x((aggPoint) => scaleX.value(aggPoint.time))
+        .y0((aggPoint) =>
+            scaleY.value(aggPoint.value + temp.value * aggPoint.count)
+        )
+        .y1((aggPoint) =>
+            scaleY.value(aggPoint.value - temp.value * aggPoint.count)
+        )
+        .defined((aggPoint) => aggPoint.highlighted ?? false);
+});
+
 const lineGen = computed(() => {
     return line<AggDataPoint>()
         .x((aggPoint) => scaleX.value(aggPoint.time))
@@ -522,7 +535,7 @@ const otherUnmuted = computed(() => {
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path
-                        :class="`muted agg-line ${globalSettings.normalizedDark} ${aggLine.selected ? 'highlighted' : ''} ${aggLine.filtered ? 'filtered' : ''}`"
+                        :class="`muted agg-line ${globalSettings.normalizedDark} ${aggLine.filtered ? 'filtered' : ''}`"
                         v-for="(
                             aggLine, index
                         ) in aggregateLineChartStore.aggLineDataList.filter(
@@ -531,6 +544,18 @@ const otherUnmuted = computed(() => {
                         :key="index"
                         :d="areaGen(aggLine.data) ?? ''"
                     ></path>
+                    <!-- Path below is for individual cell tracks with highlighted cells. -->
+                    <path
+                        style="stroke-width: 2px;"
+                        :class="`highlighted-line ${globalSettings.normalizedDark}`"
+                        v-for="(
+                            aggLine, index
+                        ) in aggregateLineChartStore.aggLineDataList.filter(
+                            (d) => d.muted
+                        )"
+                        :key="'highlighted-' + index"
+                        :d="areaGenHighlighted(aggLine.data) ?? ''"
+                        ></path>
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path

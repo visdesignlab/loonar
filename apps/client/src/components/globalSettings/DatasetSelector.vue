@@ -6,6 +6,7 @@ import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSel
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -13,6 +14,7 @@ const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const $q = useQuasar();
 
 const selectionStore = useSelectionStore();
+const mosaicSelectionStore = useMosaicSelectionStore();
 
 watch(
     () => datasetSelectionStore.fetchingTabularData,
@@ -45,8 +47,8 @@ const shortExpName = computed<string>(() => {
 });
 
 function onSelectExperiment() {
-    selectionStore.clearAllSelections();
-    selectionStore.clearAllFilters();
+    selectionStore.resetState();
+    mosaicSelectionStore.resetState();
 }
 </script>
 

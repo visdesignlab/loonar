@@ -27,7 +27,7 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
-const { conditionChartSelections, $yAxisParam } = useMosaicSelectionStore();
+const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
 const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
@@ -132,8 +132,9 @@ function createChart(xAxisName: string, yAxisName: string) {
             // Gets rid of axes and margins
             vg.axis(false),
             // Below would allow us to adjust the yAxis based on all the charts
-            // vg.yDomain($yAxisParam),
-            vg.margin(0)
+            vg.yDomain($conditionChartYAxisDomain),
+            vg.margin(0),
+            // vg.margin(40)
         );
         return chart;
     }

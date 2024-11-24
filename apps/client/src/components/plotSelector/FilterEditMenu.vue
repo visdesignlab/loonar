@@ -70,16 +70,9 @@ function onSubmit() {
 
     if (props.filterType === 'selection') {
         selectionStore.updateSelection(props.plotName, newRange);
-        //useMosaicSelectionStore.updateMosaicSelection();
     } else if (props.filterType === 'filter') {
         selectionStore.updateFilter(props.plotName, newRange);
     }
-
-    // mosaicSelectionStore.updateMosaicSelection(
-    //     props.plotName,
-    //     newRange,
-    //     'cell'
-    // );
 
     emit('update:range', { min: newRange[0], max: newRange[1] });
     showRangeDialog.value = false;

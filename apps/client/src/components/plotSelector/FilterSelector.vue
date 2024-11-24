@@ -8,26 +8,19 @@ import FilterEditMenu from './FilterEditMenu.vue';
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const { dataFilters } = storeToRefs(selectionStore);
+const { dataFilters, dataSelections } = storeToRefs(selectionStore);
 
-const selectionsCount = computed(
-    () => selectionStore.modifiedSelections.length
-);
+const selectionsCount = computed(() => dataSelections.value.length);
 const filtersCount = computed(() => dataFilters.value.length);
 
 function removeFilter(index: number) {
     selectionStore.removeFilter(index);
 }
 function removeSelection(plotName: string) {
-    selectionStore.resetSelectionByPlotName(plotName);
+    selectionStore.removeSelectionByPlotName(plotName);
 }
-function addFilter() {
-    for (const selection of selectionStore.modifiedSelections) {
-        selectionStore.addFilter({
-            ...selection,
-            range: [...selection.range],
-        });
-    }
+function convertToFilters() {
+    selectionStore.convertToFilters();    
 }
 
 const cellAttributesOpen = ref(true);
@@ -59,7 +52,7 @@ const mutedTextClass = computed(() =>
                 <q-item
                     v-for="(
                         selection, index
-                    ) in selectionStore.modifiedSelections"
+                    ) in selectionStore.dataSelections"
                     :key="index"
                 >
                     <FilterEditMenu
@@ -120,7 +113,7 @@ const mutedTextClass = computed(() =>
             no-caps
             class="filter-style w-100"
             dense
-            @click="addFilter"
+            @click="convertToFilters"
         />
         <q-separator />
         <q-expansion-item>

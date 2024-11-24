@@ -8,6 +8,7 @@ import LBtn from '../custom/LBtn.vue';
 import {
     useSelectionStore,
     emitter,
+    type AttributeChart
 } from '@/stores/interactionStores/selectionStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
@@ -19,7 +20,7 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
 const selectionStore = useSelectionStore();
-const { dataSelections } = storeToRefs(selectionStore);
+const { dataSelections, attributeCharts, showRelativeCell, showRelativeTrack } = storeToRefs(selectionStore);
 
 // Are these plots track or cell level?
 const props = defineProps({
@@ -36,12 +37,6 @@ const selectedTrackAttribute = ref('');
 const selectedAggregation = ref('');
 const errorPlotName = ref('');
 
-// Plots Displayed
-const displayedPlots = computed(() => {
-    return dataSelections.value.filter(
-        (d) => d.displayChart && d.type === props.selectorType
-    );
-});
 
 const aggregationOptions = [
     { label: 'Sum', value: 'SUM' },
@@ -66,32 +61,6 @@ const allAttributeNames = computed(() => {
     }
 });
 
-// Finds the first attribute name if data is loaded.
-const firstAttributeName = computed(() => {
-    if (
-        experimentDataInitialized.value &&
-        currentExperimentMetadata.value &&
-        currentExperimentMetadata.value.headers &&
-        currentExperimentMetadata.value.headers.length > 0
-    ) {
-        // does headerTransforms['mass'] exist
-        const headerTransforms =
-            currentExperimentMetadata.value.headerTransforms;
-        if (
-            headerTransforms &&
-            headerTransforms['mass'] &&
-            headerTransforms['mass'] !== ''
-        ) {
-            return headerTransforms['mass'];
-        } else {
-            // otherwise return first header from headers
-            return currentExperimentMetadata.value.headers[0];
-        }
-    } else {
-        return '';
-    }
-});
-
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
     errorPlotName.value = plotName;
@@ -104,26 +73,6 @@ function handlePlotError(plotName: string) {
     // Deselect the plot and remove it from the shown plots
     selectionStore.removePlotWithErrors(plotName);
 }
-
-// Adds a plot initially when first loading.
-onMounted(() => {
-    emitter.on('plot-error', handlePlotError);
-    watch(
-        experimentDataInitialized,
-        (isInitialized) => {
-            if (isInitialized && firstAttributeName.value) {
-                selectionStore.addPlot(firstAttributeName.value, 'cell');
-
-                // For testing track attributes
-                selectionStore.addPlot(
-                    `AVG ${firstAttributeName.value}`,
-                    'track'
-                );
-            }
-        },
-        { immediate: true }
-    );
-});
 
 function onMenuButtonClick() {
     if (props.selectorType === 'cell') {
@@ -141,6 +90,13 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
     trackPlotDialogOpen.value = false;
     selectionStore.addPlot(`${agg} ${atr}`, 'track');
 }
+
+
+
+function onToggleRelativeChart(){
+    props.selectorType === 'cell' ? showRelativeCell.value = !showRelativeCell.value : showRelativeTrack.value = !showRelativeTrack.value
+}
+
 </script>
 <template>
     <div>
@@ -149,7 +105,20 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
         </div>
         <div v-else>
             <!-- Menu Icon -->
-            <div class="q-item-section__right">
+
+            <div class="flex justify-between">
+                <q-btn
+                    class="gt-xs q-mr-sm"
+                    size="12px"
+                    flat
+                    dense
+                    round
+                    icon="mdi-chart-areaspline"
+                    color="grey-7"
+                    @click="onToggleRelativeChart"
+                >
+                    <q-tooltip>Show Relative Chart</q-tooltip>
+                </q-btn>
                 <q-btn
                     class="gt-xs q-mr-sm"
                     size="12px"
@@ -264,9 +233,10 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
             </div>
             <!--Generate the Plots-->
             <UnivariateCellPlot
-                v-for="dataSelection in displayedPlots"
-                :key="dataSelection.plotName"
-                :plot-name="dataSelection.plotName"
+                v-for="chart in attributeCharts.filter((entry:AttributeChart) => entry.type === props.selectorType )"
+                :key="chart.plotName"
+                :attribute-chart="chart"
+                :plot-name="chart.plotName"
                 :attribute-type="props.selectorType"
                 @plot-error="handlePlotError"
             />
@@ -275,7 +245,7 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
 </template>
 
 <style scoped>
-.q-item-section__right {
+.q-i {
     display: flex;
     justify-content: flex-end;
 }

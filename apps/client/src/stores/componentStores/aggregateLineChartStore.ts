@@ -11,14 +11,15 @@ import { useLooneageViewStore } from './looneageViewStore';
 
 import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
-import { useSelectionStore } from '../interactionStores/selectionStore';
+import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
+import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
 
 export interface AggLine {
     data: AggLineData;
     muted: boolean;
     relation: 'ancestor' | 'left' | 'right' | 'other';
     trackId: string;
-    selected?: boolean;
+    highlighted?: boolean;
     filtered?: boolean;
 }
 export interface AggLineData extends Array<AggDataPoint> { }
@@ -27,6 +28,7 @@ export interface AggDataPoint {
     value: number; // avg or total or median or ...
     count: number;
     variance?: [number, number];
+    highlighted?: boolean;
 }
 
 function storeSetup() {
@@ -36,10 +38,11 @@ function storeSetup() {
     const dataPointSelection = useDataPointSelection();
     const looneageViewStore = useLooneageViewStore();
     const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(useDatasetSelectionStore());
 
-    const selectionStore = useSelectionStore();
-    const { selectedTrackingIds, unfilteredTrackingIds } = storeToRefs(selectionStore);
 
+    const mosaicSelectionStore = useMosaicSelectionStore();
+    const { highlightedCellIds, unfilteredTrackIds } = storeToRefs(mosaicSelectionStore);
 
     const aggregatorKey = ref<string>('average');
     const aggregatorOptions = ['average', 'total', 'min', 'median', 'max'];
@@ -298,12 +301,6 @@ function storeSetup() {
     }
 
 
-    function _determineSelectedOrFiltered(track: Track) {
-        return {
-            selected: selectedTrackingIds.value ? selectedTrackingIds.value.includes(track.trackId) : false,
-            filtered: unfilteredTrackingIds.value ? !(unfilteredTrackingIds.value.includes(track.trackId)) : false
-        }
-    }
 
     const hoveredLineData = computed<{ data: AggLineData; trackId: string }>(
         () => {
@@ -467,20 +464,17 @@ function storeSetup() {
                         const time = cellMetaData.getTime(cell);
                         const value = accessor.value(cell);
                         const count = 1;
-                        aggLineData.push({ time, value, count });
+                        const highlighted = _determineCellHighlighted(cell);
+                        aggLineData.push({ time, value, count, highlighted });
                     }
 
-                    // Currently only for individual cell tracks
-                    const { selected, filtered } = _determineSelectedOrFiltered(track)
-
-
+                    const filtered = _determineTrackFiltered(track);
 
                     result.push({
-                        data: medianFilterSmooth(aggLineData),
+                        data: aggLineData,
                         muted: true,
                         trackId: track.trackId,
                         relation: 'other',
-                        selected,
                         filtered
                     });
                 }
@@ -523,6 +517,34 @@ function storeSetup() {
             targetKey.value == 'entire location combined'
         );
     });
+
+    function _determineCellHighlighted(cell: Cell) {
+        // List initializes as null. Nothing highlighted.
+        if (!highlightedCellIds.value) return false;
+
+        const frameColumn = currentExperimentMetadata.value?.headerTransforms?.['frame']
+        const locationId = currentLocationMetadata.value?.id;
+        if (frameColumn && locationId && cell.attrNum[frameColumn]) {
+            const uniqueString = `${cell.trackId}_${cell.attrNum[frameColumn]}_${locationId}`;
+            return highlightedCellIds.value.includes(uniqueString);
+        }
+        return true
+    }
+
+    function _determineTrackFiltered(track: Track) {
+
+        // The highlightedCellIds list is a set of strings like "trackId_frame_location"
+        // Extract only track Ids
+        // If track Id is present in this new set, include the track.
+        // const selected =
+        //     highlightedCellIds.value ?
+        //         [...new Set(highlightedCellIds.value.map(entry => entry.split('_')[0]))].includes(track.trackId)
+        //         : false
+
+        return unfilteredTrackIds.value ? !(unfilteredTrackIds.value.includes(track.trackId)) : false
+
+    }
+
 
     return {
         accessor,

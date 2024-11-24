@@ -215,7 +215,15 @@ const chartLineWidth = computed(() => {
                     </template>
                 </div>
             </div>
-            <div class="items-center justify-center flex">Legend</div>
+            <div class="items-start justify-center flex">
+                <svg width="50" style="position:relative; overflow:visible;" height="50" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="0" y1="20" x2="15" y2="20" stroke="black" stroke-width="3" />
+                    <text x="20" y="23" font-family="Arial" font-size="10" fill="black">Selected</text>
+                    <line x1="0" y1="35" x2="15" y2="35" stroke="black" stroke-width="2" />
+                    <text x="20" y="42" font-family="Arial" font-size="10" fill="black">Unselected</text>
+                    <rect fill="#cccccc" x="0" width="15" y="36" height="8"/>
+                </svg>
+            </div>
             <div class="items-center justify-center flex x-tag">
                 <ConditionSelectorDropDown axis="x-axis" />
             </div>

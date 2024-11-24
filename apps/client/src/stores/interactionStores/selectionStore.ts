@@ -2,16 +2,22 @@ import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import type { Track } from '../dataStores/cellMetaDataStore';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, type Ref } from 'vue';
 
+
+export type SelectionType = 'cell' | 'track' | 'lineage';
 
 export interface DataSelection {
     plotName: string;
-    type: 'cell' | 'track' | 'lineage'; // Unused, but will be needed if we have track-level and lineage-level attributes here
+    type: SelectionType; // Unused, but will be needed if we have track-level and lineage-level attributes here
     range: [number, number]; // The current range selected
-    maxRange: [number, number]; // The maximum range of the data
-    displayChart: boolean; // controls if the chart is shown or not, true by default
+}
+
+export interface AttributeChart {
+    plotName: string,
+    type: SelectionType;
+    maxRange: [number, number];
+    range: [number, number];
 }
 
 type Events = {
@@ -21,91 +27,65 @@ type Events = {
 export const emitter = mitt<Events>();
 //const emit = defineEmits(['plot-error']);
 
+interface SelectionState {
+    attributeCharts: Ref<AttributeChart[]>,
+    dataSelections: Ref<DataSelection[]>,
+    dataFilters: Ref<DataSelection[]>,
 
-
-function getPredicate(selection: DataSelection) {
-    if (selection.type === 'cell') {
-        return `NOT ("MAX ${selection.plotName}" <= ${selection.range[0]} OR "MIN ${selection.plotName}" >= ${selection.range[1]})`
-    } else if (selection.type === 'track') {
-        return `"${selection.plotName}" >= ${selection.range[0]} AND "${selection.plotName}" <= ${selection.range[1]}`
-    }
-    return true;
 }
+
+const initialState = (): SelectionState => ({
+    attributeCharts: ref<AttributeChart[]>([]),
+    dataSelections: ref<DataSelection[]>([]),
+    dataFilters: ref<DataSelection[]>([]),
+})
+
 
 export const useSelectionStore = defineStore('selectionStore', () => {
 
-    const dataSetSelectionStore = useDatasetSelectionStore();
-    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(dataSetSelectionStore);
+    // Declare initial state
+    let {
+        attributeCharts,
+        dataSelections,
+        dataFilters
+    } = initialState();
 
-    // const aggregateTableName = `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate`
-
-
-    const dataSelections = ref<DataSelection[]>([]);
-    const dataFilters = ref<DataSelection[]>([]);
-    const selectedTrackingIds = ref<string[] | null>(null);
-    const unfilteredTrackingIds = ref<string[] | null>(null);
-
-    const modifiedSelections = computed<DataSelection[]>(() => {
-        return dataSelections.value.filter(
-            (s) =>
-                s.range[0] !== s.maxRange[0] || s.range[1] !== s.maxRange[1]
-        );
-    })
-
-    interface TrackingIdQueryResult {
-        id: string
+    // create resetState function
+    function resetState(): void {
+        let newState = initialState();
+        attributeCharts.value = newState.attributeCharts.value;
+        dataSelections.value = newState.dataSelections.value;
+        dataFilters.value = newState.dataFilters.value;
     }
 
-    // Watch variable for getting selections
-    watch([dataSelections, dataFilters], async ([newDataSelections, newDataFilters]) => {
-        const queryPrefix = `
-            SELECT CAST(tracking_id as VARCHAR) AS id
-            FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate
-            WHERE location = '${currentLocationMetadata?.value?.id}'
-        `;
+    // Toggle button for showing relative charts.
+    const showRelativeCell = ref<boolean>(false);
+    const showRelativeTrack = ref<boolean>(false);
 
-        const selectionPredicate = newDataSelections.map(selection => getPredicate(selection)).join(' AND ');
+    const datasetSelectionStore = useDatasetSelectionStore();
+    const { currentExperimentMetadata, experimentDataInitialized } = storeToRefs(datasetSelectionStore);
 
-        if (selectionPredicate.length > 0) {
-            const selectionQuery = `${queryPrefix} AND ${selectionPredicate}`;
-            const selectionRes: TrackingIdQueryResult[] = await vg.coordinator().query(selectionQuery, { 'type': 'json' });
-            selectedTrackingIds.value = selectionRes.map((entry: TrackingIdQueryResult) => entry.id);
-        } else {
-            selectedTrackingIds.value = null;
+    // Watches for new experiment data. Initializes with basic attribute charts.
+    watch([experimentDataInitialized, currentExperimentMetadata], ([isInitialized, newExperimentMetadata], [prevInit, prevMeta]) => {
+        // Resets state when initialization or experiment data changes.
+        if (
+            isInitialized &&
+            newExperimentMetadata &&
+            newExperimentMetadata.headerTransforms
+        ) {
+            const { mass } = newExperimentMetadata.headerTransforms;
+            // Add mass plot.
+            addPlot(mass, 'cell');
+            // Add average mass plot.
+            addPlot(`AVG ${mass}`, 'track');
         }
-
-
-        const filterPredicate = newDataFilters.map(filter => getPredicate(filter)).join(' AND ');
-
-        if (filterPredicate.length > 0) {
-            const filterQuery = `${queryPrefix} AND ${filterPredicate}`;
-            const filterRes: TrackingIdQueryResult[] = await vg.coordinator().query(filterQuery, { 'type': 'json' });
-            unfilteredTrackingIds.value = filterRes.map((entry: TrackingIdQueryResult) => entry.id);
-        } else {
-            unfilteredTrackingIds.value = null;
-        }
-
-
-    }, { deep: true })
-
-
+    }, { immediate: true, deep: true })
 
     // Private
-    function _resetSelection(index: number) {
-        dataSelections.value[index].range = [
-            ...dataSelections.value[index].maxRange,
-        ];
-    }
-
-    // Private
-    async function _getMaxRange(plotName: string): Promise<[number, number]> {
-        const selection = getSelection(plotName);
-        if (!selection) {
-            throw new Error(`Selection "${plotName}" does not exist.`);
-        }
-        const { currentExperimentMetadata } = useDatasetSelectionStore();
+    async function _getInitialMaxRange(plotName: string, type: SelectionType): Promise<[number, number]> {
 
         try {
+
             // Loading
             let minVal = -Infinity;
             let maxVal = Infinity;
@@ -117,26 +97,15 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             // Escape the column name to handle spaces and special characters
             const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
 
-            let query = '';
-            if (selection.type === 'cell') {
-                query = `
-            SELECT
-                MIN("${escapedPlotName}") AS min_value,
-                MAX("${escapedPlotName}") AS max_value
-            FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata
-        `;
-            } else if (selection.type === 'track') {
-                query = `
-            SELECT
-                MIN("${escapedPlotName}") AS min_value,
-                MAX("${escapedPlotName}") AS max_value
-            FROM ${currentExperimentMetadata?.name}_composite_experiment_cell_metadata_aggregate
-        `;
-            } else {
-                throw new Error(
-                    `Unknown type "${selection.type}" for plot "${plotName}"`
-                );
-            }
+            const tablePrefix = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`
+            const tableName = type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`
+
+            let query = `
+                SELECT
+                    MIN("${escapedPlotName}") AS min_value,
+                    MAX("${escapedPlotName}") AS max_value
+                FROM ${tableName}
+            `;
 
             const result = await vg.coordinator().query(query);
 
@@ -167,17 +136,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         }
     }
 
-    // Private
-    async function _setMaxRange(plotName: string) {
-        const selection = getSelection(plotName);
-        if (selection === null) {
-            throw Error(`Selection ${plotName} does not exist`);
-        }
-        const [minVal, maxVal] = await _getMaxRange(plotName);
-        selection.range = [minVal, maxVal];
-        selection.maxRange = [minVal, maxVal];
-    }
-
     function addSelection(selection: DataSelection) {
         const existingIndex = dataSelections.value.findIndex(
             (s) => s.plotName === selection.plotName
@@ -191,6 +149,16 @@ export const useSelectionStore = defineStore('selectionStore', () => {
 
     function clearAllSelections() {
         dataSelections.value = [];
+    }
+
+    function convertToFilters() {
+        dataSelections.value.forEach(selection => {
+            addFilter({
+                ...selection,
+                range: [...selection.range],
+            })
+        })
+        clearAllSelections();
     }
 
     function updateSelection(
@@ -208,8 +176,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 plotName,
                 range,
                 type: type ?? 'cell', // Default value
-                maxRange: [...range], // Using the provided range as maxRange
-                displayChart: true, // Default value
             });
         }
     }
@@ -229,7 +195,14 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         );
         if (index !== -1) {
             dataSelections.value.splice(index, 1);
+
+            // Update selection range when removing selection.
+            const correspondingAttributeChart = attributeCharts.value.find(entry => entry.plotName === plotName);
+            if (correspondingAttributeChart) {
+                correspondingAttributeChart.range = [...correspondingAttributeChart.maxRange]
+            }
         }
+
     }
 
     function removePlotWithErrors(plotName: string) {
@@ -240,17 +213,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         dataSelections.value.splice(index, 1);
     }
 
-    function resetSelectionByPlotName(plotName: string) {
-        const index = dataSelections.value.findIndex(
-            (s) => s.plotName === plotName
-        );
-        if (index === -1) return;
-        // window.dispatchEvent(
-        //     new CustomEvent('selectionRemoved', { detail: plotName })
-        // );
-        _resetSelection(index);
-    }
-
     function getSelection(name: string): DataSelection | null {
         const s = dataSelections.value.find(
             (s: DataSelection) => s.plotName === name
@@ -259,30 +221,29 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         return s;
     }
 
-    function addPlot(name: string, type: DataSelection['type']) {
-        const existingIndex = dataSelections.value.findIndex(
+    async function addPlot(name: string, type: DataSelection['type']) {
+        const existingIndex = attributeCharts.value.findIndex(
             (s) => s.plotName === name
         );
         if (existingIndex !== -1) {
-            const existingPlot = dataSelections.value[existingIndex];
-            if (existingPlot.type !== type) {
-                console.warn(
-                    `Changing type of plot "${name}" from "${existingPlot.type}" to "${type}"`
-                );
-                existingPlot.type = type;
-                _setMaxRange(name);
-            }
+
+            // Not sure when above would ever be triggered. Just warning for now, do nothing otherwise.
+            console.warn('Chart already exists.')
             return;
         }
-        const selection: DataSelection = {
+
+        // Get initial range
+        const [minVal, maxVal] = await _getInitialMaxRange(name, type);
+
+        // Create chart.
+        const chart: AttributeChart = {
             plotName: name,
-            range: [-Infinity, Infinity],
-            maxRange: [-Infinity, Infinity],
-            type: type,
-            displayChart: true,
-        };
-        dataSelections.value.push(selection);
-        _setMaxRange(name);
+            range: [minVal, maxVal],
+            maxRange: [minVal, maxVal],
+            type: type
+        }
+        attributeCharts.value.push(chart);
+
     }
 
 
@@ -299,6 +260,8 @@ export const useSelectionStore = defineStore('selectionStore', () => {
 
     function removeFilter(index: number) {
         dataFilters.value.splice(index, 1);
+        // When we remove a selection, we update to the max range.
+        // When we remove a filter, we have other items in place in the mosaicSelectionStore to update the range.
     }
 
     function updateFilter(
@@ -316,8 +279,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 plotName,
                 range,
                 type: type ?? 'cell',
-                maxRange: [0, 1000],
-                displayChart: true,
             });
         }
     }
@@ -329,9 +290,10 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     return {
         dataSelections,
         dataFilters,
-        modifiedSelections,
-        selectedTrackingIds,
-        unfilteredTrackingIds,
+        attributeCharts,
+        showRelativeCell,
+        showRelativeTrack,
+        resetState,
         clearAllSelections,
         updateSelection,
         updateFilter,
@@ -339,11 +301,12 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         removeSelectionByPlotName,
         removeFilterByPlotName,
         removePlotWithErrors,
-        resetSelectionByPlotName,
         addPlot,
         getSelection,
+        addSelection,
         addFilter,
-        removeFilter
+        removeFilter,
+        convertToFilters
     }
 
 

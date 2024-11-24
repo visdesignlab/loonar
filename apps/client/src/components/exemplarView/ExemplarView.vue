@@ -21,7 +21,6 @@ const { chartColorScheme } = useConditionSelectorStore();
 const selectionStore = useSelectionStore();
 
 const mosaicSelectionStore = useMosaicSelectionStore();
-const { $yAxisParam } = storeToRefs(mosaicSelectionStore);
 
 const { dataSelections } = storeToRefs(selectionStore);
 
@@ -43,7 +42,6 @@ const handleOnClick = () => {
     // selectionStore.updateSelection(plotName, [0,500], "track");
     
     // console.log(dataSelections.value);
-    mosaicSelectionStore.$yAxisParam.update([0,1000])
 }
 
 
