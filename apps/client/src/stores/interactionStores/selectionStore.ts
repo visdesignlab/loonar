@@ -166,11 +166,20 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         range: [number, number],
         type?: DataSelection['type']
     ) {
-        const existingIndex = dataSelections.value.findIndex(
+        const plot = dataSelections.value.find(
             (s) => s.plotName === plotName
         );
-        if (existingIndex !== -1) {
-            dataSelections.value[existingIndex].range = range;
+        const chart = attributeCharts.value.find(
+            (s) => s.plotName === plotName
+        )
+
+        if (plot) {
+            plot.range = [...range];
+            if (chart) {
+                chart.range = [...range];
+            } else {
+                console.error('Could not find corresponding plot.')
+            }
         } else {
             addSelection({
                 plotName,
