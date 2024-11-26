@@ -8,7 +8,7 @@ import LBtn from '../custom/LBtn.vue';
 import {
     useSelectionStore,
     emitter,
-    type AttributeChart
+    type AttributeChart,
 } from '@/stores/interactionStores/selectionStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
@@ -20,7 +20,8 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
 const selectionStore = useSelectionStore();
-const { dataSelections, attributeCharts, showRelativeCell, showRelativeTrack } = storeToRefs(selectionStore);
+const { dataSelections, attributeCharts, showRelativeCell, showRelativeTrack } =
+    storeToRefs(selectionStore);
 
 // Are these plots track or cell level?
 const props = defineProps({
@@ -36,7 +37,6 @@ const selectedCellAttribute = ref('');
 const selectedTrackAttribute = ref('');
 const selectedAggregation = ref('');
 const errorPlotName = ref('');
-
 
 const aggregationOptions = [
     { label: 'Sum', value: 'SUM' },
@@ -90,13 +90,19 @@ function addTrackPlotFromMenu(atr: string, agg: string) {
     trackPlotDialogOpen.value = false;
     selectionStore.addPlot(`${agg} ${atr}`, 'track');
 }
+// New reactive constant for icon color state
+const isRelativeChartShown = ref(false);
 
+// Shows or hides relative chart. Changes icon color.
+function onToggleRelativeChart() {
+    isRelativeChartShown.value = !isRelativeChartShown.value;
 
-
-function onToggleRelativeChart(){
-    props.selectorType === 'cell' ? showRelativeCell.value = !showRelativeCell.value : showRelativeTrack.value = !showRelativeTrack.value
+    if (props.selectorType === 'cell') {
+        showRelativeCell.value = !showRelativeCell.value;
+    } else if (props.selectorType === 'track') {
+        showRelativeTrack.value = !showRelativeTrack.value;
+    }
 }
-
 </script>
 <template>
     <div>
@@ -114,7 +120,7 @@ function onToggleRelativeChart(){
                     dense
                     round
                     icon="mdi-chart-areaspline"
-                    color="grey-7"
+                    :color="isRelativeChartShown ? 'blue-8' : 'grey-7'"
                     @click="onToggleRelativeChart"
                 >
                     <q-tooltip>Show Relative Chart</q-tooltip>
