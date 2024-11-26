@@ -91,6 +91,56 @@ export async function loadFileIntoDuckDb(
     }
 }
 
+export interface AggregateObject {
+    functionName: string;
+    columnName: string;
+    var1?: string;
+    var2?: string;
+}
+
+export async function addColumn(idColumn: string, aggTable: string, compTable: string, aggObject: AggregateObject) {
+
+    const { functionName, columnName, var1, var2 } = aggObject;
+
+    // Start new column name string
+    let newColumnName = `${functionName} ${columnName}`;
+    // Add variables if present
+    if (var1) {
+        newColumnName = `${newColumnName} ${var1}`
+    }
+    if (var2) {
+        newColumnName = `${newColumnName} ${var2}`
+    }
+
+    await vg.coordinator().exec([`
+        ALTER TABLE ${aggTable}
+        ADD COLUMN IF NOT EXISTS "${newColumnName}" DOUBLE
+    `])
+
+    // Start function call string
+    let functionCall = `${functionName}("${columnName}"`
+    // Add variables if present
+    if (var1) {
+        functionCall = `${functionCall},${var1}`
+    }
+    if (var2) {
+        functionCall = `${functionCall},${var2}`
+    }
+    // Close parentheses
+    functionCall = `${functionCall})`
+
+    await vg.coordinator().exec([`
+        UPDATE ${aggTable} as t1
+        SET "${newColumnName}" = (
+            SELECT ${functionCall}
+            FROM ${compTable} as t2
+            WHERE t1.tracking_id = t2."${idColumn}"
+            GROUP BY "${idColumn}"
+        )
+    `])
+
+    return newColumnName;
+}
 
 export async function createAggregateTable(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
     if (headers && headerTransforms) {
@@ -103,9 +153,6 @@ export async function createAggregateTable(tableName: string, headers: string[],
             selectString = `
             ${selectString}
             AVG("${header}") AS "AVG ${header}",
-            SUM("${header}") AS "SUM ${header}",
-            COUNT("${header}") AS "COUNT ${header}",
-            MEDIAN("${header}") AS "MEDIAN ${header}",
             MAX("${header}") AS "MAX ${header}",
             MIN("${header}") AS "MIN ${header}",
             `

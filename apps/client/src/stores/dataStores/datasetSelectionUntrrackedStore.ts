@@ -65,6 +65,21 @@ export const useDatasetSelectionStore = defineStore(
         });
         let controller: AbortController;
 
+        const compTableName = computed(() => {
+            if (currentExperimentMetadata.value) {
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`
+            }
+            return null
+        })
+
+        const aggTableName = computed(() => {
+            if (currentExperimentMetadata.value) {
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`
+            }
+            return null
+        })
+
+
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
             if (configStore.serverUrl == null) return null;
@@ -138,29 +153,30 @@ export const useDatasetSelectionStore = defineStore(
                         ?.compositeTabularDataFilename
                 );
                 try {
-                    await loadFileIntoDuckDb(
-                        duckDbFileUrl,
-                        `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
-                        'parquet'
-                    );
-                    try {
-                        await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
+                    if (compTableName.value) {
+                        await loadFileIntoDuckDb(
+                            duckDbFileUrl,
+                            compTableName.value,
+                            'parquet'
+                        );
+                        try {
+                            await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
+                            notify({
+                                type: 'success',
+                                message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
+                            });
+                        } catch (error) {
+                            const typedError = error as Error
+                            notify({
+                                type: 'problem',
+                                message: typedError.message
+                            })
+                        }
                         notify({
                             type: 'success',
-                            message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
+                            message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                         });
-                    } catch (error) {
-                        const typedError = error as Error
-                        notify({
-                            type: 'problem',
-                            message: typedError.message
-                        })
                     }
-                    notify({
-                        type: 'success',
-                        message: `Created DuckDb Table for ${duckDbFileUrl}.`,
-                    });
-
                 } catch (error) {
                     const typedError = error as Error;
                     notify({
@@ -287,6 +303,8 @@ export const useDatasetSelectionStore = defineStore(
             fetchingTabularData,
             selectImagingLocation,
             refreshFileNameList,
+            compTableName,
+            aggTableName
         };
     }
 );

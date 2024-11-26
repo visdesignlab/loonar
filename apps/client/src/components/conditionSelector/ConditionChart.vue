@@ -24,7 +24,7 @@ const props = defineProps<{
 const globalSettings = useGlobalSettings();
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+const { experimentDataInitialized, currentExperimentMetadata, compTableName } = storeToRefs(
     datasetSelectionStore
 );
 const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
@@ -78,7 +78,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             // Fills in area under line chart grey (optional)
             vg.areaY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].baseSelection,
@@ -96,7 +96,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             ),
             vg.lineY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].baseSelection,
@@ -113,7 +113,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             ),
             vg.lineY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].filteredSelection,

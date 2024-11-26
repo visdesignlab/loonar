@@ -100,26 +100,28 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             const tablePrefix = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`
             const tableName = type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`
 
+            // Cast as varchar. Will convert back to number
             let query = `
                 SELECT
-                    MIN("${escapedPlotName}") AS min_value,
-                    MAX("${escapedPlotName}") AS max_value
+                    CAST(MIN("${escapedPlotName}") AS VARCHAR) AS min_value,
+                    CAST(MAX("${escapedPlotName}") AS VARCHAR) AS max_value
                 FROM ${tableName}
             `;
 
-            const result = await vg.coordinator().query(query);
+            const result = await vg.coordinator().query(query, { 'type': 'json' });
 
-            if (
-                !result ||
-                !result.batches ||
-                result.batches.length === 0 ||
-                result.batches[0].numRows === 0
-            ) {
-                throw new Error('No data returned from query');
-            }
 
-            minVal = Number(result.batches[0].get(0).min_value);
-            maxVal = Number(result.batches[0].get(0).max_value);
+            // if (
+            //     !result ||
+            //     !result.batches ||
+            //     result.batches.length === 0 ||
+            //     result.batches[0].numRows === 0
+            // ) {
+            //     throw new Error('No data returned from query');
+            // }
+
+            minVal = Number(result[0].min_value);
+            maxVal = Number(result[0].max_value);
 
             if (isNaN(minVal) || isNaN(maxVal)) {
                 emitter.emit('plot-error', plotName);
@@ -164,28 +166,21 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     function updateSelection(
         plotName: string,
         range: [number, number],
-        type?: DataSelection['type']
     ) {
-        const plot = dataSelections.value.find(
+        const selection = dataSelections.value.find(
             (s) => s.plotName === plotName
         );
         const chart = attributeCharts.value.find(
             (s) => s.plotName === plotName
         )
 
-        if (plot) {
-            plot.range = [...range];
+        if (selection) {
+            selection.range = [...range];
             if (chart) {
                 chart.range = [...range];
             } else {
                 console.error('Could not find corresponding plot.')
             }
-        } else {
-            addSelection({
-                plotName,
-                range,
-                type: type ?? 'cell', // Default value
-            });
         }
     }
 

@@ -65,10 +65,6 @@ interface MosaicSelectionState {
     aggFilClauseList: Ref<LoonarClause[]>,
 }
 
-// const  = ref<LoonarClause[]>([]);
-// const  = ref<LoonarClause[]>([]);
-// const  = ref<LoonarClause[]>([]);
-// const  = ref<LoonarClause[]>([]);
 
 const initialState = (): MosaicSelectionState => ({
     cellLevelSelection: ref<any>(vg.Selection.intersect()),
@@ -210,11 +206,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     /* -------------------------------------------------
     -------- SELECTION AND FILTER SUBSCRIPTIONS --------
     ------------------------------------------------- */
-
-    // const compSelClauseList = ref<LoonarClause[]>([]);
-    // const aggSelClauseList = ref<LoonarClause[]>([]);
-    // const compFilClauseList = ref<LoonarClause[]>([]);
-    // const aggFilClauseList = ref<LoonarClause[]>([]);
 
     const compSelPredString = computed(() =>
         _clauseListToPredString(compSelClauseList.value)

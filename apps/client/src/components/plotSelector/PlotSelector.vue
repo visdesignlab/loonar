@@ -4,7 +4,7 @@ import { QBtn } from 'quasar';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
 import LBtn from '../custom/LBtn.vue';
-
+import { addColumn, type AggregateObject } from '@/util/datasetLoader';
 import {
     useSelectionStore,
     emitter,
@@ -16,7 +16,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 const datasetSelectionStore = useDatasetSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+const { experimentDataInitialized, currentExperimentMetadata, compTableName, aggTableName } = storeToRefs(
     datasetSelectionStore
 );
 const selectionStore = useSelectionStore();
@@ -37,6 +37,9 @@ const selectedCellAttribute = ref('');
 const selectedTrackAttribute = ref('');
 const selectedAggregation = ref('');
 const errorPlotName = ref('');
+const currAddOptions = computed(() => {
+    return aggregationAdditionalOptions[selectedAggregation.value]
+})
 
 const aggregationOptions = [
     { label: 'Sum', value: 'SUM' },
@@ -45,7 +48,24 @@ const aggregationOptions = [
     { label: 'Minimum', value: 'MIN' },
     { label: 'Maximum', value: 'MAX' },
     { label: 'Median', value: 'MEDIAN' },
+    { label: 'Median Absolute Deviation', value: 'MAD'},
+    { label: 'Continuous Quantile', value: 'QUANTILE_CONT'}
 ];
+
+const aggregationAdditionalOptions:Record<string,any> = {
+    'QUANTILE_CONT':{
+        'var1':{
+            'label': 'Position',
+            'type': 'numerical',
+            'max':1,
+            'min':0,
+            'step':0.1
+        }
+    }
+}
+
+const var1Model = ref<number|null>(null);
+const var2Model = ref<number|null>(null);
 
 // Collects all attribute names after the data is loaded.
 const allAttributeNames = computed(() => {
@@ -60,6 +80,11 @@ const allAttributeNames = computed(() => {
         return [];
     }
 });
+
+function onChangeAgg() {
+    var1Model.value = null;
+    var2Model.value = null;
+}
 
 // If there is a plot loading here, a dialog is displayed.
 function handlePlotError(plotName: string) {
@@ -86,9 +111,29 @@ function addCellPlotFromMenu(atr: string) {
     cellPlotDialogOpen.value = false;
     selectionStore.addPlot(`${atr}`, 'cell');
 }
-function addTrackPlotFromMenu(atr: string, agg: string) {
-    trackPlotDialogOpen.value = false;
-    selectionStore.addPlot(`${agg} ${atr}`, 'track');
+async function addTrackPlotFromMenu() {
+
+    const atr = selectedTrackAttribute.value;
+    const agg = selectedAggregation.value;
+    const var1 = var1Model.value?.toString() ?? undefined;
+    const var2 = var2Model.value?.toString() ?? undefined;
+
+
+    const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id']
+    if(aggTableName.value && compTableName.value && idColumn){
+
+
+        const aggObject:AggregateObject = {
+            functionName:agg,
+            columnName:atr,
+            var1,
+            var2
+        }
+
+        const name = await addColumn(idColumn, aggTableName.value, compTableName.value, aggObject);
+        trackPlotDialogOpen.value = false;
+        selectionStore.addPlot(name, 'track');
+    }
 }
 // New reactive constant for icon color state
 const isRelativeChartShown = ref(false);
@@ -212,16 +257,33 @@ function onToggleRelativeChart() {
                                         :dark="globalSettings.darkMode"
                                         emit-value
                                         clickable
+                                        @update:model-value="onChangeAgg"
                                     >
                                     </q-select>
+                                    <q-input
+                                        v-if="
+                                            currAddOptions &&
+                                            currAddOptions.var1.type &&
+                                            currAddOptions.var1.type === 'numerical'
+                                        "
+                                        filled
+                                        type="number"
+                                        :step="currAddOptions.var1.step"
+                                        v-model.number="var1Model"
+                                        :label="currAddOptions.var1.label"
+                                        lazy-rules
+                                        :dark="globalSettings.darkMode"
+                                        :min="currAddOptions.var1.min"
+                                        :max="currAddOptions.var1.max"
+                                    >
+                                    </q-input>
 
                                     <div>
                                         <l-btn
                                             label="Add"
                                             @click="
                                                 addTrackPlotFromMenu(
-                                                    selectedTrackAttribute,
-                                                    selectedAggregation
+                                                    
                                                 )
                                             "
                                             :dark="globalSettings.darkMode"

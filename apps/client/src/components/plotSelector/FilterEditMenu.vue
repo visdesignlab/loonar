@@ -15,7 +15,7 @@ import {
     QBtn,
     QBanner,
 } from 'quasar';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
 
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 const mosaicSelectionStore = useMosaicSelectionStore(); // Initialize the store
@@ -26,7 +26,7 @@ const props = defineProps<{
     initialMin: number;
     initialMax: number;
     filterType: 'selection' | 'filter';
-    attributeType: string;
+    attributeType: DataSelection['type'];
 }>();
 
 const emit = defineEmits(['update:range']);
