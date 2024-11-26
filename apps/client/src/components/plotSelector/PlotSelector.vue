@@ -151,6 +151,9 @@ function onToggleRelativeChart() {
                                         label="Select Attribute"
                                         :options="allAttributeNames"
                                         v-model="selectedCellAttribute"
+                                        :dark="globalSettings.darkMode"
+                                        menu-anchor="top left"
+                                        menu-self="bottom left"
                                         clickable
                                     >
                                     </q-select>
@@ -196,6 +199,7 @@ function onToggleRelativeChart() {
                                         label="Select Attribute"
                                         :options="allAttributeNames"
                                         v-model="selectedTrackAttribute"
+                                        :dark="globalSettings.darkMode"
                                         clickable
                                     >
                                     </q-select>
@@ -205,6 +209,7 @@ function onToggleRelativeChart() {
                                         option-value="value"
                                         option-label="label"
                                         v-model="selectedAggregation"
+                                        :dark="globalSettings.darkMode"
                                         emit-value
                                         clickable
                                     >
