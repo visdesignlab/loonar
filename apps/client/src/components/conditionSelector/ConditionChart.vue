@@ -18,13 +18,14 @@ const props = defineProps<{
     yIndex: number;
     selected: boolean;
     chartLineWidth:number;
+    height:number;
 }>();
 
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
+const { experimentDataInitialized, currentExperimentMetadata, compTableName } = storeToRefs(
     datasetSelectionStore
 );
 const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
@@ -71,6 +72,7 @@ const strokeWidthSelected = props.chartLineWidth;
 // const $param = vg.Param.value([0,2000])
 
 function createChart(xAxisName: string, yAxisName: string) {
+    console.log(props.height);
     if (chartContainer.value) {
         const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
         // Creates chart, filtered by the selection that uses the query.
@@ -78,7 +80,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             // Fills in area under line chart grey (optional)
             vg.areaY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].baseSelection,
@@ -96,7 +98,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             ),
             vg.lineY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].baseSelection,
@@ -113,7 +115,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             ),
             vg.lineY(
                 vg.from(
-                    `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`,
+                    compTableName.value,
                     {
                         filterBy:
                             conditionChartSelections[source].filteredSelection,
@@ -135,6 +137,9 @@ function createChart(xAxisName: string, yAxisName: string) {
             vg.yDomain($conditionChartYAxisDomain),
             vg.margin(0),
             // vg.margin(40)
+            // vg.style('height:100%')
+            vg.height(props.height),
+            vg.width(props.height)
         );
         return chart;
     }

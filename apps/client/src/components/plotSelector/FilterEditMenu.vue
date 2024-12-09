@@ -12,13 +12,9 @@ import {
     QCardSection,
     QForm,
     QInput,
-    QBtn,
     QBanner,
 } from 'quasar';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-
-import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
-const mosaicSelectionStore = useMosaicSelectionStore(); // Initialize the store
+import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
 
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
@@ -26,7 +22,7 @@ const props = defineProps<{
     initialMin: number;
     initialMax: number;
     filterType: 'selection' | 'filter';
-    attributeType: string;
+    attributeType: DataSelection['type'];
 }>();
 
 const emit = defineEmits(['update:range']);
@@ -40,8 +36,7 @@ function confirmDeletePlot() {
     deleteDialogOpen.value = true;
 }
 function deletePlot() {
-    selectionStore.removeSelectionByPlotName(props.plotName);
-    selectionStore.removeFilterByPlotName(props.plotName);
+    selectionStore.removePlotByName(props.plotName);
     deleteDialogOpen.value = false;
 }
 
@@ -122,7 +117,8 @@ const minMaxFormValid = computed<boolean>(() => {
     <q-dialog v-model="deleteDialogOpen" persistent>
         <q-card :dark="globalSettings.darkMode">
             <q-card-section>
-                <div class="text-h6">Delete "{{ props.plotName }}"?</div>
+                <div class="text-h6">Delete plot "{{ props.plotName }}"?</div>
+                <div class="text-caption">This will remove all associated selections and filters.</div>
             </q-card-section>
             <q-card-actions align="right">
                 <l-btn

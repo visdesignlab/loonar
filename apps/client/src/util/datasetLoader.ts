@@ -2,7 +2,6 @@ import { parse, type ParseResult } from 'papaparse';
 import * as vg from '@uwdata/vgplot';
 // import type {ExperimentMetadata}
 import type { ExperimentMetadata } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import type { DataSelection } from '@/stores/interactionStores/selectionStore';
 
 export type CsvParserResults = ParseResult<AnyAttributes>;
 
@@ -91,6 +90,69 @@ export async function loadFileIntoDuckDb(
     }
 }
 
+export interface AggregateObject {
+    functionName: string;
+    label?: string;
+    attr1?: string;
+    var1?: string;
+    attr2?: string;
+}
+
+export async function addColumn(idColumn: string, aggTable: string, compTable: string, aggObject: AggregateObject) {
+
+    const { functionName, attr1, var1, attr2, label } = aggObject;
+
+    // Start new column name string
+    let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''}`;
+    // Add variables if present
+    if (attr2) {
+        newColumnName = `${newColumnName} ${attr2}`
+    }
+
+    if (var1) {
+        newColumnName = `${newColumnName} ${var1}`
+    }
+
+
+    await vg.coordinator().exec([`
+        ALTER TABLE ${aggTable}
+        ADD COLUMN IF NOT EXISTS "${newColumnName}" DOUBLE
+    `])
+
+    // Start function call string
+    let functionCall = `${functionName}`
+    if (attr1 || attr2 || var1) {
+        functionCall = `${functionCall}("${attr1}"`
+        // Add variables if present
+
+
+        if (attr2) {
+            functionCall = `${functionCall}, "${attr2}"`
+        }
+
+        if (var1) {
+            functionCall = `${functionCall},${var1}`
+        }
+
+        // Close parentheses
+        functionCall = `${functionCall})`
+    } else {
+        functionCall = `${functionCall}(*)`
+    }
+
+
+    await vg.coordinator().exec([`
+        UPDATE ${aggTable} as t1
+        SET "${newColumnName}" = (
+            SELECT ${functionCall}
+            FROM ${compTable} as t2
+            WHERE t1.tracking_id = t2."${idColumn}"
+            GROUP BY "${idColumn}"
+        )
+    `])
+
+    return newColumnName;
+}
 
 export async function createAggregateTable(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
     if (headers && headerTransforms) {
@@ -102,12 +164,9 @@ export async function createAggregateTable(tableName: string, headers: string[],
         headers.forEach((header: string) => {
             selectString = `
             ${selectString}
-            AVG("${header}") AS "AVG ${header}",
-            SUM("${header}") AS "SUM ${header}",
-            COUNT("${header}") AS "COUNT ${header}",
-            MEDIAN("${header}") AS "MEDIAN ${header}",
-            MAX("${header}") AS "MAX ${header}",
-            MIN("${header}") AS "MIN ${header}",
+            AVG("${header}") AS "Average ${header}",
+            MAX("${header}") AS "Maximum ${header}",
+            MIN("${header}") AS "Minimum ${header}",
             `
         })
 
