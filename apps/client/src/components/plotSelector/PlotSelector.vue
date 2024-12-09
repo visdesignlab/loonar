@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, type PropType } from 'vue';
 import { QBtn } from 'quasar';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
@@ -7,12 +7,12 @@ import LBtn from '../custom/LBtn.vue';
 import { addColumn, type AggregateObject } from '@/util/datasetLoader';
 import {
     useSelectionStore,
-    emitter,
     type AttributeChart,
 } from '@/stores/interactionStores/selectionStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import aggregateFunctions from './aggregateFunctions';
 const datasetSelectionStore = useDatasetSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
@@ -20,52 +20,58 @@ const { experimentDataInitialized, currentExperimentMetadata, compTableName, agg
     datasetSelectionStore
 );
 const selectionStore = useSelectionStore();
-const { dataSelections, attributeCharts, showRelativeCell, showRelativeTrack } =
+const { attributeCharts, showRelativeCell, showRelativeTrack } =
     storeToRefs(selectionStore);
 
 // Are these plots track or cell level?
 const props = defineProps({
     selectorType: {
-        type: String,
+        type: String as PropType<AttributeChart['type']>,
         required: true,
         validator: (value: string) => ['track', 'cell'].includes(value),
     },
 });
 const cellPlotDialogOpen = ref(false);
-const trackPlotDialogOpen = ref(false);
 const selectedCellAttribute = ref('');
-const selectedTrackAttribute = ref('');
-const selectedAggregation = ref('');
+
+
+const trackPlotDialogOpen = ref(false);
+const aggModel = ref<string|null>(null);
+const attr1Model = ref<string|null>(null);
+const attr2Model = ref<string|null>(null);
+const var1Model = ref<number|string|null>(null);
+
 const errorPlotName = ref('');
-const currAddOptions = computed(() => {
-    return aggregationAdditionalOptions[selectedAggregation.value]
-})
 
-const aggregationOptions = [
-    { label: 'Sum', value: 'SUM' },
-    { label: 'Average', value: 'AVG' },
-    { label: 'Count', value: 'COUNT' },
-    { label: 'Minimum', value: 'MIN' },
-    { label: 'Maximum', value: 'MAX' },
-    { label: 'Median', value: 'MEDIAN' },
-    { label: 'Median Absolute Deviation', value: 'MAD'},
-    { label: 'Continuous Quantile', value: 'QUANTILE_CONT'}
-];
 
-const aggregationAdditionalOptions:Record<string,any> = {
-    'QUANTILE_CONT':{
-        'var1':{
-            'label': 'Position',
-            'type': 'numerical',
-            'max':1,
-            'min':0,
-            'step':0.1
-        }
-    }
+interface AttributeSelection {
+    label:string,
+    type:'existing_attribute' | 'numerical',
+    max?:number,
+    min?:number,
+    step?:number
 }
 
-const var1Model = ref<number|null>(null);
-const var2Model = ref<number|null>(null);
+interface AggregationAttribute {
+    functionName:string,
+    description?:string,
+    selections?: Record<string, AttributeSelection>
+}
+
+
+const aggregationAttributes: Record<string,AggregationAttribute> = aggregateFunctions;
+
+// Currently selected aggregation
+const currAgg = computed(() => aggModel.value ? aggregationAttributes[aggModel.value] : null)
+
+// The selections of the currently selected aggregation
+const currAggSelections = computed((): Record<string,AttributeSelection> | undefined => currAgg.value?.selections)
+
+// For use in select input
+const aggregationOptions = computed(() => {
+    return Object.entries(aggregationAttributes).map(entry => { return {label: entry[0]}})
+})
+
 
 // Collects all attribute names after the data is loaded.
 const allAttributeNames = computed(() => {
@@ -83,7 +89,8 @@ const allAttributeNames = computed(() => {
 
 function onChangeAgg() {
     var1Model.value = null;
-    var2Model.value = null;
+    attr2Model.value = null;
+    attr1Model.value = null;
 }
 
 // If there is a plot loading here, a dialog is displayed.
@@ -110,13 +117,20 @@ function onMenuButtonClick() {
 function addCellPlotFromMenu(atr: string) {
     cellPlotDialogOpen.value = false;
     selectionStore.addPlot(`${atr}`, 'cell');
+    aggModel.value = '';
+    var1Model.value = null;
+    attr2Model.value = null;
+    attr1Model.value = null;
+    
 }
 async function addTrackPlotFromMenu() {
+    if(!aggModel.value) return;
 
-    const atr = selectedTrackAttribute.value;
-    const agg = selectedAggregation.value;
+    const label = aggModel.value;
+    const attr1 = attr1Model.value?.toString() ?? undefined;
     const var1 = var1Model.value?.toString() ?? undefined;
-    const var2 = var2Model.value?.toString() ?? undefined;
+    const attr2 = attr2Model.value ?? undefined;
+    const functionName = aggregationAttributes[label].functionName;
 
 
     const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id']
@@ -124,10 +138,11 @@ async function addTrackPlotFromMenu() {
 
 
         const aggObject:AggregateObject = {
-            functionName:agg,
-            columnName:atr,
+            functionName,
+            attr1,
             var1,
-            var2
+            attr2,
+            label
         }
 
         const name = await addColumn(idColumn, aggTableName.value, compTableName.value, aggObject);
@@ -230,7 +245,7 @@ function onToggleRelativeChart() {
 
                     <!-- Track Attributes Dialog -->
                     <q-dialog v-model="trackPlotDialogOpen" persistent>
-                        <q-card :dark="globalSettings.darkMode">
+                        <q-card :dark="globalSettings.darkMode" style="width: 600px; max-width: 80vw;">
                             <q-card-section>
                                 <div class="text-h6">
                                     Add Track Attribute to Display
@@ -241,42 +256,61 @@ function onToggleRelativeChart() {
                                     :dark="globalSettings.darkMode"
                                 >
                                     <q-select
-                                        label="Select Attribute"
-                                        :options="allAttributeNames"
-                                        v-model="selectedTrackAttribute"
-                                        :dark="globalSettings.darkMode"
-                                        clickable
-                                    >
-                                    </q-select>
-                                    <q-select
                                         label="Select Aggregation"
                                         :options="aggregationOptions"
-                                        option-value="value"
+                                        option-value="label"
                                         option-label="label"
-                                        v-model="selectedAggregation"
+                                        v-model="aggModel"
                                         :dark="globalSettings.darkMode"
                                         emit-value
                                         clickable
                                         @update:model-value="onChangeAgg"
                                     >
                                     </q-select>
+                                    <div class="text-caption q-mt-sm" v-if="currAgg?.description">
+                                        {{ currAgg.description }}
+                                    </div>
+                                    <q-select
+                                        v-if="currAggSelections && currAggSelections.attr1"
+                                        :label="currAggSelections.attr1.label"
+                                        :options="allAttributeNames"
+                                        v-model="attr1Model"
+                                        :dark="globalSettings.darkMode"
+                                        clickable
+                                    >
+                                    </q-select>
                                     <q-input
                                         v-if="
-                                            currAddOptions &&
-                                            currAddOptions.var1.type &&
-                                            currAddOptions.var1.type === 'numerical'
+                                            currAggSelections &&
+                                            currAggSelections.var1 &&
+                                            currAggSelections.var1.type &&
+                                            currAggSelections.var1.type === 'numerical'
                                         "
                                         filled
                                         type="number"
-                                        :step="currAddOptions.var1.step"
+                                        :step="currAggSelections.var1.step"
                                         v-model.number="var1Model"
-                                        :label="currAddOptions.var1.label"
+                                        :label="currAggSelections.var1.label"
                                         lazy-rules
                                         :dark="globalSettings.darkMode"
-                                        :min="currAddOptions.var1.min"
-                                        :max="currAddOptions.var1.max"
+                                        :min="currAggSelections.var1.min"
+                                        :max="currAggSelections.var1.max"
                                     >
                                     </q-input>
+                                    <q-select
+                                        v-if="
+                                            currAggSelections &&
+                                            currAggSelections.attr2 &&
+                                            currAggSelections.attr2.type &&
+                                            currAggSelections.attr2.type === 'existing_attribute'
+                                        "
+                                        :label="currAggSelections.attr2.label"
+                                        :options="allAttributeNames"
+                                        v-model="attr2Model"
+                                        :dark="globalSettings.darkMode"
+                                        clickable
+                                    >
+                                    </q-select>
 
                                     <div>
                                         <l-btn
@@ -328,3 +362,4 @@ function onToggleRelativeChart() {
     color: black;
 }
 </style>
+./aggregateFunctions

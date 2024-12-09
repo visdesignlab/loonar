@@ -77,7 +77,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             // Add mass plot.
             addPlot(mass, 'cell');
             // Add average mass plot.
-            addPlot(`AVG ${mass}`, 'track');
+            addPlot(`Average ${mass}`, 'track');
         }
     }, { immediate: true, deep: true })
 
@@ -109,6 +109,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             `;
 
             const result = await vg.coordinator().query(query, { 'type': 'json' });
+            console.log(result);
 
 
             // if (
@@ -182,6 +183,17 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 console.error('Could not find corresponding plot.')
             }
         }
+    }
+
+    function removePlotByName(plotName: string) {
+        const chartIndex = attributeCharts.value.findIndex(
+            (chart: AttributeChart) => chart.plotName === plotName
+        )
+        if (chartIndex === -1) return;
+
+        attributeCharts.value.splice(chartIndex, 1);
+        removeSelectionByPlotName(plotName);
+        removeFilterByPlotName(plotName);
     }
 
     function removeFilterByPlotName(plotName: string) {
@@ -310,7 +322,8 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         addSelection,
         addFilter,
         removeFilter,
-        convertToFilters
+        convertToFilters,
+        removePlotByName
     }
 
 

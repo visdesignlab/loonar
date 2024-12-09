@@ -31,7 +31,7 @@ const props = defineProps({
         required: true,
     },
     attributeType: {
-        type: String,
+        type: String as PropType<AttributeChart['type']>,
         required: true,
         validator: (value: string) => ['track', 'cell'].includes(value),
     },

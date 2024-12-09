@@ -93,7 +93,7 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
     if (currentExperimentMetadata.value) {
         if (type === 'cell') {
             return range
-                ? `NOT ( "MAX ${plotName}" <= ${range[0]} OR "MIN ${plotName}" >= ${range[1]} )`
+                ? `NOT ( "Maximum ${plotName}" <= ${range[0]} OR "Minimum ${plotName}" >= ${range[1]} )`
                 : null;
         } else if (type === 'track') {
             return range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null;
@@ -141,8 +141,8 @@ export function getPredicateFilterComposite(filter: DataSelection) {
                     SELECT tracking_id
                     FROM ${aggTableName}
                     WHERE NOT (
-                        "MAX ${plotName}" <= ${range[0]} 
-                        OR "MIN ${plotName}" >= ${range[1]}
+                        "Maximum ${plotName}" <= ${range[0]} 
+                        OR "Minimum ${plotName}" >= ${range[1]}
                     )
                 )`
                 : null;

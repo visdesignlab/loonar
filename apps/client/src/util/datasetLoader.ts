@@ -2,7 +2,6 @@ import { parse, type ParseResult } from 'papaparse';
 import * as vg from '@uwdata/vgplot';
 // import type {ExperimentMetadata}
 import type { ExperimentMetadata } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import type { DataSelection } from '@/stores/interactionStores/selectionStore';
 
 export type CsvParserResults = ParseResult<AnyAttributes>;
 
@@ -93,24 +92,27 @@ export async function loadFileIntoDuckDb(
 
 export interface AggregateObject {
     functionName: string;
-    columnName: string;
+    label?: string;
+    attr1?: string;
     var1?: string;
-    var2?: string;
+    attr2?: string;
 }
 
 export async function addColumn(idColumn: string, aggTable: string, compTable: string, aggObject: AggregateObject) {
 
-    const { functionName, columnName, var1, var2 } = aggObject;
+    const { functionName, attr1, var1, attr2, label } = aggObject;
 
     // Start new column name string
-    let newColumnName = `${functionName} ${columnName}`;
+    let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''}`;
     // Add variables if present
+    if (attr2) {
+        newColumnName = `${newColumnName} ${attr2}`
+    }
+
     if (var1) {
         newColumnName = `${newColumnName} ${var1}`
     }
-    if (var2) {
-        newColumnName = `${newColumnName} ${var2}`
-    }
+
 
     await vg.coordinator().exec([`
         ALTER TABLE ${aggTable}
@@ -118,16 +120,26 @@ export async function addColumn(idColumn: string, aggTable: string, compTable: s
     `])
 
     // Start function call string
-    let functionCall = `${functionName}("${columnName}"`
-    // Add variables if present
-    if (var1) {
-        functionCall = `${functionCall},${var1}`
+    let functionCall = `${functionName}`
+    if (attr1 || attr2 || var1) {
+        functionCall = `${functionCall}("${attr1}"`
+        // Add variables if present
+
+
+        if (attr2) {
+            functionCall = `${functionCall}, "${attr2}"`
+        }
+
+        if (var1) {
+            functionCall = `${functionCall},${var1}`
+        }
+
+        // Close parentheses
+        functionCall = `${functionCall})`
+    } else {
+        functionCall = `${functionCall}(*)`
     }
-    if (var2) {
-        functionCall = `${functionCall},${var2}`
-    }
-    // Close parentheses
-    functionCall = `${functionCall})`
+
 
     await vg.coordinator().exec([`
         UPDATE ${aggTable} as t1
@@ -152,9 +164,9 @@ export async function createAggregateTable(tableName: string, headers: string[],
         headers.forEach((header: string) => {
             selectString = `
             ${selectString}
-            AVG("${header}") AS "AVG ${header}",
-            MAX("${header}") AS "MAX ${header}",
-            MIN("${header}") AS "MIN ${header}",
+            AVG("${header}") AS "Average ${header}",
+            MAX("${header}") AS "Maximum ${header}",
+            MIN("${header}") AS "Minimum ${header}",
             `
         })
 

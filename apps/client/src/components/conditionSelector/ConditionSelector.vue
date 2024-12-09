@@ -102,7 +102,7 @@ const handleAllMouseLeave = () => {
 
 // Basic function to just adjust stroke width of the charts based on the number of charts rendered.
 const chartLineWidth = computed(() => {
-    return Math.round(Math.max(yLabels.value.length,xLabels.value.length)*4);
+    return 2;
 })
 
 </script>
@@ -168,7 +168,6 @@ const chartLineWidth = computed(() => {
                                     style="position: relative;"
                                     @click="() => conditionSelector.clickConditionChart(idx,idy)"
                                 >
-                                    <div>
                                         <ConditionChart
                                             :yIndex="idy"
                                             :tags="[
@@ -179,8 +178,8 @@ const chartLineWidth = computed(() => {
                                             :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
                                             :selected="selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected()"
                                             :chartLineWidth="chartLineWidth"
+                                            :height="size"
                                         />
-                                    </div>
                                 </div>
                             </template>
                         </div>
