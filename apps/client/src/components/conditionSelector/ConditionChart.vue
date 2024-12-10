@@ -33,7 +33,6 @@ const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
-let observer:MutationObserver|null = null;
 
 const isLoading = ref<boolean>(false);
 
@@ -46,14 +45,6 @@ watch(
 
             if(chart){
                 newChartContainer.appendChild(chart);
-                observer = new MutationObserver((mutationList) => {
-                    for(const mutation of mutationList) {
-                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                            observer?.disconnect();
-                            break;
-                        }
-                    }
-                })
             }
 
         }
