@@ -297,6 +297,7 @@ export const useGridstackLayoutStore = defineStore(
                 id: 'ExemplarView',
                 icon: 'table_chart',
                 noPadding: true,
+                toolbar: 'ExemplarViewSettingsToolbar',
             },
             {
                 component: 'LooneageViewGL',

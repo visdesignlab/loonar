@@ -24,6 +24,7 @@ import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
 import ConditionSelector from './components/conditionSelector/ConditionSelector.vue';
 import ExemplarView from './components/exemplarView/ExemplarView.vue';
+import ExemplarViewSettingsToolbar from './components/exemplarView/ExemplarViewSettingsToolbar.vue';
 import { router } from './router';
 
 import { Quasar, Loading, Notify } from 'quasar';
@@ -95,4 +96,5 @@ createApp(App)
     .component('FilterSelector', FilterSelector)
     .component('ConditionSelector', ConditionSelector)
     .component('ExemplarView', ExemplarView)
+    .component('ExemplarViewSettingsToolbar', ExemplarViewSettingsToolbar)
     .mount('#app');

@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
 import { ScatterplotLayer } from '@deck.gl/layers';
+import { useExemplarViewStore } from '@/stores/componentStores/ExemplarViewStore';
+import { storeToRefs } from 'pinia';
 
+const exemplarViewStore = useExemplarViewStore();
 const deckGlContainer = ref(null);
 const { width: deckGlWidth, height: deckGlHeight } =
     useElementSize(deckGlContainer);
+
+const { testData } = storeToRefs(exemplarViewStore);
 
 let deckgl: any | null = null;
 const initialViewState = {
@@ -104,19 +109,22 @@ const testOffset = 100;
 function createTestScatterplotLayer() {
     return new ScatterplotLayer({
         id: 'test-scatter-plot',
-        data: [
-            [0, 0],
-            [-testOffset, -testOffset],
-            [testOffset, testOffset],
-            [-testOffset, testOffset],
-            [testOffset, -testOffset],
-        ],
+        data: exemplarViewStore.testData,
         radiusMinPixels: 0.25,
         getPosition: (d: [number, number]) => [d[0], d[1], 0],
         getFillColor: [33, 133, 234],
         getRadius: 25,
     });
 }
+
+watch(
+    testData,
+    () => {
+        console.log('data changed');
+        renderDeckGL();
+    },
+    { deep: true }
+);
 </script>
 <template>
     <canvas id="exemplar-deckgl-canvas" ref="deckGlContainer"></canvas>
