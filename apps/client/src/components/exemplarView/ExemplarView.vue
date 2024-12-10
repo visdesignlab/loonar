@@ -1,102 +1,124 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
-import * as vg from '@uwdata/vgplot';
-// import { ref, nextTick} from 'vue';
-import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
-import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
-import { storeToRefs } from 'pinia';
-import LBtn from '../custom/LBtn.vue';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { ref, onMounted } from 'vue';
+import { useElementSize } from '@vueuse/core';
+import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
+import { ScatterplotLayer } from '@deck.gl/layers';
 
-// // Will use soon for dark mode.
-// const globalSettings = useGlobalSettings();
+const deckGlContainer = ref(null);
+const { width: deckGlWidth, height: deckGlHeight } =
+    useElementSize(deckGlContainer);
 
-const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(
-    datasetSelectionStore
-);
-const { chartColorScheme } = useConditionSelectorStore();
-const selectionStore = useSelectionStore();
-
-const mosaicSelectionStore = useMosaicSelectionStore();
-
-const { dataSelections } = storeToRefs(selectionStore);
-
-const chartContainer = ref<HTMLElement | null>(null);
-watch(
-    experimentDataInitialized,
-    async (isInitialized) => {
-        if (isInitialized) {
-            await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            createChart();
-        }
-    },
-    { immediate: true, deep: true }
-);
-
-const handleOnClick = () => {
-    // console.log('hello')
-    // const plotName = "avg_mass"
-    // const range = [0,100];
-    // selectionStore.updateSelection(plotName, [0,500], "track");
-    // console.log(dataSelections.value);
+let deckgl: any | null = null;
+const initialViewState = {
+    zoom: [0, 0],
+    target: [0, 0],
+    minZoom: -8,
+    maxZoom: 8,
 };
 
-async function createChart() {
-    // await vg.coordinator().exec([`
-    //     CREATE TEMP TABLE IF NOT EXISTS my_testing_table_density_two AS
-    //     SELECT AVG("Dry Mass (pg)") as avg_mass, "Tracking ID" as tracking_id
-    //     FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
-    //     GROUP BY "Tracking ID"
-    // `]);
-    // if(chartContainer.value){
-    //     const chart = vg.plot(
-    //     vg.densityY(
-    //         vg.from(
-    //             `my_testing_table_density`),
-    //             {
-    //                 x: "avg_mass",
-    //                 fill: 'grey',
-    //                 fillOpacity:0.2,
-    //                 curve: 'basis',
-    //                 stroke:'black'
-    //             }
-    //     ),
-    //     vg.width(300),
-    //     vg.height(300)
-    // )
-    // chartContainer.value.appendChild(chart);
-    // }
-    // For univariate cell plot if we want to switch to density plot
-    // vg.densityY(
-    //     vg.from(
-    //         datasetName
-    //     ),{
-    //         x:`${column}`,
-    //         fill:'#cccccc',
-    //         curve: 'basis',
-    //         stroke:'black'
-    //     }
-    // ),
-    // vg.densityY(
-    //     vg.from(
-    //         datasetName, {filterBy: mosaicSelection}
-    //     ),{
-    //         x:`${column}`,
-    //         fill: '#377eb8',
-    //         curve: 'basis',
-    //         stroke:'black'
-    //     }
-    // ),
+onMounted(() => {
+    deckgl = new Deck({
+        initialViewState,
+        // @ts-ignore
+        canvas: deckGlContainer.value?.id,
+        views: new OrthographicView({
+            id: 'exemplarController',
+            controller: true,
+        }),
+        controller: true,
+        layers: [],
+        // debug: true,
+        // onBeforeRender: (gl: any) => {
+        //     console.count('before');
+        //     console.log(gl);
+        // },
+        // onAfterRender: (gl: any) => {
+        //     console.count('after');
+        //     console.log(gl);
+        // },
+        // onError: (error: any, _layer: any) => {
+        //     console.error('ERROR');
+        //     console.log(error);
+        // },
+        // onWebGLInitialized: () => console.log('onWebGLInitialized'),
+        // onViewStateChange: ({ viewState, oldViewState }) => {
+        //     viewState.zoom[1] = 0;
+        //     if (oldViewState && !isEqual(viewState.zoom, oldViewState.zoom)) {
+        //         viewState.target[1] = oldViewState.target[1];
+        //     }
+        //     viewStateMirror.value = viewState as any;
+        //     renderDeckGL();
+        //     return viewState;
+        // },
+        // getTooltip: ({ object }) => {
+        //     if (!object) return null;
+        //     const trackId = object.trackId;
+        //     if (trackId == null) return null;
+        //     const time = dataPointSelectionUntrracked.hoveredTime;
+        //     if (time == null) return null;
+        //     const track = cellMetaData.trackMap?.get(trackId);
+        //     if (!track) return null;
+        //     const index = cellMetaData.getCellIndexWithTime(track, time);
+        //     if (index === -1) return null;
+        //     const cell = track.cells[index];
+        //     if (!cell) return null;
+        //     const formatter = format('.2f');
+        //     let html = `<h5>Cell: ${trackId}</h5>`;
+        //     html += `<div>Time: ${formatter(time)}</div>`;
+        //     for (const {
+        //         attrKey,
+        //     } of looneageViewStore.horizonChartSettingList) {
+        //         const val = formatter(cell.attrNum[attrKey]);
+        //         html += `<div>${attrKey}: ${val}</div>`;
+        //     }
+        //     return {
+        //         html,
+        //     };
+        // },
+        // onClick(info, _event) {
+        //     if (!info.object) {
+        //         // canvas was clicked, but no cell object was picked
+        //         dataPointSelection.selectedTrackId = null;
+        //     }
+        // },
+        // onInteractionStateChange: () => console.log('onInteractionStateChange'),
+        // onLoad: () => console.log('onLoad'),
+    });
+    renderDeckGL();
+});
+
+function renderDeckGL(): void {
+    if (deckgl == null) return;
+
+    const layers: any[] = [];
+    // TODO: add layers to render
+
+    layers.push(createTestScatterplotLayer());
+    deckgl.setProps({
+        layers,
+        controller: true,
+    });
+}
+
+const testOffset = 100;
+function createTestScatterplotLayer() {
+    return new ScatterplotLayer({
+        id: 'test-scatter-plot',
+        data: [
+            [0, 0],
+            [-testOffset, -testOffset],
+            [testOffset, testOffset],
+            [-testOffset, testOffset],
+            [testOffset, -testOffset],
+        ],
+        radiusMinPixels: 0.25,
+        getPosition: (d: [number, number]) => [d[0], d[1], 0],
+        getFillColor: [33, 133, 234],
+        getRadius: 25,
+    });
 }
 </script>
 <template>
-    <!-- <div style="width:100%;height:100%;" ref="chartContainer"></div> -->
-    <l-btn @click="handleOnClick" style="margin-left: 20px" label="Click me!"
-        >Test</l-btn
-    >
-    <div></div>
+    <canvas id="exemplar-deckgl-canvas" ref="deckGlContainer"></canvas>
 </template>
 <style scoped lang="scss"></style>
