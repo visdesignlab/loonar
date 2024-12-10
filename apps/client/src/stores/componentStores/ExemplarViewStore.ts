@@ -19,24 +19,84 @@ export interface DataPoint {
     value: number;
 }
 
-export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
-    const testOffset = 100;
-    const testData = ref([
-        [0, 0],
-        [-testOffset, -testOffset],
-        [testOffset, testOffset],
-        [-testOffset, testOffset],
-        [testOffset, -testOffset],
-    ]);
+export interface ViewConfiguration {
+    horizonChartHeight: number;
+    horizonChartWidth: number;
+    betweenHorizonPadding: number;
+    betweenConditionPadding: number;
+    afterStarredPadding: number;
+    timeBarHeightOuter: number;
+    timeBarHeightInner: number;
+    timeBarPadding: number;
+}
 
-    function generateRandomTestData(): void {
-        testData.value = Array.from({ length: 5 }, () => [
-            Math.random() * 200 - 100,
-            Math.random() * 200 - 100,
-        ]);
+export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
+    const viewConfiguration = ref<ViewConfiguration>({
+        horizonChartHeight: 100,
+        horizonChartWidth: 1000,
+        betweenHorizonPadding: 20,
+        betweenConditionPadding: 100,
+        afterStarredPadding: 30,
+        timeBarHeightOuter: 20,
+        timeBarHeightInner: 10,
+        timeBarPadding: 5,
+    });
+
+    const exemplarTracks = ref<ExemplarTrack[]>([]);
+    generateTestExemplarTracks();
+
+    function generateTestExemplarTracks(): void {
+        exemplarTracks.value = [];
+        for (const drug of ['drug1', 'drug2', 'drug3']) {
+            for (const conc of ['0.1', '0.2', '0.3']) {
+                for (const p of [0.1, 0.5, 0.9]) {
+                    exemplarTracks.value.push(
+                        generateTestExemplarTrack(drug, conc, p)
+                    );
+                }
+            }
+        }
     }
 
-    const exmplarTracks = ref<ExemplarTrack[]>([]);
+    function generateTestExemplarTrack(
+        drug: string,
+        conc: string,
+        p: number
+    ): ExemplarTrack {
+        const data: DataPoint[] = [];
+        const trackLength = 10 + Math.round(Math.random() * 100);
+        const tstart = Math.round(Math.random() * 50);
+        let minTime = Infinity;
+        let maxTime = -Infinity;
+        for (let i = 0; i < trackLength; i++) {
+            const time = tstart + i + 0.2 * Math.random();
+            minTime = Math.min(minTime, time);
+            maxTime = Math.max(maxTime, time);
+            data.push({
+                time,
+                frame: tstart + i,
+                value: 100 + Math.random() * 1000,
+            });
+        }
+        return {
+            trackId: `${drug}-${conc}-${p}`, // fake, but fine for now
+            locationId: `${drug}-${conc}`, // fake, but fine for now
+            minTime,
+            maxTime,
+            data,
+            tags: {
+                drug: drug,
+                conc: conc,
+            },
+            p,
+            pinned: false,
+            starred: false,
+        };
+    }
 
-    return { testData, generateRandomTestData, exmplarTracks };
+    return {
+        generateTestExemplarTracks,
+        exemplarTracks,
+        viewConfiguration,
+    };
 });

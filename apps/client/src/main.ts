@@ -57,7 +57,7 @@ createApp(App)
     .use(router)
     .use(createPinia())
     .use(Quasar, {
-        plugins: { Loading, Notify }, // import Quasar plugins and add here,
+        plugins: { Loading }, // import Quasar plugins and add here,
         config: {
             loading: {
                 delay: 0,

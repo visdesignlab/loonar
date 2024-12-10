@@ -5,7 +5,7 @@ import { useExemplarViewStore } from '@/stores/componentStores/ExemplarViewStore
 const exemplarViewStore = useExemplarViewStore();
 
 function testGenData() {
-    exemplarViewStore.generateRandomTestData();
+    exemplarViewStore.generateTestExemplarTracks();
 }
 </script>
 

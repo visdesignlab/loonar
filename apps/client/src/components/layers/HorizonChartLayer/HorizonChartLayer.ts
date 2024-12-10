@@ -59,7 +59,7 @@ type _HorizonChartLayerProps<DataT> = {
      * Center position accessor.
      */
     getPosition?: Accessor<DataT, Position>;
-    destination: [number, number, number, number];
+    destination: [number, number, number, number]; // [bottom, left, width, height]
     dataXExtent: [number, number];
     baseline: number;
     binSize: number;
@@ -133,7 +133,7 @@ export default class HorizonChartLayer<
     draw({ uniforms }: { uniforms: any }) {
         // console.log('draw custom HorizonChart layer');
         const {
-            destination,
+            destination, // [bottom, left, width, height]
             dataXExtent,
             baseline,
             binSize,
@@ -144,7 +144,7 @@ export default class HorizonChartLayer<
 
         model.setUniforms(uniforms);
         model.setUniforms({
-            destination,
+            destination, // [bottom, left, width, height]
             dataXExtent,
             baseline,
             binSize,

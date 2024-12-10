@@ -73,6 +73,12 @@ import SnippetSegmentationOutlineLayer from './layers/SnippetSegmentationOutline
 
 import HorizonChartLayer from './layers/HorizonChartLayer/HorizonChartLayer';
 import { useConfigStore } from '@/stores/misc/configStore';
+import {
+    constructGeometryBase,
+    hexListToRgba,
+    HORIZON_CHART_MOD_OFFSETS,
+    type TemporalDataPoint,
+} from './exemplarView/deckglUtil';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -400,45 +406,15 @@ onMounted(() => {
 });
 
 function constructGeometry(track: Track, key: string): number[] {
-    const geometry: number[] = [];
+    const data: TemporalDataPoint[] = track.cells.map((cell) => {
+        return {
+            time: cellMetaData.getTime(cell),
+            value: cell.attrNum[key],
+        };
+    });
 
-    const hackyBottom = -404.123456789;
-    // this is a hack to make the shaders work correctly.
-    // this value is used in the shaders to determine the non value side
-    // of the geometry. If a data has this exact value there will be a
-    // small visual bug. This value is arbitrary, but is less likely to
-    // be found in data than 0.
-
-    if (track.cells.length === 1) {
-        const cell = track.cells[0];
-        const x = cellMetaData.getTime(cell);
-        const x1 = x - cellMetaData.timestep / 2;
-        const x2 = x + cellMetaData.timestep / 2;
-        const y = cell.attrNum[key];
-        geometry.push(x1, hackyBottom);
-        geometry.push(x1, y);
-        geometry.push(x2, hackyBottom);
-        geometry.push(x2, y);
-        return geometry;
-    }
-
-    const firstX = cellMetaData.getTime(track.cells[0]);
-    geometry.push(firstX, hackyBottom);
-    let x = 0;
-    for (const cell of track.cells) {
-        const y = cell.attrNum[key];
-
-        x = cellMetaData.getTime(cell);
-
-        geometry.push(x, y);
-        geometry.push(x, hackyBottom);
-    }
-
-    geometry.push(x, hackyBottom);
-    return geometry;
+    return constructGeometryBase(data, cellMetaData.timestep);
 }
-
-const modOffsets = [-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 
 const lineageMinTime = computed<number>(() => {
     if (!cellMetaData.selectedLineage) return 0;
@@ -705,22 +681,6 @@ watch(hoveredCellIndex, () => {
 //     hoveredCellIndex.value = hoveredSnippet.value?.index ?? null;
 // });
 // Circular watch
-
-function hexListToRgba(hexList: readonly string[]): number[] {
-    const rgbaList: number[] = [];
-    for (let colorHex of hexList) {
-        // convert coloHex to rgba array all values [0-1]
-        const color = [];
-        for (let i = 0; i < 3; i++) {
-            color.push(
-                parseInt(colorHex.slice(1 + i * 2, 1 + i * 2 + 2), 16) / 255
-            );
-        }
-        color.push(1.0);
-        rgbaList.push(...color);
-    }
-    return rgbaList;
-}
 
 function getLeftPosition(node: LayoutNode<Track>): number {
     return node.y + getTimeOffsetBetweenParentChild(node.data);
@@ -1770,7 +1730,7 @@ function createHorizonChartLayer(
     const geometryData = constructGeometry(track, settings.attrKey);
     const horizonChartLayer = new HorizonChartLayer({
         id: `custom-horizon-chart-layer-${track.trackId}-${dimIndex}`,
-        data: modOffsets,
+        data: HORIZON_CHART_MOD_OFFSETS,
 
         instanceData: geometryData,
         destination,
