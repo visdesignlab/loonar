@@ -362,4 +362,3 @@ function onToggleRelativeChart() {
     color: black;
 }
 </style>
-./aggregateFunctions

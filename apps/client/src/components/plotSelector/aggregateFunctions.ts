@@ -26,7 +26,7 @@ const aggregateFunctions: Record<string, AggregationAttribute> = {
     },
     "Average": {
         "functionName": "AVG",
-        "description": "S",
+        "description": "Average of selected attribute over each track.",
         "selections": {
             "attr1": {
                 "label": "Attribute",

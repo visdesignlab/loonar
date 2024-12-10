@@ -71,11 +71,6 @@ onBeforeMount(() => {
                     type="basic"
                     label="Upload"
                 />
-                <l-btn
-                    @click="router.push('/test')"
-                    type="basic"
-                    label="Test"
-                />
             </q-toolbar>
         </q-header>
         <GlobalSettingsView></GlobalSettingsView>

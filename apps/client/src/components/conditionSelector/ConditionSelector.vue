@@ -125,7 +125,7 @@ const chartLineWidth = computed(() => {
                         v-for="(labelY, idy) in yLabels"
                         :key="idy"
                     >
-                        <div
+                        <button
                             @mouseover="
                                 () => handleLabelMouseOver('y-axis', idy)
                             "
@@ -139,7 +139,7 @@ const chartLineWidth = computed(() => {
                             >
                                 {{ labelY }}
                             </div>
-                        </div>
+                        </button>
                     </template>
                 </div>
                 <div
@@ -185,20 +185,20 @@ const chartLineWidth = computed(() => {
                         </div>
                     </template>
                 </div>
-                <div 
+                <button 
                     class="items-center justify-center flex all-section" 
                     @mouseover="handleAllMouseOver"
                     @click="() => conditionSelector.clickConditionChartAll()"
                     @mouseleave="handleAllMouseLeave"
                 >
                     All
-                </div>
+                </button>
                 <div class="items-center justify-around row">
                     <template
                         v-for="(labelX, idx) in xLabels"
                         :key="idx"
                     >
-                        <div
+                        <button
                             @mouseover="
                                 () => handleLabelMouseOver('x-axis', idx)
                             "
@@ -210,7 +210,7 @@ const chartLineWidth = computed(() => {
                             <div :style="width">
                                 {{ labelX }}
                             </div>
-                        </div>
+                        </button>
                     </template>
                 </div>
             </div>
@@ -278,7 +278,7 @@ $border: 1px solid #9ca3af;
             border-radius: 2px;
             &.hovered,
             &:hover {
-                border: $border;
+                outline: $border;
             }
         }
     }
@@ -293,10 +293,10 @@ $border: 1px solid #9ca3af;
                 cursor: pointer;
                 &:hover,
                 &.hovered {
-                    border: $border;
+                    outline: $border;
                 }
                 &.unselected{
-                    opacity:0.5
+                    opacity: 0.3;
                 }
             }
         }
@@ -306,7 +306,7 @@ $border: 1px solid #9ca3af;
 .all-section{
     border-radius:2px;
     &:hover{
-        border: $border;
+        outline: $border;
     }
 }
 
