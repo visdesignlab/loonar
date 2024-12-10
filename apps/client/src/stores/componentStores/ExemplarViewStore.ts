@@ -20,26 +20,40 @@ export interface DataPoint {
 }
 
 export interface ViewConfiguration {
+    afterStarredGap: number;
+    snippetDisplayHeight: number;
+    snippetHorizonChartGap: number;
     horizonChartHeight: number;
     horizonChartWidth: number;
-    betweenHorizonPadding: number;
-    betweenConditionPadding: number;
-    afterStarredPadding: number;
+    horizonTimeBarGap: number;
     timeBarHeightOuter: number;
     timeBarHeightInner: number;
-    timeBarPadding: number;
+    betweeenExemplarGap: number;
+    betweenConditionGap: number;
 }
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const viewConfiguration = ref<ViewConfiguration>({
-        horizonChartHeight: 100,
+        afterStarredGap: 100,
+        snippetDisplayHeight: 50,
+        snippetHorizonChartGap: 10,
+        horizonChartHeight: 40,
         horizonChartWidth: 1000,
-        betweenHorizonPadding: 20,
-        betweenConditionPadding: 100,
-        afterStarredPadding: 30,
+        horizonTimeBarGap: 8,
         timeBarHeightOuter: 20,
         timeBarHeightInner: 10,
-        timeBarPadding: 5,
+        betweeenExemplarGap: 20,
+        betweenConditionGap: 200,
+    });
+
+    const exemplarHeight = computed(() => {
+        return (
+            viewConfiguration.value.snippetDisplayHeight +
+            viewConfiguration.value.snippetHorizonChartGap +
+            viewConfiguration.value.horizonChartHeight +
+            viewConfiguration.value.horizonTimeBarGap +
+            viewConfiguration.value.timeBarHeightOuter
+        );
     });
 
     const exemplarTracks = ref<ExemplarTrack[]>([]);
@@ -98,5 +112,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         generateTestExemplarTracks,
         exemplarTracks,
         viewConfiguration,
+        exemplarHeight,
     };
 });

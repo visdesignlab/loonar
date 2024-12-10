@@ -111,11 +111,10 @@ onMounted(() => {
 function renderDeckGL(): void {
     if (deckgl == null) return;
 
-    const layers: any[] = [];
-    // TODO: add layers to render
-
     // layers.push(createTestScatterplotLayer());
+    recalculateExemplarYOffsets();
 
+    const layers: any[] = [];
     layers.push(createHorizonChartLayer());
     layers.push(createImageSnippetLayer());
     layers.push(createSnippetBoundaryLayer());
@@ -136,6 +135,32 @@ watch(
     },
     { deep: true }
 );
+
+const exemplarYOffsets = ref(new Map<string, number>());
+
+function recalculateExemplarYOffsets(): void {
+    exemplarYOffsets.value.clear();
+    let yOffset = 0;
+    let lastExemplar = exemplarViewStore.exemplarTracks[0];
+    for (let i = 0; i < exemplarViewStore.exemplarTracks.length; i++) {
+        const exemplar = exemplarViewStore.exemplarTracks[i];
+        yOffset += exemplarViewStore.exemplarHeight;
+        if (i !== 0) {
+            if (isEqual(exemplar.tags, lastExemplar.tags)) {
+                yOffset += viewConfiguration.value.betweeenExemplarGap;
+            } else {
+                yOffset += viewConfiguration.value.betweenConditionGap;
+            }
+        }
+        lastExemplar = exemplar;
+        const key = uniqueExemplarKey(exemplar);
+        exemplarYOffsets.value.set(key, yOffset);
+    }
+}
+
+function uniqueExemplarKey(exemplar: ExemplarTrack): string {
+    return exemplar.trackId + '-' + exemplar.locationId;
+}
 
 // const testOffset = 100;
 // function createTestScatterplotLayer() {
@@ -160,19 +185,15 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     // });
 
     const horizonChartLayers: HorizonChartLayer[] = [];
-    let yOffset = 0;
-    let lastExemplar = exemplarViewStore.exemplarTracks[0];
+
     for (let i = 0; i < exemplarViewStore.exemplarTracks.length; i++) {
         const exemplar = exemplarViewStore.exemplarTracks[i];
-        yOffset += viewConfiguration.value.horizonChartHeight;
-        if (i !== 0) {
-            if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                yOffset += viewConfiguration.value.betweenHorizonPadding;
-            } else {
-                yOffset += viewConfiguration.value.betweenConditionPadding;
-            }
-        }
-        lastExemplar = exemplar;
+        const yOffset =
+            exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
+            viewConfiguration.value.timeBarHeightOuter -
+            viewConfiguration.value.horizonTimeBarGap;
+
+        // TODO: probably skip if not in viewport
 
         const geometryData = constructGeometry(exemplar);
         horizonChartLayers.push(
