@@ -111,7 +111,6 @@ onMounted(() => {
 function renderDeckGL(): void {
     if (deckgl == null) return;
 
-    // layers.push(createTestScatterplotLayer());
     recalculateExemplarYOffsets();
 
     const layers: any[] = [];
@@ -162,28 +161,7 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
     return exemplar.trackId + '-' + exemplar.locationId;
 }
 
-// const testOffset = 100;
-// function createTestScatterplotLayer() {
-//     return new ScatterplotLayer({
-//         id: 'test-scatter-plot',
-//         data: exemplarViewStore.testData,
-//         radiusMinPixels: 0.25,
-//         getPosition: (d: [number, number]) => [d[0], d[1], 0],
-//         getFillColor: [33, 133, 234],
-//         getRadius: 25,
-//     });
-// }
-
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
-    // return new ScatterplotLayer({
-    //     id: 'test-scatter-plot-with-exemplar-data',
-    //     data: exemplarViewStore.exemplarTracks[0].data,
-    //     radiusMinPixels: 0.25,
-    //     getPosition: (d: DataPoint) => [d.time, d.value, 0],
-    //     getFillColor: [233, 133, 34],
-    //     getRadius: 2,
-    // });
-
     const horizonChartLayers: HorizonChartLayer[] = [];
 
     for (let i = 0; i < exemplarViewStore.exemplarTracks.length; i++) {
