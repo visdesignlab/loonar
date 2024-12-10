@@ -1,6 +1,24 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
+export interface ExemplarTrack {
+    trackId: string;
+    locationId: string;
+    minTime: number;
+    maxTime: number;
+    data: DataPoint[];
+    tags: Record<string, string>;
+    p: number; // the sample position, e.g. median has p=0.5
+    pinned: boolean; // true if this is a user pinned exemplar
+    starred: boolean; // true if this is a user starred exemplar
+}
+
+export interface DataPoint {
+    time: number;
+    frame: number;
+    value: number;
+}
+
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const testOffset = 100;
     const testData = ref([
@@ -18,5 +36,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         ]);
     }
 
-    return { testData, generateRandomTestData };
+    const exmplarTracks = ref<ExemplarTrack[]>([]);
+
+    return { testData, generateRandomTestData, exmplarTracks };
 });
