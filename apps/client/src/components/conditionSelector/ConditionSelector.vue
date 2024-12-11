@@ -128,27 +128,26 @@ const axesOptions = ref([
             <q-tab name="facet">
                 <div class="flex items-center">
                     <q-icon name="apps" size="18px" />
-                    <span class="q-ml-sm text-caption">Facet</span>
+                    <span class="q-ml-sm text-body2">Facet</span>
                 </div>
             </q-tab>
 
             <q-tab name="compare">
                 <div class="flex items-center">
                     <q-icon name="stacked_line_chart" size="18px" />
-                    <span class="q-ml-sm text-caption">Compare</span>
+                    <span class="q-ml-sm text-body2">Compare</span>
                 </div>
             </q-tab>
         </q-tabs>
 
         <div class="flex items-center justify-end" style="min-width: 300px">
-            <span class="text-caption text-grey-10 text-sm mr-2">Axes:</span>
+            <span class="text-body2 text-grey-10 mr-2">Axes:</span>
             <q-select
                 v-model="selectedAxes"
                 :options="axesOptions"
                 dense
                 flat
                 class="text-grey-10"
-                style="font-size: 0.75rem"
             />
         </div>
     </div>
