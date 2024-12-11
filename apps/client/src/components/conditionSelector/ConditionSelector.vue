@@ -9,18 +9,16 @@ import ConditionSelectorDropDown from './ConditionSelectorDropdown.vue';
 import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import ConditionSelectorCompareView from './ConditionSelectorCompareView.vue';
 const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelectorStore();
 const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
-const { currentExperimentMetadata } = storeToRefs(datasetSelectionUntrrackedStore)
+const { currentExperimentMetadata } = storeToRefs(
+    datasetSelectionUntrrackedStore
+);
 
-const {
-    xLabels,
-    yLabels,
-    selectedXTag,
-    selectedYTag,
-    selectedGrid,
- } = storeToRefs(conditionSelector)
+const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
+    storeToRefs(conditionSelector);
 
 const container = ref(null);
 const gridWidth = ref(0);
@@ -94,25 +92,73 @@ const handleLabelMouseLeave = () => {
 
 const handleAllMouseOver = () => {
     hoveredAll.value = true;
-}
+};
 
 const handleAllMouseLeave = () => {
     hoveredAll.value = false;
-}
+};
 
 // Basic function to just adjust stroke width of the charts based on the number of charts rendered.
 const chartLineWidth = computed(() => {
     return 2;
-})
+});
 
+const tab = ref('facet');
+
+// Add new state for the standard dropdown
+const selectedAxes = ref('Mass (pg) over Frame'); // default selected value
+const axesOptions = ref([
+    { label: 'Mass Over Frame', value: 'Mass (pg) over Frame ID' },
+    { label: 'Area Over Frame', value: 'Area over Frame ID' },
+    // Add more options as required
+]);
 </script>
 
 <template>
+    <div class="flex justify-between items-center">
+        <q-tabs
+            v-model="tab"
+            dense
+            no-caps
+            inline-label
+            align="left"
+            class="text-grey-10 q-pl-lg"
+            indicator-color="grey"
+        >
+            <q-tab name="facet">
+                <div class="flex items-center">
+                    <q-icon name="apps" size="18px" />
+                    <span class="q-ml-sm text-caption">Facet</span>
+                </div>
+            </q-tab>
+
+            <q-tab name="compare">
+                <div class="flex items-center">
+                    <q-icon name="stacked_line_chart" size="18px" />
+                    <span class="q-ml-sm text-caption">Compare</span>
+                </div>
+            </q-tab>
+        </q-tabs>
+
+        <div class="flex items-center justify-end" style="min-width: 300px">
+            <span class="text-caption text-grey-10 text-sm mr-2">Axes:</span>
+            <q-select
+                v-model="selectedAxes"
+                :options="axesOptions"
+                dense
+                flat
+                class="text-grey-10"
+                style="font-size: 0.75rem"
+            />
+        </div>
+    </div>
+
     <div class="flex items-center h-100">
         <div
             bordered
             :dark="globalSettings.darkMode"
             class="inner-card condition-selector-container"
+            v-if="tab === 'facet'"
         >
             <div class="items-center justify-center flex y-tag">
                 <div><ConditionSelectorDropDown axis="y-axis" /></div>
@@ -121,17 +167,21 @@ const chartLineWidth = computed(() => {
                 class="items-center justify-center flex condition-charts-container"
             >
                 <div class="justify-space-around align-center column">
-                    <template
-                        v-for="(labelY, idy) in yLabels"
-                        :key="idy"
-                    >
+                    <template v-for="(labelY, idy) in yLabels" :key="idy">
                         <button
                             @mouseover="
                                 () => handleLabelMouseOver('y-axis', idy)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
-                            @click="() => conditionSelector.clickConditionChartRow(idy)"
-                            :class="`row justify-center align-center y-label ${hoveredAll ? 'hovered' : ''}`"
+                            @click="
+                                () =>
+                                    conditionSelector.clickConditionChartRow(
+                                        idy
+                                    )
+                            "
+                            :class="`row justify-center align-center y-label ${
+                                hoveredAll ? 'hovered' : ''
+                            }`"
                             :style="maxHeight"
                         >
                             <div
@@ -160,33 +210,64 @@ const chartLineWidth = computed(() => {
                                 <div
                                     :class="`chart flex justify-center align-end ${
                                         idx === hoveredColumn ||
-                                        idy === hoveredRow || hoveredAll
+                                        idy === hoveredRow ||
+                                        hoveredAll
                                             ? 'hovered'
                                             : ''
-                                    } ${selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected() ? 'selected' : 'unselected'}` "
+                                    } ${
+                                        selectedGrid[
+                                            `${elx.toString()}-${ely.toString()}`
+                                        ] || conditionSelector.allSelected()
+                                            ? 'selected'
+                                            : 'unselected'
+                                    }`"
                                     :style="heightWidth"
-                                    style="position: relative;"
-                                    @click="() => conditionSelector.clickConditionChart(idx,idy)"
+                                    style="position: relative"
+                                    @click="
+                                        () =>
+                                            conditionSelector.clickConditionChart(
+                                                idx,
+                                                idy
+                                            )
+                                    "
                                 >
-                                        <ConditionChart
-                                            :yIndex="idy"
-                                            :tags="[
-                                                [`${selectedXTag}`,`${elx.toString()}`],
-                                                [`${selectedYTag}`,`${ely.toString()}`]
-                                            ]"
-                                            :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
-                                            :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
-                                            :selected="selectedGrid[`${elx.toString()}-${ely.toString()}`] || conditionSelector.allSelected()"
-                                            :chartLineWidth="chartLineWidth"
-                                            :height="size"
-                                        />
+                                    <ConditionChart
+                                        :yIndex="idy"
+                                        :tags="[
+                                            [
+                                                `${selectedXTag}`,
+                                                `${elx.toString()}`,
+                                            ],
+                                            [
+                                                `${selectedYTag}`,
+                                                `${ely.toString()}`,
+                                            ],
+                                        ]"
+                                        :xAxisName="`${
+                                            currentExperimentMetadata
+                                                ?.headerTransforms?.frame ??
+                                            'Test'
+                                        }`"
+                                        :yAxisName="`${
+                                            currentExperimentMetadata
+                                                ?.headerTransforms?.mass ??
+                                            'Test'
+                                        }`"
+                                        :selected="
+                                            selectedGrid[
+                                                `${elx.toString()}-${ely.toString()}`
+                                            ] || conditionSelector.allSelected()
+                                        "
+                                        :chartLineWidth="chartLineWidth"
+                                        :height="size"
+                                    />
                                 </div>
                             </template>
                         </div>
                     </template>
                 </div>
-                <button 
-                    class="items-center justify-center flex all-section" 
+                <button
+                    class="items-center justify-center flex all-section"
                     @mouseover="handleAllMouseOver"
                     @click="() => conditionSelector.clickConditionChartAll()"
                     @mouseleave="handleAllMouseLeave"
@@ -194,18 +275,21 @@ const chartLineWidth = computed(() => {
                     All
                 </button>
                 <div class="items-center justify-around row">
-                    <template
-                        v-for="(labelX, idx) in xLabels"
-                        :key="idx"
-                    >
+                    <template v-for="(labelX, idx) in xLabels" :key="idx">
                         <button
                             @mouseover="
                                 () => handleLabelMouseOver('x-axis', idx)
                             "
                             @mouseleave="() => handleLabelMouseLeave()"
-                            @click="() => conditionSelector.clickConditionChartColumn(idx)"
-
-                            :class="`row justify-center align-center flex x-label ${hoveredAll ? 'hovered' : ''}`"
+                            @click="
+                                () =>
+                                    conditionSelector.clickConditionChartColumn(
+                                        idx
+                                    )
+                            "
+                            :class="`row justify-center align-center flex x-label ${
+                                hoveredAll ? 'hovered' : ''
+                            }`"
                         >
                             <div :style="width">
                                 {{ labelX }}
@@ -215,23 +299,58 @@ const chartLineWidth = computed(() => {
                 </div>
             </div>
             <div class="items-start justify-center flex">
-                <svg width="50" style="position:relative; overflow:visible;" height="50" xmlns="http://www.w3.org/2000/svg">
-                    <line x1="0" y1="20" x2="15" y2="20" stroke="black" stroke-width="3" />
-                    <text x="20" y="23" font-family="Arial" font-size="10" fill="black">Selected</text>
-                    <line x1="0" y1="35" x2="15" y2="35" stroke="black" stroke-width="2" />
-                    <text x="20" y="42" font-family="Arial" font-size="10" fill="black">Unselected</text>
-                    <rect fill="#cccccc" x="0" width="15" y="36" height="8"/>
+                <svg
+                    width="50"
+                    style="position: relative; overflow: visible"
+                    height="50"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <line
+                        x1="0"
+                        y1="20"
+                        x2="15"
+                        y2="20"
+                        stroke="black"
+                        stroke-width="3"
+                    />
+                    <text
+                        x="20"
+                        y="23"
+                        font-family="Arial"
+                        font-size="10"
+                        fill="black"
+                    >
+                        Selected
+                    </text>
+                    <line
+                        x1="0"
+                        y1="35"
+                        x2="15"
+                        y2="35"
+                        stroke="black"
+                        stroke-width="2"
+                    />
+                    <text
+                        x="20"
+                        y="42"
+                        font-family="Arial"
+                        font-size="10"
+                        fill="black"
+                    >
+                        Unselected
+                    </text>
+                    <rect fill="#cccccc" x="0" width="15" y="36" height="8" />
                 </svg>
             </div>
             <div class="items-center justify-center flex x-tag">
                 <ConditionSelectorDropDown axis="x-axis" />
             </div>
         </div>
+        <ConditionSelectorCompareView v-else-if="tab === 'compare'" />
     </div>
 </template>
 
 <style scoped lang="scss">
-
 $border: 1px solid #9ca3af;
 .condition-selector-container {
     grid-template-columns: 60px 1fr;
@@ -295,7 +414,7 @@ $border: 1px solid #9ca3af;
                 &.hovered {
                     outline: $border;
                 }
-                &.unselected{
+                &.unselected {
                     opacity: 0.3;
                 }
             }
@@ -303,13 +422,12 @@ $border: 1px solid #9ca3af;
     }
 }
 
-.all-section{
-    border-radius:2px;
-    &:hover{
+.all-section {
+    border-radius: 2px;
+    &:hover {
         outline: $border;
     }
 }
-
 
 .inner-card {
     border-radius: 30px;

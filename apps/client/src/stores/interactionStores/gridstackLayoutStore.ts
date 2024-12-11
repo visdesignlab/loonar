@@ -288,7 +288,7 @@ export const useGridstackLayoutStore = defineStore(
                 component: 'ConditionSelector',
                 displayName: 'Condition Selector',
                 id: 'ConditionSelector',
-                icon: 'table_chart',
+                icon: 'apps',
                 noPadding: true,
             },
             // {
