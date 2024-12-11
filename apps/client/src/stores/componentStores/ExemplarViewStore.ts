@@ -30,20 +30,24 @@ export interface ViewConfiguration {
     timeBarHeightInner: number;
     betweeenExemplarGap: number;
     betweenConditionGap: number;
+    horizonHistogramGap: number;
+    histogramWidth: number;
 }
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
-        snippetDisplayHeight: 50,
+        snippetDisplayHeight: 100,
         snippetHorizonChartGap: 10,
-        horizonChartHeight: 40,
+        horizonChartHeight: 80,
         horizonChartWidth: 1000,
         horizonTimeBarGap: 8,
-        timeBarHeightOuter: 20,
-        timeBarHeightInner: 10,
+        timeBarHeightOuter: 16,
+        timeBarHeightInner: 4,
         betweeenExemplarGap: 20,
-        betweenConditionGap: 200,
+        betweenConditionGap: 100,
+        horizonHistogramGap: 30,
+        histogramWidth: 80,
     });
 
     const exemplarHeight = computed(() => {

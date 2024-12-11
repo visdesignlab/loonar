@@ -22,6 +22,7 @@ import {
 } from './deckglUtil';
 import { schemeBlues } from 'd3-scale-chromatic';
 import { isEqual } from 'lodash';
+import { PolygonLayer } from '@deck.gl/layers/typed';
 
 const deckGlContainer = ref(null);
 const { width: deckGlWidth, height: deckGlHeight } =
@@ -164,8 +165,7 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
-    for (let i = 0; i < exemplarViewStore.exemplarTracks.length; i++) {
-        const exemplar = exemplarViewStore.exemplarTracks[i];
+    for (const exemplar of exemplarViewStore.exemplarTracks) {
         const yOffset =
             exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
             viewConfiguration.value.timeBarHeightOuter -
@@ -176,7 +176,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         const geometryData = constructGeometry(exemplar);
         horizonChartLayers.push(
             new HorizonChartLayer({
-                id: `exemplar-horizon-chart-TODO-UNIQUE-ID`,
+                id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
 
                 instanceData: geometryData,
@@ -207,9 +207,43 @@ function constructGeometry(track: ExemplarTrack): number[] {
     return constructGeometryBase(track.data, cellMetaData.timestep);
 }
 
-function createImageSnippetLayer(): CellSnippetsLayer | null {
+function createImageSnippetLayer():
+    | CellSnippetsLayer[]
+    | PolygonLayer[]
+    | null {
     // TODO: implement
-    return null;
+
+    const placeholderLayer: PolygonLayer[] = [];
+
+    placeholderLayer.push(
+        new PolygonLayer({
+            id: `exemplar-snippet-placeholder`,
+            data: exemplarViewStore.exemplarTracks,
+            getPolygon: (exemplar: ExemplarTrack) => {
+                const yOffset =
+                    exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
+                    viewConfiguration.value.timeBarHeightOuter -
+                    viewConfiguration.value.horizonTimeBarGap -
+                    viewConfiguration.value.horizonChartHeight -
+                    viewConfiguration.value.snippetHorizonChartGap;
+                return [
+                    [0, yOffset],
+                    [viewConfiguration.value.horizonChartWidth, yOffset],
+                    [
+                        viewConfiguration.value.horizonChartWidth,
+                        yOffset - viewConfiguration.value.snippetDisplayHeight,
+                    ],
+                    [0, yOffset - viewConfiguration.value.snippetDisplayHeight],
+                    [0, yOffset],
+                ];
+            },
+            getLineColor: [225, 30, 10, 200],
+            getFillColor: [225, 30, 10, 100],
+            getLineWidth: 3,
+            lineWidthUnits: 'pixels',
+        })
+    );
+    return placeholderLayer;
 }
 
 function createSnippetBoundaryLayer(): CellSnippetsLayer | null {
@@ -217,14 +251,80 @@ function createSnippetBoundaryLayer(): CellSnippetsLayer | null {
     return null;
 }
 
-function createTimeWindowLayer(): null {
+function createTimeWindowLayer(): PolygonLayer[] | null {
     // TODO: implement
-    return null;
+    const placeholderLayer: PolygonLayer[] = [];
+
+    placeholderLayer.push(
+        new PolygonLayer({
+            id: `exemplar-snippet-placeholder`,
+            data: exemplarViewStore.exemplarTracks,
+            getPolygon: (exemplar: ExemplarTrack) => {
+                const yOffset = exemplarYOffsets.value.get(
+                    uniqueExemplarKey(exemplar)
+                )!;
+                return [
+                    [0, yOffset],
+                    [viewConfiguration.value.horizonChartWidth, yOffset],
+                    [
+                        viewConfiguration.value.horizonChartWidth,
+                        yOffset - viewConfiguration.value.timeBarHeightOuter,
+                    ],
+                    [0, yOffset - viewConfiguration.value.timeBarHeightOuter],
+                    [0, yOffset],
+                ];
+            },
+            getLineColor: [25, 189, 10, 200],
+            getFillColor: [25, 189, 10, 100],
+            getLineWidth: 1,
+            lineWidthUnits: 'pixels',
+        })
+    );
+    return placeholderLayer;
 }
 
-function createSidewaysHistogramLayer(): null {
+function createSidewaysHistogramLayer(): PolygonLayer[] | null {
     // TODO: implement
-    return null;
+    const placeholderLayer: PolygonLayer[] = [];
+
+    placeholderLayer.push(
+        new PolygonLayer({
+            id: `exemplar-snippet-placeholder`,
+            data: exemplarViewStore.exemplarTracks,
+            getPolygon: (exemplar: ExemplarTrack) => {
+                const yOffset = exemplarYOffsets.value.get(
+                    uniqueExemplarKey(exemplar)
+                )!;
+                return [
+                    [
+                        -viewConfiguration.value.histogramWidth -
+                            viewConfiguration.value.horizonHistogramGap,
+                        yOffset,
+                    ],
+                    [-viewConfiguration.value.horizonHistogramGap, yOffset],
+                    [
+                        -viewConfiguration.value.horizonHistogramGap,
+                        yOffset - exemplarViewStore.exemplarHeight,
+                    ],
+                    [
+                        -viewConfiguration.value.histogramWidth -
+                            viewConfiguration.value.horizonHistogramGap,
+                        yOffset - exemplarViewStore.exemplarHeight,
+                    ],
+                    [
+                        -viewConfiguration.value.histogramWidth -
+                            viewConfiguration.value.horizonHistogramGap,
+                        yOffset,
+                    ],
+                ];
+            },
+            getLineColor: [225, 30, 210, 200],
+            getFillColor: [225, 30, 210, 100],
+            getLineWidth: 2,
+            lineWidthUnits: 'pixels',
+        })
+    );
+    return placeholderLayer;
 }
 
 function createPinsAndLinesLayer(): null {
