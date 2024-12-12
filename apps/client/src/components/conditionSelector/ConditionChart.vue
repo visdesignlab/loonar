@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, computed } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
@@ -21,11 +21,19 @@ const props = defineProps<{
     height:number;
 }>();
 
+
+const $height = vg.Param.value(props.height);
+
+watch(() => props.height, (newHeight) => {
+    console.log('observes updates in height on resize.')
+    $height.update(newHeight);
+})
+
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentExperimentMetadata, compTableName } = storeToRefs(
+const { experimentDataInitialized, compTableName } = storeToRefs(
     datasetSelectionStore
 );
 const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
@@ -40,6 +48,11 @@ watch(
     [experimentDataInitialized, conditionChartSelections, chartContainer],
     async ([isInitialized, newConditionChartSelections, newChartContainer]) => {
         if (isInitialized && newChartContainer) {
+
+            while (newChartContainer.firstChild) {
+                newChartContainer.removeChild(newChartContainer.firstChild);
+            }
+
             await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
             const chart = createChart(props.xAxisName, props.yAxisName);
 
@@ -49,18 +62,13 @@ watch(
 
         }
     },
-    { immediate: true, deep: true }
+    { deep: true }
 );
-
-// Creates a new set of selections and adds them to an overall list that is updated whenever general cellLevelSelection is updated.
-// Returns the "base" and "filtered". Base a constant selection which is never updated. This is only to filter based on the tags. The "filteredSelection" is updated by other general filters (i.e. cellLevelSelection).
 
 // Styles
 const lineColor = chartColorScheme[props.yIndex % 6];
 const strokeWidth = props.chartLineWidth/2;
 const strokeWidthSelected = props.chartLineWidth;
-
-// const $param = vg.Param.value([0,2000])
 
 function createChart(xAxisName: string, yAxisName: string) {
     if (chartContainer.value) {
@@ -128,8 +136,8 @@ function createChart(xAxisName: string, yAxisName: string) {
             vg.margin(0),
             // vg.margin(40)
             // vg.style('height:100%')
-            vg.height(props.height),
-            vg.width(props.height)
+            vg.height($height),
+            vg.width($height)
         );
         return chart;
     }

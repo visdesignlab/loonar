@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, onUpdated } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     useConditionSelectorStore,
@@ -27,7 +27,6 @@ let resizeObserver: ResizeObserver | null = null;
 
 const observeContainerSize = () => {
     if (!container.value) return;
-
     resizeObserver = new ResizeObserver((entries) => {
         for (let entry of entries) {
             gridWidth.value = entry.contentRect.width;
@@ -42,21 +41,32 @@ onMounted(() => {
     observeContainerSize();
 });
 
+onUpdated(() => {
+    // Runs when we switch tabs since we are not unmounting this component.
+    if (container.value) {
+        observeContainerSize();  // Force re-observation
+    }
+});
+
 onBeforeUnmount(() => {
     if (resizeObserver) {
         resizeObserver.disconnect();
     }
 });
 
+
 const hoveredColumn = ref<number | null>(null);
 const hoveredRow = ref<number | null>(null);
 const hoveredAll = ref<boolean>(false);
 
-const size = computed(() =>
-    Math.min(
-        gridWidth.value / xLabels.value.length - 20,
-        gridHeight.value / yLabels.value.length - 20
-    )
+const size = computed(() => {
+        //Protects against svg values being below 0.
+        const defaultValue = 20;
+        return Math.max(Math.min(
+            gridWidth.value / xLabels.value.length - 20,
+            gridHeight.value / yLabels.value.length - 20
+        ),defaultValue)
+    }
 );
 
 const width = computed(() => {
@@ -121,7 +131,8 @@ const determineSelected = (elx:string, ely:string) => {
 </script>
 
 <template>
-    <div class="flex justify-between items-center">
+    <div style="display:flex;flex-direction: column;" class="full-height">
+        <div class="flex justify-between items-center">
         <q-tabs
             v-model="tab"
             dense
@@ -146,7 +157,7 @@ const determineSelected = (elx:string, ely:string) => {
             </q-tab>
         </q-tabs>
 
-        <div class="flex items-center justify-end" style="min-width: 300px">
+        <div class="flex items-center justify-end mr-5" style="min-width: 300px">
             <span class="text-body2 text-grey-10 mr-2">Axes:</span>
             <q-select
                 v-model="selectedAxes"
@@ -156,179 +167,187 @@ const determineSelected = (elx:string, ely:string) => {
                 class="text-grey-10"
             />
         </div>
-    </div>
-
-    <div class="flex items-center h-100">
-        <div
-            bordered
-            :dark="globalSettings.darkMode"
-            class="inner-card condition-selector-container"
-            v-if="tab === 'facet'"
-        >
-            <div class="items-center justify-center flex y-tag">
-                <div><ConditionSelectorDropDown axis="y-axis" /></div>
-            </div>
-            <div
-                class="items-center justify-center flex condition-charts-container"
-            >
-                <div class="justify-space-around align-center column">
-                    <template v-for="(labelY, idy) in yLabels" :key="idy">
-                        <button
-                            @mouseover="
-                                () => handleLabelMouseOver('y-axis', idy)
-                            "
-                            @mouseleave="() => handleLabelMouseLeave()"
-                            @click="
-                                () =>
-                                    conditionSelector.clickConditionChartRow(
-                                        idy
-                                    )
-                            "
-                            :class="`row justify-center align-center y-label ${
-                                hoveredAll ? 'hovered' : ''
-                            }`"
-                            :style="maxHeight"
-                        >
-                            <div
-                                class="row justify-center align-center flex y-label-text"
-                            >
-                                {{ labelY }}
-                            </div>
-                        </button>
-                    </template>
-                </div>
-                <div
-                    ref="container"
-                    class="items-center justify-center column chart-area"
-                >
-                    <template
-                        v-for="(ely, idy) in yLabels"
-                        :key="`${idy}-${yLabels.join(',')}`"
-                    >
-                        <div
-                            class="chart-row row justify-space-around align-center"
-                        >
-                            <template
-                                v-for="(elx, idx) in xLabels"
-                                :key="`${idx}-${xLabels.join(',')}`"
-                            >
-                                <div
-                                    :class="`chart flex justify-center align-end ${
-                                        idx === hoveredColumn ||
-                                        idy === hoveredRow ||
-                                        hoveredAll
-                                            ? 'hovered'
-                                            : ''
-                                    } ${determineSelected(elx,ely) ? 'selected' : 'unselected'}` "
-                                    :style="heightWidth"
-                                    style="position: relative"
-                                    @click="
-                                        () =>
-                                            conditionSelector.clickConditionChart(
-                                                idx,
-                                                idy
-                                            )
-                                    "
-                                >
-                                        <ConditionChart
-                                            :yIndex="idy"
-                                            :tags="[
-                                                [`${selectedXTag}`,`${elx.toString()}`],
-                                                [`${selectedYTag}`,`${ely.toString()}`]
-                                            ]"
-                                            :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
-                                            :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
-                                            :selected="determineSelected(elx,ely)"
-                                            :chartLineWidth="chartLineWidth"
-                                            :height="size"
-                                        />
-                                </div>
-                            </template>
-                        </div>
-                    </template>
-                </div>
-                <button
-                    class="items-center justify-center flex all-section"
-                    @mouseover="handleAllMouseOver"
-                    @click="() => conditionSelector.clickConditionChartAll()"
-                    @mouseleave="handleAllMouseLeave"
-                >
-                    All
-                </button>
-                <div class="items-center justify-around row">
-                    <template v-for="(labelX, idx) in xLabels" :key="idx">
-                        <button
-                            @mouseover="
-                                () => handleLabelMouseOver('x-axis', idx)
-                            "
-                            @mouseleave="() => handleLabelMouseLeave()"
-                            @click="
-                                () =>
-                                    conditionSelector.clickConditionChartColumn(
-                                        idx
-                                    )
-                            "
-                            :class="`row justify-center align-center flex x-label ${
-                                hoveredAll ? 'hovered' : ''
-                            }`"
-                        >
-                            <div :style="width">
-                                {{ labelX }}
-                            </div>
-                        </button>
-                    </template>
-                </div>
-            </div>
-            <div class="items-start justify-center flex">
-                <svg
-                    width="50"
-                    style="position: relative; overflow: visible"
-                    height="50"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <line
-                        x1="0"
-                        y1="20"
-                        x2="15"
-                        y2="20"
-                        stroke="black"
-                        stroke-width="3"
-                    />
-                    <text
-                        x="20"
-                        y="23"
-                        font-family="Arial"
-                        font-size="10"
-                        fill="black"
-                    >
-                        Selected
-                    </text>
-                    <line
-                        x1="0"
-                        y1="35"
-                        x2="15"
-                        y2="35"
-                        stroke="black"
-                        stroke-width="2"
-                    />
-                    <text
-                        x="20"
-                        y="42"
-                        font-family="Arial"
-                        font-size="10"
-                        fill="black"
-                    >
-                        Unselected
-                    </text>
-                    <rect fill="#cccccc" x="0" width="15" y="36" height="8" />
-                </svg>
-            </div>
-            <div class="items-center justify-center flex x-tag">
-                <ConditionSelectorDropDown axis="x-axis" />
-            </div>
         </div>
-        <ConditionSelectorCompareView v-else-if="tab === 'compare'" />
+        <keep-alive>
+            <q-tab-panels v-model="tab" animated class="flex items-center" style="flex:1">
+                    <q-tab-panel name="facet">
+                        <div
+                            bordered
+                            :dark="globalSettings.darkMode"
+                            class="inner-card condition-selector-container"
+                        >
+                            <div class="items-center justify-center flex y-tag">
+                                <div><ConditionSelectorDropDown axis="y-axis" /></div>
+                            </div>
+                            <div
+                                class="items-center justify-center flex condition-charts-container"
+                            >
+                                <div class="justify-space-around align-center column">
+                                    <template v-for="(labelY, idy) in yLabels" :key="idy">
+                                        <button
+                                            @mouseover="
+                                                () => handleLabelMouseOver('y-axis', idy)
+                                            "
+                                            @mouseleave="() => handleLabelMouseLeave()"
+                                            @click="
+                                                () =>
+                                                    conditionSelector.clickConditionChartRow(
+                                                        idy
+                                                    )
+                                            "
+                                            :class="`row justify-center align-center y-label ${
+                                                hoveredAll ? 'hovered' : ''
+                                            }`"
+                                            :style="maxHeight"
+                                        >
+                                            <div
+                                                class="row justify-center align-center flex y-label-text"
+                                            >
+                                                {{ labelY }}
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                                <div
+                                    ref="container"
+                                    class="items-center justify-center column chart-area"
+                                >
+                                    <template
+                                        v-for="(ely, idy) in yLabels"
+                                        :key="`${idy}-${yLabels.join(',')}`"
+                                    >
+                                        <div
+                                            class="chart-row row justify-space-around align-center"
+                                        >
+                                            <template
+                                                v-for="(elx, idx) in xLabels"
+                                                :key="`${idx}-${xLabels.join(',')}`"
+                                            >
+                                                <div
+                                                    :class="`chart flex justify-center align-end ${
+                                                        idx === hoveredColumn ||
+                                                        idy === hoveredRow ||
+                                                        hoveredAll
+                                                            ? 'hovered'
+                                                            : ''
+                                                    } ${determineSelected(elx,ely) ? 'selected' : 'unselected'}` "
+                                                    :style="heightWidth"
+                                                    style="position: relative"
+                                                    @click="
+                                                        () =>
+                                                            conditionSelector.clickConditionChart(
+                                                                idx,
+                                                                idy
+                                                            )
+                                                    "
+                                                >
+                                                        <ConditionChart
+                                                            :yIndex="idy"
+                                                            :tags="[
+                                                                [`${selectedXTag}`,`${elx.toString()}`],
+                                                                [`${selectedYTag}`,`${ely.toString()}`]
+                                                            ]"
+                                                            :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
+                                                            :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
+                                                            :selected="determineSelected(elx,ely)"
+                                                            :chartLineWidth="chartLineWidth"
+                                                            :height="size"
+                                                        />
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button
+                                    class="items-center justify-center flex all-section"
+                                    @mouseover="handleAllMouseOver"
+                                    @click="() => conditionSelector.clickConditionChartAll()"
+                                    @mouseleave="handleAllMouseLeave"
+                                >
+                                    All
+                                </button>
+                                <div class="items-center justify-around row">
+                                    <template v-for="(labelX, idx) in xLabels" :key="idx">
+                                        <button
+                                            @mouseover="
+                                                () => handleLabelMouseOver('x-axis', idx)
+                                            "
+                                            @mouseleave="() => handleLabelMouseLeave()"
+                                            @click="
+                                                () =>
+                                                    conditionSelector.clickConditionChartColumn(
+                                                        idx
+                                                    )
+                                            "
+                                            :class="`row justify-center align-center flex x-label ${
+                                                hoveredAll ? 'hovered' : ''
+                                            }`"
+                                        >
+                                            <div :style="width">
+                                                {{ labelX }}
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="items-start justify-center flex">
+                                <svg
+                                    width="50"
+                                    style="position: relative; overflow: visible"
+                                    height="50"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <line
+                                        x1="0"
+                                        y1="20"
+                                        x2="15"
+                                        y2="20"
+                                        stroke="black"
+                                        stroke-width="3"
+                                    />
+                                    <text
+                                        x="20"
+                                        y="23"
+                                        font-family="Arial"
+                                        font-size="10"
+                                        fill="black"
+                                    >
+                                        Selected
+                                    </text>
+                                    <line
+                                        x1="0"
+                                        y1="35"
+                                        x2="15"
+                                        y2="35"
+                                        stroke="black"
+                                        stroke-width="2"
+                                    />
+                                    <text
+                                        x="20"
+                                        y="42"
+                                        font-family="Arial"
+                                        font-size="10"
+                                        fill="black"
+                                    >
+                                        Unselected
+                                    </text>
+                                    <rect fill="#cccccc" x="0" width="15" y="36" height="8" />
+                                </svg>
+                            </div>
+                            <div class="items-center justify-center flex x-tag">
+                                <ConditionSelectorDropDown axis="x-axis" />
+                            </div>
+                        </div>
+                    </q-tab-panel>
+
+                <q-tab-panel name="compare">
+                    <ConditionSelectorCompareView />
+                </q-tab-panel>
+            </q-tab-panels>     
+        </keep-alive>
     </div>
+    
+
 </template>
 
 <style scoped lang="scss">
