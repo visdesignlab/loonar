@@ -4,7 +4,8 @@ import { watch, ref, type Ref, computed } from 'vue';
 import {
     useSelectionStore,
     type DataSelection,
-    type AttributeChart
+    type AttributeChart,
+    type SelectionType
 } from '@/stores/interactionStores/selectionStore';
 import { useDatasetSelectionStore } from './datasetSelectionUntrrackedStore';
 
@@ -25,6 +26,7 @@ interface ConditionChartSelection {
 interface LoonarClause {
     source: string;
     predicate: string | null;
+    type?: SelectionType;
 }
 
 interface QueryResult {
@@ -63,6 +65,8 @@ interface MosaicSelectionState {
     aggSelClauseList: Ref<LoonarClause[]>,
     compFilClauseList: Ref<LoonarClause[]>,
     aggFilClauseList: Ref<LoonarClause[]>,
+    condAggClauseList: Ref<LoonarClause[]>,
+    condCompClauseList: Ref<LoonarClause[]>
 }
 
 
@@ -81,6 +85,8 @@ const initialState = (): MosaicSelectionState => ({
     aggSelClauseList: ref<LoonarClause[]>([]),
     compFilClauseList: ref<LoonarClause[]>([]),
     aggFilClauseList: ref<LoonarClause[]>([]),
+    condAggClauseList: ref<LoonarClause[]>([]),
+    condCompClauseList: ref<LoonarClause[]>([])
 })
 
 
@@ -102,6 +108,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         aggSelClauseList,
         compFilClauseList,
         aggFilClauseList,
+        condAggClauseList,
+        condCompClauseList,
     } = initialState()
 
     // Reset state function
@@ -120,6 +128,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         aggSelClauseList.value = newState.aggSelClauseList.value;
         compFilClauseList.value = newState.compFilClauseList.value;
         aggFilClauseList.value = newState.aggFilClauseList.value;
+        condAggClauseList.value = newState.condAggClauseList.value;
+        condCompClauseList.value = newState.condCompClauseList.value;
     }
 
 
@@ -228,18 +238,21 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     watch([dataSelections, dataFilters, conditionChartSelections], ([newDataSelections, newDataFilters, newConditionChartSelections]) => {
         if (Object.keys(newConditionChartSelections).length > 0) {
             // Update existing or new
-            newDataSelections.forEach(selection => {
+            newDataSelections.forEach((selection: DataSelection) => {
+                const source = selection.plotName;
                 const compositePredicate = getPredicateSelectionComposite(selection);
                 const compClause = {
-                    source: selection.plotName,
-                    predicate: compositePredicate
+                    source,
+                    predicate: compositePredicate,
+                    type: selection.type
                 }
                 _updatePredicate(compSelClauseList.value, compClause);
 
                 const aggregatePredicate = getPredicateSelectionAgg(selection);
                 const aggClause = {
-                    source: selection.plotName,
-                    predicate: aggregatePredicate
+                    source,
+                    predicate: aggregatePredicate,
+                    type: selection.type
                 }
 
                 _updatePredicate(aggSelClauseList.value, aggClause);
@@ -247,44 +260,76 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
 
             // Update existing or new
-            newDataFilters.forEach(filter => {
+            newDataFilters.forEach((filter: DataSelection) => {
                 const compositePredicate = getPredicateFilterComposite(filter);
-                const compClause = {
-                    source: `${filter.plotName}_filter`,
-                    predicate: compositePredicate
-                }
-                _updatePredicate(compFilClauseList.value, compClause);
-
                 const aggregatePredicate = getPredicateFilterAgg(filter);
-                const aggClause = {
-                    source: `${filter.plotName}_filter`,
-                    predicate: aggregatePredicate
+
+                if (filter.type !== 'conditionChart') {
+                    const source = `${filter.plotName}_filter`;
+                    const compClause = {
+                        source,
+                        predicate: compositePredicate,
+                        type: filter.type
+                    }
+                    _updatePredicate(compFilClauseList.value, compClause);
+
+                    const aggClause = {
+                        source,
+                        predicate: aggregatePredicate,
+                        type: filter.type
+                    }
+                    _updatePredicate(aggFilClauseList.value, aggClause);
+                } else {
+                    const source = filter.plotName;
+                    const compClause = {
+                        source,
+                        predicate: compositePredicate,
+                        type: filter.type
+                    }
+                    const aggClause = {
+                        source,
+                        predicate: aggregatePredicate,
+                        type: filter.type
+                    }
+
+                    _updatePredicate(condCompClauseList.value, compClause);
+                    _updatePredicate(condAggClauseList.value, aggClause);
                 }
-                _updatePredicate(aggFilClauseList.value, aggClause);
             })
 
             // All selections removed
             const removedSelections = previousDataSelections.filter(entry => {
-                return !newDataSelections.map(newEntry => newEntry.plotName).includes(entry.plotName)
+                return !newDataSelections.map((newEntry: DataSelection) => newEntry.plotName).includes(entry.plotName)
             })
 
             // All filters removed
             const removedFilters = previousDataFilters.filter(entry => {
-                return !newDataFilters.map(newEntry => newEntry.plotName).includes(entry.plotName)
+                return !newDataFilters.map((newEntry: DataSelection) => newEntry.plotName).includes(entry.plotName)
             });
 
             // Set predicates to null for all removed selections.
             removedSelections.forEach(removedSelection => {
-                const clause = { source: removedSelection.plotName, predicate: null }
+                const clause = {
+                    source: removedSelection.plotName, predicate: null, type: removedSelection.type
+                }
                 _updatePredicate(compSelClauseList.value, clause);
                 _updatePredicate(aggSelClauseList.value, clause);
             })
 
             // Set predicates to null for all removed filters.
             removedFilters.forEach(removedFilter => {
-                const clause = { source: `${removedFilter.plotName}_filter`, predicate: null }
-                _updatePredicate(compFilClauseList.value, clause);
-                _updatePredicate(aggFilClauseList.value, clause);
+                const clause = { source: '', predicate: null, type: removedFilter.type }
+                if (removedFilter.type !== 'conditionChart') {
+                    const source = `${removedFilter.plotName}_filter`
+                    clause.source = source;
+                    _updatePredicate(compFilClauseList.value, clause);
+                    _updatePredicate(aggFilClauseList.value, clause);
+                } else {
+                    const source = `${removedFilter.plotName}`
+                    clause.source = source;
+                    _updatePredicate(condCompClauseList.value, clause);
+                    _updatePredicate(condAggClauseList.value, clause);
+                }
             })
 
             previousDataSelections = _.cloneDeep(newDataSelections);
@@ -314,6 +359,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         newCompSelList,
         newAggSelList,
     ]) => {
+
         newCompSelList.forEach((clause: LoonarClause) => {
             cellLevelSelection.value.update({ ...clause });
             _updateConditionChartSelections({ ...clause });
@@ -337,11 +383,12 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         newCompFilList,
         newAggFilList
     ]) => {
-
         newCompFilList.forEach((clause: LoonarClause) => {
             cellLevelSelection.value.update({ ...clause });
             cellLevelFilter.value.update({ ...clause });
-            _updateConditionChartSelections({ ...clause }, true);
+            if (clause.type !== 'conditionChart') {
+                _updateConditionChartSelections({ ...clause }, true);
+            }
         })
 
         newAggFilList.forEach((clause: LoonarClause) => {
@@ -357,11 +404,37 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     }, { deep: true })
 
 
-    // Used to watch when selectedGrid changes
-    watch(conditionSelectorStore.selectedGrid, (newSelectedGrid) => {
+    // We need to watch this sub list since these don't directly interact with the
+    // Individual charts. It is only to maintain the correct predicates for each
+    // condition chart selection.
+    watch([
+        condAggClauseList,
+        condCompClauseList
+    ], ([
+        newCondAggClauseList,
+        newCondCompClauseList
+    ]) => {
 
-        // Whenever selected Grid Changes, change
-    });
+        // Creates large predicate string for aggregate table
+        const newAggPredicate = newCondAggClauseList.length > 0 ? `((${newCondAggClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : null;
+        // Creates large predicate string for comp table
+        const newCompPredicate = newCondCompClauseList.length > 0 ? `((${newCondCompClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : null;
+
+        const compClause: LoonarClause = {
+            source: 'condition_chart',
+            predicate: newCompPredicate,
+            type: 'conditionChart'
+        }
+        _updatePredicate(compFilClauseList.value, compClause)
+
+        const aggClause: LoonarClause = {
+            source: 'condition_chart',
+            predicate: newAggPredicate,
+            type: 'conditionChart'
+        }
+        _updatePredicate(aggFilClauseList.value, aggClause)
+
+    }, { deep: true })
 
 
 
@@ -592,12 +665,12 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     ----------------- UTILITY FUNCTIONS -----------------
     ------------------------------------------------- */
 
-    function _findClause(clauseList: LoonarClause[], source: string) {
-        return clauseList.find(entry => entry.source === source);
+    function _findClause(clauseList: LoonarClause[], clause: LoonarClause) {
+        return clauseList.find(entry => entry.source === clause.source);
     }
 
     function _updatePredicate(clauseList: LoonarClause[], clause: LoonarClause) {
-        const searchedClause = _findClause(clauseList, clause.source);
+        const searchedClause = _findClause(clauseList, clause);
         if (searchedClause) {
             searchedClause.predicate = clause.predicate;
         } else {

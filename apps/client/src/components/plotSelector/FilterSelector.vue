@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import PlotSelector from './PlotSelector.vue';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
+import { stringToKeys} from '@/util/conChartStringFunctions';
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
@@ -29,6 +30,14 @@ const trackAttributesOpen = ref(true);
 const mutedTextClass = computed(() =>
     globalSettings.darkMode ? 'text-grey-5' : 'text-grey-8'
 );
+
+function getFilterLabel(filter:DataSelection){
+    if(filter.type !== 'conditionChart') return filter.plotName;
+
+    const [key1, value1, key2, value2] = stringToKeys(filter.plotName);
+    return `${key1}: ${value1}\n${key2}: ${value2}`
+}
+
 </script>
 
 <template>
@@ -157,9 +166,10 @@ const mutedTextClass = computed(() =>
 
                     <q-item-section>
                         <q-item-label class="text-body2">
-                            {{ filter.plotName }}
+                            {{ getFilterLabel(filter) }}
                         </q-item-label>
                         <q-item-label
+                            v-if="filter.type !== 'conditionChart'"
                             :class="`text-caption ${mutedTextClass}`"
                             :dark="globalSettings.darkMode"
                         >

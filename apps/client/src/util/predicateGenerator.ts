@@ -81,7 +81,7 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
 
     ----------------------------------------------*/
 
-    const { plotName, type, range: unescapedRange } = selection;
+    const { plotName, type, range: unescapedRange, predicate } = selection;
     const range = _escapeRange(unescapedRange);
 
     const escapedSource = _escapeSource(plotName);
@@ -90,6 +90,13 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
     const { currentExperimentMetadata } = storeToRefs(dataSetSelectionStore);
 
 
+    // Aggregate Table Name
+    const compTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
+
+    // Tracking ID column
+    const idColumn =
+        currentExperimentMetadata.value?.headerTransforms?.['id'];
+
     if (currentExperimentMetadata.value) {
         if (type === 'cell') {
             return range
@@ -97,6 +104,13 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
                 : null;
         } else if (type === 'track') {
             return range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null;
+        } else if (type === 'conditionChart') {
+            return predicate
+                ? `tracking_id IN (
+                    SELECT "${idColumn}"
+                    FROM ${compTableName}
+                    WHERE ${predicate}
+                )` : null
         } else {
             console.warn(`Type '${type}' not implemented.`)
             return null
@@ -121,7 +135,7 @@ export function getPredicateFilterComposite(filter: DataSelection) {
 
     ----------------------------------------------*/
 
-    const { plotName, type, range: unescapedRange } = filter;
+    const { plotName, type, range: unescapedRange, predicate } = filter;
     const range = _escapeRange(unescapedRange);
 
     const dataSetSelectionStore = useDatasetSelectionStore();
@@ -155,6 +169,8 @@ export function getPredicateFilterComposite(filter: DataSelection) {
                     AND "${plotName}" <= ${range[1]}
             )`
                 : null;
+        } else if (type === 'conditionChart') {
+            return predicate ?? null;
         } else {
             console.warn(`Type '${type}' not implemented.`)
             return null

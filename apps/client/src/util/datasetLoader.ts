@@ -98,7 +98,12 @@ export interface AggregateObject {
     attr2?: string;
 }
 
-export async function addColumn(idColumn: string, aggTable: string, compTable: string, aggObject: AggregateObject) {
+export async function addColumn(
+    idColumn: string,
+    aggTable: string,
+    compTable: string,
+    aggObject: AggregateObject
+) {
 
     const { functionName, attr1, var1, attr2, label } = aggObject;
 

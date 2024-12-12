@@ -485,7 +485,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
     async function onSubmitExperiment(): Promise<CreateExperimentResponseData> {
         if (experimentName.value && experimentConfig.value) {
             const locationTags = convertTags();
-            console.log(locationTags);
             const submitExperimentResponse = await loonAxios.createExperiment(
                 experimentName.value,
                 experimentConfig.value,

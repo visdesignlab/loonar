@@ -112,6 +112,12 @@ const axesOptions = ref([
     { label: 'Area Over Frame', value: 'Area over Frame ID' },
     // Add more options as required
 ]);
+const determineSelected = (elx:string, ely:string) => {
+    return selectedGrid.value[`${selectedXTag.value}¶${elx.toString()}¶${selectedYTag.value}¶${ely.toString()}`] 
+        || selectedGrid.value[`${selectedYTag.value}¶${ely.toString()}¶${selectedXTag.value}¶${elx.toString()}`]
+        || conditionSelector.allSelected()
+}
+
 </script>
 
 <template>
@@ -213,13 +219,7 @@ const axesOptions = ref([
                                         hoveredAll
                                             ? 'hovered'
                                             : ''
-                                    } ${
-                                        selectedGrid[
-                                            `${elx.toString()}-${ely.toString()}`
-                                        ] || conditionSelector.allSelected()
-                                            ? 'selected'
-                                            : 'unselected'
-                                    }`"
+                                    } ${determineSelected(elx,ely) ? 'selected' : 'unselected'}` "
                                     :style="heightWidth"
                                     style="position: relative"
                                     @click="
@@ -230,36 +230,18 @@ const axesOptions = ref([
                                             )
                                     "
                                 >
-                                    <ConditionChart
-                                        :yIndex="idy"
-                                        :tags="[
-                                            [
-                                                `${selectedXTag}`,
-                                                `${elx.toString()}`,
-                                            ],
-                                            [
-                                                `${selectedYTag}`,
-                                                `${ely.toString()}`,
-                                            ],
-                                        ]"
-                                        :xAxisName="`${
-                                            currentExperimentMetadata
-                                                ?.headerTransforms?.frame ??
-                                            'Test'
-                                        }`"
-                                        :yAxisName="`${
-                                            currentExperimentMetadata
-                                                ?.headerTransforms?.mass ??
-                                            'Test'
-                                        }`"
-                                        :selected="
-                                            selectedGrid[
-                                                `${elx.toString()}-${ely.toString()}`
-                                            ] || conditionSelector.allSelected()
-                                        "
-                                        :chartLineWidth="chartLineWidth"
-                                        :height="size"
-                                    />
+                                        <ConditionChart
+                                            :yIndex="idy"
+                                            :tags="[
+                                                [`${selectedXTag}`,`${elx.toString()}`],
+                                                [`${selectedYTag}`,`${ely.toString()}`]
+                                            ]"
+                                            :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
+                                            :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
+                                            :selected="determineSelected(elx,ely)"
+                                            :chartLineWidth="chartLineWidth"
+                                            :height="size"
+                                        />
                                 </div>
                             </template>
                         </div>

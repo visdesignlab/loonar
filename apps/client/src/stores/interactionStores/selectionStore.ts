@@ -3,14 +3,16 @@ import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { ref, computed, watch, type Ref } from 'vue';
+import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
 
 
-export type SelectionType = 'cell' | 'track' | 'lineage';
+export type SelectionType = 'cell' | 'track' | 'lineage' | 'conditionChart';
 
 export interface DataSelection {
     plotName: string;
     type: SelectionType; // Unused, but will be needed if we have track-level and lineage-level attributes here
     range: [number, number]; // The current range selected
+    predicate?: string
 }
 
 export interface AttributeChart {
@@ -64,7 +66,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
 
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata, experimentDataInitialized } = storeToRefs(datasetSelectionStore);
-
+    const conditionSelectorStore = useConditionSelectorStore();
     // Watches for new experiment data. Initializes with basic attribute charts.
     watch([experimentDataInitialized, currentExperimentMetadata], ([isInitialized, newExperimentMetadata], [prevInit, prevMeta]) => {
         // Resets state when initialization or experiment data changes.
@@ -109,17 +111,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             `;
 
             const result = await vg.coordinator().query(query, { 'type': 'json' });
-            console.log(result);
-
-
-            // if (
-            //     !result ||
-            //     !result.batches ||
-            //     result.batches.length === 0 ||
-            //     result.batches[0].numRows === 0
-            // ) {
-            //     throw new Error('No data returned from query');
-            // }
 
             minVal = Number(result[0].min_value);
             maxVal = Number(result[0].max_value);
@@ -274,7 +265,30 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         }
     }
 
+    // Function to add multiple filters at once in order to avoid multiple watch triggers.
+    function addConditionChartFilters(filters: DataSelection[]) {
+        // Create deep copy temp data filters
+        const tempDataFilters: DataSelection[] = dataFilters.value.filter((item) => !item.plotName.startsWith('condition_chart')).map((item) => { return { ...item } })
+        filters.forEach(filter => {
+            const existingIndex = tempDataFilters.findIndex(
+                (s) => s.plotName === filter.plotName
+            );
+
+            if (existingIndex !== -1) {
+                tempDataFilters[existingIndex] = filter;
+            } else {
+                tempDataFilters.push(filter);
+            }
+        })
+        dataFilters.value = tempDataFilters;
+    }
+
     function removeFilter(index: number) {
+        const removedFilter = dataFilters.value[index];
+        // Updates selectedGrid by artificially clicking on grid.
+        if (removedFilter.type === 'conditionChart') {
+            conditionSelectorStore.clickConditionChartByName(removedFilter.plotName);
+        }
         dataFilters.value.splice(index, 1);
         // When we remove a selection, we update to the max range.
         // When we remove a filter, we have other items in place in the mosaicSelectionStore to update the range.
@@ -321,6 +335,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         getSelection,
         addSelection,
         addFilter,
+        addConditionChartFilters,
         removeFilter,
         convertToFilters,
         removePlotByName

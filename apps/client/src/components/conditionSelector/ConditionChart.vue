@@ -63,7 +63,6 @@ const strokeWidthSelected = props.chartLineWidth;
 // const $param = vg.Param.value([0,2000])
 
 function createChart(xAxisName: string, yAxisName: string) {
-    console.log(props.height);
     if (chartContainer.value) {
         const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
         // Creates chart, filtered by the selection that uses the query.

@@ -1,6 +1,9 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import { useDatasetSelectionStore, type LocationMetadata } from '../dataStores/datasetSelectionUntrrackedStore';
+import { debounce } from 'quasar';
+import { useSelectionStore, type DataSelection } from '../interactionStores/selectionStore';
+import { stringToKeys } from '@/util/conChartStringFunctions';
 // import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 
 export type Axis = 'x-axis' | 'y-axis';
@@ -8,6 +11,7 @@ export type Axis = 'x-axis' | 'y-axis';
 export const useConditionSelectorStore = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
+    const selectionStore = useSelectionStore();
     // const mosaicSelectionStore = useMosaicSelectionStore();
 
     // Initialize starting tags as empty strings
@@ -115,11 +119,41 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
         return Object.keys(selectedGrid.value).length === 0;
     }
 
+    // Boolean to avoid circular logic
+    let isExternalGridUpdate = false;
+    watch(selectedGrid, debounce((newSelectedGrid) => {
+        if (!isExternalGridUpdate) {
+            const keys = Object.entries(newSelectedGrid).filter(entry => entry[1] === true).map(entry => entry[0])
+            const newFilters: DataSelection[] = [];
+            keys.forEach(key => {
+                const [key1, value1, key2, value2] = stringToKeys(key);
+                newFilters.push({
+                    plotName: `condition_chart_${key}`,
+                    type: 'conditionChart',
+                    range: [0, 0],
+                    predicate: `"${key1}" = '${value1}' AND "${key2}" = '${value2}'`
+                })
+            })
+            selectionStore.addConditionChartFilters(newFilters);
+        }
+        isExternalGridUpdate = false;
+
+
+    }), { deep: true, immediate: true });
+
+    function clickConditionChartByName(name: string) {
+        const [key1, value1, key2, value2] = stringToKeys(name);
+        const idx = currentExperimentTags.value[selectedXTag.value].findIndex(entry => entry === value1);
+        const idy = currentExperimentTags.value[selectedYTag.value].findIndex(entry => entry === value2);
+        isExternalGridUpdate = true;
+        clickConditionChart(idx, idy);
+    }
+
     function clickConditionChart(idx: number, idy: number, allSelected: boolean | null = null) {
         const currentColumnVal = currentExperimentTags.value[selectedXTag.value][idx]
         const currentRowVal = currentExperimentTags.value[selectedYTag.value][idy]
 
-        const currentValue = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`];
+        const currentValue = selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`];
 
         let newValue = !currentValue;
         if (allSelected !== null) {
@@ -127,8 +161,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
         }
 
         // Set 'Selected' on current selection
-        selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] = newValue;
-
+        selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`] = newValue;
     }
     type allSelectedType = 'row' | 'col' | 'all'
 
@@ -141,7 +174,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
 
                 currentExperimentTags.value[selectedYTag.value].forEach((value: string) => {
                     const currentRowVal: string = value;
-                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    const selected = selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`] ?? false;
                     allSelected = allSelected && selected;
                 })
                 return allSelected
@@ -156,7 +189,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
 
                 currentExperimentTags.value[selectedXTag.value].forEach((value: string) => {
                     const currentColumnVal: string = value;
-                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    const selected = selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`] ?? false;
                     allSelected = allSelected && selected;
                 })
                 return allSelected
@@ -168,7 +201,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
                 const currentColumnVal: string = xValue;
                 currentExperimentTags.value[selectedYTag.value].forEach((yValue: string) => {
                     const currentRowVal: string = yValue;
-                    const selected = selectedGrid.value[`${currentColumnVal}-${currentRowVal}`] ?? false;
+                    const selected = selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`] ?? false;
                     allSelected = allSelected && selected;
                 })
             })
@@ -191,6 +224,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
         clickConditionChartAll,
         clickConditionChartColumn,
         clickConditionChartRow,
+        clickConditionChartByName,
         selectedGrid,
         allSelected
     };
