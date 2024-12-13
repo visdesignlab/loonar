@@ -215,7 +215,6 @@ const determineSelected = (elx: string, ely: string) => {
 
             <div
                 class="flex items-center justify-end mr-5"
-                style="min-width: 300px"
             >
                 <span
                     class="text-body2 mr-2"
@@ -292,7 +291,7 @@ const determineSelected = (elx: string, ely: string) => {
                                 </template>
                             </div>
                             <div
-                                ref="container"
+                                ref="facetContainer"
                                 class="items-center justify-center column chart-area"
                             >
                                 <template
