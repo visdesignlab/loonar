@@ -4,7 +4,6 @@ import {
     computed,
     onMounted,
     onBeforeUnmount,
-    onActivated,
     onUpdated,
 } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
