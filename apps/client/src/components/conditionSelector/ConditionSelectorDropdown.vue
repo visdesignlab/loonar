@@ -4,8 +4,10 @@ import {
     type Axis,
 } from '@/stores/componentStores/conditionSelectorStore';
 import { storeToRefs } from 'pinia';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+const globalSettings = useGlobalSettings();
 const conditionSelector = useConditionSelectorStore();
-const {currentExperimentTags} = storeToRefs(conditionSelector);
+const { currentExperimentTags } = storeToRefs(conditionSelector);
 const props = defineProps({
     axis: {
         type: String,
@@ -24,7 +26,7 @@ const handleTagClick = (item: string) => {
 </script>
 <template>
     <q-btn-dropdown flat no-caps :label="conditionSelector[tagVar]">
-        <q-list>
+        <q-list :class="{ 'custom-dark': globalSettings.darkMode }">
             <template
                 v-for="(item, index) in Object.keys(currentExperimentTags)"
                 :key="index"
@@ -43,4 +45,17 @@ const handleTagClick = (item: string) => {
     </q-btn-dropdown>
 </template>
 
-<style></style>
+<style scoped>
+.custom-dark {
+    background-color: #1a1a1a; /* Example dark background */
+    color: #ecf0f1; /* Example light text color */
+}
+
+.custom-dark .q-item {
+    background-color: #1a1a1a; /* Darker shade for items */
+}
+
+.custom-dark .q-item-label {
+    color: white; /* Light text for labels */
+}
+</style>
