@@ -25,7 +25,6 @@ const props = defineProps<{
 const $height = vg.Param.value(props.height);
 
 watch(() => props.height, (newHeight) => {
-    console.log('observes updates in height on resize.')
     $height.update(newHeight);
 })
 
@@ -36,13 +35,11 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, compTableName } = storeToRefs(
     datasetSelectionStore
 );
-const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
+const { conditionChartSelections, $conditionChartYAxisDomain, cellLevelSelection } = useMosaicSelectionStore();
 const { chartColorScheme } = useConditionSelectorStore();
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
-
-const isLoading = ref<boolean>(false);
 
 watch(
     [experimentDataInitialized, conditionChartSelections, chartContainer],
@@ -70,6 +67,8 @@ const lineColor = chartColorScheme[props.yIndex % 6];
 const strokeWidth = props.chartLineWidth/2;
 const strokeWidthSelected = props.chartLineWidth;
 
+
+// Filter statements in below code are left here to illustrate possibility of additional filter statements.
 function createChart(xAxisName: string, yAxisName: string) {
     if (chartContainer.value) {
         const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
@@ -92,6 +91,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     fillOpacity: 0.3,
                     curve: 'basis',
                     stroke: null,
+                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
                 }
             ),
             vg.lineY(
@@ -109,6 +109,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     strokeWidth: strokeWidth,
                     curve: 'basis',
                     opacity: 0.6,
+                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
                 }
             ),
             vg.lineY(
@@ -117,6 +118,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     {
                         filterBy:
                             conditionChartSelections[source].filteredSelection,
+                            // cellLevelSelection
                     }
                 ),
                 {
@@ -126,6 +128,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     strokeWidth: strokeWidthSelected,
                     curve: 'basis',
                     opacity: 1,
+                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
                 }
             ),
 
@@ -134,8 +137,6 @@ function createChart(xAxisName: string, yAxisName: string) {
             // Below would allow us to adjust the yAxis based on all the charts
             vg.yDomain($conditionChartYAxisDomain),
             vg.margin(0),
-            // vg.margin(40)
-            // vg.style('height:100%')
             vg.height($height),
             vg.width($height)
         );
@@ -145,13 +146,6 @@ function createChart(xAxisName: string, yAxisName: string) {
 </script>
 
 <template>
-    <div 
-        v-if="isLoading"
-        style="position:absolute;width:100%;height:100%;flex:1;display:flex;"
-        class="flex justify-center"
-    >
-        <q-spinner/>
-    </div>
     <div ref="chartContainer"></div>
 </template>
 

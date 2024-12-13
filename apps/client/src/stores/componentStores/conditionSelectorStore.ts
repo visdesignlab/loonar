@@ -10,7 +10,7 @@ export type Axis = 'x-axis' | 'y-axis';
 
 export const useConditionSelectorStore = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
-    const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore)
+    const { currentExperimentMetadata, experimentDataInitialized } = storeToRefs(datasetSelectionStore)
     const selectionStore = useSelectionStore();
     // const mosaicSelectionStore = useMosaicSelectionStore();
 
@@ -59,6 +59,16 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
         if (Object.keys(newExperimentTags).length > 1) {
             selectedXTag.value = Object.keys(newExperimentTags)[0];
             selectedYTag.value = Object.keys(newExperimentTags)[1];
+        }
+    }, { immediate: true })
+
+
+    // Initializes the condition chart as being all selected. Ensures that experiment tags are chosen.
+    watch(experimentDataInitialized, (isInitialized) => {
+        if (isInitialized && Object.keys(currentExperimentTags.value).length > 1) {
+            // Reset grid. Should always be reset
+            selectedGrid.value = {}
+            clickConditionChartAll()
         }
     }, { immediate: true })
 
@@ -207,7 +217,6 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
             })
             return allSelected;
         }
-
     }
 
 

@@ -27,37 +27,60 @@ const { currentExperimentMetadata } = storeToRefs(
 const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
     storeToRefs(conditionSelector);
 
-const container = ref(null);
+const facetContainer = ref(null);
+const compareContainer = ref(null);
 const gridWidth = ref(0);
 const gridHeight = ref(0);
-let resizeObserver: ResizeObserver | null = null;
+const compareWidth = ref(0);
+const compareHeight = ref(0);
+let facetResizeObserver: ResizeObserver | null = null;
+let compareResizeObserver: ResizeObserver | null = null;
 
 const observeContainerSize = () => {
-    if (!container.value) return;
-    resizeObserver = new ResizeObserver((entries) => {
+    if (!facetContainer.value) return;
+    facetResizeObserver = new ResizeObserver((entries) => {
         for (let entry of entries) {
             gridWidth.value = entry.contentRect.width;
             gridHeight.value = entry.contentRect.height;
         }
     });
 
-    resizeObserver.observe(container.value);
+    facetResizeObserver.observe(facetContainer.value);
 };
+
+const observeOuterContainerSize = () => {
+    if (!compareContainer.value) return;
+    compareResizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+            compareWidth.value = Math.min(entry.contentRect.width, entry.contentRect.height);
+            compareHeight.value = Math.min(entry.contentRect.width, entry.contentRect.height);
+        }
+    });
+
+    compareResizeObserver.observe(compareContainer.value);
+}
 
 onMounted(() => {
     observeContainerSize();
+    observeOuterContainerSize();
 });
 
 onUpdated(() => {
     // Runs when we switch tabs since we are not unmounting this component.
-    if (container.value) {
-        observeContainerSize(); // Force re-observation
+    if (facetContainer.value) {
+        observeContainerSize();  // Force re-observation
+    }
+    if(compareContainer.value) {
+        observeOuterContainerSize();
     }
 });
 
 onBeforeUnmount(() => {
-    if (resizeObserver) {
-        resizeObserver.disconnect();
+    if (facetResizeObserver) {
+        facetResizeObserver.disconnect();
+    }
+    if(compareResizeObserver) {
+        compareResizeObserver.disconnect();
     }
 });
 
@@ -66,16 +89,14 @@ const hoveredRow = ref<number | null>(null);
 const hoveredAll = ref<boolean>(false);
 
 const size = computed(() => {
-    //Protects against svg values being below 0.
-    const defaultValue = 20;
-    return Math.max(
-        Math.min(
-            gridWidth.value / xLabels.value.length - 20,
-            gridHeight.value / yLabels.value.length - 20
-        ),
-        defaultValue
-    );
-});
+        //Protects against svg values being below 0.
+        const defaultValue = 0;
+        return Math.max(Math.min(
+            gridWidth.value / xLabels.value.length - 4,
+            gridHeight.value / yLabels.value.length - 10
+        ),defaultValue)
+    }
+);
 
 const width = computed(() => {
     return {
@@ -212,8 +233,7 @@ const determineSelected = (elx: string, ely: string) => {
                 />
             </div>
         </div>
-        <keep-alive>
-            <q-tab-panels
+        <q-tab-panels
                 v-model="tab"
                 animated
                 class="flex items-center"
@@ -448,11 +468,16 @@ const determineSelected = (elx: string, ely: string) => {
                     </div>
                 </q-tab-panel>
 
-                <q-tab-panel name="compare">
-                    <ConditionSelectorCompareView />
-                </q-tab-panel>
-            </q-tab-panels>
-        </keep-alive>
+            <q-tab-panel name="compare">
+                <div class="full-height full-width flex justify-center align-center" ref="compareContainer">
+                    <ConditionSelectorCompareView 
+                        :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
+                        :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
+                        :width="compareWidth"
+                    />
+                </div>
+            </q-tab-panel>
+        </q-tab-panels>     
     </div>
 </template>
 

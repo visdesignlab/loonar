@@ -17,10 +17,13 @@ import {
     getPredicateFilterComposite,
     getPredicateFilterAgg
 } from '@/util/predicateGenerator';
+import { debounce } from 'quasar';
 
 interface ConditionChartSelection {
     baseSelection: any;
     filteredSelection: any;
+    compChartFilteredSelection: any;
+    compChartBaseSelection: any;
 }
 
 interface LoonarClause {
@@ -197,6 +200,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             {
                                 baseSelection: newSelection,
                                 filteredSelection: newSelection.clone(),
+                                compChartFilteredSelection: newSelection.clone(),
+                                compChartBaseSelection: newSelection.clone()
                             };
 
                             tempConditionChartSelections[newSource] =
@@ -235,7 +240,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
 
 
-    watch([dataSelections, dataFilters, conditionChartSelections], ([newDataSelections, newDataFilters, newConditionChartSelections]) => {
+    watch([dataSelections, dataFilters, conditionChartSelections], debounce(([newDataSelections, newDataFilters, newConditionChartSelections]) => {
         if (Object.keys(newConditionChartSelections).length > 0) {
             // Update existing or new
             newDataSelections.forEach((selection: DataSelection) => {
@@ -337,7 +342,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
 
 
-    }, { deep: true, immediate: true })
+    }, 100), { deep: true, immediate: true })
 
 
 
@@ -386,9 +391,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         newCompFilList.forEach((clause: LoonarClause) => {
             cellLevelSelection.value.update({ ...clause });
             cellLevelFilter.value.update({ ...clause });
-            if (clause.type !== 'conditionChart') {
-                _updateConditionChartSelections({ ...clause }, true);
-            }
+            _updateConditionChartSelections({ ...clause }, true, clause.type === 'conditionChart');
         })
 
         newAggFilList.forEach((clause: LoonarClause) => {
@@ -415,10 +418,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         newCondCompClauseList
     ]) => {
 
+        // These tertiary statements end in "1 = 0" so that when no conditions are selected, we filter out ALL data.
+
         // Creates large predicate string for aggregate table
-        const newAggPredicate = newCondAggClauseList.length > 0 ? `((${newCondAggClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : null;
+        const isNull = newCondAggClauseList.filter(entry => entry.predicate).length > 0;
+        const newAggPredicate = isNull ? `((${newCondAggClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : `(1 = 0)`;
         // Creates large predicate string for comp table
-        const newCompPredicate = newCondCompClauseList.length > 0 ? `((${newCondCompClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : null;
+        const newCompPredicate = isNull ? `((${newCondCompClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : `(1 = 0) `;
+
 
         const compClause: LoonarClause = {
             source: 'condition_chart',
@@ -590,13 +597,20 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
     }
 
-    function _updateConditionChartSelections(clause: LoonarClause, filter?: boolean) {
+    function _updateConditionChartSelections(clause: LoonarClause, filter?: boolean, isConditionChart: boolean = false) {
         Object.values(conditionChartSelections.value).forEach(
             (selectionObject: ConditionChartSelection) => {
-                selectionObject.filteredSelection.update(clause);
-                // If filtering, also apply clause to the base filter on the chart.
+                if (!isConditionChart) {
+                    selectionObject.filteredSelection.update(clause);
+                    // If filtering, also apply clause to the base filter on the chart.
+                    if (filter) {
+                        selectionObject.baseSelection.update(clause);
+                    }
+                }
+                // If the filter comes from the condition chart, compare view must be updated.
+                selectionObject.compChartFilteredSelection.update(clause);
                 if (filter) {
-                    selectionObject.baseSelection.update(clause);
+                    selectionObject.compChartBaseSelection.update(clause);
                 }
             }
         );
@@ -614,7 +628,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
         // Catch to return early.
         if (!xAttributeName || !yAttributeName) {
-            console.log('Could not get frame and mass from header transforms.')
+            console.warn('Could not get frame and mass from header transforms.')
             return;
         }
         const compositeTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
@@ -639,7 +653,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     GROUP BY "${xAttributeName}", "${conditionSelectorStore.selectedXTag}", "${conditionSelectorStore.selectedYTag}"
                 )
             `;
-
         try {
             const result = await vg
                 .coordinator()
@@ -656,7 +669,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
 
         if (overallMin === Infinity || overallMax === -Infinity) {
-            throw new Error('No data found for any condition.');
+            console.warn('Minimum and/or Maximum are set to Infinity. Not updating.');
+            return;
         }
         $conditionChartYAxisDomain.update([overallMin, overallMax]);
     }

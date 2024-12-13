@@ -6,13 +6,17 @@ import { useSelectionStore, type DataSelection } from '@/stores/interactionStore
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
 import { stringToKeys} from '@/util/conChartStringFunctions';
+import type { SelectionType } from '@/stores/interactionStores/selectionStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
 const { dataFilters, dataSelections } = storeToRefs(selectionStore);
+const conditionSelectorStore = useConditionSelectorStore();
+const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
+    storeToRefs(conditionSelectorStore);
 
 const selectionsCount = computed(() => dataSelections.value.length);
-const filtersCount = computed(() => dataFilters.value.length);
 
 function removeFilter(index: number) {
     selectionStore.removeFilter(index);
@@ -31,12 +35,32 @@ const mutedTextClass = computed(() =>
     globalSettings.darkMode ? 'text-grey-5' : 'text-grey-8'
 );
 
-function getFilterLabel(filter:DataSelection){
-    if(filter.type !== 'conditionChart') return filter.plotName;
-
-    const [key1, value1, key2, value2] = stringToKeys(filter.plotName);
-    return `${key1}: ${value1}\n${key2}: ${value2}`
+// Just for additional styling of existing filters.
+interface ReadableDataFilter{
+    plotName:string,
+    type:SelectionType,
+    range:[number,number];
+    subName?:string
 }
+
+const readableDataFilters = computed(() => {
+    const nonConditionChartFilters = dataFilters.value.filter(entry => entry.type !== 'conditionChart');
+    const conditionChartLength = dataFilters.value.filter(entry => entry.type === 'conditionChart').length;
+    const totalLength = xLabels.value.length*yLabels.value.length;
+    if(totalLength === conditionChartLength){
+        return nonConditionChartFilters as ReadableDataFilter[];
+    } else {
+        return [...nonConditionChartFilters, {
+        plotName:`Condition Charts`,
+        subName: `${conditionChartLength} out of ${xLabels.value.length*yLabels.value.length} selected.`,
+        type:'conditionChart' as SelectionType,
+        range:[0,0]
+        }] as ReadableDataFilter[]
+    }
+})
+
+const filtersCount = computed(() => readableDataFilters.value.length);
+
 
 </script>
 
@@ -141,7 +165,7 @@ function getFilterLabel(filter:DataSelection){
                 </q-item-section>
             </template>
             <q-list>
-                <q-item v-for="(filter, index) in dataFilters" :key="index">
+                <q-item v-for="(filter, index) in readableDataFilters" :key="index">
                     <FilterEditMenu
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"
@@ -166,7 +190,8 @@ function getFilterLabel(filter:DataSelection){
 
                     <q-item-section>
                         <q-item-label class="text-body2">
-                            {{ getFilterLabel(filter) }}
+                            {{ filter.plotName }}
+                            <div class="text-caption">{{ filter.subName }}</div>
                         </q-item-label>
                         <q-item-label
                             v-if="filter.type !== 'conditionChart'"
