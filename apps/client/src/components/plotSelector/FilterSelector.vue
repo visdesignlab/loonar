@@ -18,8 +18,9 @@ const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
 
 const selectionsCount = computed(() => dataSelections.value.length);
 
-function removeFilter(index: number) {
-    selectionStore.removeFilter(index);
+function removeFilter(plotName: string) {
+    console.log(plotName);
+    selectionStore.removeFilterByPlotName(plotName);
 }
 function removeSelection(plotName: string) {
     selectionStore.removeSelectionByPlotName(plotName);
@@ -206,7 +207,7 @@ const filtersCount = computed(() => readableDataFilters.value.length);
                     <q-item-section side>
                         <q-btn
                             class="gt-xs"
-                            @click="removeFilter(index)"
+                            @click="removeFilter(filter.plotName)"
                             size="md"
                             flat
                             dense

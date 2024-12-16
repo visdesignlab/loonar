@@ -188,9 +188,16 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     }
 
     function removeFilterByPlotName(plotName: string) {
+        if (plotName === 'Condition Charts') {
+            // When removing this filter, same as clicking "All" when not all selected.
+            // Situation of deleting this filter when all are selected is impossible.
+            conditionSelectorStore.clickConditionChartAll()
+            return
+        }
         const index = dataFilters.value.findIndex(
             (s) => s.plotName === plotName
         );
+
         if (index === -1) return;
 
         removeFilter(index);
@@ -284,14 +291,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     }
 
     function removeFilter(index: number) {
-        const removedFilter = dataFilters.value[index];
-        // Updates selectedGrid by artificially clicking on grid.
-        if (removedFilter.type === 'conditionChart') {
-            conditionSelectorStore.clickConditionChartByName(removedFilter.plotName);
-        }
         dataFilters.value.splice(index, 1);
-        // When we remove a selection, we update to the max range.
-        // When we remove a filter, we have other items in place in the mosaicSelectionStore to update the range.
     }
 
     function updateFilter(

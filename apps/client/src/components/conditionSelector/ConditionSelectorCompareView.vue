@@ -41,6 +41,9 @@ watch(() => props.width, (newWidth) => {
     $width.update(newWidth);
 })
 
+let observer: MutationObserver | null = null;
+const isLoading = ref<boolean>(true);
+
 watch(
     [experimentDataInitialized, conditionChartSelections, chartContainer],
     async ([isInitialized, newConditionChartSelections, newChartContainer]) => {
@@ -62,6 +65,26 @@ watch(
 
             if(chart){
                 newChartContainer.appendChild(chart);
+
+                observer = new MutationObserver((mutationsList) => {
+                    for (const mutation of mutationsList) {
+                        if (
+                            mutation.type === 'childList' &&
+                            mutation.addedNodes.length > 0
+                        ) {
+                            isLoading.value = false;
+                            console.log('finished loading');
+                            observer?.disconnect();
+                            break;
+                        }
+                    }
+                });
+
+                // Observe the SVG for changes to its child elements
+                observer.observe(chart, {
+                    childList: true,
+                    subtree: true,
+                });
             }
 
         }
@@ -162,6 +185,14 @@ function createChart(xAxisName: string, yAxisName: string) {
 </script>
 
 <template>
+    <div
+        v-if="isLoading"
+        style="position:absolute;top:0px;left:0px;gap:10px;"
+        class="flex justify-center align-center full-height full-width"
+    >
+        <q-spinner />
+        <div class="text-caption">Loading chart</div>
+    </div>
     <div ref="chartContainer"></div>
 </template>
 
