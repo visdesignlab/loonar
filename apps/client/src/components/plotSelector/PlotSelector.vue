@@ -12,7 +12,7 @@ import {
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import aggregateFunctions from './aggregateFunctions';
+import { aggregateFunctions, type AttributeSelection, type AggregationAttribute }from './aggregateFunctions';
 const datasetSelectionStore = useDatasetSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
@@ -42,21 +42,6 @@ const attr2Model = ref<string|null>(null);
 const var1Model = ref<number|string|null>(null);
 
 const errorPlotName = ref('');
-
-
-interface AttributeSelection {
-    label:string,
-    type:'existing_attribute' | 'numerical',
-    max?:number,
-    min?:number,
-    step?:number
-}
-
-interface AggregationAttribute {
-    functionName:string,
-    description?:string,
-    selections?: Record<string, AttributeSelection>
-}
 
 
 const aggregationAttributes: Record<string,AggregationAttribute> = aggregateFunctions;
@@ -131,21 +116,25 @@ async function addTrackPlotFromMenu() {
     const var1 = var1Model.value?.toString() ?? undefined;
     const attr2 = attr2Model.value ?? undefined;
     const functionName = aggregationAttributes[label].functionName;
+    const customQuery = aggregationAttributes[label].customQuery;
 
 
-    const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id']
-    if(aggTableName.value && compTableName.value && idColumn){
-
-
+    if(aggTableName.value && compTableName.value && currentExperimentMetadata.value?.headerTransforms){
         const aggObject:AggregateObject = {
             functionName,
             attr1,
             var1,
             attr2,
-            label
+            label,
+            customQuery
         }
 
-        const name = await addColumn(idColumn, aggTableName.value, compTableName.value, aggObject);
+        const name = await addColumn(
+            aggTableName.value,
+            compTableName.value,
+            aggObject,
+            currentExperimentMetadata.value?.headerTransforms
+        );
         trackPlotDialogOpen.value = false;
         selectionStore.addPlot(name, 'track');
     }

@@ -1,5 +1,5 @@
 
-interface AttributeSelection {
+export interface AttributeSelection {
     label: string,
     type: 'existing_attribute' | 'numerical',
     max?: number,
@@ -7,13 +7,14 @@ interface AttributeSelection {
     step?: number
 }
 
-interface AggregationAttribute {
+export interface AggregationAttribute {
     functionName: string,
     description?: string,
     selections?: Record<string, AttributeSelection>
+    customQuery?: string
 }
 
-const aggregateFunctions: Record<string, AggregationAttribute> = {
+export const aggregateFunctions: Record<string, AggregationAttribute> = {
     "Sum": {
         "functionName": "SUM",
         "description": "Sum of selected attribute over each track.",
@@ -98,7 +99,32 @@ const aggregateFunctions: Record<string, AggregationAttribute> = {
                 "type": "existing_attribute"
             }
         }
+    },
+    /*
+    Custom query must do the following:
+    - Any string replacement needed uses the {item} syntax. This is the same syntax as typescripts syntax without the "$"
+    - The result of the query must return a column aliased as the function name
+    - The result of the query must return the tracking id aliased as "tracking_id"
+    - There must only be one result per tracking id.
+    */
+    "Initial Mass": {
+        "functionName": "init_mass",
+        "description": "The adjusted initial mass determined by linear regression.",
+        "customQuery": `
+            SELECT 
+                MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept as init_mass,
+                t1."{idColumn}" as tracking_id
+            FROM {compTable} as t1
+            LEFT JOIN (
+                SELECT 
+                    regr_slope("{massColumn}", "{timeColumn}") as slope,
+                    regr_intercept("{massColumn}", "{timeColumn}") as intercept,
+                    "{idColumn}" as tracking_id
+                FROM {compTable}
+                GROUP BY "{idColumn}"
+            ) as regr_line
+            ON t1."{idColumn}" = regr_line.tracking_id
+            GROUP BY t1."{idColumn}", regr_line.slope, regr_line.intercept
+    `
     }
 }
-
-export default aggregateFunctions;

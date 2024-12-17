@@ -92,71 +92,112 @@ export async function loadFileIntoDuckDb(
 
 export interface AggregateObject {
     functionName: string;
-    label?: string;
+    label: string;
     attr1?: string;
     var1?: string;
     attr2?: string;
+    customQuery?: string;
 }
 
 export async function addColumn(
-    idColumn: string,
     aggTable: string,
     compTable: string,
-    aggObject: AggregateObject
-) {
+    aggObject: AggregateObject,
+    headerTransforms: ExperimentMetadata['headerTransforms']
+): Promise<string> {
 
-    const { functionName, attr1, var1, attr2, label } = aggObject;
+    const { functionName, attr1, var1, attr2, label, customQuery } = aggObject;
+    if (headerTransforms) {
+        const { id, mass, time } = headerTransforms;
 
-    // Start new column name string
-    let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''}`;
-    // Add variables if present
-    if (attr2) {
-        newColumnName = `${newColumnName} ${attr2}`
-    }
+        if (customQuery) {
+            const newColumnName = label;
 
-    if (var1) {
-        newColumnName = `${newColumnName} ${var1}`
-    }
+            await vg.coordinator().exec([`
+                ALTER TABLE ${aggTable}
+                ADD COLUMN "${newColumnName}" DOUBLE
+            `]);
+
+            // Keys match what you're replacing in custom sql query
+            const replacements: Record<string, string | undefined> = {
+                'idColumn': id,
+                'compTable': compTable,
+                'timeColumn': time,
+                'massColumn': mass
+            }
+            const filledCustomQuery = customQuery.replace(/{(\w+)}/g, (match, key) => {
+                if (key in replacements && replacements[key] !== undefined) {
+                    return replacements[key] as string;
+                }
+                return match;
+            });
+
+            await vg.coordinator().exec([`
+                UPDATE ${aggTable} as orig_agg_table
+                SET "${newColumnName}" = (
+                    SELECT "${functionName}"
+                    FROM (
+                        ${filledCustomQuery}
+                    ) as custom_table
+                    WHERE custom_table.tracking_id = orig_agg_table.tracking_id
+                )
+            `])
+
+            return newColumnName;
+
+        } else {
+            // Start new column name string
+            let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''}`;
+            // Add variables if present
+            if (attr2) {
+                newColumnName = `${newColumnName} ${attr2}`
+            }
+
+            if (var1) {
+                newColumnName = `${newColumnName} ${var1}`
+            }
+
+            await vg.coordinator().exec([`
+                ALTER TABLE ${aggTable}
+                ADD COLUMN IF NOT EXISTS "${newColumnName}" DOUBLE
+            `])
+
+            // Start function call string
+            let functionCall = `${functionName}`
+            if (attr1 || attr2 || var1) {
+                functionCall = `${functionCall}("${attr1}"`
+                // Add variables if present
 
 
-    await vg.coordinator().exec([`
-        ALTER TABLE ${aggTable}
-        ADD COLUMN IF NOT EXISTS "${newColumnName}" DOUBLE
-    `])
+                if (attr2) {
+                    functionCall = `${functionCall}, "${attr2}"`
+                }
 
-    // Start function call string
-    let functionCall = `${functionName}`
-    if (attr1 || attr2 || var1) {
-        functionCall = `${functionCall}("${attr1}"`
-        // Add variables if present
+                if (var1) {
+                    functionCall = `${functionCall},${var1}`
+                }
+
+                // Close parentheses
+                functionCall = `${functionCall})`
+            } else {
+                functionCall = `${functionCall}(*)`
+            }
 
 
-        if (attr2) {
-            functionCall = `${functionCall}, "${attr2}"`
+            await vg.coordinator().exec([`
+                UPDATE ${aggTable} as t1
+                SET "${newColumnName}" = (
+                    SELECT ${functionCall}
+                    FROM ${compTable} as t2
+                    WHERE t1.tracking_id = t2."${id}"
+                    GROUP BY "${id}"
+                )
+            `])
+
+            return newColumnName;
         }
-
-        if (var1) {
-            functionCall = `${functionCall},${var1}`
-        }
-
-        // Close parentheses
-        functionCall = `${functionCall})`
-    } else {
-        functionCall = `${functionCall}(*)`
     }
-
-
-    await vg.coordinator().exec([`
-        UPDATE ${aggTable} as t1
-        SET "${newColumnName}" = (
-            SELECT ${functionCall}
-            FROM ${compTable} as t2
-            WHERE t1.tracking_id = t2."${idColumn}"
-            GROUP BY "${idColumn}"
-        )
-    `])
-
-    return newColumnName;
+    return ""
 }
 
 export async function createAggregateTable(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
