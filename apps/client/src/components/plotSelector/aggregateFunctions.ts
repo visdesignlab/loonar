@@ -126,5 +126,36 @@ export const aggregateFunctions: Record<string, AggregationAttribute> = {
             ON t1."{idColumn}" = regr_line.tracking_id
             GROUP BY t1."{idColumn}", regr_line.slope, regr_line.intercept
     `
+    },
+    "Exponential Growth Rate Constant": {
+        "functionName": "exp_growth_rate_constant",
+        "description": "The slope of the linear regression line divided by the initial mass.",
+        "customQuery": `
+            SELECT 
+                regr_line.slope/(MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept) as exp_growth_rate_constant,
+                t1."{idColumn}" as tracking_id
+            FROM {compTable} as t1
+            LEFT JOIN (
+                SELECT 
+                    regr_slope("{massColumn}", "{timeColumn}") as slope,
+                    regr_intercept("{massColumn}", "{timeColumn}") as intercept,
+                    "{idColumn}" as tracking_id
+                FROM {compTable}
+                GROUP BY "{idColumn}"
+            ) as regr_line
+            ON t1."{idColumn}" = regr_line.tracking_id
+            GROUP BY t1."{idColumn}", regr_line.slope, regr_line.intercept
+    `
+    },
+    "Growth Rate": {
+        "functionName": "growth_rate",
+        "description": "The slope of the linear regression line where time is the independent variable and mass is the dependent variable.",
+        "customQuery": `
+            SELECT 
+                regr_slope("{massColumn}", "{timeColumn}") as growth_rate,
+                "{idColumn}" as tracking_id
+            FROM {compTable}
+            GROUP BY "{idColumn}"
+        `
     }
 }
