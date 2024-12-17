@@ -313,8 +313,10 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         }
     }
 
+    // When we remove all filters (which is currently only happening when locations change), we need to "clickAll" for the condition chart again and ensure everything is selected.
     function clearAllFilters() {
         dataFilters.value = [];
+        conditionSelectorStore.clickConditionChartAll()
     }
 
     return {

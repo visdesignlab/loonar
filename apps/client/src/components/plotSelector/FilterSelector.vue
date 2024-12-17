@@ -46,7 +46,7 @@ interface ReadableDataFilter{
 
 const readableDataFilters = computed(() => {
     const nonConditionChartFilters = dataFilters.value.filter(entry => entry.type !== 'conditionChart');
-    const conditionChartLength = dataFilters.value.filter(entry => entry.type === 'conditionChart').length;
+    const conditionChartLength = dataFilters.value.filter(entry => entry.type === 'conditionChart').length/2;
     const totalLength = xLabels.value.length*yLabels.value.length;
     if(totalLength === conditionChartLength){
         return nonConditionChartFilters as ReadableDataFilter[];

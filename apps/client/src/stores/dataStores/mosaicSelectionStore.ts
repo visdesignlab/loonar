@@ -142,6 +142,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     const selectionStore = useSelectionStore();
     const { dataSelections, dataFilters, attributeCharts } = storeToRefs(selectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
+    const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore)
 
     const datasetSelectionStore = useDatasetSelectionStore();
     const { experimentDataInitialized, currentExperimentMetadata, currentLocationMetadata } = storeToRefs(datasetSelectionStore);
@@ -236,6 +237,12 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
     const aggFilPredString = computed(() =>
         _clauseListToPredString(aggFilClauseList.value)
+    )
+
+    // Skips over cond chart conditions.
+    // Used in cond chart domains so that the domains do not update dependent on cond chart selections
+    const compFilPredStringWithoutConditions = computed(() =>
+        _clauseListToPredString(compFilClauseList.value, 'conditionChart')
     )
 
 
@@ -616,16 +623,22 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         );
     }
 
+    // When selection for the y axis of the individual
+    // cond chart changes, we update ranges.
+    watch(selectedIndividualYAxis, () => {
+        _updateConditionChartsDomain()
+    })
+
     async function _updateConditionChartsDomain() {
 
-        const filPredicateString = compFilPredString.value;
+        const filPredicateString = compFilPredStringWithoutConditions.value;
         const selPredicateString = compSelPredString.value;
 
         const xAttributeName =
             currentExperimentMetadata.value?.headerTransforms?.frame;
-        const yAttributeName =
-            currentExperimentMetadata.value?.headerTransforms?.mass;
 
+        const yAttributeName =
+            selectedIndividualYAxis.value;
         // Catch to return early.
         if (!xAttributeName || !yAttributeName) {
             console.warn('Could not get frame and mass from header transforms.')
@@ -692,10 +705,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
     }
 
-    function _clauseListToPredString(clauseList: LoonarClause[]) {
+    function _clauseListToPredString(clauseList: LoonarClause[], skipType?: SelectionType) {
         let tempString: string | null = '';
         if (clauseList.length > 0) {
-            tempString = `${clauseList.map((clause: LoonarClause) => clause.predicate).filter(Boolean).join(') AND (')}`
+            if (skipType) {
+                tempString = `${clauseList.filter(entry => entry.type !== skipType).map((clause: LoonarClause) => clause.predicate).filter(Boolean).join(') AND (')}`
+            } else {
+                tempString = `${clauseList.map((clause: LoonarClause) => clause.predicate).filter(Boolean).join(') AND (')}`
+            }
         }
         return tempString.trim() === "" ? null : `(${tempString})`
     }

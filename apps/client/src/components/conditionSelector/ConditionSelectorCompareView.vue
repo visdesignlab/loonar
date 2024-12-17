@@ -32,7 +32,7 @@ const chartContainer = ref<HTMLElement | null>(null);
 // Final frame ref
 const finalFrame = ref<number | null>(null);
 
-const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
+const { xLabels, yLabels, selectedXTag, selectedYTag, selectedIndividualYAxis } =
     storeToRefs(conditionSelectorStore);
 
 const $width = vg.Param.value(props.width);
@@ -44,10 +44,15 @@ watch(() => props.width, (newWidth) => {
 let observer: MutationObserver | null = null;
 const isLoading = ref<boolean>(true);
 
+// When axis of charts change, set loading to true
+watch(selectedIndividualYAxis, () => {
+    isLoading.value = true;
+})
+
 watch(
-    [experimentDataInitialized, conditionChartSelections, chartContainer],
-    async ([isInitialized, newConditionChartSelections, newChartContainer]) => {
-        if (isInitialized && newChartContainer) {
+    [experimentDataInitialized,  chartContainer, selectedIndividualYAxis, conditionChartSelections,],
+    async ([isInitialized, newChartContainer, newYAxis, newConditionChartSelections]) => {
+        if (isInitialized && newChartContainer && newYAxis) {
             while (newChartContainer.firstChild) {
                 newChartContainer.removeChild(newChartContainer.firstChild);
             }
@@ -61,7 +66,7 @@ watch(
             finalFrame.value = res[0].final_frame;
 
             await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            const chart = createChart(props.xAxisName, props.yAxisName);
+            const chart = createChart(props.xAxisName, newYAxis);
 
             if(chart){
                 newChartContainer.appendChild(chart);
@@ -93,7 +98,6 @@ watch(
 );
 
 const strokeWidth = 3;
-const strokeWidthSelected = 2;
 
 function createChart(xAxisName: string, yAxisName: string) {
     if (chartContainer.value) {
@@ -114,7 +118,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     {
                         x: xAxisName,
                         y: vg.avg(yAxisName),
-                        stroke: vg.sql`CONCAT('${xLabel}', ' - ', '${yLabel}')`,
+                        stroke: vg.sql`'${yLabel}'`,
                         strokeWidth,
                         curve: 'basis',
                         opacity: 1
@@ -131,7 +135,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     {
                         x: xAxisName,
                         y: vg.avg(yAxisName),
-                        stroke: vg.sql`CONCAT('${xLabel}', ' - ', '${yLabel}')`,
+                        stroke: vg.sql`'${yLabel}'`,
                         strokeWidth,
                         curve: 'basis',
                         opacity: 0.3
@@ -151,12 +155,31 @@ function createChart(xAxisName: string, yAxisName: string) {
                         x: xAxisName,
                         y: vg.avg(yAxisName),
                         text:vg.sql`CONCAT("${selectedXTag.value}", ' - ', "${selectedYTag.value}")`,
-                        // filter: vg.sql`"Frame ID" = (SELECT MAX("Frame ID") FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
+                        textAnchor:'start',
                         filter:vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
-                        fill: vg.sql`CONCAT('${xLabel}', ' - ', '${yLabel}')`,
-                        dx:50
+                        fill: vg.sql`'${yLabel}'`,
+                        dx:10
                     }
                 )
+
+                const tempCircle = vg.dotX(
+                    vg.from(
+                        compTableName.value,
+                        {
+                            filterBy:
+                                conditionChartSelections[tempSource].compChartFilteredSelection,
+                        }
+                    ), {
+                        x: xAxisName,
+                        y: vg.avg(yAxisName),
+                        r: 3,
+                        // stroke:'black',
+                        // filter: vg.sql`"Frame ID" = (SELECT MAX("Frame ID") FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
+                        filter:vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
+                        fill: vg.sql`'${yLabel}'`,
+                    }
+                )
+                lines.push(tempCircle);
                 lines.push(tempText);
             })
         })
@@ -173,7 +196,8 @@ function createChart(xAxisName: string, yAxisName: string) {
             vg.yDomain($conditionChartYAxisDomain),
             vg.marginLeft(40),
             vg.marginBottom(40),
-            vg.colorScheme("observable10"),
+            vg.colorDomain(conditionSelectorStore.yLabels),
+            vg.colorRange(conditionSelectorStore.chartColorScheme),
             vg.width($width),
             vg.height($width),
             vg.marginRight(100),

@@ -8,6 +8,13 @@ import { stringToKeys } from '@/util/conChartStringFunctions';
 
 export type Axis = 'x-axis' | 'y-axis';
 
+
+interface AxesOption {
+    label: string,
+    value: string
+}
+
+
 export const useConditionSelectorStore = defineStore('conditionSelector', () => {
     const datasetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata, experimentDataInitialized } = storeToRefs(datasetSelectionStore)
@@ -19,6 +26,14 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
     const selectedYTag = ref<string>('');
     // Initialize as empty. Used to indicate what is selected.
     const selectedGrid = ref<Record<string, boolean>>({});
+
+    const selectedIndividualAxes = ref<AxesOption | null>(null)
+
+    const axesOptions = ref<AxesOption[]>([]);
+
+    const selectedIndividualYAxis = computed(() => {
+        return selectedIndividualAxes.value?.value;
+    })
 
     const chartColorScheme = [
         "#C026D3", // Fuchsia 600
@@ -69,12 +84,14 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
             // Reset grid. Should always be reset
             selectedGrid.value = {}
             clickConditionChartAll()
+            axesOptions.value = currentExperimentMetadata.value!.headers.map(entry => { return { label: entry, value: entry } })
+            selectedIndividualAxes.value = {
+                label: currentExperimentMetadata.value!.headerTransforms!.mass,
+                value: currentExperimentMetadata.value!.headerTransforms!.mass
+            }
+
         }
     }, { immediate: true })
-
-
-
-
 
 
     const xLabels = computed<string[]>(() => {
@@ -172,6 +189,8 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
 
         // Set 'Selected' on current selection
         selectedGrid.value[`${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`] = newValue;
+        selectedGrid.value[`${selectedYTag.value}¶${currentRowVal}¶${selectedXTag.value}¶${currentColumnVal}`] = newValue;
+
     }
     type allSelectedType = 'row' | 'col' | 'all'
 
@@ -235,6 +254,9 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
         clickConditionChartRow,
         clickConditionChartByName,
         selectedGrid,
-        allSelected
+        allSelected,
+        selectedIndividualAxes,
+        axesOptions,
+        selectedIndividualYAxis
     };
 });

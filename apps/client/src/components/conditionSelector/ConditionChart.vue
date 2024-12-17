@@ -14,7 +14,6 @@ import { storeToRefs } from 'pinia';
 const props = defineProps<{
     tags: [string, string][];
     xAxisName: string;
-    yAxisName: string;
     yIndex: number;
     selected: boolean;
     chartLineWidth:number;
@@ -28,6 +27,8 @@ watch(() => props.height, (newHeight) => {
     $height.update(newHeight);
 })
 
+
+
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
 
@@ -35,23 +36,24 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, compTableName } = storeToRefs(
     datasetSelectionStore
 );
-const { conditionChartSelections, $conditionChartYAxisDomain, cellLevelSelection } = useMosaicSelectionStore();
-const { chartColorScheme } = useConditionSelectorStore();
+const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
+const conditionSelectorStore = useConditionSelectorStore();
+const { selectedIndividualYAxis} = storeToRefs(conditionSelectorStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
 
 watch(
-    [experimentDataInitialized, conditionChartSelections, chartContainer],
-    async ([isInitialized, newConditionChartSelections, newChartContainer]) => {
-        if (isInitialized && newChartContainer) {
+    [experimentDataInitialized,  chartContainer, selectedIndividualYAxis, conditionChartSelections,],
+    async ([isInitialized, newChartContainer, newYAxis, newConditionChartSelections]) => {
+        if (isInitialized && newChartContainer && newYAxis) {
 
             while (newChartContainer.firstChild) {
                 newChartContainer.removeChild(newChartContainer.firstChild);
             }
 
             await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            const chart = createChart(props.xAxisName, props.yAxisName);
+            const chart = createChart(props.xAxisName, newYAxis);
 
             if(chart){
                 newChartContainer.appendChild(chart);
@@ -63,7 +65,7 @@ watch(
 );
 
 // Styles
-const lineColor = chartColorScheme[props.yIndex % 6];
+const lineColor = conditionSelectorStore.chartColorScheme[props.yIndex % 6];
 const strokeWidth = props.chartLineWidth/2;
 const strokeWidthSelected = props.chartLineWidth;
 

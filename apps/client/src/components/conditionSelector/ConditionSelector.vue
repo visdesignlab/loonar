@@ -5,6 +5,7 @@ import {
     onMounted,
     onBeforeUnmount,
     onUpdated,
+    watch
 } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
@@ -23,7 +24,7 @@ const { currentExperimentMetadata } = storeToRefs(
     datasetSelectionUntrrackedStore
 );
 
-const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
+const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid, selectedIndividualAxes, selectedIndividualYAxis, axesOptions } =
     storeToRefs(conditionSelector);
 
 const facetContainer = ref(null);
@@ -143,13 +144,7 @@ const chartLineWidth = computed(() => {
 
 const tab = ref('facet');
 
-// Add new state for the standard dropdown
-const selectedAxes = ref('Mass (pg) over Frame'); // default selected value
-const axesOptions = ref([
-    { label: 'Mass Over Frame', value: 'Mass (pg) over Frame ID' },
-    { label: 'Area Over Frame', value: 'Area over Frame ID' },
-    // Add more options as required
-]);
+
 const determineSelected = (elx: string, ely: string) => {
     return (
         selectedGrid.value[
@@ -222,7 +217,7 @@ const determineSelected = (elx: string, ely: string) => {
                     Axes:
                 </span>
                 <q-select
-                    v-model="selectedAxes"
+                    v-model="selectedIndividualAxes"
                     :options="axesOptions"
                     dense
                     flat
@@ -342,11 +337,6 @@ const determineSelected = (elx: string, ely: string) => {
                                                         currentExperimentMetadata
                                                             ?.headerTransforms
                                                             ?.frame ?? 'Test'
-                                                    }`"
-                                                    :yAxisName="`${
-                                                        currentExperimentMetadata
-                                                            ?.headerTransforms
-                                                            ?.mass ?? 'Test'
                                                     }`"
                                                     :selected="
                                                         determineSelected(
@@ -470,7 +460,7 @@ const determineSelected = (elx: string, ely: string) => {
                 <div class="full-height full-width flex justify-center align-center" ref="compareContainer">
                     <ConditionSelectorCompareView 
                         :xAxisName="`${currentExperimentMetadata?.headerTransforms?.frame ?? 'Test'}`"
-                        :yAxisName="`${currentExperimentMetadata?.headerTransforms?.mass ?? 'Test'}`"
+                        :yAxisName="`${selectedIndividualYAxis ?? 'Test'}`"
                         :width="compareWidth"
                     />
                 </div>
