@@ -263,23 +263,64 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
                 )!;
+                const cellBirthTime = exemplar.data[0].time;
+                const cellDeathTime =
+                    exemplar.data[exemplar.data.length - 1].time;
                 return [
-                    [0, yOffset],
-                    [viewConfiguration.value.horizonChartWidth, yOffset],
+                    [0 + cellBirthTime, yOffset],
                     [
-                        viewConfiguration.value.horizonChartWidth,
+                        viewConfiguration.value.horizonChartWidth -
+                            cellDeathTime,
+                        yOffset,
+                    ],
+                    [
+                        viewConfiguration.value.horizonChartWidth -
+                            cellDeathTime,
                         yOffset - viewConfiguration.value.timeBarHeightOuter,
                     ],
-                    [0, yOffset - viewConfiguration.value.timeBarHeightOuter],
-                    [0, yOffset],
+                    [
+                        0 + cellBirthTime,
+                        yOffset - viewConfiguration.value.timeBarHeightOuter,
+                    ],
+                    [0 + cellBirthTime, yOffset],
                 ];
             },
-            getLineColor: [25, 189, 10, 200],
-            getFillColor: [25, 189, 10, 100],
-            getLineWidth: 1,
+            getFillColor: [144, 238, 144, 255],
+            getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
     );
+    // Add background rectangle half as tall
+    placeholderLayer.push(
+        new PolygonLayer({
+            id: `exemplar-snippet-background-placeholder`,
+            data: exemplarViewStore.exemplarTracks,
+            getPolygon: (exemplar: ExemplarTrack) => {
+                const yOffset = exemplarYOffsets.value.get(
+                    uniqueExemplarKey(exemplar)
+                )!;
+                const quarterHeight =
+                    viewConfiguration.value.timeBarHeightOuter / 4;
+                return [
+                    [0, yOffset - quarterHeight * 1.5],
+                    [
+                        viewConfiguration.value.horizonChartWidth,
+                        yOffset - quarterHeight * 1.5,
+                    ],
+                    [
+                        viewConfiguration.value.horizonChartWidth,
+                        yOffset - quarterHeight * 2.5,
+                    ],
+                    [0, yOffset - quarterHeight * 2.5],
+                    [0, yOffset - quarterHeight * 1.5],
+                ];
+            },
+            getFillColor: [144, 238, 144, 255],
+            getLineWidth: 0,
+            lineWidthUnits: 'pixels',
+        })
+    );
+
     return placeholderLayer;
 }
 
