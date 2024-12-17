@@ -4,7 +4,7 @@ import { QBtn } from 'quasar';
 import { storeToRefs } from 'pinia';
 import UnivariateCellPlot from './UnivariateCellPlot.vue';
 import LBtn from '../custom/LBtn.vue';
-import { addColumn, type AggregateObject } from '@/util/datasetLoader';
+import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
 import {
     useSelectionStore,
     type AttributeChart,
@@ -66,7 +66,7 @@ const allAttributeNames = computed(() => {
         currentExperimentMetadata.value.headers &&
         currentExperimentMetadata.value.headers.length > 0
     ) {
-        return currentExperimentMetadata.value.headers;
+        return [...currentExperimentMetadata.value.headers, "Mass Norm", "Time Norm"];
     } else {
         return [];
     }
@@ -129,7 +129,7 @@ async function addTrackPlotFromMenu() {
             customQuery
         }
 
-        const name = await addColumn(
+        const name = await addAggregateColumn(
             aggTableName.value,
             compTableName.value,
             aggObject,

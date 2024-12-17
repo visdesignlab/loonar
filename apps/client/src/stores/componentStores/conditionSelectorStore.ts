@@ -84,7 +84,7 @@ export const useConditionSelectorStore = defineStore('conditionSelector', () => 
             // Reset grid. Should always be reset
             selectedGrid.value = {}
             clickConditionChartAll()
-            axesOptions.value = currentExperimentMetadata.value!.headers.map(entry => { return { label: entry, value: entry } })
+            axesOptions.value = [...currentExperimentMetadata.value!.headers.map(entry => { return { label: entry, value: entry } }), { label: "Mass Norm", value: "Mass Norm" }]
             selectedIndividualAxes.value = {
                 label: currentExperimentMetadata.value!.headerTransforms!.mass,
                 value: currentExperimentMetadata.value!.headerTransforms!.mass

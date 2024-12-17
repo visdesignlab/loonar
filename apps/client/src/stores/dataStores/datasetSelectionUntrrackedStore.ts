@@ -14,6 +14,7 @@ import {
     loadCsv,
     loadFileIntoDuckDb,
     createAggregateTable,
+    addAdditionalCellColumns,
 } from '@/util/datasetLoader';
 import { useNotificationStore } from '../misc/notificationStore';
 
@@ -159,6 +160,11 @@ export const useDatasetSelectionStore = defineStore(
                             compTableName.value,
                             'parquet'
                         );
+                        try {
+                            await addAdditionalCellColumns(compTableName.value, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
+                        } catch (error) {
+                            console.error(error);
+                        }
                         try {
                             await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
                             notify({

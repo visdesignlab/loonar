@@ -99,7 +99,7 @@ export interface AggregateObject {
     customQuery?: string;
 }
 
-export async function addColumn(
+export async function addAggregateColumn(
     aggTable: string,
     compTable: string,
     aggObject: AggregateObject,
@@ -216,6 +216,14 @@ export async function createAggregateTable(tableName: string, headers: string[],
             `
         })
 
+        selectString = `
+            ${selectString}
+            MAX("Mass Norm") AS "Maximum Mass Norm",
+            MIN("Mass Norm") AS "Minimum Mass Norm",
+            MAX("Time Norm") AS "Maximum Time Norm",
+            MIN("Time Norm") AS "Minimum Time Norm",
+        `
+
         try {
             try {
                 await vg.coordinator().exec([`
@@ -242,4 +250,56 @@ export async function createAggregateTable(tableName: string, headers: string[],
 
 
 
+}
+
+
+export async function addAdditionalCellColumns(tableName: string, headers: string[], headerTransforms: ExperimentMetadata['headerTransforms']) {
+    if (headers && headerTransforms) {
+        const { id, frame, mass, time } = headerTransforms;
+        await vg.coordinator().exec([`
+            ALTER TABLE ${tableName}
+            ADD COLUMN IF NOT EXISTS "Mass Norm" DOUBLE
+        `])
+
+        await vg.coordinator().exec([`
+            WITH min_frame_mass AS (
+                SELECT 
+                    "${id}" AS tracking_id,
+                    "${mass}" AS min_frame_mass
+                FROM ${tableName}
+                WHERE "${frame}" = (
+                    SELECT MIN("${frame}")
+                    FROM ${tableName} AS sub_table
+                    WHERE sub_table."${id}" = ${tableName}."${id}"
+                )
+            )
+            UPDATE ${tableName} AS orig_comp_table
+            SET "Mass Norm" = "${mass}" / (
+                SELECT min_frame_mass
+                FROM min_frame_mass
+                WHERE min_frame_mass.tracking_id = orig_comp_table."${id}"
+            )
+        `])
+
+        await vg.coordinator().exec([`
+            ALTER TABLE ${tableName}
+            ADD COLUMN IF NOT EXISTS "Time Norm" DOUBLE
+        `])
+
+        await vg.coordinator().exec([`
+            WITH min_time AS (
+                SELECT 
+                    "${id}" AS tracking_id,
+                    MIN("${time}") AS min_time
+                FROM ${tableName}
+                GROUP BY "${id}"
+            )
+            UPDATE ${tableName} AS orig_comp_table
+            SET "Time Norm" = "${time}" - (
+                SELECT min_time
+                FROM min_time
+                WHERE min_time.tracking_id = orig_comp_table."${id}"
+            )
+        `])
+    }
 }
