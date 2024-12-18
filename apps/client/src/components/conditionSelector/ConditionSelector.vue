@@ -553,7 +553,6 @@ $border: 1px solid #9ca3af;
     border-radius: 30px;
 }
 .custom-dark {
-    background-color: #1a1a1a;
     color: white;
 
     .q-tabs,
