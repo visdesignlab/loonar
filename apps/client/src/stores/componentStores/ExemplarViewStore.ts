@@ -1,5 +1,8 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
+import { storeToRefs } from 'pinia';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import * as vg from '@uwdata/vgplot';
 
 export interface ExemplarTrack {
     trackId: string;
@@ -112,10 +115,59 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         };
     }
 
+    const datasetSelectionStore = useDatasetSelectionStore();
+    const { experimentDataInitialized, currentExperimentMetadata } =
+        storeToRefs(datasetSelectionStore);
+
+    async function getTotalExperimentTime(): Promise<number> {
+        if (
+            !experimentDataInitialized.value ||
+            !currentExperimentMetadata.value
+        ) {
+            return 0;
+        }
+
+        // Assume the time column is specified in headerTransforms
+        const timeColumn =
+            currentExperimentMetadata.value.headerTransforms?.time;
+
+        if (!timeColumn) {
+            console.error('Time column not defined in headerTransforms.');
+            return 0;
+        }
+
+        const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
+
+        const query = `
+            SELECT MAX("${timeColumn}") as max_time, MIN("${timeColumn}") as min_time
+            FROM "${tableName}"
+        `;
+
+        try {
+            const result: { max_time: number; min_time: number }[] = await vg
+                .coordinator()
+                .query(query, { type: 'json' });
+            if (
+                result &&
+                result.length > 0 &&
+                result[0].max_time != null &&
+                result[0].min_time != null
+            ) {
+                return result[0].max_time - result[0].min_time;
+            } else {
+                return 0;
+            }
+        } catch (error) {
+            console.error('Error fetching total experiment time:', error);
+            return 0;
+        }
+    }
+
     return {
         generateTestExemplarTracks,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,
+        getTotalExperimentTime,
     };
 });
