@@ -387,6 +387,7 @@ const determineSelected = (elx: string, ely: string) => {
                         }`"
                         :yAxisName="`${selectedIndividualYAxis ?? 'Test'}`"
                         :width="compareWidth"
+                        :height="compareHeight"
                     />
                 </div>
             </q-tab-panel>

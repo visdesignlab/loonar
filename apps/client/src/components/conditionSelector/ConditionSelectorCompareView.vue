@@ -12,6 +12,7 @@ const props = defineProps<{
     xAxisName: string;
     yAxisName: string;
     width: number;
+    height: number;
 }>();
 
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -37,11 +38,19 @@ const {
 } = storeToRefs(conditionSelectorStore);
 
 const $width = vg.Param.value(props.width);
+const $height = vg.Param.value(props.height);
 
 watch(
     () => props.width,
     (newWidth) => {
         $width.update(newWidth);
+    }
+);
+
+watch(
+    () => props.height,
+    (newHeight) => {
+        $height.update(newHeight);
     }
 );
 
@@ -210,7 +219,7 @@ function createChart(xAxisName: string, yAxisName: string) {
         vg.colorDomain(conditionSelectorStore.yLabels),
         vg.colorRange(conditionSelectorStore.chartColorScheme),
         vg.width($width),
-        vg.height($width),
+        vg.height($height),
         vg.marginRight(100),
         vg.name('my-lines')
     );
