@@ -60,10 +60,9 @@ export const useConditionSelectorStore = defineStore(
             const locationMetadataList =
                 currentExperimentMetadata.value.locationMetadataList;
             for (const locationMetadata of locationMetadataList) {
-                if (!locationMetadata.tags) continue;
-                for (const [tagKey, tagValue] of Object.entries(
-                    locationMetadata.tags
-                )) {
+                const locationTags = locationMetadata.tags;
+                if (!locationTags) continue;
+                for (const [tagKey, tagValue] of Object.entries(locationTags)) {
                     if (!(tagKey in experimentTags)) {
                         experimentTags[tagKey] = [];
                     }
