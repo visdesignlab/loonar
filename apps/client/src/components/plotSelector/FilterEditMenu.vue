@@ -14,7 +14,10 @@ import {
     QInput,
     QBanner,
 } from 'quasar';
-import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
 
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
@@ -118,7 +121,9 @@ const minMaxFormValid = computed<boolean>(() => {
         <q-card :dark="globalSettings.darkMode">
             <q-card-section>
                 <div class="text-h6">Delete plot "{{ props.plotName }}"?</div>
-                <div class="text-caption">This will remove all associated selections and filters.</div>
+                <div class="text-caption">
+                    This will remove all associated selections and filters.
+                </div>
             </q-card-section>
             <q-card-actions align="right">
                 <l-btn

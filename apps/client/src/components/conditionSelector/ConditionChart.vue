@@ -16,18 +16,18 @@ const props = defineProps<{
     xAxisName: string;
     yIndex: number;
     selected: boolean;
-    chartLineWidth:number;
-    height:number;
+    chartLineWidth: number;
+    height: number;
 }>();
-
 
 const $height = vg.Param.value(props.height);
 
-watch(() => props.height, (newHeight) => {
-    $height.update(newHeight);
-})
-
-
+watch(
+    () => props.height,
+    (newHeight) => {
+        $height.update(newHeight);
+    }
+);
 
 // Will use soon for dark mode.
 const globalSettings = useGlobalSettings();
@@ -36,18 +36,28 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, compTableName } = storeToRefs(
     datasetSelectionStore
 );
-const { conditionChartSelections, $conditionChartYAxisDomain } = useMosaicSelectionStore();
+const { conditionChartSelections, $conditionChartYAxisDomain } =
+    useMosaicSelectionStore();
 const conditionSelectorStore = useConditionSelectorStore();
-const { selectedIndividualYAxis} = storeToRefs(conditionSelectorStore);
+const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
 
 watch(
-    [experimentDataInitialized,  chartContainer, selectedIndividualYAxis, conditionChartSelections,],
-    async ([isInitialized, newChartContainer, newYAxis, newConditionChartSelections]) => {
+    [
+        experimentDataInitialized,
+        chartContainer,
+        selectedIndividualYAxis,
+        conditionChartSelections,
+    ],
+    async ([
+        isInitialized,
+        newChartContainer,
+        newYAxis,
+        newConditionChartSelections,
+    ]) => {
         if (isInitialized && newChartContainer && newYAxis) {
-
             while (newChartContainer.firstChild) {
                 newChartContainer.removeChild(newChartContainer.firstChild);
             }
@@ -55,10 +65,9 @@ watch(
             await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
             const chart = createChart(props.xAxisName, newYAxis);
 
-            if(chart){
+            if (chart) {
                 newChartContainer.appendChild(chart);
             }
-
         }
     },
     { deep: true }
@@ -66,9 +75,8 @@ watch(
 
 // Styles
 const lineColor = conditionSelectorStore.chartColorScheme[props.yIndex % 6];
-const strokeWidth = props.chartLineWidth/2;
+const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
-
 
 // Filter statements in below code are left here to illustrate possibility of additional filter statements.
 function createChart(xAxisName: string, yAxisName: string) {
@@ -78,13 +86,9 @@ function createChart(xAxisName: string, yAxisName: string) {
         const chart = vg.plot(
             // Fills in area under line chart grey (optional)
             vg.areaY(
-                vg.from(
-                    compTableName.value,
-                    {
-                        filterBy:
-                            conditionChartSelections[source].baseSelection,
-                    }
-                ),
+                vg.from(compTableName.value, {
+                    filterBy: conditionChartSelections[source].baseSelection,
+                }),
                 {
                     x: xAxisName,
                     y1: 0,
@@ -97,13 +101,9 @@ function createChart(xAxisName: string, yAxisName: string) {
                 }
             ),
             vg.lineY(
-                vg.from(
-                    compTableName.value,
-                    {
-                        filterBy:
-                            conditionChartSelections[source].baseSelection,
-                    }
-                ),
+                vg.from(compTableName.value, {
+                    filterBy: conditionChartSelections[source].baseSelection,
+                }),
                 {
                     x: xAxisName,
                     y: vg.avg(yAxisName),
@@ -115,14 +115,11 @@ function createChart(xAxisName: string, yAxisName: string) {
                 }
             ),
             vg.lineY(
-                vg.from(
-                    compTableName.value,
-                    {
-                        filterBy:
-                            conditionChartSelections[source].filteredSelection,
-                            // cellLevelSelection
-                    }
-                ),
+                vg.from(compTableName.value, {
+                    filterBy:
+                        conditionChartSelections[source].filteredSelection,
+                    // cellLevelSelection
+                }),
                 {
                     x: xAxisName,
                     y: vg.avg(yAxisName),

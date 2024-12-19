@@ -2,10 +2,13 @@
 import { computed, ref } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import PlotSelector from './PlotSelector.vue';
-import { useSelectionStore, type DataSelection } from '@/stores/interactionStores/selectionStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
-import { stringToKeys} from '@/util/conChartStringFunctions';
+import { stringToKeys } from '@/util/conChartStringFunctions';
 import type { SelectionType } from '@/stores/interactionStores/selectionStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
@@ -26,7 +29,7 @@ function removeSelection(plotName: string) {
     selectionStore.removeSelectionByPlotName(plotName);
 }
 function convertToFilters() {
-    selectionStore.convertToFilters();    
+    selectionStore.convertToFilters();
 }
 
 const cellAttributesOpen = ref(true);
@@ -37,32 +40,39 @@ const mutedTextClass = computed(() =>
 );
 
 // Just for additional styling of existing filters.
-interface ReadableDataFilter{
-    plotName:string,
-    type:SelectionType,
-    range:[number,number];
-    subName?:string
+interface ReadableDataFilter {
+    plotName: string;
+    type: SelectionType;
+    range: [number, number];
+    subName?: string;
 }
 
 const readableDataFilters = computed(() => {
-    const nonConditionChartFilters = dataFilters.value.filter(entry => entry.type !== 'conditionChart');
-    const conditionChartLength = dataFilters.value.filter(entry => entry.type === 'conditionChart').length/2;
-    const totalLength = xLabels.value.length*yLabels.value.length;
-    if(totalLength === conditionChartLength){
+    const nonConditionChartFilters = dataFilters.value.filter(
+        (entry) => entry.type !== 'conditionChart'
+    );
+    const conditionChartLength =
+        dataFilters.value.filter((entry) => entry.type === 'conditionChart')
+            .length / 2;
+    const totalLength = xLabels.value.length * yLabels.value.length;
+    if (totalLength === conditionChartLength) {
         return nonConditionChartFilters as ReadableDataFilter[];
     } else {
-        return [...nonConditionChartFilters, {
-        plotName:`Condition Charts`,
-        subName: `${conditionChartLength} out of ${xLabels.value.length*yLabels.value.length} selected.`,
-        type:'conditionChart' as SelectionType,
-        range:[0,0]
-        }] as ReadableDataFilter[]
+        return [
+            ...nonConditionChartFilters,
+            {
+                plotName: `Condition Charts`,
+                subName: `${conditionChartLength} out of ${
+                    xLabels.value.length * yLabels.value.length
+                } selected.`,
+                type: 'conditionChart' as SelectionType,
+                range: [0, 0],
+            },
+        ] as ReadableDataFilter[];
     }
-})
+});
 
 const filtersCount = computed(() => readableDataFilters.value.length);
-
-
 </script>
 
 <template>
@@ -84,9 +94,7 @@ const filtersCount = computed(() => readableDataFilters.value.length);
             </template>
             <q-list>
                 <q-item
-                    v-for="(
-                        selection, index
-                    ) in selectionStore.dataSelections"
+                    v-for="(selection, index) in selectionStore.dataSelections"
                     :key="index"
                 >
                     <FilterEditMenu
@@ -166,7 +174,10 @@ const filtersCount = computed(() => readableDataFilters.value.length);
                 </q-item-section>
             </template>
             <q-list>
-                <q-item v-for="(filter, index) in readableDataFilters" :key="index">
+                <q-item
+                    v-for="(filter, index) in readableDataFilters"
+                    :key="index"
+                >
                     <FilterEditMenu
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"

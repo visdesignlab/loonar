@@ -5,7 +5,7 @@ import * as vg from '@uwdata/vgplot';
 import {
     useSelectionStore,
     type DataSelection,
-    type AttributeChart
+    type AttributeChart,
 } from '@/stores/interactionStores/selectionStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { storeToRefs } from 'pinia';
@@ -15,14 +15,17 @@ import { QItemSection } from 'quasar';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { currentExperimentMetadata } = storeToRefs(
-    datasetSelectionStore
-);
+const { currentExperimentMetadata } = storeToRefs(datasetSelectionStore);
 
 const globalSettings = useGlobalSettings();
 const selectionStore = useSelectionStore();
-const {showRelativeCell, showRelativeTrack} = storeToRefs(selectionStore);
-const { cellLevelSelection, trackLevelSelection, cellLevelFilter, trackLevelFilter } = useMosaicSelectionStore();
+const { showRelativeCell, showRelativeTrack } = storeToRefs(selectionStore);
+const {
+    cellLevelSelection,
+    trackLevelSelection,
+    cellLevelFilter,
+    trackLevelFilter,
+} = useMosaicSelectionStore();
 
 // Define Plot Emits and Props
 const props = defineProps({
@@ -35,10 +38,10 @@ const props = defineProps({
         required: true,
         validator: (value: string) => ['track', 'cell'].includes(value),
     },
-    attributeChart:{
+    attributeChart: {
         type: Object as PropType<AttributeChart>,
-        required: true
-    }
+        required: true,
+    },
 });
 
 const plotContainer = ref<HTMLDivElement | null>(null);
@@ -46,24 +49,26 @@ const charts = ref<null | HTMLElement>(null);
 const isLoading = ref<boolean>(true);
 let observer: MutationObserver | null = null;
 
-
 const showRelative = computed(() => {
-    return props.attributeType === 'cell' ? showRelativeCell.value : showRelativeTrack.value
-})
+    return props.attributeType === 'cell'
+        ? showRelativeCell.value
+        : showRelativeTrack.value;
+});
 
 // Styling for "relative" charts.
 const $params = {
-    style: showRelative.value ? vg.Param.value('display:block') : vg.Param.value('display:none'),
-}
+    style: showRelative.value
+        ? vg.Param.value('display:block')
+        : vg.Param.value('display:none'),
+};
 
 watch(showRelative, (isShown) => {
-    if(isShown){
-        $params.style.update('display:block')
+    if (isShown) {
+        $params.style.update('display:block');
     } else {
-        $params.style.update('display: none')
+        $params.style.update('display: none');
     }
-})
-
+});
 
 // Creates charts when reference is available.
 // Incorporates loading.
@@ -76,7 +81,7 @@ watch(
                 props.attributeType === 'cell'
                     ? cellLevelSelection
                     : trackLevelSelection;
-            const mosaicFilter = 
+            const mosaicFilter =
                 props.attributeType === 'cell'
                     ? cellLevelFilter
                     : trackLevelFilter;
@@ -120,17 +125,22 @@ watch(
 );
 
 // Vg Plot
-function makePlot(column: string, mosaicSelection: any, mosaicFilter:any, datasetName: string) {
+function makePlot(
+    column: string,
+    mosaicSelection: any,
+    mosaicFilter: any,
+    datasetName: string
+) {
     try {
         return vg.vconcat(
             vg.plot(
                 // Currently Selected Data
                 vg.rectY(vg.from(datasetName, { filterBy: mosaicSelection }), {
-                    x: vg.bin(column, {steps:100}),
-                    y:vg.count(),
+                    x: vg.bin(column, { steps: 100 }),
+                    y: vg.count(),
                     fill: '#377eb8',
                     opacity: 1,
-                    inset: 0.2
+                    inset: 0.2,
                 }),
                 vg.marginBottom(30),
                 vg.marginTop(5),
@@ -151,20 +161,20 @@ function makePlot(column: string, mosaicSelection: any, mosaicFilter:any, datase
             ),
             vg.plot(
                 // Background grey data
-                vg.rectY(vg.from(datasetName, {filterBy: mosaicFilter }), {
-                    x: vg.bin(column, {steps:100}),
+                vg.rectY(vg.from(datasetName, { filterBy: mosaicFilter }), {
+                    x: vg.bin(column, { steps: 100 }),
                     y: vg.count(),
                     fill: '#cccccc',
                     inset: 0.2,
                 }),
                 // Currently Selected Data
                 vg.rectY(vg.from(datasetName, { filterBy: mosaicSelection }), {
-                    x: vg.bin(column, {steps:100}),
-                    y:vg.count(),
+                    x: vg.bin(column, { steps: 100 }),
+                    y: vg.count(),
                     // div: vg.sql`"count"/"sum"`,
                     fill: '#377eb8',
                     opacity: 1,
-                    inset: 0.2
+                    inset: 0.2,
                 }),
                 vg.marginBottom(45),
                 vg.marginTop(5),
@@ -182,33 +192,38 @@ function makePlot(column: string, mosaicSelection: any, mosaicFilter:any, datase
                 vg.yAxis(null),
                 vg.xLine(false),
                 vg.xNice(false),
-                vg.xAxis(true),
+                vg.xAxis(true)
             )
         );
     } catch (error) {
-        console.error(`Error with plot: ${error}`)
+        console.error(`Error with plot: ${error}`);
     }
 }
 
 const rangeModel = computed({
     get() {
-        return { min: props.attributeChart.range[0], max: props.attributeChart.range[1] };
+        return {
+            min: props.attributeChart.range[0],
+            max: props.attributeChart.range[1],
+        };
     },
 
     set(newValue) {
         // Turn this into a function in store.
-        const selection = selectionStore.dataSelections.find((selection: DataSelection) => {
-            return selection.plotName === props.attributeChart.plotName
-        })
-        if(selection){
+        const selection = selectionStore.dataSelections.find(
+            (selection: DataSelection) => {
+                return selection.plotName === props.attributeChart.plotName;
+            }
+        );
+        if (selection) {
             selection.range[0] = newValue.min;
             selection.range[1] = newValue.max;
         } else {
             const newSelection: DataSelection = {
                 ...props.attributeChart,
                 range: [newValue.min, newValue.max],
-            }
-            selectionStore.addSelection(newSelection)
+            };
+            selectionStore.addSelection(newSelection);
         }
         props.attributeChart.range[0] = newValue.min;
         props.attributeChart.range[1] = newValue.max;
@@ -241,10 +256,7 @@ function handleRangeUpdate(newRange: { min: number; max: number }) {
                     <q-spinner />
                     <div class="text-caption">Loading chart</div>
                 </div>
-                <div 
-                    v-if="!isLoading"
-                    class="q-range-container"
-                >
+                <div v-if="!isLoading" class="q-range-container">
                     <q-range
                         v-model="rangeModel"
                         :min="props.attributeChart.maxRange[0]"
@@ -270,16 +282,16 @@ function handleRangeUpdate(newRange: { min: number; max: number }) {
 .q-range-container {
     padding: 0 20px;
     position: relative;
-    bottom:50px;
+    bottom: 50px;
     left: 0;
     right: 0;
 }
 
-.chart-container{
+.chart-container {
     /* position: relative; */
-    border-top:1px solid #cccccc;
-    border-radius:2px;
-    padding-top:20px;
-    margin-top:10px;
+    border-top: 1px solid #cccccc;
+    border-radius: 2px;
+    padding-top: 20px;
+    margin-top: 10px;
 }
 </style>

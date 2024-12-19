@@ -129,7 +129,6 @@ const areaGen = computed(() => {
         );
 });
 
-
 const areaGenHighlighted = computed(() => {
     return area<AggDataPoint>()
         .x((aggPoint) => scaleX.value(aggPoint.time))
@@ -535,7 +534,9 @@ const otherUnmuted = computed(() => {
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path
-                        :class="`muted agg-line ${globalSettings.normalizedDark} ${aggLine.filtered ? 'filtered' : ''}`"
+                        :class="`muted agg-line ${
+                            globalSettings.normalizedDark
+                        } ${aggLine.filtered ? 'filtered' : ''}`"
                         v-for="(
                             aggLine, index
                         ) in aggregateLineChartStore.aggLineDataList.filter(
@@ -546,7 +547,7 @@ const otherUnmuted = computed(() => {
                     ></path>
                     <!-- Path below is for individual cell tracks with highlighted cells. -->
                     <path
-                        style="stroke-width: 2px;"
+                        style="stroke-width: 2px"
                         :class="`highlighted-line ${globalSettings.normalizedDark}`"
                         v-for="(
                             aggLine, index
@@ -555,7 +556,7 @@ const otherUnmuted = computed(() => {
                         )"
                         :key="'highlighted-' + index"
                         :d="areaGenHighlighted(aggLine.data) ?? ''"
-                        ></path>
+                    ></path>
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path
@@ -672,13 +673,13 @@ const otherUnmuted = computed(() => {
     opacity: 0.6;
 }
 
-.highlighted.agg-line{
-    stroke-width:3px;
-    opacity:1;
+.highlighted.agg-line {
+    stroke-width: 3px;
+    opacity: 1;
 }
 
-.filtered.agg-line{
-    opacity:0 !important;
+.filtered.agg-line {
+    opacity: 0 !important;
 }
 .selected.agg-line {
     stroke-width: 4px;

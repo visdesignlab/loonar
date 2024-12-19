@@ -21,7 +21,6 @@ import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 
-
 import {
     loadOmeTiff,
     getChannelStats,
@@ -59,7 +58,8 @@ const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
-const { highlightedCellIds, unfilteredTrackIds} = storeToRefs(mosaicSelectionStore);
+const { highlightedCellIds, unfilteredTrackIds } =
+    storeToRefs(mosaicSelectionStore);
 
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
@@ -70,22 +70,23 @@ const contrastLimit = computed<[number, number][]>(() => {
     return [[contrastLimitSlider.value.min, contrastLimitSlider.value.max]];
 });
 
-const _determineSelectedOrFiltered = (trackId:string) => {
-
+const _determineSelectedOrFiltered = (trackId: string) => {
     const frame = imageViewerStore.frameNumber;
     const location = currentLocationMetadata.value?.id;
     let selected = false;
-    if(frame && location && highlightedCellIds.value){
+    if (frame && location && highlightedCellIds.value) {
         // Generate Unique String to compare against list
-        const unique_string = `${trackId}_${frame}_${location}`
-        selected = highlightedCellIds.value.includes(unique_string)
+        const unique_string = `${trackId}_${frame}_${location}`;
+        selected = highlightedCellIds.value.includes(unique_string);
     }
 
     return {
         selected,
-        filtered: unfilteredTrackIds.value ? !(unfilteredTrackIds.value.includes(trackId)) : false
-    }
-}
+        filtered: unfilteredTrackIds.value
+            ? !unfilteredTrackIds.value.includes(trackId)
+            : false,
+    };
+};
 
 let deckgl: any | null = null;
 onMounted(() => {
@@ -172,8 +173,6 @@ onMounted(() => {
     eventBusStore.emitter.on('resetImageView', resetView);
 });
 
-
-
 const loader = ref<any | null>(null);
 const pixelSource = ref<any | null>(null);
 watch(currentLocationMetadata, async () => {
@@ -251,9 +250,11 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
                 return hoverColorWithAlpha;
             }
 
-            const { filtered } = _determineSelectedOrFiltered(info.properties?.id?.toString())
-            if(filtered){
-                return[0,0,0,255];
+            const { filtered } = _determineSelectedOrFiltered(
+                info.properties?.id?.toString()
+            );
+            if (filtered) {
+                return [0, 0, 0, 255];
             }
             return [0, 0, 0, 0];
         },
@@ -270,12 +271,14 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
                 return colors.hovered.rgb;
             }
 
-            const {selected,filtered} = _determineSelectedOrFiltered(info.properties?.id?.toString())
-            if(filtered){
-                return [0,0,0];
+            const { selected, filtered } = _determineSelectedOrFiltered(
+                info.properties?.id?.toString()
+            );
+            if (filtered) {
+                return [0, 0, 0];
             } else {
-                if(!selected){
-                    return [0,0,0];
+                if (!selected) {
+                    return [0, 0, 0];
                 }
             }
             return colors.unselectedBoundary.rgb;
@@ -295,7 +298,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
         updateTriggers: {
             getFillColor: [dataPointSelectionUntrracked.hoveredTrackId],
             getLineColor: [dataPointSelection.selectedTrackId],
-            getLineWidth: [dataPointSelection.selectedTrackId]
+            getLineWidth: [dataPointSelection.selectedTrackId],
         },
     });
 }
@@ -492,8 +495,8 @@ function createCenterPointLayer(): ScatterplotLayer {
 
             const { filtered } = _determineSelectedOrFiltered(d.trackId);
 
-            if(filtered){
-                return[0,0,0,0];
+            if (filtered) {
+                return [0, 0, 0, 0];
             }
 
             return [228, 26, 28];
@@ -697,7 +700,6 @@ watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
 watch(highlightedCellIds, renderDeckGL);
 watch(unfilteredTrackIds, renderDeckGL);
-
 
 function clearSelection() {
     dataPointSelection.selectedTrackId = null;

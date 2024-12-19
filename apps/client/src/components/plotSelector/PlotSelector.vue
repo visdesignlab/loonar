@@ -12,13 +12,20 @@ import {
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { aggregateFunctions, type AttributeSelection, type AggregationAttribute }from './aggregateFunctions';
+import {
+    aggregateFunctions,
+    type AttributeSelection,
+    type AggregationAttribute,
+} from './aggregateFunctions';
 const datasetSelectionStore = useDatasetSelectionStore();
 const globalSettings = useGlobalSettings();
 const notificationStore = useNotificationStore();
-const { experimentDataInitialized, currentExperimentMetadata, compTableName, aggTableName } = storeToRefs(
-    datasetSelectionStore
-);
+const {
+    experimentDataInitialized,
+    currentExperimentMetadata,
+    compTableName,
+    aggTableName,
+} = storeToRefs(datasetSelectionStore);
 const selectionStore = useSelectionStore();
 const { attributeCharts, showRelativeCell, showRelativeTrack } =
     storeToRefs(selectionStore);
@@ -34,29 +41,34 @@ const props = defineProps({
 const cellPlotDialogOpen = ref(false);
 const selectedCellAttribute = ref('');
 
-
 const trackPlotDialogOpen = ref(false);
-const aggModel = ref<string|null>(null);
-const attr1Model = ref<string|null>(null);
-const attr2Model = ref<string|null>(null);
-const var1Model = ref<number|string|null>(null);
+const aggModel = ref<string | null>(null);
+const attr1Model = ref<string | null>(null);
+const attr2Model = ref<string | null>(null);
+const var1Model = ref<number | string | null>(null);
 
 const errorPlotName = ref('');
 
-
-const aggregationAttributes: Record<string,AggregationAttribute> = aggregateFunctions;
+const aggregationAttributes: Record<string, AggregationAttribute> =
+    aggregateFunctions;
 
 // Currently selected aggregation
-const currAgg = computed(() => aggModel.value ? aggregationAttributes[aggModel.value] : null)
+const currAgg = computed(() =>
+    aggModel.value ? aggregationAttributes[aggModel.value] : null
+);
 
 // The selections of the currently selected aggregation
-const currAggSelections = computed((): Record<string,AttributeSelection> | undefined => currAgg.value?.selections)
+const currAggSelections = computed(
+    (): Record<string, AttributeSelection> | undefined =>
+        currAgg.value?.selections
+);
 
 // For use in select input
 const aggregationOptions = computed(() => {
-    return Object.entries(aggregationAttributes).map(entry => { return {label: entry[0]}})
-})
-
+    return Object.entries(aggregationAttributes).map((entry) => {
+        return { label: entry[0] };
+    });
+});
 
 // Collects all attribute names after the data is loaded.
 const allAttributeNames = computed(() => {
@@ -66,7 +78,11 @@ const allAttributeNames = computed(() => {
         currentExperimentMetadata.value.headers &&
         currentExperimentMetadata.value.headers.length > 0
     ) {
-        return [...currentExperimentMetadata.value.headers, "Mass Norm", "Time Norm"];
+        return [
+            ...currentExperimentMetadata.value.headers,
+            'Mass Norm',
+            'Time Norm',
+        ];
     } else {
         return [];
     }
@@ -106,10 +122,9 @@ function addCellPlotFromMenu(atr: string) {
     var1Model.value = null;
     attr2Model.value = null;
     attr1Model.value = null;
-    
 }
 async function addTrackPlotFromMenu() {
-    if(!aggModel.value) return;
+    if (!aggModel.value) return;
 
     const label = aggModel.value;
     const attr1 = attr1Model.value?.toString() ?? undefined;
@@ -118,16 +133,19 @@ async function addTrackPlotFromMenu() {
     const functionName = aggregationAttributes[label].functionName;
     const customQuery = aggregationAttributes[label].customQuery;
 
-
-    if(aggTableName.value && compTableName.value && currentExperimentMetadata.value?.headerTransforms){
-        const aggObject:AggregateObject = {
+    if (
+        aggTableName.value &&
+        compTableName.value &&
+        currentExperimentMetadata.value?.headerTransforms
+    ) {
+        const aggObject: AggregateObject = {
             functionName,
             attr1,
             var1,
             attr2,
             label,
-            customQuery
-        }
+            customQuery,
+        };
 
         const name = await addAggregateColumn(
             aggTableName.value,
@@ -234,7 +252,10 @@ function onToggleRelativeChart() {
 
                     <!-- Track Attributes Dialog -->
                     <q-dialog v-model="trackPlotDialogOpen" persistent>
-                        <q-card :dark="globalSettings.darkMode" style="width: 600px; max-width: 80vw;">
+                        <q-card
+                            :dark="globalSettings.darkMode"
+                            style="width: 600px; max-width: 80vw"
+                        >
                             <q-card-section>
                                 <div class="text-h6">
                                     Add Track Attribute to Display
@@ -256,11 +277,17 @@ function onToggleRelativeChart() {
                                         @update:model-value="onChangeAgg"
                                     >
                                     </q-select>
-                                    <div class="text-caption q-mt-sm" v-if="currAgg?.description">
+                                    <div
+                                        class="text-caption q-mt-sm"
+                                        v-if="currAgg?.description"
+                                    >
                                         {{ currAgg.description }}
                                     </div>
                                     <q-select
-                                        v-if="currAggSelections && currAggSelections.attr1"
+                                        v-if="
+                                            currAggSelections &&
+                                            currAggSelections.attr1
+                                        "
                                         :label="currAggSelections.attr1.label"
                                         :options="allAttributeNames"
                                         v-model="attr1Model"
@@ -273,7 +300,8 @@ function onToggleRelativeChart() {
                                             currAggSelections &&
                                             currAggSelections.var1 &&
                                             currAggSelections.var1.type &&
-                                            currAggSelections.var1.type === 'numerical'
+                                            currAggSelections.var1.type ===
+                                                'numerical'
                                         "
                                         filled
                                         type="number"
@@ -291,7 +319,8 @@ function onToggleRelativeChart() {
                                             currAggSelections &&
                                             currAggSelections.attr2 &&
                                             currAggSelections.attr2.type &&
-                                            currAggSelections.attr2.type === 'existing_attribute'
+                                            currAggSelections.attr2.type ===
+                                                'existing_attribute'
                                         "
                                         :label="currAggSelections.attr2.label"
                                         :options="allAttributeNames"
@@ -304,11 +333,7 @@ function onToggleRelativeChart() {
                                     <div>
                                         <l-btn
                                             label="Add"
-                                            @click="
-                                                addTrackPlotFromMenu(
-                                                    
-                                                )
-                                            "
+                                            @click="addTrackPlotFromMenu()"
                                             :dark="globalSettings.darkMode"
                                             class="q-mr-sm"
                                             color="blue"

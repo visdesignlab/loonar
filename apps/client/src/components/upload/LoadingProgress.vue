@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue';
-import type {
-    FileToUpload,
-} from '@/stores/componentStores/uploadStore';
+import type { FileToUpload } from '@/stores/componentStores/uploadStore';
 
 const props = defineProps({
     progressStatus: {
@@ -20,8 +18,8 @@ const getLabel = (file: FileToUpload): string => {
         locationId = splitUniqueId[1];
     }
 
-    if(file.uploading === 'not_started'){
-        return `Waiting to upload Location ${locationId} ${fileType}...`
+    if (file.uploading === 'not_started') {
+        return `Waiting to upload Location ${locationId} ${fileType}...`;
     }
 
     if (file.uploading !== 'succeeded' && file.uploading !== 'failed') {
@@ -84,7 +82,10 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                     class="q-mr-sm"
                 />
                 <q-icon
-                    v-else-if="item.processing === 'succeeded' && item.uploading === 'succeeded'"
+                    v-else-if="
+                        item.processing === 'succeeded' &&
+                        item.uploading === 'succeeded'
+                    "
                     name="check_circle"
                     color="success"
                     class="q-mr-sm"

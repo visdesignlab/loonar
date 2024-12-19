@@ -203,14 +203,20 @@ function handlePreviousStep(): void {
                             @click="returnHome"
                             label="Return To Home"
                             class="q-mr-sm"
-                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
+                            :disabled="
+                                uploadStore.overallProgress.status !==
+                                'succeeded'
+                            "
                             type="previous"
                         />
                         <l-btn
                             v-if="uploadStore.step == 'uploading'"
                             @click="addNewExperiment"
                             label="Create New Experiment"
-                            :disabled="uploadStore.overallProgress.status !== 'succeeded'"
+                            :disabled="
+                                uploadStore.overallProgress.status !==
+                                'succeeded'
+                            "
                         />
                     </q-stepper-navigation>
                 </template>
