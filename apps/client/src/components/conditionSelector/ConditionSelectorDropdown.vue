@@ -19,10 +19,10 @@ const props = defineProps({
 
 const tagVar = props.axis === 'x-axis' ? 'selectedXTag' : 'selectedYTag';
 
-const handleTagClick = (item: string) => {
+function handleTagClick(item: string): void {
     const axis = props.axis as Axis;
     conditionSelector.selectTag(item, axis);
-};
+}
 </script>
 <template>
     <q-btn-dropdown flat no-caps :label="conditionSelector[tagVar]">
