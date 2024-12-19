@@ -77,26 +77,26 @@ const heightWidth = computed(() => {
     };
 });
 
-const handleLabelMouseOver = (axis: Axis, index: number) => {
+function handleLabelMouseOver(axis: Axis, index: number) {
     if (axis === 'x-axis') {
         hoveredColumn.value = index;
     } else {
         hoveredRow.value = index;
     }
-};
+}
 
-const handleLabelMouseLeave = () => {
+function handleLabelMouseLeave() {
     hoveredColumn.value = null;
     hoveredRow.value = null;
-};
+}
 
-const handleAllMouseOver = () => {
+function handleAllMouseOver() {
     hoveredAll.value = true;
-};
+}
 
-const handleAllMouseLeave = () => {
+function handleAllMouseLeave() {
     hoveredAll.value = false;
-};
+}
 
 // Basic function to just adjust stroke width of the charts based on the number of charts rendered.
 const chartLineWidth = computed(() => {
