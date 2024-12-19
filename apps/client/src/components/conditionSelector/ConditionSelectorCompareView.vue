@@ -118,102 +118,103 @@ watch(
 const strokeWidth = 3;
 
 function createChart(xAxisName: string, yAxisName: string) {
-    if (chartContainer.value) {
-        const lines: any[] = [];
-        xLabels.value.forEach((xLabel, idx) => {
-            yLabels.value.forEach((yLabel, idy) => {
-                const tempSource = `${selectedXTag.value}-${xLabel}_${selectedYTag.value}-${yLabel}`;
-
-                const tempLine = vg.lineY(
-                    vg.from(compTableName.value, {
-                        filterBy:
-                            conditionChartSelections[tempSource]
-                                .compChartFilteredSelection,
-                    }),
-                    {
-                        x: xAxisName,
-                        y: vg.avg(yAxisName),
-                        stroke: vg.sql`'${yLabel}'`,
-                        strokeWidth,
-                        curve: 'basis',
-                        opacity: 1,
-                    }
-                );
-                const tempBaseLine = vg.lineY(
-                    vg.from(compTableName.value, {
-                        filterBy:
-                            conditionChartSelections[tempSource]
-                                .compChartBaseSelection,
-                    }),
-                    {
-                        x: xAxisName,
-                        y: vg.avg(yAxisName),
-                        stroke: vg.sql`'${yLabel}'`,
-                        strokeWidth,
-                        curve: 'basis',
-                        opacity: 0.3,
-                    }
-                );
-                lines.push(tempLine);
-                lines.push(tempBaseLine);
-
-                const tempText = vg.textX(
-                    vg.from(compTableName.value, {
-                        filterBy:
-                            conditionChartSelections[tempSource]
-                                .compChartFilteredSelection,
-                    }),
-                    {
-                        x: xAxisName,
-                        y: vg.avg(yAxisName),
-                        text: vg.sql`CONCAT("${selectedXTag.value}", ' - ', "${selectedYTag.value}")`,
-                        textAnchor: 'start',
-                        filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
-                        fill: vg.sql`'${yLabel}'`,
-                        dx: 10,
-                    }
-                );
-
-                const tempCircle = vg.dotX(
-                    vg.from(compTableName.value, {
-                        filterBy:
-                            conditionChartSelections[tempSource]
-                                .compChartFilteredSelection,
-                    }),
-                    {
-                        x: xAxisName,
-                        y: vg.avg(yAxisName),
-                        r: 3,
-                        // stroke:'black',
-                        // filter: vg.sql`"Frame ID" = (SELECT MAX("Frame ID") FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
-                        filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
-                        fill: vg.sql`'${yLabel}'`,
-                    }
-                );
-                lines.push(tempCircle);
-                lines.push(tempText);
-            });
-        });
-
-        // Creates chart, filtered by the selection that uses the query.
-        const chart = vg.plot(
-            // Fills in area under line chart grey (optional)
-            ...lines,
-            // Gets rid of axes and margins
-            vg.axis(true),
-            // Below would allow us to adjust the yAxis based on all the charts
-            vg.yDomain($conditionChartYAxisDomain),
-            vg.marginLeft(40),
-            vg.marginBottom(40),
-            vg.colorDomain(conditionSelectorStore.yLabels),
-            vg.colorRange(conditionSelectorStore.chartColorScheme),
-            vg.width($width),
-            vg.height($width),
-            vg.marginRight(100),
-            vg.name('my-lines')
-        );
-        return chart;
+    if (!chartContainer.value) {
+        return null;
     }
+    const lines: any[] = [];
+    xLabels.value.forEach((xLabel, idx) => {
+        yLabels.value.forEach((yLabel, idy) => {
+            const tempSource = `${selectedXTag.value}-${xLabel}_${selectedYTag.value}-${yLabel}`;
+
+            const tempLine = vg.lineY(
+                vg.from(compTableName.value, {
+                    filterBy:
+                        conditionChartSelections[tempSource]
+                            .compChartFilteredSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y: vg.avg(yAxisName),
+                    stroke: vg.sql`'${yLabel}'`,
+                    strokeWidth,
+                    curve: 'basis',
+                    opacity: 1,
+                }
+            );
+            const tempBaseLine = vg.lineY(
+                vg.from(compTableName.value, {
+                    filterBy:
+                        conditionChartSelections[tempSource]
+                            .compChartBaseSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y: vg.avg(yAxisName),
+                    stroke: vg.sql`'${yLabel}'`,
+                    strokeWidth,
+                    curve: 'basis',
+                    opacity: 0.3,
+                }
+            );
+            lines.push(tempLine);
+            lines.push(tempBaseLine);
+
+            const tempText = vg.textX(
+                vg.from(compTableName.value, {
+                    filterBy:
+                        conditionChartSelections[tempSource]
+                            .compChartFilteredSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y: vg.avg(yAxisName),
+                    text: vg.sql`CONCAT("${selectedXTag.value}", ' - ', "${selectedYTag.value}")`,
+                    textAnchor: 'start',
+                    filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
+                    fill: vg.sql`'${yLabel}'`,
+                    dx: 10,
+                }
+            );
+
+            const tempCircle = vg.dotX(
+                vg.from(compTableName.value, {
+                    filterBy:
+                        conditionChartSelections[tempSource]
+                            .compChartFilteredSelection,
+                }),
+                {
+                    x: xAxisName,
+                    y: vg.avg(yAxisName),
+                    r: 3,
+                    // stroke:'black',
+                    // filter: vg.sql`"Frame ID" = (SELECT MAX("Frame ID") FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
+                    filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
+                    fill: vg.sql`'${yLabel}'`,
+                }
+            );
+            lines.push(tempCircle);
+            lines.push(tempText);
+        });
+    });
+
+    // Creates chart, filtered by the selection that uses the query.
+    const chart = vg.plot(
+        // Fills in area under line chart grey (optional)
+        ...lines,
+        // Gets rid of axes and margins
+        vg.axis(true),
+        // Below would allow us to adjust the yAxis based on all the charts
+        vg.yDomain($conditionChartYAxisDomain),
+        vg.marginLeft(40),
+        vg.marginBottom(40),
+        vg.colorDomain(conditionSelectorStore.yLabels),
+        vg.colorRange(conditionSelectorStore.chartColorScheme),
+        vg.width($width),
+        vg.height($width),
+        vg.marginRight(100),
+        vg.name('my-lines')
+    );
+    return chart;
 }
 </script>
 
