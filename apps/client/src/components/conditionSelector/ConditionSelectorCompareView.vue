@@ -115,7 +115,7 @@ watch(
     { deep: true }
 );
 
-const strokeWidth = 3;
+const strokeWidth = 2;
 
 function createChart(xAxisName: string, yAxisName: string) {
     if (!chartContainer.value) {
