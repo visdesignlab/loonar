@@ -126,7 +126,7 @@ export const useConditionSelectorStore = defineStore(
             return currentExperimentTags.value[selectedYTag.value];
         });
 
-        function selectTag(tag: string, axis: Axis) {
+        function selectTag(tag: string, axis: Axis): void {
             if (axis === 'x-axis') {
                 selectedXTag.value = tag;
             } else {
@@ -134,7 +134,7 @@ export const useConditionSelectorStore = defineStore(
             }
         }
 
-        function clickConditionChartColumn(idx: number) {
+        function clickConditionChartColumn(idx: number): void {
             const allSelected = _checkAllSelected(idx, 'col');
 
             currentExperimentTags.value[selectedYTag.value].forEach(
@@ -144,7 +144,7 @@ export const useConditionSelectorStore = defineStore(
             );
         }
 
-        function clickConditionChartRow(idy: number) {
+        function clickConditionChartRow(idy: number): void {
             const allSelected = _checkAllSelected(idy, 'row');
 
             currentExperimentTags.value[selectedXTag.value].forEach(
@@ -154,7 +154,7 @@ export const useConditionSelectorStore = defineStore(
             );
         }
 
-        function clickConditionChartAll() {
+        function clickConditionChartAll(): void {
             const allSelected = _checkAllSelected(null, 'all');
 
             currentExperimentTags.value[selectedXTag.value].forEach(
@@ -168,7 +168,7 @@ export const useConditionSelectorStore = defineStore(
             );
         }
 
-        function allSelected() {
+        function allSelected(): boolean {
             return Object.keys(selectedGrid.value).length === 0;
         }
 
@@ -244,7 +244,7 @@ export const useConditionSelectorStore = defineStore(
         function _checkAllSelected(
             index: number | null,
             type: allSelectedType = 'all'
-        ) {
+        ): boolean {
             if (type === 'col') {
                 if (index !== null) {
                     const currentColumnVal: string =
