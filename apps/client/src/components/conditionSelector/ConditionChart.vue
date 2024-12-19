@@ -47,7 +47,12 @@ watch(
         selectedIndividualYAxis,
         conditionChartSelections,
     ],
-    async ([isInitialized, newChartContainer, newYAxis]) => {
+    async ([
+        isInitialized,
+        newChartContainer,
+        newYAxis,
+        newConditionChartSelections,
+    ]) => {
         if (isInitialized && newChartContainer && newYAxis) {
             while (newChartContainer.firstChild) {
                 newChartContainer.removeChild(newChartContainer.firstChild);
