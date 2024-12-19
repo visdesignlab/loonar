@@ -139,7 +139,7 @@ export const useConditionSelectorStore = defineStore(
 
             currentExperimentTags.value[selectedYTag.value].forEach(
                 (value: string, idy: number) => {
-                    clickConditionChart(idx, idy, allSelected);
+                    toggleConditionChart(idx, idy, allSelected);
                 }
             );
         }
@@ -149,7 +149,7 @@ export const useConditionSelectorStore = defineStore(
 
             currentExperimentTags.value[selectedXTag.value].forEach(
                 (value: string, idx: number) => {
-                    clickConditionChart(idx, idy, allSelected);
+                    toggleConditionChart(idx, idy, allSelected);
                 }
             );
         }
@@ -161,7 +161,7 @@ export const useConditionSelectorStore = defineStore(
                 (xValue: string, idx: number) => {
                     currentExperimentTags.value[selectedYTag.value].forEach(
                         (yValue: string, idy: number) => {
-                            clickConditionChart(idx, idy, allSelected);
+                            toggleConditionChart(idx, idy, allSelected);
                         }
                     );
                 }
@@ -207,13 +207,13 @@ export const useConditionSelectorStore = defineStore(
                 selectedYTag.value
             ].findIndex((entry) => entry === value2);
             isExternalGridUpdate = true;
-            clickConditionChart(idx, idy);
+            toggleConditionChart(idx, idy);
         }
 
-        function clickConditionChart(
+        function toggleConditionChart(
             idx: number,
             idy: number,
-            allSelected: boolean | null = null
+            show: boolean | null = null
         ) {
             const column = currentExperimentTags.value[selectedXTag.value][idx];
             const row = currentExperimentTags.value[selectedYTag.value][idy];
@@ -221,11 +221,21 @@ export const useConditionSelectorStore = defineStore(
             const currentValue = getSelectedGridValue(column, row);
 
             let newValue = !currentValue;
-            if (allSelected !== null) {
-                newValue = allSelected ? false : true;
+            if (show !== null) {
+                newValue = !show;
             }
 
             setSelectedGridValue(column, row, newValue);
+        }
+
+        function clickConditionChart(idx: number, idy: number): void {
+            // clicking a condition chart should select that individual cell if everything is selected
+            // otherwise it should just toggle the chart.
+            const allSelected = _checkAllSelected(null, 'all');
+            if (allSelected) {
+                clickConditionChartAll();
+            }
+            toggleConditionChart(idx, idy);
         }
 
         function getSelectedGridValue(column: string, row: string): boolean {
