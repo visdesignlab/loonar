@@ -97,7 +97,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 y: vg.avg(yAxisName),
                 fill: 'grey',
                 fillOpacity: 0.3,
-                curve: 'basis',
+                curve: 'linear',
                 stroke: null,
                 // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
             }
@@ -111,7 +111,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 y: vg.avg(yAxisName),
                 stroke: lineColor,
                 strokeWidth: strokeWidth,
-                curve: 'basis',
+                curve: 'linear',
                 opacity: 0.6,
                 // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
             }
@@ -126,7 +126,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 y: vg.avg(yAxisName),
                 stroke: lineColor,
                 strokeWidth: strokeWidthSelected,
-                curve: 'basis',
+                curve: 'linear',
                 opacity: 1,
                 // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
             }

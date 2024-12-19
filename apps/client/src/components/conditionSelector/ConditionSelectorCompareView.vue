@@ -137,7 +137,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     y: vg.avg(yAxisName),
                     stroke: vg.sql`'${yLabel}'`,
                     strokeWidth,
-                    curve: 'basis',
+                    curve: 'linear',
                     opacity: 1,
                 }
             );
@@ -152,7 +152,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                     y: vg.avg(yAxisName),
                     stroke: vg.sql`'${yLabel}'`,
                     strokeWidth,
-                    curve: 'basis',
+                    curve: 'linear',
                     opacity: 0.3,
                 }
             );
