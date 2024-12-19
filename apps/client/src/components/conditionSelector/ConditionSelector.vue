@@ -97,11 +97,7 @@ function handleAllMouseOver() {
 function handleAllMouseLeave() {
     hoveredAll.value = false;
 }
-
-// Basic function to just adjust stroke width of the charts based on the number of charts rendered.
-const chartLineWidth = computed(() => {
-    return 2;
-});
+const chartLineWidth = 2;
 
 const tab = ref('facet');
 
