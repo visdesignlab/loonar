@@ -66,47 +66,51 @@ watch(
         newYAxis,
         newConditionChartSelections,
     ]) => {
-        if (isInitialized && newChartContainer && newYAxis) {
-            while (newChartContainer.firstChild) {
-                newChartContainer.removeChild(newChartContainer.firstChild);
-            }
-            const res = await vg.coordinator().query(
-                `SELECT MIN(max_frame) as final_frame FROM (
+        if (!isInitialized || !newChartContainer || !newYAxis) {
+            return;
+        }
+
+        while (newChartContainer.firstChild) {
+            newChartContainer.removeChild(newChartContainer.firstChild);
+        }
+        const res = await vg.coordinator().query(
+            `SELECT MIN(max_frame) as final_frame FROM (
                         SELECT MAX("${props.xAxisName}") as max_frame
                         FROM ${compTableName.value}
                         GROUP BY "${selectedXTag.value}", "${selectedYTag.value}"
                     )`,
-                { type: 'json' }
-            );
-            finalFrame.value = res[0].final_frame;
+            { type: 'json' }
+        );
+        finalFrame.value = res[0].final_frame;
 
-            await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            const chart = createChart(props.xAxisName, newYAxis);
+        await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
+        const chart = createChart(props.xAxisName, newYAxis);
 
-            if (chart) {
-                newChartContainer.appendChild(chart);
-
-                observer = new MutationObserver((mutationsList) => {
-                    for (const mutation of mutationsList) {
-                        if (
-                            mutation.type === 'childList' &&
-                            mutation.addedNodes.length > 0
-                        ) {
-                            isLoading.value = false;
-                            console.log('finished loading');
-                            observer?.disconnect();
-                            break;
-                        }
-                    }
-                });
-
-                // Observe the SVG for changes to its child elements
-                observer.observe(chart, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
+        if (!chart) {
+            return;
         }
+
+        newChartContainer.appendChild(chart);
+
+        observer = new MutationObserver((mutationsList) => {
+            for (const mutation of mutationsList) {
+                if (
+                    mutation.type === 'childList' &&
+                    mutation.addedNodes.length > 0
+                ) {
+                    isLoading.value = false;
+                    console.log('finished loading');
+                    observer?.disconnect();
+                    break;
+                }
+            }
+        });
+
+        // Observe the SVG for changes to its child elements
+        observer.observe(chart, {
+            childList: true,
+            subtree: true,
+        });
     },
     { deep: true }
 );

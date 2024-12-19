@@ -53,17 +53,18 @@ watch(
         newYAxis,
         newConditionChartSelections,
     ]) => {
-        if (isInitialized && newChartContainer && newYAxis) {
-            while (newChartContainer.firstChild) {
-                newChartContainer.removeChild(newChartContainer.firstChild);
-            }
+        if (!isInitialized || !newChartContainer || !newYAxis) {
+            return;
+        }
+        while (newChartContainer.firstChild) {
+            newChartContainer.removeChild(newChartContainer.firstChild);
+        }
 
-            await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
-            const chart = createChart(props.xAxisName, newYAxis);
+        await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
+        const chart = createChart(props.xAxisName, newYAxis);
 
-            if (chart) {
-                newChartContainer.appendChild(chart);
-            }
+        if (chart) {
+            newChartContainer.appendChild(chart);
         }
     },
     { deep: true }
