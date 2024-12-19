@@ -2,7 +2,13 @@
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core';
-import { ScatterplotLayer, PolygonLayer } from '@deck.gl/layers';
+import type { Layer } from '@deck.gl/core';
+import {
+    ScatterplotLayer,
+    PolygonLayer,
+    LineLayer,
+    TextLayer,
+} from '@deck.gl/layers';
 import {
     type DataPoint,
     type ExemplarTrack,
@@ -95,7 +101,7 @@ function renderDeckGL(): void {
 
     recalculateExemplarYOffsets();
 
-    const layers: any[] = [];
+    const layers = [];
     layers.push(createHorizonChartLayer());
     layers.push(createImageSnippetLayer());
     layers.push(createSnippetBoundaryLayer());
@@ -219,8 +225,7 @@ function createImageSnippetLayer():
             },
             getLineColor: [225, 30, 10, 200],
             getFillColor: [225, 30, 10, 100],
-            getLineWidth: 3,
-            lineWidthUnits: 'pixels',
+            getLineWidth: 0,
         })
     );
     return placeholderLayer;
@@ -307,48 +312,147 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     return placeholderLayer;
 }
 
-function createSidewaysHistogramLayer(): PolygonLayer[] | null {
-    // TODO: implement
-    const placeholderLayer: PolygonLayer[] = [];
+interface TextDatum {
+    coordinates: [number, number];
+    drug: string;
+    conc: string;
+}
 
-    placeholderLayer.push(
-        new PolygonLayer({
-            id: `exemplar-snippet-placeholder`,
-            data: exemplarViewStore.exemplarTracks,
-            getPolygon: (exemplar: ExemplarTrack) => {
-                const yOffset = exemplarYOffsets.value.get(
-                    uniqueExemplarKey(exemplar)
-                )!;
-                return [
-                    [
-                        -viewConfiguration.value.histogramWidth -
-                            viewConfiguration.value.horizonHistogramGap,
-                        yOffset,
-                    ],
-                    [-viewConfiguration.value.horizonHistogramGap, yOffset],
-                    [
-                        -viewConfiguration.value.horizonHistogramGap,
-                        yOffset - exemplarViewStore.exemplarHeight,
-                    ],
-                    [
-                        -viewConfiguration.value.histogramWidth -
-                            viewConfiguration.value.horizonHistogramGap,
-                        yOffset - exemplarViewStore.exemplarHeight,
-                    ],
-                    [
-                        -viewConfiguration.value.histogramWidth -
-                            viewConfiguration.value.horizonHistogramGap,
-                        yOffset,
-                    ],
-                ];
-            },
-            getLineColor: [225, 30, 210, 200],
-            getFillColor: [225, 30, 210, 100],
-            getLineWidth: 2,
-            lineWidthUnits: 'pixels',
-        })
+function createSidewaysHistogramLayer(): any[] | null {
+    const placeholderLayer: any[] = [];
+
+    // Group exemplars by their condition
+    const groupedExemplars = groupExemplarsByCondition(
+        exemplarViewStore.exemplarTracks
     );
+
+    const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
+        viewConfiguration.value;
+
+    for (const group of groupedExemplars) {
+        if (group.length === 0) continue;
+
+        // Identify the first and last exemplar in the group
+        const firstExemplar = group[0];
+        const lastExemplar = group[group.length - 1];
+
+        const firstOffset = exemplarYOffsets.value.get(
+            uniqueExemplarKey(firstExemplar)
+        )!;
+        const lastOffset = exemplarYOffsets.value.get(
+            uniqueExemplarKey(lastExemplar)
+        )!;
+
+        // Calculate the top and bottom boundaries of the group
+        const groupTop = firstOffset - exemplarViewStore.exemplarHeight;
+        const groupBottom = lastOffset;
+
+        // Create a single histogram layer that spans the full vertical extent of the group
+        placeholderLayer.push(
+            new PolygonLayer({
+                id: `exemplar-sideways-histogram-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: [group], // Just need one polygon for the group
+                getPolygon: () => {
+                    return [
+                        [-hGap - histWidth, groupBottom],
+                        [-hGap, groupBottom],
+                        [-hGap, groupTop],
+                        [-hGap - histWidth, groupTop],
+                        [-hGap - histWidth, groupBottom],
+                    ];
+                },
+                getLineColor: [225, 30, 210, 200],
+                getFillColor: [225, 30, 210, 100],
+                getLineWidth: 0,
+            })
+        );
+
+        // Add line layers for the entire group to show division lines
+        const lineData = [
+            {
+                coordinates: [
+                    [-hGap - 0.25 * histWidth, groupBottom],
+                    [-hGap - 0.25 * histWidth, groupTop],
+                ],
+            },
+        ];
+
+        placeholderLayer.push(
+            new LineLayer({
+                id: `exemplar-sideways-histogram-line-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: lineData,
+                getSourcePosition: (d) => d.coordinates[0],
+                getTargetPosition: (d) => d.coordinates[1],
+                getColor: [128, 128, 128], // Grey color for the line
+                getWidth: 1, // Line width in pixels
+            })
+        );
+
+        const yOffset = (groupBottom + groupTop) / 2; // Centered vertically
+
+        const textData: TextDatum[] = [
+            {
+                coordinates: [
+                    -hGap - 0.125 * histWidth, // Offset slightly to the right
+                    yOffset,
+                ],
+                drug: firstExemplar.tags.drug,
+                conc: firstExemplar.tags.conc,
+            },
+        ];
+
+        // Updated TextLayer to use dynamic text
+        placeholderLayer.push(
+            new TextLayer({
+                id: `exemplar-sideways-histogram-text-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: textData,
+                getPosition: (d: TextDatum) => d.coordinates,
+                getText: (d: TextDatum) => `${d.drug} ${d.conc}um`,
+                sizeScale: 1,
+                sizeUnits: 'common',
+                sizeMaxPixels: 15,
+                getAngle: 90, // 90 degrees counter clockwise
+                getColor: [128, 128, 128], // Grey color
+                billboard: true,
+                textAnchor: 'middle',
+                alignmentBaseline: 'middle',
+            })
+        );
+    }
+
     return placeholderLayer;
+}
+
+function groupExemplarsByCondition(
+    exemplars: ExemplarTrack[]
+): ExemplarTrack[][] {
+    const groups: ExemplarTrack[][] = [];
+    let currentGroup: ExemplarTrack[] = [];
+
+    for (const exemplar of exemplars) {
+        if (currentGroup.length === 0) {
+            currentGroup.push(exemplar);
+        } else {
+            const lastExemplar = currentGroup[currentGroup.length - 1];
+            if (isEqual(exemplar.tags, lastExemplar.tags)) {
+                currentGroup.push(exemplar);
+            } else {
+                groups.push(currentGroup);
+                currentGroup = [exemplar];
+            }
+        }
+    }
+    if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+    }
+
+    return groups;
 }
 
 function createPinsAndLinesLayer(): null {

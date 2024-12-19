@@ -40,17 +40,17 @@ export interface ViewConfiguration {
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
-        snippetDisplayHeight: 100,
-        snippetHorizonChartGap: 10,
-        horizonChartHeight: 80,
+        snippetDisplayHeight: 80,
+        snippetHorizonChartGap: 5,
+        horizonChartHeight: 40,
         horizonChartWidth: 1000,
-        horizonTimeBarGap: 8,
-        timeBarHeightOuter: 16,
-        timeBarHeightInner: 4,
+        horizonTimeBarGap: 5,
+        timeBarHeightOuter: 12,
+        timeBarHeightInner: 2,
         betweeenExemplarGap: 20,
-        betweenConditionGap: 100,
-        horizonHistogramGap: 30,
-        histogramWidth: 80,
+        betweenConditionGap: 20,
+        horizonHistogramGap: 5,
+        histogramWidth: 150,
     });
 
     const exemplarHeight = computed(() => {
