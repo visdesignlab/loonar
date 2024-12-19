@@ -79,9 +79,10 @@ export const useConditionSelectorStore = defineStore(
         watch(
             currentExperimentTags,
             (newExperimentTags) => {
-                if (Object.keys(newExperimentTags).length > 1) {
-                    selectedXTag.value = Object.keys(newExperimentTags)[0];
-                    selectedYTag.value = Object.keys(newExperimentTags)[1];
+                const tagKeys = Object.keys(newExperimentTags);
+                if (tagKeys.length > 1) {
+                    selectedXTag.value = tagKeys[0];
+                    selectedYTag.value = tagKeys[1];
                 }
             },
             { immediate: true }
