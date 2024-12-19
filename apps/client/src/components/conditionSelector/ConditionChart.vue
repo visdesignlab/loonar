@@ -74,67 +74,67 @@ const strokeWidthSelected = props.chartLineWidth;
 
 // Filter statements in below code are left here to illustrate possibility of additional filter statements.
 function createChart(xAxisName: string, yAxisName: string) {
-    if (chartContainer.value) {
-        const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
-        // Creates chart, filtered by the selection that uses the query.
-        const chart = vg.plot(
-            // Fills in area under line chart grey (optional)
-            vg.areaY(
-                vg.from(compTableName.value, {
-                    filterBy: conditionChartSelections[source].baseSelection,
-                }),
-                {
-                    x: xAxisName,
-                    y1: 0,
-                    y: vg.avg(yAxisName),
-                    fill: 'grey',
-                    fillOpacity: 0.3,
-                    curve: 'basis',
-                    stroke: null,
-                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
-                }
-            ),
-            vg.lineY(
-                vg.from(compTableName.value, {
-                    filterBy: conditionChartSelections[source].baseSelection,
-                }),
-                {
-                    x: xAxisName,
-                    y: vg.avg(yAxisName),
-                    stroke: lineColor,
-                    strokeWidth: strokeWidth,
-                    curve: 'basis',
-                    opacity: 0.6,
-                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
-                }
-            ),
-            vg.lineY(
-                vg.from(compTableName.value, {
-                    filterBy:
-                        conditionChartSelections[source].filteredSelection,
-                    // cellLevelSelection
-                }),
-                {
-                    x: xAxisName,
-                    y: vg.avg(yAxisName),
-                    stroke: lineColor,
-                    strokeWidth: strokeWidthSelected,
-                    curve: 'basis',
-                    opacity: 1,
-                    // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
-                }
-            ),
-
-            // Gets rid of axes and margins
-            vg.axis(false),
-            // Below would allow us to adjust the yAxis based on all the charts
-            vg.yDomain($conditionChartYAxisDomain),
-            vg.margin(0),
-            vg.height($height),
-            vg.width($height)
-        );
-        return chart;
+    if (!chartContainer.value) {
+        return null;
     }
+    const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
+    // Creates chart, filtered by the selection that uses the query.
+    const chart = vg.plot(
+        // Fills in area under line chart grey (optional)
+        vg.areaY(
+            vg.from(compTableName.value, {
+                filterBy: conditionChartSelections[source].baseSelection,
+            }),
+            {
+                x: xAxisName,
+                y1: 0,
+                y: vg.avg(yAxisName),
+                fill: 'grey',
+                fillOpacity: 0.3,
+                curve: 'basis',
+                stroke: null,
+                // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
+            }
+        ),
+        vg.lineY(
+            vg.from(compTableName.value, {
+                filterBy: conditionChartSelections[source].baseSelection,
+            }),
+            {
+                x: xAxisName,
+                y: vg.avg(yAxisName),
+                stroke: lineColor,
+                strokeWidth: strokeWidth,
+                curve: 'basis',
+                opacity: 0.6,
+                // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
+            }
+        ),
+        vg.lineY(
+            vg.from(compTableName.value, {
+                filterBy: conditionChartSelections[source].filteredSelection,
+                // cellLevelSelection
+            }),
+            {
+                x: xAxisName,
+                y: vg.avg(yAxisName),
+                stroke: lineColor,
+                strokeWidth: strokeWidthSelected,
+                curve: 'basis',
+                opacity: 1,
+                // filter: vg.sql`("${props.tags[0][0]}" = '${props.tags[0][1]}' AND "${props.tags[1][0]}" = '${props.tags[1][1]}')`
+            }
+        ),
+
+        // Gets rid of axes and margins
+        vg.axis(false),
+        // Below would allow us to adjust the yAxis based on all the charts
+        vg.yDomain($conditionChartYAxisDomain),
+        vg.margin(0),
+        vg.height($height),
+        vg.width($height)
+    );
+    return chart;
 }
 </script>
 
