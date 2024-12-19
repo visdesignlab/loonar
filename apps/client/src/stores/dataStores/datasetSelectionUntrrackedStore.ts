@@ -68,18 +68,17 @@ export const useDatasetSelectionStore = defineStore(
 
         const compTableName = computed(() => {
             if (currentExperimentMetadata.value) {
-                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
             }
-            return null
-        })
+            return null;
+        });
 
         const aggTableName = computed(() => {
             if (currentExperimentMetadata.value) {
-                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`;
             }
-            return null
-        })
-
+            return null;
+        });
 
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
@@ -161,22 +160,30 @@ export const useDatasetSelectionStore = defineStore(
                             'parquet'
                         );
                         try {
-                            await addAdditionalCellColumns(compTableName.value, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
+                            await addAdditionalCellColumns(
+                                compTableName.value,
+                                currentExperimentMetadata.value.headers,
+                                currentExperimentMetadata.value.headerTransforms
+                            );
                         } catch (error) {
                             console.error(error);
                         }
                         try {
-                            await createAggregateTable(`${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`, currentExperimentMetadata.value.headers, currentExperimentMetadata.value.headerTransforms)
+                            await createAggregateTable(
+                                `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
+                                currentExperimentMetadata.value.headers,
+                                currentExperimentMetadata.value.headerTransforms
+                            );
                             notify({
                                 type: 'success',
                                 message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
                             });
                         } catch (error) {
-                            const typedError = error as Error
+                            const typedError = error as Error;
                             notify({
                                 type: 'problem',
-                                message: typedError.message
-                            })
+                                message: typedError.message,
+                            });
                         }
                         notify({
                             type: 'success',
@@ -223,7 +230,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                        location.id
+                            location.id
                         ]
                     ) {
                         return location;
@@ -310,7 +317,7 @@ export const useDatasetSelectionStore = defineStore(
             selectImagingLocation,
             refreshFileNameList,
             compTableName,
-            aggTableName
+            aggTableName,
         };
     }
 );

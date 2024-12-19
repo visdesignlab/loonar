@@ -5,18 +5,17 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 import { ref, computed, watch, type Ref } from 'vue';
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
 
-
 export type SelectionType = 'cell' | 'track' | 'lineage' | 'conditionChart';
 
 export interface DataSelection {
     plotName: string;
     type: SelectionType; // Unused, but will be needed if we have track-level and lineage-level attributes here
     range: [number, number]; // The current range selected
-    predicate?: string
+    predicate?: string;
 }
 
 export interface AttributeChart {
-    plotName: string,
+    plotName: string;
     type: SelectionType;
     maxRange: [number, number];
     range: [number, number];
@@ -30,27 +29,20 @@ export const emitter = mitt<Events>();
 //const emit = defineEmits(['plot-error']);
 
 interface SelectionState {
-    attributeCharts: Ref<AttributeChart[]>,
-    dataSelections: Ref<DataSelection[]>,
-    dataFilters: Ref<DataSelection[]>,
-
+    attributeCharts: Ref<AttributeChart[]>;
+    dataSelections: Ref<DataSelection[]>;
+    dataFilters: Ref<DataSelection[]>;
 }
 
 const initialState = (): SelectionState => ({
     attributeCharts: ref<AttributeChart[]>([]),
     dataSelections: ref<DataSelection[]>([]),
     dataFilters: ref<DataSelection[]>([]),
-})
-
+});
 
 export const useSelectionStore = defineStore('selectionStore', () => {
-
     // Declare initial state
-    let {
-        attributeCharts,
-        dataSelections,
-        dataFilters
-    } = initialState();
+    let { attributeCharts, dataSelections, dataFilters } = initialState();
 
     // create resetState function
     function resetState(): void {
@@ -65,29 +57,35 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     const showRelativeTrack = ref<boolean>(false);
 
     const datasetSelectionStore = useDatasetSelectionStore();
-    const { currentExperimentMetadata, experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+    const { currentExperimentMetadata, experimentDataInitialized } =
+        storeToRefs(datasetSelectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
     // Watches for new experiment data. Initializes with basic attribute charts.
-    watch([experimentDataInitialized, currentExperimentMetadata], ([isInitialized, newExperimentMetadata], [prevInit, prevMeta]) => {
-        // Resets state when initialization or experiment data changes.
-        if (
-            isInitialized &&
-            newExperimentMetadata &&
-            newExperimentMetadata.headerTransforms
-        ) {
-            const { mass } = newExperimentMetadata.headerTransforms;
-            // Add mass plot.
-            addPlot(mass, 'cell');
-            // Add average mass plot.
-            addPlot(`Average ${mass}`, 'track');
-        }
-    }, { immediate: true, deep: true })
+    watch(
+        [experimentDataInitialized, currentExperimentMetadata],
+        ([isInitialized, newExperimentMetadata], [prevInit, prevMeta]) => {
+            // Resets state when initialization or experiment data changes.
+            if (
+                isInitialized &&
+                newExperimentMetadata &&
+                newExperimentMetadata.headerTransforms
+            ) {
+                const { mass } = newExperimentMetadata.headerTransforms;
+                // Add mass plot.
+                addPlot(mass, 'cell');
+                // Add average mass plot.
+                addPlot(`Average ${mass}`, 'track');
+            }
+        },
+        { immediate: true, deep: true }
+    );
 
     // Private
-    async function _getInitialMaxRange(plotName: string, type: SelectionType): Promise<[number, number]> {
-
+    async function _getInitialMaxRange(
+        plotName: string,
+        type: SelectionType
+    ): Promise<[number, number]> {
         try {
-
             // Loading
             let minVal = -Infinity;
             let maxVal = Infinity;
@@ -99,8 +97,9 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             // Escape the column name to handle spaces and special characters
             const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
 
-            const tablePrefix = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`
-            const tableName = type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`
+            const tablePrefix = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
+            const tableName =
+                type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`;
 
             // Cast as varchar. Will convert back to number
             let query = `
@@ -110,7 +109,9 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 FROM ${tableName}
             `;
 
-            const result = await vg.coordinator().query(query, { 'type': 'json' });
+            const result = await vg
+                .coordinator()
+                .query(query, { type: 'json' });
 
             minVal = Number(result[0].min_value);
             maxVal = Number(result[0].max_value);
@@ -146,32 +147,29 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     }
 
     function convertToFilters() {
-        dataSelections.value.forEach(selection => {
+        dataSelections.value.forEach((selection) => {
             addFilter({
                 ...selection,
                 range: [...selection.range],
-            })
-        })
+            });
+        });
         clearAllSelections();
     }
 
-    function updateSelection(
-        plotName: string,
-        range: [number, number],
-    ) {
+    function updateSelection(plotName: string, range: [number, number]) {
         const selection = dataSelections.value.find(
             (s) => s.plotName === plotName
         );
         const chart = attributeCharts.value.find(
             (s) => s.plotName === plotName
-        )
+        );
 
         if (selection) {
             selection.range = [...range];
             if (chart) {
                 chart.range = [...range];
             } else {
-                console.error('Could not find corresponding plot.')
+                console.error('Could not find corresponding plot.');
             }
         }
     }
@@ -179,7 +177,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     function removePlotByName(plotName: string) {
         const chartIndex = attributeCharts.value.findIndex(
             (chart: AttributeChart) => chart.plotName === plotName
-        )
+        );
         if (chartIndex === -1) return;
 
         attributeCharts.value.splice(chartIndex, 1);
@@ -191,8 +189,8 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         if (plotName === 'Condition Charts') {
             // When removing this filter, same as clicking "All" when not all selected.
             // Situation of deleting this filter when all are selected is impossible.
-            conditionSelectorStore.clickConditionChartAll()
-            return
+            conditionSelectorStore.clickConditionChartAll();
+            return;
         }
         const index = dataFilters.value.findIndex(
             (s) => s.plotName === plotName
@@ -211,12 +209,15 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             dataSelections.value.splice(index, 1);
 
             // Update selection range when removing selection.
-            const correspondingAttributeChart = attributeCharts.value.find(entry => entry.plotName === plotName);
+            const correspondingAttributeChart = attributeCharts.value.find(
+                (entry) => entry.plotName === plotName
+            );
             if (correspondingAttributeChart) {
-                correspondingAttributeChart.range = [...correspondingAttributeChart.maxRange]
+                correspondingAttributeChart.range = [
+                    ...correspondingAttributeChart.maxRange,
+                ];
             }
         }
-
     }
 
     function removePlotWithErrors(plotName: string) {
@@ -240,9 +241,8 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             (s) => s.plotName === name
         );
         if (existingIndex !== -1) {
-
             // Not sure when above would ever be triggered. Just warning for now, do nothing otherwise.
-            console.warn('Chart already exists.')
+            console.warn('Chart already exists.');
             return;
         }
 
@@ -254,12 +254,10 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             plotName: name,
             range: [minVal, maxVal],
             maxRange: [minVal, maxVal],
-            type: type
-        }
+            type: type,
+        };
         attributeCharts.value.push(chart);
-
     }
-
 
     function addFilter(filter: DataSelection) {
         const existingIndex = dataFilters.value.findIndex(
@@ -275,8 +273,12 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     // Function to add multiple filters at once in order to avoid multiple watch triggers.
     function addConditionChartFilters(filters: DataSelection[]) {
         // Create deep copy temp data filters
-        const tempDataFilters: DataSelection[] = dataFilters.value.filter((item) => !item.plotName.startsWith('condition_chart')).map((item) => { return { ...item } })
-        filters.forEach(filter => {
+        const tempDataFilters: DataSelection[] = dataFilters.value
+            .filter((item) => !item.plotName.startsWith('condition_chart'))
+            .map((item) => {
+                return { ...item };
+            });
+        filters.forEach((filter) => {
             const existingIndex = tempDataFilters.findIndex(
                 (s) => s.plotName === filter.plotName
             );
@@ -286,7 +288,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
             } else {
                 tempDataFilters.push(filter);
             }
-        })
+        });
         dataFilters.value = tempDataFilters;
     }
 
@@ -316,7 +318,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
     // When we remove all filters (which is currently only happening when locations change), we need to "clickAll" for the condition chart again and ensure everything is selected.
     function clearAllFilters() {
         dataFilters.value = [];
-        conditionSelectorStore.clickConditionChartAll()
+        conditionSelectorStore.clickConditionChartAll();
     }
 
     return {
@@ -340,9 +342,6 @@ export const useSelectionStore = defineStore('selectionStore', () => {
         addConditionChartFilters,
         removeFilter,
         convertToFilters,
-        removePlotByName
-    }
-
-
-})
-
+        removePlotByName,
+    };
+});

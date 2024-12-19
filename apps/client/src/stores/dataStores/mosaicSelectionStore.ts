@@ -5,7 +5,7 @@ import {
     useSelectionStore,
     type DataSelection,
     type AttributeChart,
-    type SelectionType
+    type SelectionType,
 } from '@/stores/interactionStores/selectionStore';
 import { useDatasetSelectionStore } from './datasetSelectionUntrrackedStore';
 
@@ -15,7 +15,7 @@ import {
     getPredicateSelectionComposite,
     getPredicateSelectionAgg,
     getPredicateFilterComposite,
-    getPredicateFilterAgg
+    getPredicateFilterAgg,
 } from '@/util/predicateGenerator';
 import { debounce } from 'quasar';
 
@@ -52,26 +52,24 @@ interface RangeResult {
  * Clear Mosaic Selection: Helper function to clear by source.
  */
 
-
 interface MosaicSelectionState {
-    cellLevelSelection: Ref<any>,
-    trackLevelSelection: Ref<any>,
-    cellLevelFilter: Ref<any>,
-    trackLevelFilter: Ref<any>,
-    previousDataSelections: DataSelection[],
-    previousDataFilters: DataSelection[],
-    conditionChartSelectionsInitialized: Ref<boolean>
-    highlightedCellIds: Ref<string[] | null>,
-    unfilteredTrackIds: Ref<string[] | null>
-    $conditionChartYAxisDomain: Ref<any>,
-    compSelClauseList: Ref<LoonarClause[]>,
-    aggSelClauseList: Ref<LoonarClause[]>,
-    compFilClauseList: Ref<LoonarClause[]>,
-    aggFilClauseList: Ref<LoonarClause[]>,
-    condAggClauseList: Ref<LoonarClause[]>,
-    condCompClauseList: Ref<LoonarClause[]>
+    cellLevelSelection: Ref<any>;
+    trackLevelSelection: Ref<any>;
+    cellLevelFilter: Ref<any>;
+    trackLevelFilter: Ref<any>;
+    previousDataSelections: DataSelection[];
+    previousDataFilters: DataSelection[];
+    conditionChartSelectionsInitialized: Ref<boolean>;
+    highlightedCellIds: Ref<string[] | null>;
+    unfilteredTrackIds: Ref<string[] | null>;
+    $conditionChartYAxisDomain: Ref<any>;
+    compSelClauseList: Ref<LoonarClause[]>;
+    aggSelClauseList: Ref<LoonarClause[]>;
+    compFilClauseList: Ref<LoonarClause[]>;
+    aggFilClauseList: Ref<LoonarClause[]>;
+    condAggClauseList: Ref<LoonarClause[]>;
+    condCompClauseList: Ref<LoonarClause[]>;
 }
-
 
 const initialState = (): MosaicSelectionState => ({
     cellLevelSelection: ref<any>(vg.Selection.intersect()),
@@ -89,13 +87,10 @@ const initialState = (): MosaicSelectionState => ({
     compFilClauseList: ref<LoonarClause[]>([]),
     aggFilClauseList: ref<LoonarClause[]>([]),
     condAggClauseList: ref<LoonarClause[]>([]),
-    condCompClauseList: ref<LoonarClause[]>([])
-})
-
+    condCompClauseList: ref<LoonarClause[]>([]),
+});
 
 export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
-
-
     // Initial state
     let {
         cellLevelSelection,
@@ -113,7 +108,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         aggFilClauseList,
         condAggClauseList,
         condCompClauseList,
-    } = initialState()
+    } = initialState();
 
     // Reset state function
     function resetState(): void {
@@ -122,7 +117,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         trackLevelSelection.value = newState.trackLevelSelection.value;
         cellLevelFilter.value = newState.cellLevelFilter.value;
         trackLevelFilter.value = newState.trackLevelFilter.value;
-        conditionChartSelectionsInitialized.value = newState.conditionChartSelectionsInitialized.value;
+        conditionChartSelectionsInitialized.value =
+            newState.conditionChartSelectionsInitialized.value;
         previousDataSelections = newState.previousDataSelections;
         previousDataFilters = newState.previousDataFilters;
         highlightedCellIds.value = newState.highlightedCellIds.value;
@@ -135,26 +131,29 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         condCompClauseList.value = newState.condCompClauseList.value;
     }
 
-
-    let $conditionChartYAxisDomain = vg.Param.value([0, 2000])
-
+    let $conditionChartYAxisDomain = vg.Param.value([0, 2000]);
 
     const selectionStore = useSelectionStore();
-    const { dataSelections, dataFilters, attributeCharts } = storeToRefs(selectionStore);
+    const { dataSelections, dataFilters, attributeCharts } =
+        storeToRefs(selectionStore);
     const conditionSelectorStore = useConditionSelectorStore();
-    const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore)
+    const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore);
 
     const datasetSelectionStore = useDatasetSelectionStore();
-    const { experimentDataInitialized, currentExperimentMetadata, currentLocationMetadata } = storeToRefs(datasetSelectionStore);
+    const {
+        experimentDataInitialized,
+        currentExperimentMetadata,
+        currentLocationMetadata,
+    } = storeToRefs(datasetSelectionStore);
 
-
-
-    watch([experimentDataInitialized, conditionChartSelectionsInitialized], ([isInitialized, isConditionChartInitialized]) => {
-        if (isInitialized && isConditionChartInitialized) {
-            _updateConditionChartsDomain();
+    watch(
+        [experimentDataInitialized, conditionChartSelectionsInitialized],
+        ([isInitialized, isConditionChartInitialized]) => {
+            if (isInitialized && isConditionChartInitialized) {
+                _updateConditionChartsDomain();
+            }
         }
-    })
-
+    );
 
     // Object containing all condition chart selections
     // Indexed by unique key containing the tag labels and values
@@ -180,7 +179,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     const compareKey = keysList[j];
                     const compareValues =
                         conditionSelectorStore.currentExperimentTags[
-                        compareKey
+                            compareKey
                         ];
 
                     currValues.forEach((currValue: string) => {
@@ -198,12 +197,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             // Update this for new track level attributes
                             newSelection.update(clause);
                             const conditionChartSelection: ConditionChartSelection =
-                            {
-                                baseSelection: newSelection,
-                                filteredSelection: newSelection.clone(),
-                                compChartFilteredSelection: newSelection.clone(),
-                                compChartBaseSelection: newSelection.clone()
-                            };
+                                {
+                                    baseSelection: newSelection,
+                                    filteredSelection: newSelection.clone(),
+                                    compChartFilteredSelection:
+                                        newSelection.clone(),
+                                    compChartBaseSelection:
+                                        newSelection.clone(),
+                                };
 
                             tempConditionChartSelections[newSource] =
                                 conditionChartSelection;
@@ -218,140 +219,176 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
     );
 
-
     /* -------------------------------------------------
     -------- SELECTION AND FILTER SUBSCRIPTIONS --------
     ------------------------------------------------- */
 
     const compSelPredString = computed(() =>
         _clauseListToPredString(compSelClauseList.value)
-    )
+    );
 
     const aggSelPredString = computed(() =>
         _clauseListToPredString(aggSelClauseList.value)
-    )
+    );
 
     const compFilPredString = computed(() =>
         _clauseListToPredString(compFilClauseList.value)
-    )
+    );
 
     const aggFilPredString = computed(() =>
         _clauseListToPredString(aggFilClauseList.value)
-    )
+    );
 
     // Skips over cond chart conditions.
     // Used in cond chart domains so that the domains do not update dependent on cond chart selections
     const compFilPredStringWithoutConditions = computed(() =>
         _clauseListToPredString(compFilClauseList.value, 'conditionChart')
-    )
+    );
 
+    watch(
+        [dataSelections, dataFilters, conditionChartSelections],
+        debounce(
+            ([
+                newDataSelections,
+                newDataFilters,
+                newConditionChartSelections,
+            ]) => {
+                if (Object.keys(newConditionChartSelections).length > 0) {
+                    // Update existing or new
+                    newDataSelections.forEach((selection: DataSelection) => {
+                        const source = selection.plotName;
+                        const compositePredicate =
+                            getPredicateSelectionComposite(selection);
+                        const compClause = {
+                            source,
+                            predicate: compositePredicate,
+                            type: selection.type,
+                        };
+                        _updatePredicate(compSelClauseList.value, compClause);
 
+                        const aggregatePredicate =
+                            getPredicateSelectionAgg(selection);
+                        const aggClause = {
+                            source,
+                            predicate: aggregatePredicate,
+                            type: selection.type,
+                        };
 
-    watch([dataSelections, dataFilters, conditionChartSelections], debounce(([newDataSelections, newDataFilters, newConditionChartSelections]) => {
-        if (Object.keys(newConditionChartSelections).length > 0) {
-            // Update existing or new
-            newDataSelections.forEach((selection: DataSelection) => {
-                const source = selection.plotName;
-                const compositePredicate = getPredicateSelectionComposite(selection);
-                const compClause = {
-                    source,
-                    predicate: compositePredicate,
-                    type: selection.type
+                        _updatePredicate(aggSelClauseList.value, aggClause);
+                    });
+
+                    // Update existing or new
+                    newDataFilters.forEach((filter: DataSelection) => {
+                        const compositePredicate =
+                            getPredicateFilterComposite(filter);
+                        const aggregatePredicate =
+                            getPredicateFilterAgg(filter);
+
+                        if (filter.type !== 'conditionChart') {
+                            const source = `${filter.plotName}_filter`;
+                            const compClause = {
+                                source,
+                                predicate: compositePredicate,
+                                type: filter.type,
+                            };
+                            _updatePredicate(
+                                compFilClauseList.value,
+                                compClause
+                            );
+
+                            const aggClause = {
+                                source,
+                                predicate: aggregatePredicate,
+                                type: filter.type,
+                            };
+                            _updatePredicate(aggFilClauseList.value, aggClause);
+                        } else {
+                            const source = filter.plotName;
+                            const compClause = {
+                                source,
+                                predicate: compositePredicate,
+                                type: filter.type,
+                            };
+                            const aggClause = {
+                                source,
+                                predicate: aggregatePredicate,
+                                type: filter.type,
+                            };
+
+                            _updatePredicate(
+                                condCompClauseList.value,
+                                compClause
+                            );
+                            _updatePredicate(
+                                condAggClauseList.value,
+                                aggClause
+                            );
+                        }
+                    });
+
+                    // All selections removed
+                    const removedSelections = previousDataSelections.filter(
+                        (entry) => {
+                            return !newDataSelections
+                                .map(
+                                    (newEntry: DataSelection) =>
+                                        newEntry.plotName
+                                )
+                                .includes(entry.plotName);
+                        }
+                    );
+
+                    // All filters removed
+                    const removedFilters = previousDataFilters.filter(
+                        (entry) => {
+                            return !newDataFilters
+                                .map(
+                                    (newEntry: DataSelection) =>
+                                        newEntry.plotName
+                                )
+                                .includes(entry.plotName);
+                        }
+                    );
+
+                    // Set predicates to null for all removed selections.
+                    removedSelections.forEach((removedSelection) => {
+                        const clause = {
+                            source: removedSelection.plotName,
+                            predicate: null,
+                            type: removedSelection.type,
+                        };
+                        _updatePredicate(compSelClauseList.value, clause);
+                        _updatePredicate(aggSelClauseList.value, clause);
+                    });
+
+                    // Set predicates to null for all removed filters.
+                    removedFilters.forEach((removedFilter) => {
+                        const clause = {
+                            source: '',
+                            predicate: null,
+                            type: removedFilter.type,
+                        };
+                        if (removedFilter.type !== 'conditionChart') {
+                            const source = `${removedFilter.plotName}_filter`;
+                            clause.source = source;
+                            _updatePredicate(compFilClauseList.value, clause);
+                            _updatePredicate(aggFilClauseList.value, clause);
+                        } else {
+                            const source = `${removedFilter.plotName}`;
+                            clause.source = source;
+                            _updatePredicate(condCompClauseList.value, clause);
+                            _updatePredicate(condAggClauseList.value, clause);
+                        }
+                    });
+
+                    previousDataSelections = _.cloneDeep(newDataSelections);
+                    previousDataFilters = _.cloneDeep(newDataFilters);
                 }
-                _updatePredicate(compSelClauseList.value, compClause);
-
-                const aggregatePredicate = getPredicateSelectionAgg(selection);
-                const aggClause = {
-                    source,
-                    predicate: aggregatePredicate,
-                    type: selection.type
-                }
-
-                _updatePredicate(aggSelClauseList.value, aggClause);
-            })
-
-
-            // Update existing or new
-            newDataFilters.forEach((filter: DataSelection) => {
-                const compositePredicate = getPredicateFilterComposite(filter);
-                const aggregatePredicate = getPredicateFilterAgg(filter);
-
-                if (filter.type !== 'conditionChart') {
-                    const source = `${filter.plotName}_filter`;
-                    const compClause = {
-                        source,
-                        predicate: compositePredicate,
-                        type: filter.type
-                    }
-                    _updatePredicate(compFilClauseList.value, compClause);
-
-                    const aggClause = {
-                        source,
-                        predicate: aggregatePredicate,
-                        type: filter.type
-                    }
-                    _updatePredicate(aggFilClauseList.value, aggClause);
-                } else {
-                    const source = filter.plotName;
-                    const compClause = {
-                        source,
-                        predicate: compositePredicate,
-                        type: filter.type
-                    }
-                    const aggClause = {
-                        source,
-                        predicate: aggregatePredicate,
-                        type: filter.type
-                    }
-
-                    _updatePredicate(condCompClauseList.value, compClause);
-                    _updatePredicate(condAggClauseList.value, aggClause);
-                }
-            })
-
-            // All selections removed
-            const removedSelections = previousDataSelections.filter(entry => {
-                return !newDataSelections.map((newEntry: DataSelection) => newEntry.plotName).includes(entry.plotName)
-            })
-
-            // All filters removed
-            const removedFilters = previousDataFilters.filter(entry => {
-                return !newDataFilters.map((newEntry: DataSelection) => newEntry.plotName).includes(entry.plotName)
-            });
-
-            // Set predicates to null for all removed selections.
-            removedSelections.forEach(removedSelection => {
-                const clause = {
-                    source: removedSelection.plotName, predicate: null, type: removedSelection.type
-                }
-                _updatePredicate(compSelClauseList.value, clause);
-                _updatePredicate(aggSelClauseList.value, clause);
-            })
-
-            // Set predicates to null for all removed filters.
-            removedFilters.forEach(removedFilter => {
-                const clause = { source: '', predicate: null, type: removedFilter.type }
-                if (removedFilter.type !== 'conditionChart') {
-                    const source = `${removedFilter.plotName}_filter`
-                    clause.source = source;
-                    _updatePredicate(compFilClauseList.value, clause);
-                    _updatePredicate(aggFilClauseList.value, clause);
-                } else {
-                    const source = `${removedFilter.plotName}`
-                    clause.source = source;
-                    _updatePredicate(condCompClauseList.value, clause);
-                    _updatePredicate(condAggClauseList.value, clause);
-                }
-            })
-
-            previousDataSelections = _.cloneDeep(newDataSelections);
-            previousDataFilters = _.cloneDeep(newDataFilters);
-        }
-
-
-    }, 100), { deep: true, immediate: true })
-
-
+            },
+            100
+        ),
+        { deep: true, immediate: true }
+    );
 
     /* -------------------------------------------------
     --------------- CLAUSE SUBSCRIPTIONS ---------------
@@ -364,126 +401,123 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     */
 
     // Watch for selection clause changes
-    watch([
-        compSelClauseList,
-        aggSelClauseList,
-    ], ([
-        newCompSelList,
-        newAggSelList,
-    ]) => {
+    watch(
+        [compSelClauseList, aggSelClauseList],
+        ([newCompSelList, newAggSelList]) => {
+            newCompSelList.forEach((clause: LoonarClause) => {
+                cellLevelSelection.value.update({ ...clause });
+                _updateConditionChartSelections({ ...clause });
+            });
 
-        newCompSelList.forEach((clause: LoonarClause) => {
-            cellLevelSelection.value.update({ ...clause });
-            _updateConditionChartSelections({ ...clause });
-        })
+            newAggSelList.forEach((clause: LoonarClause) => {
+                trackLevelSelection.value.update({ ...clause });
+            });
 
-
-        newAggSelList.forEach((clause: LoonarClause) => {
-            trackLevelSelection.value.update({ ...clause });
-        })
-
-        _updateConditionChartsDomain();
-        _updateStandardHighlightOrFilter(false)
-
-    }, { deep: true })
+            _updateConditionChartsDomain();
+            _updateStandardHighlightOrFilter(false);
+        },
+        { deep: true }
+    );
 
     // Watch for filter clause changes
-    watch([
-        compFilClauseList,
-        aggFilClauseList
-    ], ([
-        newCompFilList,
-        newAggFilList
-    ]) => {
-        newCompFilList.forEach((clause: LoonarClause) => {
-            cellLevelSelection.value.update({ ...clause });
-            cellLevelFilter.value.update({ ...clause });
-            _updateConditionChartSelections({ ...clause }, true, clause.type === 'conditionChart');
-        })
+    watch(
+        [compFilClauseList, aggFilClauseList],
+        ([newCompFilList, newAggFilList]) => {
+            newCompFilList.forEach((clause: LoonarClause) => {
+                cellLevelSelection.value.update({ ...clause });
+                cellLevelFilter.value.update({ ...clause });
+                _updateConditionChartSelections(
+                    { ...clause },
+                    true,
+                    clause.type === 'conditionChart'
+                );
+            });
 
-        newAggFilList.forEach((clause: LoonarClause) => {
-            trackLevelSelection.value.update({ ...clause });
-            trackLevelFilter.value.update({ ...clause });
-        })
+            newAggFilList.forEach((clause: LoonarClause) => {
+                trackLevelSelection.value.update({ ...clause });
+                trackLevelFilter.value.update({ ...clause });
+            });
 
-        _updateConditionChartsDomain();
-        _updateStandardHighlightOrFilter(true)
-        _updateAttributeChartRanges();
-
-
-    }, { deep: true })
-
+            _updateConditionChartsDomain();
+            _updateStandardHighlightOrFilter(true);
+            _updateAttributeChartRanges();
+        },
+        { deep: true }
+    );
 
     // We need to watch this sub list since these don't directly interact with the
     // Individual charts. It is only to maintain the correct predicates for each
     // condition chart selection.
-    watch([
-        condAggClauseList,
-        condCompClauseList
-    ], ([
-        newCondAggClauseList,
-        newCondCompClauseList
-    ]) => {
+    watch(
+        [condAggClauseList, condCompClauseList],
+        ([newCondAggClauseList, newCondCompClauseList]) => {
+            // These tertiary statements end in "1 = 0" so that when no conditions are selected, we filter out ALL data.
 
-        // These tertiary statements end in "1 = 0" so that when no conditions are selected, we filter out ALL data.
+            // Creates large predicate string for aggregate table
+            const isNull =
+                newCondAggClauseList.filter((entry) => entry.predicate).length >
+                0;
+            const newAggPredicate = isNull
+                ? `((${newCondAggClauseList
+                      .filter((entry) => entry.predicate)
+                      .map((entry) => entry.predicate)
+                      .join(') OR (')}))`
+                : `(1 = 0)`;
+            // Creates large predicate string for comp table
+            const newCompPredicate = isNull
+                ? `((${newCondCompClauseList
+                      .filter((entry) => entry.predicate)
+                      .map((entry) => entry.predicate)
+                      .join(') OR (')}))`
+                : `(1 = 0) `;
 
-        // Creates large predicate string for aggregate table
-        const isNull = newCondAggClauseList.filter(entry => entry.predicate).length > 0;
-        const newAggPredicate = isNull ? `((${newCondAggClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : `(1 = 0)`;
-        // Creates large predicate string for comp table
-        const newCompPredicate = isNull ? `((${newCondCompClauseList.filter(entry => entry.predicate).map(entry => entry.predicate).join(') OR (')}))` : `(1 = 0) `;
+            const compClause: LoonarClause = {
+                source: 'condition_chart',
+                predicate: newCompPredicate,
+                type: 'conditionChart',
+            };
+            _updatePredicate(compFilClauseList.value, compClause);
 
-
-        const compClause: LoonarClause = {
-            source: 'condition_chart',
-            predicate: newCompPredicate,
-            type: 'conditionChart'
-        }
-        _updatePredicate(compFilClauseList.value, compClause)
-
-        const aggClause: LoonarClause = {
-            source: 'condition_chart',
-            predicate: newAggPredicate,
-            type: 'conditionChart'
-        }
-        _updatePredicate(aggFilClauseList.value, aggClause)
-
-    }, { deep: true })
-
-
+            const aggClause: LoonarClause = {
+                source: 'condition_chart',
+                predicate: newAggPredicate,
+                type: 'conditionChart',
+            };
+            _updatePredicate(aggFilClauseList.value, aggClause);
+        },
+        { deep: true }
+    );
 
     /* -------------------------------------------------
     ----------------- UPDATE FUNCTIONS -----------------
     ------------------------------------------------- */
     async function _updateAttributeChartRanges() {
-
         const compFilPredicate = compFilPredString.value;
         const aggFilPredicate = aggFilPredString.value;
 
         const promiseList: Promise<any>[] = [];
-        attributeCharts.value.forEach(chart => {
-
+        attributeCharts.value.forEach((chart) => {
             const { plotName, type } = chart;
 
             // Use appropriate predicate.
-            let predicate = ``
+            let predicate = ``;
             if (type === 'cell') {
                 if (compFilPredicate) {
-                    predicate = `WHERE ${compFilPredicate}`
+                    predicate = `WHERE ${compFilPredicate}`;
                 }
             } else if (type === 'track') {
                 if (aggFilPredicate) {
-                    predicate = `WHERE ${aggFilPredicate}`
+                    predicate = `WHERE ${aggFilPredicate}`;
                 }
             }
 
-
             // Table Prefix
-            const tableNamePrefix =
-                `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`
+            const tableNamePrefix = `${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata`;
             // Generate correct table name
             const tableName =
-                type === 'cell' ? tableNamePrefix : `${tableNamePrefix}_aggregate`
+                type === 'cell'
+                    ? tableNamePrefix
+                    : `${tableNamePrefix}_aggregate`;
 
             const query = `
                 SELECT 
@@ -492,10 +526,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     CAST(MAX("${plotName}") AS VARCHAR) as max_value
                 FROM ${tableName}
                 ${predicate}
-            `
-            promiseList.push(
-                vg.coordinator().query(query, { 'type': 'json' })
-            )
+            `;
+            promiseList.push(vg.coordinator().query(query, { type: 'json' }));
         });
 
         // Wait for all promises to resolve
@@ -505,19 +537,32 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
             results.forEach((resultList: RangeResult[]) => {
                 const result = resultList[0];
-                let correspondingPlot = attributeCharts.value.find((chart: AttributeChart) => chart.plotName === result.source);
+                let correspondingPlot = attributeCharts.value.find(
+                    (chart: AttributeChart) => chart.plotName === result.source
+                );
                 if (correspondingPlot) {
-                    correspondingPlot.maxRange = [parseFloat(result.min_value), parseFloat(result.max_value)]
+                    correspondingPlot.maxRange = [
+                        parseFloat(result.min_value),
+                        parseFloat(result.max_value),
+                    ];
                     // If there is a selection when a filter is removed, then we need to update the slider (attributeChart) range to be the same as the selection, not the max range returned from the results.
 
-                    let correspondingSelection = dataSelections.value.find((selection: DataSelection) => selection.plotName === result.source)
+                    let correspondingSelection = dataSelections.value.find(
+                        (selection: DataSelection) =>
+                            selection.plotName === result.source
+                    );
                     if (correspondingSelection) {
-                        correspondingPlot.range = [...correspondingSelection.range]
+                        correspondingPlot.range = [
+                            ...correspondingSelection.range,
+                        ];
                     } else {
-                        correspondingPlot.range = [parseFloat(result.min_value), parseFloat(result.max_value)]
+                        correspondingPlot.range = [
+                            parseFloat(result.min_value),
+                            parseFloat(result.max_value),
+                        ];
                     }
                 }
-            })
+            });
 
             return results;
         } catch (error) {
@@ -525,22 +570,23 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             console.error('Error resolving promises:', error);
             throw error;
         }
-
-
     }
 
-    async function _updateStandardHighlightOrFilter(
-        filter?: boolean
-    ) {
+    async function _updateStandardHighlightOrFilter(filter?: boolean) {
+        const selPredicateString = filter
+            ? aggSelPredString.value
+            : compSelPredString.value;
 
-        const selPredicateString = filter ? aggSelPredString.value : compSelPredString.value;
+        const filPredicateString = filter
+            ? aggFilPredString.value
+            : compFilPredString.value;
 
-        const filPredicateString = filter ? aggFilPredString.value : compFilPredString.value;
-
-        let predicate = ``
-        const predicateTuple = [selPredicateString, filPredicateString].filter(Boolean);
+        let predicate = ``;
+        const predicateTuple = [selPredicateString, filPredicateString].filter(
+            Boolean
+        );
         if (predicateTuple.length > 0) {
-            predicate = `AND ${predicateTuple.join(' AND ')}`
+            predicate = `AND ${predicateTuple.join(' AND ')}`;
         }
 
         if (
@@ -549,7 +595,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             currentExperimentMetadata.value.headerTransforms
         ) {
             if (!filter) {
-                // If no selections, nothing should be selected. 
+                // If no selections, nothing should be selected.
                 if (selPredicateString === null) {
                     highlightedCellIds.value = null;
                     return;
@@ -558,7 +604,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
                 // Generate predicate string
                 // Pull id and frame column names
-                const { id, frame } = currentExperimentMetadata.value.headerTransforms
+                const { id, frame } =
+                    currentExperimentMetadata.value.headerTransforms;
                 // Construct query to get all track id, frame, location combinations that satisfy predicate
                 const selectionQuery = `
                     SELECT CAST("${id}" AS VARCHAR) as id, "${frame}" as frame, location
@@ -567,16 +614,20 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     ${predicate}
 
                 `;
-                const selectionRes: QueryResult[] = await vg.coordinator().query(selectionQuery, { 'type': 'json' });
+                const selectionRes: QueryResult[] = await vg
+                    .coordinator()
+                    .query(selectionQuery, { type: 'json' });
 
                 // No need to filter out 'filtered' track ids. This is already handled by query.
                 // These strings identify a particular row in the table.
                 const uniqueCellIds = selectionRes.map((entry: any) => {
-                    return `${entry.id}_${parseInt(entry.frame)}_${parseInt(entry.location)}`
-                })
+                    return `${entry.id}_${parseInt(entry.frame)}_${parseInt(
+                        entry.location
+                    )}`;
+                });
 
                 // Update selected ids
-                highlightedCellIds.value = uniqueCellIds
+                highlightedCellIds.value = uniqueCellIds;
             } else {
                 // When filter, uses aggregate table to grab track ids. Still uses ful sel and fil predicate.
 
@@ -587,24 +638,32 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     WHERE location = '${currentLocationMetadata?.value?.id}'
                     ${predicate}
                 `;
-                const filterRes: QueryResult[] = await vg.coordinator().query(filterQuery, { 'type': 'json' })
+                const filterRes: QueryResult[] = await vg
+                    .coordinator()
+                    .query(filterQuery, { type: 'json' });
 
-                const resultIds = filterRes.map(entry => entry.id);
+                const resultIds = filterRes.map((entry) => entry.id);
 
                 // Update unfilteredTrackIds
                 unfilteredTrackIds.value = resultIds;
 
                 // Update selected cell Ids to exclude any tracks filtered out
                 if (highlightedCellIds.value) {
-                    highlightedCellIds.value = highlightedCellIds.value.filter((entry: any) => {
-                        return resultIds.includes(entry.split('_')[0])
-                    });
+                    highlightedCellIds.value = highlightedCellIds.value.filter(
+                        (entry: any) => {
+                            return resultIds.includes(entry.split('_')[0]);
+                        }
+                    );
                 }
             }
         }
     }
 
-    function _updateConditionChartSelections(clause: LoonarClause, filter?: boolean, isConditionChart: boolean = false) {
+    function _updateConditionChartSelections(
+        clause: LoonarClause,
+        filter?: boolean,
+        isConditionChart: boolean = false
+    ) {
         Object.values(conditionChartSelections.value).forEach(
             (selectionObject: ConditionChartSelection) => {
                 if (!isConditionChart) {
@@ -626,31 +685,37 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     // When selection for the y axis of the individual
     // cond chart changes, we update ranges.
     watch(selectedIndividualYAxis, () => {
-        _updateConditionChartsDomain()
-    })
+        _updateConditionChartsDomain();
+    });
 
     async function _updateConditionChartsDomain() {
-
         const filPredicateString = compFilPredStringWithoutConditions.value;
         const selPredicateString = compSelPredString.value;
 
         const xAttributeName =
             currentExperimentMetadata.value?.headerTransforms?.frame;
 
-        const yAttributeName =
-            selectedIndividualYAxis.value;
+        const yAttributeName = selectedIndividualYAxis.value;
         // Catch to return early.
         if (!xAttributeName || !yAttributeName) {
-            console.warn('Could not get frame and mass from header transforms.')
+            console.warn(
+                'Could not get frame and mass from header transforms.'
+            );
             return;
         }
         const compositeTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
         let overallMin = Infinity;
         let overallMax = -Infinity;
 
-        const s1Predicate = filPredicateString ? `WHERE ${filPredicateString}` : '';
-        const s2Predicate = s1Predicate === '' ? selPredicateString ? `WHERE ${selPredicateString}` : '' : `${s1Predicate} AND ${selPredicateString}`;
-
+        const s1Predicate = filPredicateString
+            ? `WHERE ${filPredicateString}`
+            : '';
+        const s2Predicate =
+            s1Predicate === ''
+                ? selPredicateString
+                    ? `WHERE ${selPredicateString}`
+                    : ''
+                : `${s1Predicate} AND ${selPredicateString}`;
 
         const query = `
                 SELECT MIN(avg_value) AS min, MAX(avg_value) AS max
@@ -682,7 +747,9 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
 
         if (overallMin === Infinity || overallMax === -Infinity) {
-            console.warn('Minimum and/or Maximum are set to Infinity. Not updating.');
+            console.warn(
+                'Minimum and/or Maximum are set to Infinity. Not updating.'
+            );
             return;
         }
         $conditionChartYAxisDomain.update([overallMin, overallMax]);
@@ -693,10 +760,13 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     ------------------------------------------------- */
 
     function _findClause(clauseList: LoonarClause[], clause: LoonarClause) {
-        return clauseList.find(entry => entry.source === clause.source);
+        return clauseList.find((entry) => entry.source === clause.source);
     }
 
-    function _updatePredicate(clauseList: LoonarClause[], clause: LoonarClause) {
+    function _updatePredicate(
+        clauseList: LoonarClause[],
+        clause: LoonarClause
+    ) {
         const searchedClause = _findClause(clauseList, clause);
         if (searchedClause) {
             searchedClause.predicate = clause.predicate;
@@ -705,16 +775,26 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         }
     }
 
-    function _clauseListToPredString(clauseList: LoonarClause[], skipType?: SelectionType) {
+    function _clauseListToPredString(
+        clauseList: LoonarClause[],
+        skipType?: SelectionType
+    ) {
         let tempString: string | null = '';
         if (clauseList.length > 0) {
             if (skipType) {
-                tempString = `${clauseList.filter(entry => entry.type !== skipType).map((clause: LoonarClause) => clause.predicate).filter(Boolean).join(') AND (')}`
+                tempString = `${clauseList
+                    .filter((entry) => entry.type !== skipType)
+                    .map((clause: LoonarClause) => clause.predicate)
+                    .filter(Boolean)
+                    .join(') AND (')}`;
             } else {
-                tempString = `${clauseList.map((clause: LoonarClause) => clause.predicate).filter(Boolean).join(') AND (')}`
+                tempString = `${clauseList
+                    .map((clause: LoonarClause) => clause.predicate)
+                    .filter(Boolean)
+                    .join(') AND (')}`;
             }
         }
-        return tempString.trim() === "" ? null : `(${tempString})`
+        return tempString.trim() === '' ? null : `(${tempString})`;
     }
 
     return {
@@ -727,6 +807,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         $conditionChartYAxisDomain,
         highlightedCellIds,
         unfilteredTrackIds,
-        resetState
+        resetState,
     };
 });

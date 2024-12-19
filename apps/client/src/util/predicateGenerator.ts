@@ -1,30 +1,29 @@
-import type { DataSelection } from "@/stores/interactionStores/selectionStore";
-import { useDatasetSelectionStore } from "@/stores/dataStores/datasetSelectionUntrrackedStore";
-import { storeToRefs } from "pinia";
+import type { DataSelection } from '@/stores/interactionStores/selectionStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { storeToRefs } from 'pinia';
 
 function _escapeSource(source: string) {
     return `"${source.replace(/"/g, '""')}"`;
 }
 
-// If ranges are using the JS Infinity key word, 
+// If ranges are using the JS Infinity key word,
 // then escape with single quotes for use in SQL
 function _escapeRange(range: number[]) {
     const newRange: Array<string | number> = [];
-    range.forEach(number => {
+    range.forEach((number) => {
         if (number === Infinity) {
-            newRange.push("'Infinity'")
+            newRange.push("'Infinity'");
         } else if (number === -Infinity) {
-            newRange.push("'-Infinity'")
+            newRange.push("'-Infinity'");
         } else {
-            newRange.push(number)
+            newRange.push(number);
         }
-    })
+    });
     return newRange;
 }
 
 // Predicate for 'selection' queries with data source as the composite table.
 export function getPredicateSelectionComposite(selection: DataSelection) {
-
     /*----------------------------------------------
 
         Charts Using This Type of Predicate:
@@ -45,8 +44,7 @@ export function getPredicateSelectionComposite(selection: DataSelection) {
     const { currentExperimentMetadata } = storeToRefs(dataSetSelectionStore);
 
     // Get ID Column
-    const idColumn =
-        currentExperimentMetadata.value?.headerTransforms?.['id'];
+    const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id'];
 
     // Aggregate Table Name
     const aggTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`;
@@ -61,18 +59,17 @@ export function getPredicateSelectionComposite(selection: DataSelection) {
                 ? `"${idColumn}" IN (SELECT tracking_id FROM ${aggTableName} WHERE ${escapedSource} between ${range[0]} and ${range[1]} )`
                 : null;
         } else {
-            console.warn(`Type '${type}' not implemented.`)
-            return null
+            console.warn(`Type '${type}' not implemented.`);
+            return null;
         }
     } else {
-        console.warn('Cell Metadata not yet initialized.')
-        return null
+        console.warn('Cell Metadata not yet initialized.');
+        return null;
     }
 }
 
 // Predicate for 'selection' queries with data source as the agg table.
 export function getPredicateSelectionAgg(selection: DataSelection) {
-
     /*----------------------------------------------
 
         Charts Using This Type of Predicate:
@@ -89,13 +86,11 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
     const dataSetSelectionStore = useDatasetSelectionStore();
     const { currentExperimentMetadata } = storeToRefs(dataSetSelectionStore);
 
-
     // Aggregate Table Name
     const compTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
 
     // Tracking ID column
-    const idColumn =
-        currentExperimentMetadata.value?.headerTransforms?.['id'];
+    const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id'];
 
     if (currentExperimentMetadata.value) {
         if (type === 'cell') {
@@ -103,28 +98,29 @@ export function getPredicateSelectionAgg(selection: DataSelection) {
                 ? `NOT ( "Maximum ${plotName}" <= ${range[0]} OR "Minimum ${plotName}" >= ${range[1]} )`
                 : null;
         } else if (type === 'track') {
-            return range ? `${escapedSource} between ${range[0]} and ${range[1]}` : null;
+            return range
+                ? `${escapedSource} between ${range[0]} and ${range[1]}`
+                : null;
         } else if (type === 'conditionChart') {
             return predicate
                 ? `tracking_id IN (
                     SELECT "${idColumn}"
                     FROM ${compTableName}
                     WHERE ${predicate}
-                )` : null
+                )`
+                : null;
         } else {
-            console.warn(`Type '${type}' not implemented.`)
-            return null
+            console.warn(`Type '${type}' not implemented.`);
+            return null;
         }
     } else {
-        console.warn('Cell Metadata not yet initialized.')
-        return null
+        console.warn('Cell Metadata not yet initialized.');
+        return null;
     }
-
 }
 
 // Predicate for 'filter' queries with data source as the composite table
 export function getPredicateFilterComposite(filter: DataSelection) {
-
     /*----------------------------------------------
 
         Charts Using This Type of Predicate:
@@ -142,8 +138,7 @@ export function getPredicateFilterComposite(filter: DataSelection) {
     const { currentExperimentMetadata } = storeToRefs(dataSetSelectionStore);
 
     // Get ID Column
-    const idColumn =
-        currentExperimentMetadata.value?.headerTransforms?.['id'];
+    const idColumn = currentExperimentMetadata.value?.headerTransforms?.['id'];
 
     // Aggregate Table Name
     const aggTableName = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`;
@@ -172,15 +167,13 @@ export function getPredicateFilterComposite(filter: DataSelection) {
         } else if (type === 'conditionChart') {
             return predicate ?? null;
         } else {
-            console.warn(`Type '${type}' not implemented.`)
-            return null
+            console.warn(`Type '${type}' not implemented.`);
+            return null;
         }
     } else {
-        console.warn('Cell Metadata not yet initialized.')
-        return null
+        console.warn('Cell Metadata not yet initialized.');
+        return null;
     }
-
-
 }
 
 // Predicate for 'filter' queries with data source as the aggregate table
@@ -197,5 +190,4 @@ export function getPredicateFilterAgg(filter: DataSelection) {
     ----------------------------------------------*/
     // Same as the selection. May re-write
     return getPredicateSelectionAgg(filter);
-
 }

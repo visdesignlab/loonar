@@ -22,7 +22,7 @@ export interface AggLine {
     highlighted?: boolean;
     filtered?: boolean;
 }
-export interface AggLineData extends Array<AggDataPoint> { }
+export interface AggLineData extends Array<AggDataPoint> {}
 export interface AggDataPoint {
     time: number;
     value: number; // avg or total or median or ...
@@ -38,11 +38,13 @@ function storeSetup() {
     const dataPointSelection = useDataPointSelection();
     const looneageViewStore = useLooneageViewStore();
     const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
-    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(useDatasetSelectionStore());
-
+    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(
+        useDatasetSelectionStore()
+    );
 
     const mosaicSelectionStore = useMosaicSelectionStore();
-    const { highlightedCellIds, unfilteredTrackIds } = storeToRefs(mosaicSelectionStore);
+    const { highlightedCellIds, unfilteredTrackIds } =
+        storeToRefs(mosaicSelectionStore);
 
     const aggregatorKey = ref<string>('average');
     const aggregatorOptions = ['average', 'total', 'min', 'median', 'max'];
@@ -300,8 +302,6 @@ function storeSetup() {
         };
     }
 
-
-
     const hoveredLineData = computed<{ data: AggLineData; trackId: string }>(
         () => {
             // if (targetKey.value !== 'selected lineage') {
@@ -475,7 +475,7 @@ function storeSetup() {
                         muted: true,
                         trackId: track.trackId,
                         relation: 'other',
-                        filtered
+                        filtered,
                     });
                 }
                 return result;
@@ -522,17 +522,17 @@ function storeSetup() {
         // List initializes as null. Nothing highlighted.
         if (!highlightedCellIds.value) return false;
 
-        const frameColumn = currentExperimentMetadata.value?.headerTransforms?.['frame']
+        const frameColumn =
+            currentExperimentMetadata.value?.headerTransforms?.['frame'];
         const locationId = currentLocationMetadata.value?.id;
         if (frameColumn && locationId && cell.attrNum[frameColumn]) {
             const uniqueString = `${cell.trackId}_${cell.attrNum[frameColumn]}_${locationId}`;
             return highlightedCellIds.value.includes(uniqueString);
         }
-        return true
+        return true;
     }
 
     function _determineTrackFiltered(track: Track) {
-
         // The highlightedCellIds list is a set of strings like "trackId_frame_location"
         // Extract only track Ids
         // If track Id is present in this new set, include the track.
@@ -541,10 +541,10 @@ function storeSetup() {
         //         [...new Set(highlightedCellIds.value.map(entry => entry.split('_')[0]))].includes(track.trackId)
         //         : false
 
-        return unfilteredTrackIds.value ? !(unfilteredTrackIds.value.includes(track.trackId)) : false
-
+        return unfilteredTrackIds.value
+            ? !unfilteredTrackIds.value.includes(track.trackId)
+            : false;
     }
-
 
     return {
         accessor,

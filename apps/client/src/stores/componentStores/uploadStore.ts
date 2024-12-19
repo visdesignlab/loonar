@@ -62,7 +62,7 @@ const initialState = () => ({
     experimentName: ref<string>(''),
     overallProgress: ref<OverallProgress>({
         status: 'not_started',
-        message: 'Waiting to upload and process data.'
+        message: 'Waiting to upload and process data.',
     }),
     tags: ref<[string, string][][]>([[['', '']]]),
     tagColors: ref<Record<string, string>>({}),
@@ -291,7 +291,6 @@ export const useUploadStore = defineStore('uploadStore', () => {
         }
     });
 
-
     // Function to upload all necessary files in experiment.
     async function uploadAll() {
         experimentCreated.value = true;
@@ -403,7 +402,7 @@ export const useUploadStore = defineStore('uploadStore', () => {
     // --------------------------------------------------------
     // --------------------------------------------------------
 
-    const createExperimentProgress = ref<progress>('not_started')
+    const createExperimentProgress = ref<progress>('not_started');
 
     const progressList = computed<FileToUpload[]>((): FileToUpload[] => {
         const tempProgressList: FileToUpload[] = [];
@@ -422,11 +421,10 @@ export const useUploadStore = defineStore('uploadStore', () => {
     watch(
         [progressList, createExperimentProgress],
         ([newList, newCreateExperimentProgress]) => {
-
             const anyRunning = newList.some(
                 (item: FileToUpload) =>
-                    item.uploading === 'running' || item.processing === 'running'
-
+                    item.uploading === 'running' ||
+                    item.processing === 'running'
             );
 
             const anyFailed = newList.some(
@@ -447,10 +445,12 @@ export const useUploadStore = defineStore('uploadStore', () => {
             } else if (allSucceeded) {
                 if (newCreateExperimentProgress === 'succeeded') {
                     overallProgress.value.status = 'succeeded';
-                    overallProgress.value.message = 'All your data has been processed and your experiment has been successfully added. You can now navigate away from this page.';
+                    overallProgress.value.message =
+                        'All your data has been processed and your experiment has been successfully added. You can now navigate away from this page.';
                 } else if (newCreateExperimentProgress === 'failed') {
                     overallProgress.value.status = 'failed';
-                    overallProgress.value.message = 'There was an error when creating the final experiment. Please contact an administrator or re-try the experiment.'
+                    overallProgress.value.message =
+                        'There was an error when creating the final experiment. Please contact an administrator or re-try the experiment.';
                 }
             } else if (anyRunning) {
                 overallProgress.value.status = 'running';
