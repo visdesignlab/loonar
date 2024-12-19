@@ -65,7 +65,10 @@ watch(
 );
 
 // Styles
-const lineColor = conditionSelectorStore.chartColorScheme[props.yIndex % 6];
+const lineColor =
+    conditionSelectorStore.chartColorScheme[
+        props.yIndex % conditionSelectorStore.chartColorScheme.length
+    ];
 const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
 
