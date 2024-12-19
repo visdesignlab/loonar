@@ -103,16 +103,7 @@ const tab = ref('facet');
 
 function determineSelected(elx: string, ely: string): boolean {
     return (
-        selectedGrid.value[
-            `${selectedXTag.value}¶${elx.toString()}¶${
-                selectedYTag.value
-            }¶${ely.toString()}`
-        ] ||
-        selectedGrid.value[
-            `${selectedYTag.value}¶${ely.toString()}¶${
-                selectedXTag.value
-            }¶${elx.toString()}`
-        ] ||
+        conditionSelectorStore.getSelectedGridValue(elx, ely) ||
         conditionSelectorStore.allSelected()
     );
 }

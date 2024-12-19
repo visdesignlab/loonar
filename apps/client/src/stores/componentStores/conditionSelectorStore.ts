@@ -9,7 +9,7 @@ import {
     useSelectionStore,
     type DataSelection,
 } from '../interactionStores/selectionStore';
-import { stringToKeys } from '@/util/conChartStringFunctions';
+import { keysToString, stringToKeys } from '@/util/conChartStringFunctions';
 // import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 
 export type Axis = 'x-axis' | 'y-axis';
@@ -215,29 +215,63 @@ export const useConditionSelectorStore = defineStore(
             idy: number,
             allSelected: boolean | null = null
         ) {
-            const currentColumnVal =
-                currentExperimentTags.value[selectedXTag.value][idx];
-            const currentRowVal =
-                currentExperimentTags.value[selectedYTag.value][idy];
+            const column = currentExperimentTags.value[selectedXTag.value][idx];
+            const row = currentExperimentTags.value[selectedYTag.value][idy];
 
-            const currentValue =
-                selectedGrid.value[
-                    `${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`
-                ];
+            const currentValue = getSelectedGridValue(column, row);
 
             let newValue = !currentValue;
             if (allSelected !== null) {
                 newValue = allSelected ? false : true;
             }
 
-            // Set 'Selected' on current selection
-            selectedGrid.value[
-                `${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`
-            ] = newValue;
-            selectedGrid.value[
-                `${selectedYTag.value}¶${currentRowVal}¶${selectedXTag.value}¶${currentColumnVal}`
-            ] = newValue;
+            setSelectedGridValue(column, row, newValue);
         }
+
+        function getSelectedGridValue(column: string, row: string): boolean {
+            const keys = getSelectedKeys(column, row);
+            // check if all values are the same
+            const allEqual = keys.every((key) => {
+                return selectedGrid.value[key] === selectedGrid.value[keys[0]];
+            });
+            if (!allEqual) {
+                throw new Error('Selected grid values are not all the same');
+            }
+
+            return selectedGrid.value[keys[0]];
+        }
+
+        function setSelectedGridValue(
+            column: string,
+            row: string,
+            value: boolean
+        ): void {
+            for (const key of getSelectedKeys(column, row)) {
+                selectedGrid.value[key] = value;
+            }
+        }
+
+        function getSelectedKeys(column: string, row: string): string[] {
+            const keys: string[] = [];
+            keys.push(
+                keysToString(
+                    selectedXTag.value,
+                    column,
+                    selectedYTag.value,
+                    row
+                )
+            );
+            keys.push(
+                keysToString(
+                    selectedYTag.value,
+                    row,
+                    selectedXTag.value,
+                    column
+                )
+            );
+            return keys;
+        }
+
         type allSelectedType = 'row' | 'col' | 'all';
 
         //Helper function to determine if all objects in a row or column are selected (or if all are selected)
@@ -247,17 +281,14 @@ export const useConditionSelectorStore = defineStore(
         ): boolean {
             if (type === 'col') {
                 if (index !== null) {
-                    const currentColumnVal: string =
+                    const column: string =
                         currentExperimentTags.value[selectedXTag.value][index];
                     let allSelected = true;
 
                     currentExperimentTags.value[selectedYTag.value].forEach(
                         (value: string) => {
-                            const currentRowVal: string = value;
-                            const selected =
-                                selectedGrid.value[
-                                    `${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`
-                                ] ?? false;
+                            const row: string = value;
+                            const selected = getSelectedGridValue(column, row);
                             allSelected = allSelected && selected;
                         }
                     );
@@ -266,17 +297,14 @@ export const useConditionSelectorStore = defineStore(
                 return false;
             } else if (type === 'row') {
                 if (index !== null) {
-                    const currentRowVal: string =
+                    const row: string =
                         currentExperimentTags.value[selectedYTag.value][index];
                     let allSelected = true;
 
                     currentExperimentTags.value[selectedXTag.value].forEach(
                         (value: string) => {
-                            const currentColumnVal: string = value;
-                            const selected =
-                                selectedGrid.value[
-                                    `${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`
-                                ] ?? false;
+                            const column: string = value;
+                            const selected = getSelectedGridValue(column, row);
                             allSelected = allSelected && selected;
                         }
                     );
@@ -287,14 +315,14 @@ export const useConditionSelectorStore = defineStore(
                 let allSelected = true;
                 currentExperimentTags.value[selectedXTag.value].forEach(
                     (xValue: string) => {
-                        const currentColumnVal: string = xValue;
+                        const column: string = xValue;
                         currentExperimentTags.value[selectedYTag.value].forEach(
                             (yValue: string) => {
-                                const currentRowVal: string = yValue;
-                                const selected =
-                                    selectedGrid.value[
-                                        `${selectedXTag.value}¶${currentColumnVal}¶${selectedYTag.value}¶${currentRowVal}`
-                                    ] ?? false;
+                                const row: string = yValue;
+                                const selected = getSelectedGridValue(
+                                    column,
+                                    row
+                                );
                                 allSelected = allSelected && selected;
                             }
                         );
@@ -318,6 +346,7 @@ export const useConditionSelectorStore = defineStore(
             clickConditionChartRow,
             clickConditionChartByName,
             selectedGrid,
+            getSelectedGridValue,
             allSelected,
             selectedIndividualAxes,
             axesOptions,
