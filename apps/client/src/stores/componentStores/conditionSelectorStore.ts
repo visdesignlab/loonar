@@ -20,7 +20,7 @@ interface AxesOption {
 }
 
 export const useConditionSelectorStore = defineStore(
-    'conditionSelector',
+    'conditionSelectorStore',
     () => {
         const datasetSelectionStore = useDatasetSelectionStore();
         const { currentExperimentMetadata, experimentDataInitialized } =

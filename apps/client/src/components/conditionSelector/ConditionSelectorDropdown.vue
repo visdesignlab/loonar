@@ -6,8 +6,8 @@ import {
 import { storeToRefs } from 'pinia';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 const globalSettings = useGlobalSettings();
-const conditionSelector = useConditionSelectorStore();
-const { currentExperimentTags } = storeToRefs(conditionSelector);
+const conditionSelectorStore = useConditionSelectorStore();
+const { currentExperimentTags } = storeToRefs(conditionSelectorStore);
 const props = defineProps({
     axis: {
         type: String,
@@ -21,11 +21,11 @@ const tagVar = props.axis === 'x-axis' ? 'selectedXTag' : 'selectedYTag';
 
 function handleTagClick(item: string): void {
     const axis = props.axis as Axis;
-    conditionSelector.selectTag(item, axis);
+    conditionSelectorStore.selectTag(item, axis);
 }
 </script>
 <template>
-    <q-btn-dropdown flat no-caps :label="conditionSelector[tagVar]">
+    <q-btn-dropdown flat no-caps :label="conditionSelectorStore[tagVar]">
         <q-list :class="{ 'custom-dark': globalSettings.darkMode }">
             <template
                 v-for="(item, index) in Object.keys(currentExperimentTags)"

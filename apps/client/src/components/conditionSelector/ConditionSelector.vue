@@ -18,7 +18,7 @@ import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import ConditionSelectorCompareView from './ConditionSelectorCompareView.vue';
 const globalSettings = useGlobalSettings();
-const conditionSelector = useConditionSelectorStore();
+const conditionSelectorStore = useConditionSelectorStore();
 const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
 const { currentExperimentMetadata } = storeToRefs(
     datasetSelectionUntrrackedStore
@@ -34,7 +34,7 @@ const {
     selectedIndividualAxes,
     selectedIndividualYAxis,
     axesOptions,
-} = storeToRefs(conditionSelector);
+} = storeToRefs(conditionSelectorStore);
 
 const facetContainer = ref(null);
 const compareContainer = ref(null);
@@ -101,7 +101,7 @@ const chartLineWidth = 2;
 
 const tab = ref('facet');
 
-const determineSelected = (elx: string, ely: string) => {
+function determineSelected(elx: string, ely: string): boolean {
     return (
         selectedGrid.value[
             `${selectedXTag.value}¶${elx.toString()}¶${
@@ -113,9 +113,9 @@ const determineSelected = (elx: string, ely: string) => {
                 selectedXTag.value
             }¶${elx.toString()}`
         ] ||
-        conditionSelector.allSelected()
+        conditionSelectorStore.allSelected()
     );
-};
+}
 </script>
 
 <template>
@@ -213,7 +213,7 @@ const determineSelected = (elx: string, ely: string) => {
                                 @mouseleave="() => handleLabelMouseLeave()"
                                 @click="
                                     () =>
-                                        conditionSelector.clickConditionChartRow(
+                                        conditionSelectorStore.clickConditionChartRow(
                                             idy
                                         )
                                 "
@@ -256,7 +256,7 @@ const determineSelected = (elx: string, ely: string) => {
                                     style="position: relative"
                                     @click="
                                         () =>
-                                            conditionSelector.clickConditionChart(
+                                            conditionSelectorStore.clickConditionChart(
                                                 idx,
                                                 idy
                                             )
@@ -290,7 +290,8 @@ const determineSelected = (elx: string, ely: string) => {
                             class="items-center justify-center flex all-section full-height"
                             @mouseover="handleAllMouseOver"
                             @click="
-                                () => conditionSelector.clickConditionChartAll()
+                                () =>
+                                    conditionSelectorStore.clickConditionChartAll()
                             "
                             @mouseleave="handleAllMouseLeave"
                         >
@@ -306,7 +307,7 @@ const determineSelected = (elx: string, ely: string) => {
                                 @mouseleave="() => handleLabelMouseLeave()"
                                 @click="
                                     () =>
-                                        conditionSelector.clickConditionChartColumn(
+                                        conditionSelectorStore.clickConditionChartColumn(
                                             idx
                                         )
                                 "
