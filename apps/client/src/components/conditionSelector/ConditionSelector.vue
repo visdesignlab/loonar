@@ -23,6 +23,7 @@ const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
 const { currentExperimentMetadata } = storeToRefs(
     datasetSelectionUntrrackedStore
 );
+import { useElementSize } from '@vueuse/core';
 
 const {
     xLabels,
@@ -37,66 +38,10 @@ const {
 
 const facetContainer = ref(null);
 const compareContainer = ref(null);
-const gridWidth = ref(0);
-const gridHeight = ref(0);
-const compareWidth = ref(0);
-const compareHeight = ref(0);
-let facetResizeObserver: ResizeObserver | null = null;
-let compareResizeObserver: ResizeObserver | null = null;
 
-const observeContainerSize = () => {
-    if (!facetContainer.value) return;
-    facetResizeObserver = new ResizeObserver((entries) => {
-        for (let entry of entries) {
-            gridWidth.value = entry.contentRect.width;
-            gridHeight.value = entry.contentRect.height;
-        }
-    });
-
-    facetResizeObserver.observe(facetContainer.value);
-};
-
-const observeOuterContainerSize = () => {
-    if (!compareContainer.value) return;
-    compareResizeObserver = new ResizeObserver((entries) => {
-        for (let entry of entries) {
-            compareWidth.value = Math.min(
-                entry.contentRect.width,
-                entry.contentRect.height
-            );
-            compareHeight.value = Math.min(
-                entry.contentRect.width,
-                entry.contentRect.height
-            );
-        }
-    });
-
-    compareResizeObserver.observe(compareContainer.value);
-};
-
-onMounted(() => {
-    observeContainerSize();
-    observeOuterContainerSize();
-});
-
-onUpdated(() => {
-    // Runs when we switch tabs since we are not unmounting this component.
-    if (facetContainer.value) {
-        observeContainerSize(); // Force re-observation
-    }
-    if (compareContainer.value) {
-        observeOuterContainerSize();
-    }
-});
-
-onBeforeUnmount(() => {
-    if (facetResizeObserver) {
-        facetResizeObserver.disconnect();
-    }
-    if (compareResizeObserver) {
-        compareResizeObserver.disconnect();
-    }
-});
+const { width: gridWidth, height: gridHeight } = useElementSize(facetContainer);
+const { width: compareWidth, height: compareHeight } =
+    useElementSize(compareContainer);
 
 const hoveredColumn = ref<number | null>(null);
 const hoveredRow = ref<number | null>(null);
@@ -432,7 +377,7 @@ const determineSelected = (elx: string, ely: string) => {
 
             <q-tab-panel name="compare">
                 <div
-                    class="full-height full-width flex justify-center align-center"
+                    class="full-height full-width flex justify-center align-center blargen"
                     ref="compareContainer"
                 >
                     <ConditionSelectorCompareView
@@ -544,5 +489,9 @@ $border: 1px solid #9ca3af;
     .legend-svg .legend-rect {
         fill: #cccccc;
     }
+}
+
+.blargen {
+    outline: solid tomato 3px;
 }
 </style>
