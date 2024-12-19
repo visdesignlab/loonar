@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
-import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
@@ -28,9 +27,6 @@ watch(
         $height.update(newHeight);
     }
 );
-
-// Will use soon for dark mode.
-const globalSettings = useGlobalSettings();
 
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, compTableName } = storeToRefs(
