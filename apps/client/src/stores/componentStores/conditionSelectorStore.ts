@@ -289,57 +289,25 @@ export const useConditionSelectorStore = defineStore(
             index: number | null,
             type: allSelectedType = 'all'
         ): boolean {
-            if (type === 'col') {
-                if (index !== null) {
-                    const column: string =
-                        currentExperimentTags.value[selectedXTag.value][index];
-                    let allSelected = true;
-
-                    currentExperimentTags.value[selectedYTag.value].forEach(
-                        (value: string) => {
-                            const row: string = value;
-                            const selected = getSelectedGridValue(column, row);
-                            allSelected = allSelected && selected;
-                        }
-                    );
-                    return allSelected;
-                }
-                return false;
-            } else if (type === 'row') {
-                if (index !== null) {
-                    const row: string =
-                        currentExperimentTags.value[selectedYTag.value][index];
-                    let allSelected = true;
-
-                    currentExperimentTags.value[selectedXTag.value].forEach(
-                        (value: string) => {
-                            const column: string = value;
-                            const selected = getSelectedGridValue(column, row);
-                            allSelected = allSelected && selected;
-                        }
-                    );
-                    return allSelected;
-                }
-                return false;
-            } else {
-                let allSelected = true;
-                currentExperimentTags.value[selectedXTag.value].forEach(
-                    (xValue: string) => {
-                        const column: string = xValue;
-                        currentExperimentTags.value[selectedYTag.value].forEach(
-                            (yValue: string) => {
-                                const row: string = yValue;
-                                const selected = getSelectedGridValue(
-                                    column,
-                                    row
-                                );
-                                allSelected = allSelected && selected;
-                            }
-                        );
-                    }
+            const columns = currentExperimentTags.value[selectedXTag.value];
+            const rows = currentExperimentTags.value[selectedYTag.value];
+            if (type === 'all') {
+                return columns.every((column) =>
+                    rows.every((row) => getSelectedGridValue(column, row))
                 );
-                return allSelected;
             }
+            if (index === null) {
+                throw new Error('Index is required when type is not all');
+            }
+            if (type === 'col') {
+                const column: string = columns[index];
+                return rows.every((row) => getSelectedGridValue(column, row));
+            }
+            if (type === 'row') {
+                const row: string = rows[index];
+                return columns.every((col) => getSelectedGridValue(col, row));
+            }
+            throw new Error('Invalid type');
         }
 
         return {
