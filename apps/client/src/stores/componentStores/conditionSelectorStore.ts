@@ -53,30 +53,27 @@ export const useConditionSelectorStore = defineStore(
 
         // Provides the set of tags
         const currentExperimentTags = computed((): Record<string, string[]> => {
-            const tempTags: Record<string, string[]> = {};
-            currentExperimentMetadata.value?.locationMetadataList.forEach(
-                (locationMetadata: LocationMetadata) => {
-                    if (locationMetadata.tags) {
-                        Object.entries(locationMetadata.tags).forEach(
-                            (entry: [string, string]) => {
-                                let tempTagKey = entry[0];
-                                let tempTagValue = entry[1];
+            const experimentTags: Record<string, string[]> = {};
+            if (!currentExperimentMetadata.value) {
+                return experimentTags;
+            }
+            const locationMetadataList =
+                currentExperimentMetadata.value.locationMetadataList;
+            for (const locationMetadata of locationMetadataList) {
+                if (!locationMetadata.tags) continue;
+                for (const [tagKey, tagValue] of Object.entries(
+                    locationMetadata.tags
+                )) {
+                    if (!(tagKey in experimentTags)) {
+                        experimentTags[tagKey] = [];
+                    }
 
-                                if (!(tempTagKey in tempTags)) {
-                                    tempTags[tempTagKey] = [];
-                                }
-
-                                if (
-                                    !tempTags[tempTagKey].includes(tempTagValue)
-                                ) {
-                                    tempTags[tempTagKey].push(tempTagValue);
-                                }
-                            }
-                        );
+                    if (!experimentTags[tagKey].includes(tagValue)) {
+                        experimentTags[tagKey].push(tagValue);
                     }
                 }
-            );
-            return tempTags;
+            }
+            return experimentTags;
         });
 
         // When experimentTags change, initialize as values.
