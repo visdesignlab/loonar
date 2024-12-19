@@ -123,14 +123,14 @@ const determineSelected = (elx: string, ely: string) => {
 </script>
 
 <template>
-    <div class="flex column full-height">
-        <div class="flex justify-between items-center">
+    <div class="flex column no-wrap full-height">
+        <q-toolbar>
             <q-tabs
                 v-model="tab"
                 dense
                 no-caps
                 inline-label
-                class="text-grey-10 q-pl-lg"
+                class="text-grey-10 q-ml-sm"
                 indicator-color="grey"
             >
                 <q-tab name="facet">
@@ -138,11 +138,15 @@ const determineSelected = (elx: string, ely: string) => {
                         <q-icon
                             name="apps"
                             size="xs"
-                            :class="{ 'custom-dark': globalSettings.darkMode }"
+                            :class="{
+                                'custom-dark': globalSettings.darkMode,
+                            }"
                         />
                         <span
                             class="q-ml-sm text-body2"
-                            :class="{ 'custom-dark': globalSettings.darkMode }"
+                            :class="{
+                                'custom-dark': globalSettings.darkMode,
+                            }"
                         >
                             Facet
                         </span>
@@ -154,19 +158,23 @@ const determineSelected = (elx: string, ely: string) => {
                         <q-icon
                             name="stacked_line_chart"
                             size="xs"
-                            :class="{ 'custom-dark': globalSettings.darkMode }"
+                            :class="{
+                                'custom-dark': globalSettings.darkMode,
+                            }"
                         />
                         <span
                             class="q-ml-sm text-body2"
-                            :class="{ 'custom-dark': globalSettings.darkMode }"
+                            :class="{
+                                'custom-dark': globalSettings.darkMode,
+                            }"
                         >
                             Compare
                         </span>
                     </div>
                 </q-tab>
             </q-tabs>
-
-            <div class="flex items-center justify-end q-mr-md">
+            <q-space />
+            <div class="flex items-center justify-end">
                 <span
                     class="text-body2 q-mr-sm"
                     :class="{ 'custom-dark': globalSettings.darkMode }"
@@ -182,7 +190,7 @@ const determineSelected = (elx: string, ely: string) => {
                     :dark="globalSettings.darkMode"
                 />
             </div>
-        </div>
+        </q-toolbar>
         <q-tab-panels
             v-model="tab"
             animated
@@ -377,7 +385,7 @@ const determineSelected = (elx: string, ely: string) => {
 
             <q-tab-panel name="compare">
                 <div
-                    class="full-height full-width flex justify-center align-center blargen"
+                    class="full-height full-width flex justify-center align-center"
                     ref="compareContainer"
                 >
                     <ConditionSelectorCompareView
@@ -490,9 +498,5 @@ $border: 1px solid #9ca3af;
     .legend-svg .legend-rect {
         fill: #cccccc;
     }
-}
-
-.blargen {
-    outline: solid tomato 3px;
 }
 </style>
