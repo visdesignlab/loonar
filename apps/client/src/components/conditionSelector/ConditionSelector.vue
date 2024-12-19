@@ -49,7 +49,7 @@ const hoveredAll = ref<boolean>(false);
 
 const size = computed(() => {
     //Protects against svg values being below 0.
-    const defaultValue = 0;
+    const defaultValue = 32;
     return Math.max(
         Math.min(
             gridWidth.value / xLabels.value.length - 4,
@@ -240,7 +240,7 @@ const determineSelected = (elx: string, ely: string) => {
                             <div
                                 v-for="(ely, idy) in yLabels"
                                 :key="`${idy}-${yLabels.join(',')}`"
-                                class="chart-row row justify-around align-center"
+                                class="chart-row row justify-around align-center no-wrap"
                             >
                                 <div
                                     v-for="(elx, idx) in xLabels"
