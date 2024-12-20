@@ -92,14 +92,14 @@ const initialState = (): MosaicSelectionState => ({
 
 export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     // Initial state
-    let {
+    const defaultState = initialState();
+    const {
         cellLevelSelection,
         trackLevelSelection,
         cellLevelFilter,
         trackLevelFilter,
         conditionChartSelectionsInitialized,
-        previousDataSelections,
-        previousDataFilters,
+
         highlightedCellIds,
         unfilteredTrackIds,
         compSelClauseList,
@@ -108,11 +108,13 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         aggFilClauseList,
         condAggClauseList,
         condCompClauseList,
-    } = initialState();
+    } = defaultState;
+
+    let { previousDataSelections, previousDataFilters } = defaultState;
 
     // Reset state function
     function resetState(): void {
-        let newState = initialState();
+        const newState = initialState();
         cellLevelSelection.value = newState.cellLevelSelection.value;
         trackLevelSelection.value = newState.trackLevelSelection.value;
         cellLevelFilter.value = newState.cellLevelFilter.value;
@@ -131,7 +133,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         condCompClauseList.value = newState.condCompClauseList.value;
     }
 
-    let $conditionChartYAxisDomain = vg.Param.value([0, 2000]);
+    const $conditionChartYAxisDomain = vg.Param.value([0, 2000]);
 
     const selectionStore = useSelectionStore();
     const { dataSelections, dataFilters, attributeCharts } =
@@ -165,7 +167,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             const keysList = Object.keys(
                 conditionSelectorStore.currentExperimentTags
             );
-            let tempConditionChartSelections: Record<
+            const tempConditionChartSelections: Record<
                 string,
                 ConditionChartSelection
             > = {};
@@ -537,7 +539,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
             results.forEach((resultList: RangeResult[]) => {
                 const result = resultList[0];
-                let correspondingPlot = attributeCharts.value.find(
+                const correspondingPlot = attributeCharts.value.find(
                     (chart: AttributeChart) => chart.plotName === result.source
                 );
                 if (correspondingPlot) {
@@ -547,7 +549,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     ];
                     // If there is a selection when a filter is removed, then we need to update the slider (attributeChart) range to be the same as the selection, not the max range returned from the results.
 
-                    let correspondingSelection = dataSelections.value.find(
+                    const correspondingSelection = dataSelections.value.find(
                         (selection: DataSelection) =>
                             selection.plotName === result.source
                     );

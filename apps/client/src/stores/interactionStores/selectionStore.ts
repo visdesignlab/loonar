@@ -42,11 +42,11 @@ const initialState = (): SelectionState => ({
 
 export const useSelectionStore = defineStore('selectionStore', () => {
     // Declare initial state
-    let { attributeCharts, dataSelections, dataFilters } = initialState();
+    const { attributeCharts, dataSelections, dataFilters } = initialState();
 
     // create resetState function
     function resetState(): void {
-        let newState = initialState();
+        const newState = initialState();
         attributeCharts.value = newState.attributeCharts.value;
         dataSelections.value = newState.dataSelections.value;
         dataFilters.value = newState.dataFilters.value;
@@ -102,7 +102,7 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`;
 
             // Cast as varchar. Will convert back to number
-            let query = `
+            const query = `
                 SELECT
                     CAST(MIN("${escapedPlotName}") AS VARCHAR) AS min_value,
                     CAST(MAX("${escapedPlotName}") AS VARCHAR) AS max_value
