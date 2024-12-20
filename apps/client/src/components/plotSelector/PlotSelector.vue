@@ -336,7 +336,7 @@ function onToggleRelativeChart() {
                                             @click="addTrackPlotFromMenu()"
                                             :dark="globalSettings.darkMode"
                                             class="q-mr-sm"
-                                            color="blue"
+                                            color="primary"
                                         />
                                         <l-btn
                                             label="Cancel"
@@ -344,6 +344,7 @@ function onToggleRelativeChart() {
                                             @click="onMenuButtonClick"
                                             :dark="globalSettings.darkMode"
                                             class="q-mr-sm"
+                                            color="primary"
                                         />
                                     </div>
                                 </q-form>
