@@ -9,7 +9,7 @@ import {
 } from '@/stores/interactionStores/selectionStore';
 import { useDatasetSelectionStore } from './datasetSelectionUntrrackedStore';
 
-import _ from 'lodash-es';
+import { cloneDeep } from 'lodash-es';
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
 import {
     getPredicateSelectionComposite,
@@ -383,8 +383,8 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                         }
                     });
 
-                    previousDataSelections = _.cloneDeep(newDataSelections);
-                    previousDataFilters = _.cloneDeep(newDataFilters);
+                    previousDataSelections = cloneDeep(newDataSelections);
+                    previousDataFilters = cloneDeep(newDataFilters);
                 }
             },
             100
