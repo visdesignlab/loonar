@@ -254,137 +254,121 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 newDataFilters,
                 newConditionChartSelections,
             ]) => {
-                if (Object.keys(newConditionChartSelections).length > 0) {
-                    // Update existing or new
-                    newDataSelections.forEach((selection: DataSelection) => {
-                        const source = selection.plotName;
-                        const compositePredicate =
-                            getPredicateSelectionComposite(selection);
+                if (Object.keys(newConditionChartSelections).length === 0) {
+                    return;
+                }
+
+                // Update existing or new
+                newDataSelections.forEach((selection: DataSelection) => {
+                    const source = selection.plotName;
+                    const compositePredicate =
+                        getPredicateSelectionComposite(selection);
+                    const compClause = {
+                        source,
+                        predicate: compositePredicate,
+                        type: selection.type,
+                    };
+                    _updatePredicate(compSelClauseList.value, compClause);
+
+                    const aggregatePredicate =
+                        getPredicateSelectionAgg(selection);
+                    const aggClause = {
+                        source,
+                        predicate: aggregatePredicate,
+                        type: selection.type,
+                    };
+
+                    _updatePredicate(aggSelClauseList.value, aggClause);
+                });
+
+                // Update existing or new
+                newDataFilters.forEach((filter: DataSelection) => {
+                    const compositePredicate =
+                        getPredicateFilterComposite(filter);
+                    const aggregatePredicate = getPredicateFilterAgg(filter);
+
+                    if (filter.type !== 'conditionChart') {
+                        const source = `${filter.plotName}_filter`;
                         const compClause = {
                             source,
                             predicate: compositePredicate,
-                            type: selection.type,
+                            type: filter.type,
                         };
-                        _updatePredicate(compSelClauseList.value, compClause);
+                        _updatePredicate(compFilClauseList.value, compClause);
 
-                        const aggregatePredicate =
-                            getPredicateSelectionAgg(selection);
                         const aggClause = {
                             source,
                             predicate: aggregatePredicate,
-                            type: selection.type,
+                            type: filter.type,
+                        };
+                        _updatePredicate(aggFilClauseList.value, aggClause);
+                    } else {
+                        const source = filter.plotName;
+                        const compClause = {
+                            source,
+                            predicate: compositePredicate,
+                            type: filter.type,
+                        };
+                        const aggClause = {
+                            source,
+                            predicate: aggregatePredicate,
+                            type: filter.type,
                         };
 
-                        _updatePredicate(aggSelClauseList.value, aggClause);
-                    });
+                        _updatePredicate(condCompClauseList.value, compClause);
+                        _updatePredicate(condAggClauseList.value, aggClause);
+                    }
+                });
 
-                    // Update existing or new
-                    newDataFilters.forEach((filter: DataSelection) => {
-                        const compositePredicate =
-                            getPredicateFilterComposite(filter);
-                        const aggregatePredicate =
-                            getPredicateFilterAgg(filter);
+                // All selections removed
+                const removedSelections = previousDataSelections.filter(
+                    (entry) => {
+                        return !newDataSelections
+                            .map((newEntry: DataSelection) => newEntry.plotName)
+                            .includes(entry.plotName);
+                    }
+                );
 
-                        if (filter.type !== 'conditionChart') {
-                            const source = `${filter.plotName}_filter`;
-                            const compClause = {
-                                source,
-                                predicate: compositePredicate,
-                                type: filter.type,
-                            };
-                            _updatePredicate(
-                                compFilClauseList.value,
-                                compClause
-                            );
+                // All filters removed
+                const removedFilters = previousDataFilters.filter((entry) => {
+                    return !newDataFilters
+                        .map((newEntry: DataSelection) => newEntry.plotName)
+                        .includes(entry.plotName);
+                });
 
-                            const aggClause = {
-                                source,
-                                predicate: aggregatePredicate,
-                                type: filter.type,
-                            };
-                            _updatePredicate(aggFilClauseList.value, aggClause);
-                        } else {
-                            const source = filter.plotName;
-                            const compClause = {
-                                source,
-                                predicate: compositePredicate,
-                                type: filter.type,
-                            };
-                            const aggClause = {
-                                source,
-                                predicate: aggregatePredicate,
-                                type: filter.type,
-                            };
+                // Set predicates to null for all removed selections.
+                removedSelections.forEach((removedSelection) => {
+                    const clause = {
+                        source: removedSelection.plotName,
+                        predicate: null,
+                        type: removedSelection.type,
+                    };
+                    _updatePredicate(compSelClauseList.value, clause);
+                    _updatePredicate(aggSelClauseList.value, clause);
+                });
 
-                            _updatePredicate(
-                                condCompClauseList.value,
-                                compClause
-                            );
-                            _updatePredicate(
-                                condAggClauseList.value,
-                                aggClause
-                            );
-                        }
-                    });
+                // Set predicates to null for all removed filters.
+                removedFilters.forEach((removedFilter) => {
+                    const clause = {
+                        source: '',
+                        predicate: null,
+                        type: removedFilter.type,
+                    };
+                    if (removedFilter.type !== 'conditionChart') {
+                        const source = `${removedFilter.plotName}_filter`;
+                        clause.source = source;
+                        _updatePredicate(compFilClauseList.value, clause);
+                        _updatePredicate(aggFilClauseList.value, clause);
+                    } else {
+                        const source = `${removedFilter.plotName}`;
+                        clause.source = source;
+                        _updatePredicate(condCompClauseList.value, clause);
+                        _updatePredicate(condAggClauseList.value, clause);
+                    }
+                });
 
-                    // All selections removed
-                    const removedSelections = previousDataSelections.filter(
-                        (entry) => {
-                            return !newDataSelections
-                                .map(
-                                    (newEntry: DataSelection) =>
-                                        newEntry.plotName
-                                )
-                                .includes(entry.plotName);
-                        }
-                    );
-
-                    // All filters removed
-                    const removedFilters = previousDataFilters.filter(
-                        (entry) => {
-                            return !newDataFilters
-                                .map(
-                                    (newEntry: DataSelection) =>
-                                        newEntry.plotName
-                                )
-                                .includes(entry.plotName);
-                        }
-                    );
-
-                    // Set predicates to null for all removed selections.
-                    removedSelections.forEach((removedSelection) => {
-                        const clause = {
-                            source: removedSelection.plotName,
-                            predicate: null,
-                            type: removedSelection.type,
-                        };
-                        _updatePredicate(compSelClauseList.value, clause);
-                        _updatePredicate(aggSelClauseList.value, clause);
-                    });
-
-                    // Set predicates to null for all removed filters.
-                    removedFilters.forEach((removedFilter) => {
-                        const clause = {
-                            source: '',
-                            predicate: null,
-                            type: removedFilter.type,
-                        };
-                        if (removedFilter.type !== 'conditionChart') {
-                            const source = `${removedFilter.plotName}_filter`;
-                            clause.source = source;
-                            _updatePredicate(compFilClauseList.value, clause);
-                            _updatePredicate(aggFilClauseList.value, clause);
-                        } else {
-                            const source = `${removedFilter.plotName}`;
-                            clause.source = source;
-                            _updatePredicate(condCompClauseList.value, clause);
-                            _updatePredicate(condAggClauseList.value, clause);
-                        }
-                    });
-
-                    previousDataSelections = cloneDeep(newDataSelections);
-                    previousDataFilters = cloneDeep(newDataFilters);
-                }
+                previousDataSelections = cloneDeep(newDataSelections);
+                previousDataFilters = cloneDeep(newDataFilters);
             },
             100
         ),
