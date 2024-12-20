@@ -61,8 +61,9 @@ function onSubmit() {
     if (
         typeof minInput.value === 'undefined' ||
         typeof maxInput.value === 'undefined'
-    )
+    ) {
         return;
+    }
 
     const newRange: [number, number] = [minInput.value, maxInput.value];
 
@@ -78,13 +79,16 @@ function onSubmit() {
 
 const minMaxFormError = computed<string | boolean>(() => {
     // @ts-ignore: actually it can be '', I would expect quasar to make this undefined or null, but it doesn't
-    if (typeof minInput.value === 'undefined' || minInput.value === '')
+    if (typeof minInput.value === 'undefined' || minInput.value === '') {
         return 'Min cannot be undefined.';
+    }
     // @ts-ignore: actually it can be '', I would expect quasar to make this undefined or null, but it doesn't
-    if (typeof maxInput.value === 'undefined' || maxInput.value === '')
+    if (typeof maxInput.value === 'undefined' || maxInput.value === '') {
         return 'Max cannot be undefined.';
-    if (minInput.value > maxInput.value)
+    }
+    if (minInput.value > maxInput.value) {
         return 'Min should be less than or equal to Max.';
+    }
     return false;
 });
 
@@ -125,7 +129,7 @@ const minMaxFormValid = computed<boolean>(() => {
                     This will remove all associated selections and filters.
                 </div>
             </q-card-section>
-            <q-card-actions align="right">
+            <q-card-actions>
                 <l-btn
                     flat
                     label="Cancel"
