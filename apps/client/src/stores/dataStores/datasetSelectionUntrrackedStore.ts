@@ -148,7 +148,7 @@ export const useDatasetSelectionStore = defineStore(
             if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
                 fetchingTabularData.value = true;
 
-                let duckDbFileUrl = configStore.getDuckDbFileUrl(
+                const duckDbFileUrl = configStore.getDuckDbFileUrl(
                     currentExperimentMetadata.value
                         ?.compositeTabularDataFilename
                 );
