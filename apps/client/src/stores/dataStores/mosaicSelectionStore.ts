@@ -99,7 +99,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         cellLevelFilter,
         trackLevelFilter,
         conditionChartSelectionsInitialized,
-
         highlightedCellIds,
         unfilteredTrackIds,
         compSelClauseList,
@@ -159,7 +158,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
     // Object containing all condition chart selections
     // Indexed by unique key containing the tag labels and values
-    // When we add "tag1-A_tab2-B", we also add "tag2-B_tag1-A" with the reference to the same selection
+    // When we add "tag1-A_tag2-B", we also add "tag2-B_tag1-A" with the reference to the same selection
     // This is so we can easily grab the selection regardless of the orientation of the condition
     // chart matrix.
     const conditionChartSelections = computed(
