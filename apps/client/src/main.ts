@@ -35,17 +35,6 @@ import 'quasar/src/css/index.sass';
 
 // Vuetify
 import 'vuetify/styles';
-import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
-
-import '@mdi/font/css/materialdesignicons.css';
-import 'vuetify/styles';
-const vuetify = createVuetify({
-    components,
-    directives,
-    ssr: true,
-});
 
 import './App.scss';
 
@@ -66,7 +55,6 @@ library.add(fas);
 createApp(App)
     .use(router)
     .use(createPinia())
-    .use(vuetify)
     .use(Quasar, {
         plugins: { Loading, Notify }, // import Quasar plugins and add here,
         config: {
