@@ -190,7 +190,11 @@ function onToggleRelativeChart() {
                     :color="isRelativeChartShown ? 'blue-8' : 'grey-7'"
                     @click="onToggleRelativeChart"
                 >
-                    <q-tooltip>Show Relative Chart</q-tooltip>
+                    <q-tooltip>{{
+                        isRelativeChartShown
+                            ? 'Hide Relative Chart'
+                            : 'Show Relative Chart'
+                    }}</q-tooltip>
                 </q-btn>
                 <q-btn
                     class="q-mr-sm"
