@@ -91,6 +91,7 @@ function onSelectExperiment() {
                         location.id
                     ]
                 "
+                active-class="bg-primary text-white"
                 @click="
                     () => {
                         onClickLocation(location);
