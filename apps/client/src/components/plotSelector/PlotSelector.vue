@@ -366,14 +366,4 @@ function onToggleRelativeChart() {
     </div>
 </template>
 
-<style scoped>
-.q-i {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.selected-item {
-    background-color: #e0e0e0;
-    color: black;
-}
-</style>
+<style scoped></style>
