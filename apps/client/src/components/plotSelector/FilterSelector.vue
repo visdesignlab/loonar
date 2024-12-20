@@ -22,7 +22,7 @@ const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
 const selectionsCount = computed(() => dataSelections.value.length);
 
 function removeFilter(plotName: string) {
-    console.log(plotName);
+    // console.log(plotName);
     selectionStore.removeFilterByPlotName(plotName);
 }
 function removeSelection(plotName: string) {
@@ -62,9 +62,7 @@ const readableDataFilters = computed(() => {
             ...nonConditionChartFilters,
             {
                 plotName: `Condition Charts`,
-                subName: `${conditionChartLength} out of ${
-                    xLabels.value.length * yLabels.value.length
-                } selected.`,
+                subName: `${conditionChartLength} out of ${totalLength} selected.`,
                 type: 'conditionChart' as SelectionType,
                 range: [0, 0],
             },
