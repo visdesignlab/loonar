@@ -203,7 +203,7 @@ function onToggleRelativeChart() {
                     @click="onMenuButtonClick"
                 >
                     <!-- Cell Attributes Dialog -->
-                    <q-dialog v-model="cellPlotDialogOpen" persistent>
+                    <q-dialog v-model="cellPlotDialogOpen">
                         <q-card :dark="globalSettings.darkMode">
                             <q-card-section>
                                 <div class="text-h6">
@@ -251,7 +251,7 @@ function onToggleRelativeChart() {
                     </q-dialog>
 
                     <!-- Track Attributes Dialog -->
-                    <q-dialog v-model="trackPlotDialogOpen" persistent>
+                    <q-dialog v-model="trackPlotDialogOpen">
                         <q-card
                             :dark="globalSettings.darkMode"
                             style="width: 600px; max-width: 80vw"
