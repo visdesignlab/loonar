@@ -6,14 +6,36 @@ export interface AttributeSelection {
     step?: number;
 }
 
-export interface AggregationAttribute {
-    functionName: string;
-    description?: string;
-    selections?: Record<string, AttributeSelection>;
-    customQuery?: string;
+export type AggregateFunction =
+    | BasicAggregateFunction
+    | StandardAggregateFunction
+    | CustomAggregateFunction;
+
+export interface CustomAggregateFunction extends BasicAggregateFunction {
+    customQuery: string;
 }
 
-export const aggregateFunctions: Record<string, AggregationAttribute> = {
+export interface StandardAggregateFunction extends BasicAggregateFunction {
+    selections: Record<string, AttributeSelection>;
+}
+
+export interface BasicAggregateFunction {
+    functionName: string;
+    description: string;
+}
+
+export function isStandardAggregateFunction(
+    aggFunction: AggregateFunction
+): aggFunction is StandardAggregateFunction {
+    return 'selections' in aggFunction;
+}
+
+export function isCustomAggregateFunction(
+    aggFunction: AggregateFunction
+): aggFunction is CustomAggregateFunction {
+    return 'customQuery' in aggFunction;
+}
+export const aggregateFunctions: Record<string, AggregateFunction> = {
     Sum: {
         functionName: 'SUM',
         description: 'Sum of selected attribute over each track.',

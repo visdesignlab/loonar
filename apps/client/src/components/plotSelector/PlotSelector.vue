@@ -14,8 +14,10 @@ import { useNotificationStore } from '@/stores/misc/notificationStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import {
     aggregateFunctions,
+    isCustomAggregateFunction,
+    isStandardAggregateFunction,
     type AttributeSelection,
-    type AggregationAttribute,
+    type AggregateFunction,
 } from './aggregateFunctions';
 const datasetSelectionStore = useDatasetSelectionStore();
 const globalSettings = useGlobalSettings();
@@ -49,23 +51,25 @@ const var1Model = ref<number | string | null>(null);
 
 const errorPlotName = ref('');
 
-const aggregationAttributes: Record<string, AggregationAttribute> =
-    aggregateFunctions;
-
 // Currently selected aggregation
-const currAgg = computed(() =>
-    aggModel.value ? aggregationAttributes[aggModel.value] : null
+const currAgg = computed<AggregateFunction | null>(() =>
+    aggModel.value ? aggregateFunctions[aggModel.value] : null
 );
 
 // The selections of the currently selected aggregation
 const currAggSelections = computed(
-    (): Record<string, AttributeSelection> | undefined =>
-        currAgg.value?.selections
+    (): Record<string, AttributeSelection> | undefined => {
+        if (!currAgg.value) return;
+        if (!isStandardAggregateFunction(currAgg.value)) {
+            return;
+        }
+        return currAgg.value.selections;
+    }
 );
 
 // For use in select input
 const aggregationOptions = computed(() => {
-    return Object.entries(aggregationAttributes).map((entry) => {
+    return Object.entries(aggregateFunctions).map((entry) => {
         return { label: entry[0] };
     });
 });
@@ -130,8 +134,11 @@ async function addTrackPlotFromMenu() {
     const attr1 = attr1Model.value?.toString() ?? undefined;
     const var1 = var1Model.value?.toString() ?? undefined;
     const attr2 = attr2Model.value ?? undefined;
-    const functionName = aggregationAttributes[label].functionName;
-    const customQuery = aggregationAttributes[label].customQuery;
+    const functionName = aggregateFunctions[label].functionName;
+    let customQuery;
+    if (isCustomAggregateFunction(aggregateFunctions[label])) {
+        customQuery = aggregateFunctions[label].customQuery;
+    }
 
     if (
         aggTableName.value &&
