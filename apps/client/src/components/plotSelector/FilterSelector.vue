@@ -132,7 +132,6 @@ const filtersCount = computed(() => readableDataFilters.value.length);
 
                     <q-item-section side>
                         <q-btn
-                            class="gt-xs"
                             @click="removeSelection(selection.plotName)"
                             size="md"
                             flat
@@ -216,7 +215,6 @@ const filtersCount = computed(() => readableDataFilters.value.length);
 
                     <q-item-section side>
                         <q-btn
-                            class="gt-xs"
                             @click="removeFilter(filter.plotName)"
                             size="md"
                             flat

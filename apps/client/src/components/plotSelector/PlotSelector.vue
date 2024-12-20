@@ -181,7 +181,7 @@ function onToggleRelativeChart() {
 
             <div class="flex justify-between">
                 <q-btn
-                    class="gt-xs q-mr-sm"
+                    class="q-mr-sm"
                     size="12px"
                     flat
                     dense
@@ -193,7 +193,7 @@ function onToggleRelativeChart() {
                     <q-tooltip>Show Relative Chart</q-tooltip>
                 </q-btn>
                 <q-btn
-                    class="gt-xs q-mr-sm"
+                    class="q-mr-sm"
                     size="12px"
                     flat
                     dense
