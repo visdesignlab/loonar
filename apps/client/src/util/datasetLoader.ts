@@ -219,7 +219,23 @@ export async function createAggregateTable(
 
     const { id, mass } = headerTransforms;
 
-    const selectString = `AVG("${mass}") AS "Average ${mass}",`;
+    let selectString = `AVG("${mass}") AS "Average ${mass}",`;
+
+    headers.forEach((header: string) => {
+        selectString = `
+        ${selectString}
+        MAX("${header}") AS "Maximum ${header}",
+        MIN("${header}") AS "Minimum ${header}",
+        `;
+    });
+
+    selectString = `
+        ${selectString}
+        MAX("Mass Norm") AS "Maximum Mass Norm",
+        MIN("Mass Norm") AS "Minimum Mass Norm",
+        MAX("Time Norm") AS "Maximum Time Norm",
+        MIN("Time Norm") AS "Minimum Time Norm",
+    `;
 
     try {
         try {
