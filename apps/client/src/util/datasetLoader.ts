@@ -105,42 +105,40 @@ export async function addAggregateColumn(
     aggObject: AggregateObject,
     headerTransforms: ExperimentMetadata['headerTransforms']
 ): Promise<string> {
+    if (!headerTransforms) return '';
     const { functionName, attr1, var1, attr2, label, customQuery } = aggObject;
-    if (headerTransforms) {
-        const { id, mass, time } = headerTransforms;
 
-        if (customQuery) {
-            const newColumnName = label;
+    const { id, mass, time } = headerTransforms;
 
-            await vg.coordinator().exec([
-                `
+    if (customQuery) {
+        const newColumnName = label;
+
+        await vg.coordinator().exec([
+            `
                 ALTER TABLE ${aggTable}
                 ADD COLUMN "${newColumnName}" DOUBLE
             `,
-            ]);
+        ]);
 
-            // Keys match what you're replacing in custom sql query
-            const replacements: Record<string, string | undefined> = {
-                idColumn: id,
-                compTable: compTable,
-                timeColumn: time,
-                massColumn: mass,
-            };
-            const filledCustomQuery = customQuery.replace(
-                /{(\w+)}/g,
-                (match, key) => {
-                    if (
-                        key in replacements &&
-                        replacements[key] !== undefined
-                    ) {
-                        return replacements[key] as string;
-                    }
-                    return match;
+        // Keys match what you're replacing in custom sql query
+        const replacements: Record<string, string | undefined> = {
+            idColumn: id,
+            compTable: compTable,
+            timeColumn: time,
+            massColumn: mass,
+        };
+        const filledCustomQuery = customQuery.replace(
+            /{(\w+)}/g,
+            (match, key) => {
+                if (key in replacements && replacements[key] !== undefined) {
+                    return replacements[key] as string;
                 }
-            );
+                return match;
+            }
+        );
 
-            await vg.coordinator().exec([
-                `
+        await vg.coordinator().exec([
+            `
                 UPDATE ${aggTable} as orig_agg_table
                 SET "${newColumnName}" = (
                     SELECT "${functionName}"
@@ -150,52 +148,52 @@ export async function addAggregateColumn(
                     WHERE custom_table.tracking_id = orig_agg_table.tracking_id
                 )
             `,
-            ]);
+        ]);
 
-            return newColumnName;
-        } else {
-            // Start new column name string
-            let newColumnName = `${label ? label : functionName}${
-                attr1 ? ` ${attr1}` : ''
-            }`;
-            // Add variables if present
-            if (attr2) {
-                newColumnName = `${newColumnName} ${attr2}`;
-            }
+        return newColumnName;
+    } else {
+        // Start new column name string
+        let newColumnName = `${label ? label : functionName}${
+            attr1 ? ` ${attr1}` : ''
+        }`;
+        // Add variables if present
+        if (attr2) {
+            newColumnName = `${newColumnName} ${attr2}`;
+        }
 
-            if (var1) {
-                newColumnName = `${newColumnName} ${var1}`;
-            }
+        if (var1) {
+            newColumnName = `${newColumnName} ${var1}`;
+        }
 
-            await vg.coordinator().exec([
-                `
+        await vg.coordinator().exec([
+            `
                 ALTER TABLE ${aggTable}
                 ADD COLUMN IF NOT EXISTS "${newColumnName}" DOUBLE
             `,
-            ]);
+        ]);
 
-            // Start function call string
-            let functionCall = `${functionName}`;
-            if (attr1 || attr2 || var1) {
-                functionCall = `${functionCall}("${attr1}"`;
-                // Add variables if present
+        // Start function call string
+        let functionCall = `${functionName}`;
+        if (attr1 || attr2 || var1) {
+            functionCall = `${functionCall}("${attr1}"`;
+            // Add variables if present
 
-                if (attr2) {
-                    functionCall = `${functionCall}, "${attr2}"`;
-                }
-
-                if (var1) {
-                    functionCall = `${functionCall},${var1}`;
-                }
-
-                // Close parentheses
-                functionCall = `${functionCall})`;
-            } else {
-                functionCall = `${functionCall}(*)`;
+            if (attr2) {
+                functionCall = `${functionCall}, "${attr2}"`;
             }
 
-            await vg.coordinator().exec([
-                `
+            if (var1) {
+                functionCall = `${functionCall},${var1}`;
+            }
+
+            // Close parentheses
+            functionCall = `${functionCall})`;
+        } else {
+            functionCall = `${functionCall}(*)`;
+        }
+
+        await vg.coordinator().exec([
+            `
                 UPDATE ${aggTable} as t1
                 SET "${newColumnName}" = (
                     SELECT ${functionCall}
@@ -204,11 +202,11 @@ export async function addAggregateColumn(
                     GROUP BY "${id}"
                 )
             `,
-            ]);
+        ]);
 
-            return newColumnName;
-        }
+        return newColumnName;
     }
+
     return '';
 }
 
@@ -217,23 +215,24 @@ export async function createAggregateTable(
     headers: string[],
     headerTransforms: ExperimentMetadata['headerTransforms']
 ) {
-    if (headers && headerTransforms) {
-        const { id, mass } = headerTransforms;
+    if (!headers || !headerTransforms) return;
 
-        const selectString = `AVG("${mass}") AS "Average ${mass}",`;
+    const { id, mass } = headerTransforms;
 
+    const selectString = `AVG("${mass}") AS "Average ${mass}",`;
+
+    try {
         try {
-            try {
-                await vg.coordinator().exec([
-                    `
-                    DROP TABLE IF EXISTS ${tableName}_aggregate;
-                `,
-                ]);
-            } catch (error) {
-                console.error(error);
-            }
             await vg.coordinator().exec([
                 `
+                    DROP TABLE IF EXISTS ${tableName}_aggregate;
+                `,
+            ]);
+        } catch (error) {
+            console.error(error);
+        }
+        await vg.coordinator().exec([
+            `
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
                     SELECT 
                         ${selectString}
@@ -242,12 +241,11 @@ export async function createAggregateTable(
                     FROM ${tableName}
                     GROUP BY "${id}", location
             `,
-            ]);
-        } catch (error) {
-            console.error(error);
-            const message = `Unexpected error when creating aggregate table.`;
-            throw new Error(message);
-        }
+        ]);
+    } catch (error) {
+        console.error(error);
+        const message = `Unexpected error when creating aggregate table.`;
+        throw new Error(message);
     }
 }
 
@@ -256,17 +254,18 @@ export async function addAdditionalCellColumns(
     headers: string[],
     headerTransforms: ExperimentMetadata['headerTransforms']
 ) {
-    if (headers && headerTransforms) {
-        const { id, frame, mass, time } = headerTransforms;
-        await vg.coordinator().exec([
-            `
+    if (!headers || !headerTransforms) return;
+
+    const { id, frame, mass, time } = headerTransforms;
+    await vg.coordinator().exec([
+        `
             ALTER TABLE ${tableName}
             ADD COLUMN IF NOT EXISTS "Mass Norm" DOUBLE
         `,
-        ]);
+    ]);
 
-        await vg.coordinator().exec([
-            `
+    await vg.coordinator().exec([
+        `
             WITH min_frame_mass AS (
                 SELECT 
                     "${id}" AS tracking_id,
@@ -285,17 +284,17 @@ export async function addAdditionalCellColumns(
                 WHERE min_frame_mass.tracking_id = orig_comp_table."${id}"
             )
         `,
-        ]);
+    ]);
 
-        await vg.coordinator().exec([
-            `
+    await vg.coordinator().exec([
+        `
             ALTER TABLE ${tableName}
             ADD COLUMN IF NOT EXISTS "Time Norm" DOUBLE
         `,
-        ]);
+    ]);
 
-        await vg.coordinator().exec([
-            `
+    await vg.coordinator().exec([
+        `
             WITH min_time AS (
                 SELECT 
                     "${id}" AS tracking_id,
@@ -310,6 +309,5 @@ export async function addAdditionalCellColumns(
                 WHERE min_time.tracking_id = orig_comp_table."${id}"
             )
         `,
-        ]);
-    }
+    ]);
 }
