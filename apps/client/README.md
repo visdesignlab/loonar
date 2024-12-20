@@ -1,6 +1,6 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/d889955c-3ff6-4443-b1df-b7d740ea1cfc/deploy-status)](https://app.netlify.com/sites/bright-pika-7e11db/deploys)
 
-# aardvark
+# Loon
 
 This template should help get you started developing with Vue 3 in Vite.
 
