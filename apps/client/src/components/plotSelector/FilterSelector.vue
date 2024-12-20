@@ -177,6 +177,7 @@ const filtersCount = computed(() => readableDataFilters.value.length);
                     :key="index"
                 >
                     <FilterEditMenu
+                        v-if="filter.type !== 'conditionChart'"
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"
                         :initial-max="filter.range[1]"
