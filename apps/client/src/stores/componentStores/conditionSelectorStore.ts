@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, type Ref } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import {
     useDatasetSelectionStore,
@@ -19,9 +19,43 @@ interface AxesOption {
     value: string;
 }
 
+interface ConditionSelectorState {
+    selectedXTag: Ref<string>;
+    selectedYTag: Ref<string>;
+    selectedGrid: Ref<Record<string, boolean>>;
+    selectedIndividualAxes: Ref<AxesOption | null>;
+    axesOptions: Ref<AxesOption[]>;
+}
+
+const initialState = (): ConditionSelectorState => ({
+    selectedXTag: ref<string>(''),
+    selectedYTag: ref<string>(''),
+    selectedGrid: ref<Record<string, boolean>>({}),
+    selectedIndividualAxes: ref<AxesOption | null>(null),
+    axesOptions: ref<AxesOption[]>([])
+})
+
 export const useConditionSelectorStore = defineStore(
     'conditionSelectorStore',
     () => {
+        const defaultState = initialState();
+        const {
+            selectedXTag,
+            selectedYTag,
+            selectedGrid,
+            selectedIndividualAxes,
+            axesOptions
+        } = defaultState;
+
+        function resetState(): void {
+            const newState = initialState();
+            selectedXTag.value = newState.selectedXTag.value;
+            selectedYTag.value = newState.selectedYTag.value;
+            selectedGrid.value = newState.selectedGrid.value;
+            selectedIndividualAxes.value = newState.selectedIndividualAxes.value
+            axesOptions.value = newState.axesOptions.value;
+        }
+
         const datasetSelectionStore = useDatasetSelectionStore();
         const { currentExperimentMetadata, experimentDataInitialized } =
             storeToRefs(datasetSelectionStore);
@@ -29,14 +63,9 @@ export const useConditionSelectorStore = defineStore(
         // const mosaicSelectionStore = useMosaicSelectionStore();
 
         // Initialize starting tags as empty strings
-        const selectedXTag = ref<string>('');
-        const selectedYTag = ref<string>('');
         // Initialize as empty. Used to indicate what is selected.
-        const selectedGrid = ref<Record<string, boolean>>({});
 
-        const selectedIndividualAxes = ref<AxesOption | null>(null);
 
-        const axesOptions = ref<AxesOption[]>([]);
 
         const selectedIndividualYAxis = computed(() => {
             return selectedIndividualAxes.value?.value;
@@ -329,6 +358,7 @@ export const useConditionSelectorStore = defineStore(
             selectedIndividualAxes,
             axesOptions,
             selectedIndividualYAxis,
+            resetState
         };
     }
 );

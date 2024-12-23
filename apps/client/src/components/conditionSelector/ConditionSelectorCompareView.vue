@@ -108,7 +108,6 @@ watch(
                     mutation.addedNodes.length > 0
                 ) {
                     isLoading.value = false;
-                    console.log('finished loading');
                     observer?.disconnect();
                     break;
                 }

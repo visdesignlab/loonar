@@ -180,7 +180,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     const compareKey = keysList[j];
                     const compareValues =
                         conditionSelectorStore.currentExperimentTags[
-                            compareKey
+                        compareKey
                         ];
 
                     currValues.forEach((currValue: string) => {
@@ -198,14 +198,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             // Update this for new track level attributes
                             newSelection.update(clause);
                             const conditionChartSelection: ConditionChartSelection =
-                                {
-                                    baseSelection: newSelection,
-                                    filteredSelection: newSelection.clone(),
-                                    compChartFilteredSelection:
-                                        newSelection.clone(),
-                                    compChartBaseSelection:
-                                        newSelection.clone(),
-                                };
+                            {
+                                baseSelection: newSelection,
+                                filteredSelection: newSelection.clone(),
+                                compChartFilteredSelection:
+                                    newSelection.clone(),
+                                compChartBaseSelection:
+                                    newSelection.clone(),
+                            };
 
                             tempConditionChartSelections[newSource] =
                                 conditionChartSelection;
@@ -444,16 +444,16 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 0;
             const newAggPredicate = isNull
                 ? `((${newCondAggClauseList
-                      .filter((entry) => entry.predicate)
-                      .map((entry) => entry.predicate)
-                      .join(') OR (')}))`
+                    .filter((entry) => entry.predicate)
+                    .map((entry) => entry.predicate)
+                    .join(') OR (')}))`
                 : `(1 = 0)`;
             // Creates large predicate string for comp table
             const newCompPredicate = isNull
                 ? `((${newCondCompClauseList
-                      .filter((entry) => entry.predicate)
-                      .map((entry) => entry.predicate)
-                      .join(') OR (')}))`
+                    .filter((entry) => entry.predicate)
+                    .map((entry) => entry.predicate)
+                    .join(') OR (')}))`
                 : `(1 = 0) `;
 
             const compClause: LoonarClause = {

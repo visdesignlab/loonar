@@ -7,6 +7,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -15,6 +16,7 @@ const $q = useQuasar();
 
 const selectionStore = useSelectionStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
+const conditionSelectorStore = useConditionSelectorStore();
 
 watch(
     () => datasetSelectionStore.fetchingTabularData,
@@ -30,8 +32,6 @@ watch(
 );
 
 function onClickLocation(location: any) {
-    selectionStore.clearAllSelections();
-    selectionStore.clearAllFilters();
     datasetSelectionStore.selectImagingLocation(location);
 }
 
@@ -49,6 +49,7 @@ const shortExpName = computed<string>(() => {
 function onSelectExperiment() {
     selectionStore.resetState();
     mosaicSelectionStore.resetState();
+    conditionSelectorStore.resetState();
 }
 </script>
 

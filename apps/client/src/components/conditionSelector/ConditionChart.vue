@@ -84,6 +84,7 @@ function createChart(xAxisName: string, yAxisName: string) {
         return null;
     }
     const source = `${props.tags[0][0]}-${props.tags[0][1]}_${props.tags[1][0]}-${props.tags[1][1]}`;
+
     // Creates chart, filtered by the selection that uses the query.
     const chart = vg.plot(
         // Fills in area under line chart grey (optional)

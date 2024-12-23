@@ -22,7 +22,6 @@ const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
 const selectionsCount = computed(() => dataSelections.value.length);
 
 function removeFilter(plotName: string) {
-    // console.log(plotName);
     selectionStore.removeFilterByPlotName(plotName);
 }
 function removeSelection(plotName: string) {
@@ -48,26 +47,29 @@ interface ReadableDataFilter {
 }
 
 const readableDataFilters = computed(() => {
-    const nonConditionChartFilters = dataFilters.value.filter(
-        (entry) => entry.type !== 'conditionChart'
-    );
-    const conditionChartLength =
-        dataFilters.value.filter((entry) => entry.type === 'conditionChart')
-            .length / 2;
-    const totalLength = xLabels.value.length * yLabels.value.length;
-    if (totalLength === conditionChartLength) {
-        return nonConditionChartFilters as ReadableDataFilter[];
-    } else {
-        return [
-            ...nonConditionChartFilters,
-            {
-                plotName: `Condition Charts`,
-                subName: `${conditionChartLength} out of ${totalLength} selected.`,
-                type: 'conditionChart' as SelectionType,
-                range: [0, 0],
-            },
-        ] as ReadableDataFilter[];
+    if(xLabels.value && yLabels.value){
+        const nonConditionChartFilters = dataFilters.value.filter(
+            (entry) => entry.type !== 'conditionChart'
+        );
+        const conditionChartLength =
+            dataFilters.value.filter((entry) => entry.type === 'conditionChart')
+                .length / 2;
+        const totalLength = xLabels.value.length * yLabels.value.length;
+        if (totalLength === conditionChartLength) {
+            return nonConditionChartFilters as ReadableDataFilter[];
+        } else {
+            return [
+                ...nonConditionChartFilters,
+                {
+                    plotName: `Condition Charts`,
+                    subName: `${conditionChartLength} out of ${totalLength} selected.`,
+                    type: 'conditionChart' as SelectionType,
+                    range: [0, 0],
+                },
+            ] as ReadableDataFilter[];
+        }
     }
+    return []
 });
 
 const filtersCount = computed(() => readableDataFilters.value.length);
