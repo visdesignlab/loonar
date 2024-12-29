@@ -37,7 +37,8 @@ const cellMetaData = useCellMetaData();
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
 
-const { viewConfiguration, exemplarTracks } = storeToRefs(exemplarViewStore);
+const { viewConfiguration, exemplarTracks, exemplarHeight } =
+    storeToRefs(exemplarViewStore);
 
 // Reactive reference for totalExperimentTime
 const totalExperimentTime = ref(0);
@@ -45,11 +46,16 @@ const totalExperimentTime = ref(0);
 // Reactive Deck.gl instance
 const deckgl = ref<any | null>(null);
 
+// 1. Introduce exemplarDataInitialized
+const exemplarDataInitialized = ref(false);
+
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
     () => experimentDataInitialized.value,
     async (initialized) => {
         if (initialized) {
+            console.log('Experiment data initialized.');
+
             // Fetch total experiment time
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
@@ -71,20 +77,41 @@ watch(
                     controller: true,
                     layers: [],
                 });
+                console.log('Deck.gl initialized.');
             }
 
-            // Render Deck.gl layers
-            renderDeckGL();
+            // Add logging before and after generating exemplar tracks
+            console.log('Generating test exemplar tracks...');
+            await exemplarViewStore.generateTestExemplarTracks();
+            console.log('Exemplar tracks generated.');
+
+            // 2. Set exemplarDataInitialized to true after data generation
+            exemplarDataInitialized.value = true;
         } else {
             // If not initialized, clean up Deck.gl instance
             if (deckgl.value) {
                 deckgl.value.finalize();
                 deckgl.value = null;
+                console.log('Deck.gl instance finalized and removed.');
             }
             totalExperimentTime.value = 0;
+
+            // Reset exemplarDataInitialized
+            exemplarDataInitialized.value = false;
         }
     },
     { immediate: false } // We don't need to run this immediately on mount
+);
+
+// 4. Add a new watcher on exemplarDataInitialized
+watch(
+    exemplarDataInitialized,
+    (initialized) => {
+        if (initialized) {
+            renderDeckGL();
+        }
+    },
+    { immediate: false }
 );
 
 // Clean up Deck.gl on component unmount
@@ -93,6 +120,8 @@ onBeforeUnmount(() => {
         deckgl.value.finalize();
         deckgl.value = null;
     }
+    // 5. Reset exemplarDataInitialized on unmount
+    exemplarDataInitialized.value = false;
 });
 
 // Function to render Deck.gl layers
@@ -115,24 +144,15 @@ function renderDeckGL(): void {
     });
 }
 
-// Watcher to re-render Deck.gl when exemplarTracks change
-watch(
-    exemplarTracks,
-    () => {
-        renderDeckGL();
-    },
-    { deep: true }
-);
-
 const exemplarYOffsets = ref(new Map<string, number>());
 
 function recalculateExemplarYOffsets(): void {
     exemplarYOffsets.value.clear();
     let yOffset = 0;
-    let lastExemplar = exemplarViewStore.exemplarTracks[0];
-    for (let i = 0; i < exemplarViewStore.exemplarTracks.length; i++) {
-        const exemplar = exemplarViewStore.exemplarTracks[i];
-        yOffset += exemplarViewStore.exemplarHeight;
+    let lastExemplar = exemplarTracks.value[0];
+    for (let i = 0; i < exemplarTracks.value.length; i++) {
+        const exemplar = exemplarTracks.value[i];
+        yOffset += exemplarHeight.value;
         if (i !== 0) {
             if (isEqual(exemplar.tags, lastExemplar.tags)) {
                 yOffset += viewConfiguration.value.betweeenExemplarGap;
@@ -153,7 +173,7 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
-    for (const exemplar of exemplarViewStore.exemplarTracks) {
+    for (const exemplar of exemplarTracks.value) {
         const yOffset =
             exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
             viewConfiguration.value.timeBarHeightOuter -
@@ -204,7 +224,7 @@ function createImageSnippetLayer():
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-snippet-placeholder`,
-            data: exemplarViewStore.exemplarTracks,
+            data: exemplarTracks.value,
             getPolygon: (exemplar: ExemplarTrack) => {
                 const yOffset =
                     exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
@@ -243,50 +263,16 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     // Testing
     console.log('Total Experiment Time:', totalExperimentTime.value);
 
-    placeholderLayer.push(
-        new PolygonLayer({
-            id: `exemplar-time-window`,
-            data: exemplarViewStore.exemplarTracks,
-            getPolygon: (exemplar: ExemplarTrack) => {
-                const yOffset = exemplarYOffsets.value.get(
-                    uniqueExemplarKey(exemplar)
-                )!;
-                const cellBirthTime = 1; // TODO: Replace with actual data
-                const cellDeathTime = 1; // TODO: Replace with actual data
-                const timeBarWidth = viewConfiguration.value.horizonChartWidth;
-                const cellBirthXValue =
-                    (cellBirthTime / totalExperimentTime.value) * timeBarWidth;
-                const cellDeathXValue =
-                    timeBarWidth -
-                    (cellDeathTime / totalExperimentTime.value) * timeBarWidth;
-                return [
-                    [cellBirthXValue, yOffset],
-                    [cellDeathXValue, yOffset],
-                    [
-                        cellDeathXValue,
-                        yOffset - viewConfiguration.value.timeBarHeightOuter,
-                    ],
-                    [
-                        cellBirthXValue,
-                        yOffset - viewConfiguration.value.timeBarHeightOuter,
-                    ],
-                    [cellBirthXValue, yOffset],
-                ];
-            },
-            getFillColor: [144, 238, 144, 255],
-            getLineWidth: 0,
-            lineWidthUnits: 'pixels',
-        })
-    );
     // Add background rectangle half as tall
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-snippet-background-placeholder`,
-            data: exemplarViewStore.exemplarTracks,
+            data: exemplarTracks.value,
             getPolygon: (exemplar: ExemplarTrack) => {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
                 )!;
+                console.log("i'm here");
                 const quarterHeight =
                     viewConfiguration.value.timeBarHeightOuter / 4;
                 return [
@@ -301,6 +287,45 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     ],
                     [0, yOffset - quarterHeight * 2.5],
                     [0, yOffset - quarterHeight * 1.5],
+                ];
+            },
+            getFillColor: [0, 0, 0, 255],
+            getLineWidth: 0,
+            lineWidthUnits: 'pixels',
+        })
+    );
+    placeholderLayer.push(
+        new PolygonLayer({
+            id: `exemplar-time-window`,
+            data: exemplarTracks.value,
+            getPolygon: (exemplar: ExemplarTrack) => {
+                const yOffset = exemplarYOffsets.value.get(
+                    uniqueExemplarKey(exemplar)
+                )!;
+                const cellBirthTime = exemplar.minTime; // TODO: Replace with actual data
+                console.log('CellBirth:', cellBirthTime);
+                const cellDeathTime = exemplar.maxTime; // TODO: Replace with actual data
+                console.log('CellDeath:', cellDeathTime);
+                const timeBarWidth = viewConfiguration.value.horizonChartWidth;
+                console.log('TimeBarWidth:', timeBarWidth);
+                const cellBirthXValue =
+                    (cellBirthTime / totalExperimentTime.value) * timeBarWidth;
+                console.log('CellBirthXVal:', cellBirthXValue);
+                const cellDeathXValue =
+                    (cellDeathTime / totalExperimentTime.value) * timeBarWidth;
+                console.log('CellDeathXVal:', cellDeathXValue);
+                return [
+                    [cellBirthXValue, yOffset],
+                    [cellDeathXValue, yOffset],
+                    [
+                        cellDeathXValue,
+                        yOffset - viewConfiguration.value.timeBarHeightOuter,
+                    ],
+                    [
+                        cellBirthXValue,
+                        yOffset - viewConfiguration.value.timeBarHeightOuter,
+                    ],
+                    [cellBirthXValue, yOffset],
                 ];
             },
             getFillColor: [144, 238, 144, 255],
@@ -322,9 +347,7 @@ function createSidewaysHistogramLayer(): any[] | null {
     const placeholderLayer: any[] = [];
 
     // Group exemplars by their condition
-    const groupedExemplars = groupExemplarsByCondition(
-        exemplarViewStore.exemplarTracks
-    );
+    const groupedExemplars = groupExemplarsByCondition(exemplarTracks.value);
 
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
@@ -344,7 +367,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         )!;
 
         // Calculate the top and bottom boundaries of the group
-        const groupTop = firstOffset - exemplarViewStore.exemplarHeight;
+        const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
 
         // Create a single histogram layer that spans the full vertical extent of the group
