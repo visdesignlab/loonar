@@ -1,0 +1,15 @@
+{
+  "name": "loonar",
+  "version": "1.0.0",
+  "description": "## Applications in Loon",
+  "main": "index.js",
+  "dependencies": {
+    "quasar": "^2.16.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
