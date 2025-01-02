@@ -3,6 +3,9 @@ import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
+//import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
+//const conditionSelector = useConditionSelectorStore();
+//const { currentExperimentTags } = storeToRefs(conditionSelector);
 
 export interface ExemplarTrack {
     trackId: string;
@@ -139,34 +142,32 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         // Then the outer query:
         //   - Finds MIN and MAX of timeColumn for that chosen track_id.
         const query = `
-                WITH avg_mass_per_cell AS (
-                SELECT
+                WITH
+                avg_mass_per_cell AS (
+                    SELECT
                     "${trackColumn}" AS track_id,
                     AVG("${massColumn}") AS avg_mass
-                FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${drugColumn}" = '${drug}'
+                    FROM "${experimentName}_composite_experiment_cell_metadata"
+                    WHERE "${drugColumn}" = '${drug}'
                     AND "${concColumn}" = '${conc}'
-                GROUP BY "${trackColumn}"
+                    GROUP BY "${trackColumn}"
                 ),
-                mass_threshold AS (
-                SELECT quantile_cont(avg_mass, ${pDecimal}) AS threshold
-                FROM avg_mass_per_cell
+                percentile_val AS (
+                    SELECT quantile_disc(avg_mass, ${pDecimal}) AS pVal
+                    FROM avg_mass_per_cell
                 ),
                 selected_cell AS (
-                SELECT track_id
-                FROM avg_mass_per_cell
-                JOIN mass_threshold ON TRUE
-                WHERE avg_mass >= threshold
-                ORDER BY avg_mass
-                LIMIT 1
+                    SELECT track_id
+                    FROM avg_mass_per_cell
+                    WHERE avg_mass = (SELECT pVal FROM percentile_val)
+                    LIMIT 1
                 )
                 SELECT
                 MIN("${timeColumn}") AS birthTime,
                 MAX("${timeColumn}") AS deathTime
                 FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${trackColumn}" = (
-                SELECT track_id FROM selected_cell
-                );
+                WHERE "${trackColumn}" = (SELECT track_id FROM selected_cell);
+
             `;
 
         try {
@@ -209,8 +210,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         p: number
     ): Promise<ExemplarTrack> {
         const data: DataPoint[] = [];
-        const trackLength = 10 + Math.round(Math.random() * 100);
-        const tstart = Math.round(Math.random() * 50);
+        const trackLength = 24;
+        const tstart = Math.round(Math.random() * 24);
         for (let i = 0; i < trackLength; i++) {
             const time = tstart + i + 0.2 * Math.random();
             data.push({
@@ -260,9 +261,54 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             console.error('Error generating exemplar tracks:', error);
         }
     }
+    // async function getExemplarTrack(...tags: any[]) {
+    //     console.log('Generating exemplar tracks for tags:', tags);
+    // }
+
+    // async function getExemplarTracks(): Promise<void> {
+    //     exemplarTracks.value = [];
+    //     const trackPromises: Promise<ExemplarTrack>[] = [];
+
+    //     const allTags: Array<{ key: string; value: string }> = [];
+
+    //     for (const key in currentExperimentTags.value) {
+    //         const values = currentExperimentTags.value[key];
+    //         values.forEach((value) => {
+    //             allTags.push({ key, value });
+    //         });
+    //     }
+
+    //     const generateCombinations = (
+    //         tags: Array<{ key: string; value: string }>
+    //     ): Array<Array<{ key: string; value: string }>> => {
+    //         const result: Array<Array<{ key: string; value: string }>> = [];
+
+    //         const backtrack = (
+    //             start: number,
+    //             current: Array<{ key: string; value: string }>
+    //         ) => {
+    //             for (let i = start; i < tags.length; i++) {
+    //                 current.push(tags[i]);
+    //                 result.push([...current]);
+    //                 backtrack(i + 1, current);
+    //                 current.pop();
+    //             }
+    //         };
+
+    //         backtrack(0, []);
+    //         return result;
+    //     };
+
+    //     const allCombinations = generateCombinations(allTags);
+
+    //     allCombinations.forEach((combination) => {
+    //         getExemplarTrack(...combination);
+    //     });
+    // }
 
     return {
         generateTestExemplarTracks,
+        //getExemplarTracks,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,
