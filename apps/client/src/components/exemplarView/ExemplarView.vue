@@ -192,7 +192,12 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
-                dataXExtent: [exemplar.minTime, exemplar.maxTime],
+                dataXExtent: [
+                    0,
+                    totalExperimentTime.value > 0
+                        ? totalExperimentTime.value
+                        : 150,
+                ],
 
                 baseline: 0,
                 binSize: 200,
@@ -243,8 +248,8 @@ function createImageSnippetLayer():
                     [0, yOffset],
                 ];
             },
-            getLineColor: [225, 30, 10, 200],
-            getFillColor: [225, 30, 10, 100],
+            getLineColor: [225, 30, 10, 0],
+            getFillColor: [225, 30, 10, 0],
             getLineWidth: 0,
         })
     );
