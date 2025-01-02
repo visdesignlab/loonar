@@ -124,38 +124,33 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const timeColumn = 'Time (h)';
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
-        const massColumn = 'Mass (pg)';
-        //currentExperimentMetadata?.value?.headerTransforms?.mass;
+        const massColumn = 'AVG Mass (pg)';
+        const trackColumn = 'track_id';
+        const experimentName = currentExperimentMetadata?.value?.name;
 
-        // // Ensure all required columns are defined
-        // if (!timeColumn || !drugColumn || !concColumn || !massColumn) {
-        //     console.error(
-        //         'One or more required header transforms are missing.'
-        //     );
-        //     return { birthTime: 0, deathTime: 100 };
-        // }
-
+        // This subquery aims to:
+        //   1) Selects each track_id, calculates the averageMass for that cell.
+        //   2) Uses PERCENTILE_CONT(p) to get the p-th percentile of averageMass
+        //      among all cells in the same drug/conc group.
+        //   3) Filters down to the single track_id whose averageMass == p-th percentile.
+        //   4) Limits to 1 track_id (in case multiple tie the exact percentile).
+        //
+        // Then the outer query:
+        //   - Finds MIN and MAX of timeColumn for that chosen track_id.
         const query = `
             SELECT 
-                MIN("${timeColumn}") AS birthTime, 
+                MIN("${timeColumn}") AS birthTime,
                 MAX("${timeColumn}") AS deathTime
-            FROM "${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata"
-            WHERE "${drugColumn}" = '${drug}' 
-              AND "${concColumn}" = '${conc}'
-              AND "${massColumn}" >= (
-                  SELECT PERCENTILE_CONT(${p}/100.0) WITHIN GROUP (ORDER BY "${massColumn}") 
-                  FROM "${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata"
-                  WHERE "${drugColumn}" = '${drug}'
-                    AND "${concColumn}" = '${conc}'
-              )
-        `;
+            FROM "${experimentName}_composite_experiment_cell_metadata"
+            WHERE "${drugColumn}" = '${drug}'
+                AND "${concColumn}" = '${conc}'
+            `;
 
         try {
             const result = await vg
                 .coordinator()
                 .query(query, { type: 'json' });
 
-            // Log the raw query result
             console.log(
                 `Query Result for condition ${drug}-${conc} with p=${p}:`,
                 JSON.stringify(result, null, 2)
