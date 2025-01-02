@@ -121,10 +121,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         birthTime: number;
         deathTime: number;
     }> {
+        const pDecimal = p / 100;
         const timeColumn = 'Time (h)';
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
-        const massColumn = 'AVG Mass (pg)';
+        const massColumn = 'Mass (pg)';
         const trackColumn = 'track_id';
         const experimentName = currentExperimentMetadata?.value?.name;
 
@@ -138,12 +139,34 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         // Then the outer query:
         //   - Finds MIN and MAX of timeColumn for that chosen track_id.
         const query = `
-            SELECT 
+                WITH avg_mass_per_cell AS (
+                SELECT
+                    "${trackColumn}" AS track_id,
+                    AVG("${massColumn}") AS avg_mass
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${drugColumn}" = '${drug}'
+                    AND "${concColumn}" = '${conc}'
+                GROUP BY "${trackColumn}"
+                ),
+                mass_threshold AS (
+                SELECT quantile_cont(avg_mass, ${pDecimal}) AS threshold
+                FROM avg_mass_per_cell
+                ),
+                selected_cell AS (
+                SELECT track_id
+                FROM avg_mass_per_cell
+                JOIN mass_threshold ON TRUE
+                WHERE avg_mass >= threshold
+                ORDER BY avg_mass
+                LIMIT 1
+                )
+                SELECT
                 MIN("${timeColumn}") AS birthTime,
                 MAX("${timeColumn}") AS deathTime
-            FROM "${experimentName}_composite_experiment_cell_metadata"
-            WHERE "${drugColumn}" = '${drug}'
-                AND "${concColumn}" = '${conc}'
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${trackColumn}" = (
+                SELECT track_id FROM selected_cell
+                );
             `;
 
         try {

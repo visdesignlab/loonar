@@ -272,7 +272,6 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
                 )!;
-                console.log("i'm here");
                 const quarterHeight =
                     viewConfiguration.value.timeBarHeightOuter / 4;
                 return [
@@ -289,7 +288,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [0, yOffset - quarterHeight * 1.5],
                 ];
             },
-            getFillColor: [0, 0, 0, 255],
+            getFillColor: [144, 238, 144, 255],
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
@@ -302,18 +301,19 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
                 )!;
-                const cellBirthTime = exemplar.minTime; // TODO: Replace with actual data
-                console.log('CellBirth:', cellBirthTime);
-                const cellDeathTime = exemplar.maxTime; // TODO: Replace with actual data
-                console.log('CellDeath:', cellDeathTime);
+                const cellBirthTime = exemplar.minTime;
+                const cellDeathTime = exemplar.maxTime;
                 const timeBarWidth = viewConfiguration.value.horizonChartWidth;
-                console.log('TimeBarWidth:', timeBarWidth);
                 const cellBirthXValue =
                     (cellBirthTime / totalExperimentTime.value) * timeBarWidth;
-                console.log('CellBirthXVal:', cellBirthXValue);
-                const cellDeathXValue =
+                let cellDeathXValue =
                     (cellDeathTime / totalExperimentTime.value) * timeBarWidth;
-                console.log('CellDeathXVal:', cellDeathXValue);
+
+                // If cellBirthTime and cellDeathTime are the same, adjust cellDeathXValue
+                if (cellBirthTime === cellDeathTime) {
+                    cellDeathXValue += (1 / 500) * timeBarWidth;
+                }
+
                 return [
                     [cellBirthXValue, yOffset],
                     [cellDeathXValue, yOffset],
@@ -328,7 +328,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [cellBirthXValue, yOffset],
                 ];
             },
-            getFillColor: [144, 238, 144, 255],
+            getFillColor: [0, 0, 0, 255],
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
