@@ -142,32 +142,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         // Then the outer query:
         //   - Finds MIN and MAX of timeColumn for that chosen track_id.
         const query = `
-                WITH
-                avg_mass_per_cell AS (
-                    SELECT
-                    "${trackColumn}" AS track_id,
-                    AVG("${massColumn}") AS avg_mass
-                    FROM "${experimentName}_composite_experiment_cell_metadata"
-                    WHERE "${drugColumn}" = '${drug}'
-                    AND "${concColumn}" = '${conc}'
-                    GROUP BY "${trackColumn}"
-                ),
-                percentile_val AS (
-                    SELECT quantile_disc(avg_mass, ${pDecimal}) AS pVal
-                    FROM avg_mass_per_cell
-                ),
-                selected_cell AS (
-                    SELECT track_id
-                    FROM avg_mass_per_cell
-                    WHERE avg_mass = (SELECT pVal FROM percentile_val)
-                    LIMIT 1
-                )
-                SELECT
-                MIN("${timeColumn}") AS birthTime,
-                MAX("${timeColumn}") AS deathTime
-                FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${trackColumn}" = (SELECT track_id FROM selected_cell);
-
+            WITH avg_mass_per_cell AS (
+            SELECT
+                "${trackColumn}"  AS track_id,
+                AVG("${massColumn}") AS avg_mass
+            FROM "${experimentName}_composite_experiment_cell_metadata"
+            WHERE "${drugColumn}" = '${drug}'
+                AND "${concColumn}" = '${conc}'
+            GROUP BY "${trackColumn}"
+            )
+            SELECT
+            MIN("${timeColumn}") AS birthTime,
+            MAX("${timeColumn}") AS deathTime
+            FROM "${experimentName}_composite_experiment_cell_metadata"
+            WHERE "${trackColumn}" = (
+            SELECT track_id
+            FROM avg_mass_per_cell
+            WHERE avg_mass = (
+                SELECT quantile_disc(avg_mass, ${pDecimal})
+                FROM avg_mass_per_cell
+            )
+            LIMIT 1
+            );
             `;
 
         try {
