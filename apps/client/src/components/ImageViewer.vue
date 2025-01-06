@@ -250,11 +250,12 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
                 return hoverColorWithAlpha;
             }
 
+            // Fades out if filtered
             const { filtered } = _determineSelectedOrFiltered(
                 info.properties?.id?.toString()
             );
             if (filtered) {
-                return [0, 0, 0, 255];
+                return [0, 0, 0, 80];
             }
             return [0, 0, 0, 0];
         },
@@ -274,6 +275,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             const { selected, filtered } = _determineSelectedOrFiltered(
                 info.properties?.id?.toString()
             );
+            // Removes outline
             if (filtered) {
                 return [0, 0, 0];
             } else {
@@ -493,11 +495,11 @@ function createCenterPointLayer(): ScatterplotLayer {
                 return globalSettings.normalizedSelectedRgb;
             }
 
-            const { filtered } = _determineSelectedOrFiltered(d.trackId);
+            // const { filtered } = _determineSelectedOrFiltered(d.trackId);
 
-            if (filtered) {
-                return [0, 0, 0, 0];
-            }
+            // if (filtered) {
+            //     return [0, 0, 0, 0];
+            // }
 
             return [228, 26, 28];
         },
