@@ -18,7 +18,6 @@ import {
     addAdditionalCellColumns,
 } from '@/util/datasetLoader';
 import { useNotificationStore } from '../misc/notificationStore';
-import { select } from 'd3-selection';
 
 export interface ExperimentMetadata {
     name: string; // user friendly name

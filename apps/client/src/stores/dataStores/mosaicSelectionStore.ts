@@ -615,14 +615,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                 highlightedCellIds.value = uniqueCellIds;
             } else {
                 // When filter, uses aggregate table to grab track ids. Still uses ful sel and fil predicate.
-
                 // Pull track ids from aggregate table
                 const filterQuery = `
                     SELECT CAST(tracking_id as VARCHAR) AS id
                     FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate
                     WHERE location = '${currentLocationMetadata?.value?.id}'
-                    ${predicate}
+                    AND ${filPredicateString}
                 `;
+
                 const filterRes: QueryResult[] = await vg
                     .coordinator()
                     .query(filterQuery, { type: 'json' });

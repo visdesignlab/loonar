@@ -80,6 +80,8 @@ const _determineSelectedOrFiltered = (trackId: string) => {
         selected = highlightedCellIds.value.includes(unique_string);
     }
 
+    // console.log(unfilteredTrackIds.value)
+
     return {
         selected,
         filtered: unfilteredTrackIds.value
