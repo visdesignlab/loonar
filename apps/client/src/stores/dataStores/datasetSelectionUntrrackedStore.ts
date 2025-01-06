@@ -18,6 +18,7 @@ import {
     addAdditionalCellColumns,
 } from '@/util/datasetLoader';
 import { useNotificationStore } from '../misc/notificationStore';
+import { select } from 'd3-selection';
 
 export interface ExperimentMetadata {
     name: string; // user friendly name
@@ -246,7 +247,26 @@ export const useDatasetSelectionStore = defineStore(
             }
         );
 
+        // Location shown in list
         const shownSelectedLocationIds = ref<SelectedLocationIds>({});
+
+        // Holds most recent, working location metadata
+        const shownSelectedLocationMetadata = computed<LocationMetadata | null>(
+            () => {
+                if (currentExperimentMetadata.value == null) return null;
+                for (const location of currentExperimentMetadata.value
+                    .locationMetadataList) {
+                    if (
+                        shownSelectedLocationIds.value[
+                        location.id
+                        ]
+                    ) {
+                        return location;
+                    }
+                }
+                return null;
+            }
+        )
 
         watch(currentLocationMetadata, async () => {
             if (!currentLocationMetadata.value?.tabularDataFilename) {
@@ -284,16 +304,36 @@ export const useDatasetSelectionStore = defineStore(
 
                 } catch (error) {
                     const typedError = error as Error;
-                    notify({
-                        type: 'problem',
-                        message: typedError.message,
-                    });
+
+                    if (shownSelectedLocationMetadata.value) {
+                        selectImagingLocation(shownSelectedLocationMetadata.value);
+                        notify({
+                            type: 'problem',
+                            message: `${typedError.message}. Reverting to Location ${shownSelectedLocationMetadata.value.id}`,
+                        });
+                    } else {
+                        notify({
+                            type: 'problem',
+                            message: typedError.message,
+                        });
+                    }
+
                 }
             } catch (error) {
-                notify({
-                    type: 'problem',
-                    message: 'Failed to load location CSV file.',
-                });
+
+                // Revert back to previous location.
+                if (shownSelectedLocationMetadata.value) {
+                    selectImagingLocation(shownSelectedLocationMetadata.value);
+                    notify({
+                        type: 'problem',
+                        message: `Failed to load location CSV file. Reverting to Location ${shownSelectedLocationMetadata.value.id}`,
+                    });
+                } else {
+                    notify({
+                        type: 'problem',
+                        message: `Failed to load location CSV file. No location chosen.`,
+                    });
+                }
             }
             fetchingTabularData.value = false;
 

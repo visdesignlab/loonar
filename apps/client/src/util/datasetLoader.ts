@@ -70,7 +70,7 @@ export async function loadFileIntoDuckDb(
             await vg.coordinator().exec([vg.loadCSV(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);
         } catch (error) {
-            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}`;
+            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);
             throw new Error(message);
         }
@@ -79,7 +79,7 @@ export async function loadFileIntoDuckDb(
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
             console.log(`Got DuckDb file: ${url}`);
         } catch (error) {
-            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}`;
+            const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);
             throw new Error(message);
         }
@@ -153,9 +153,8 @@ export async function addAggregateColumn(
         return newColumnName;
     } else {
         // Start new column name string
-        let newColumnName = `${label ? label : functionName}${
-            attr1 ? ` ${attr1}` : ''
-        }`;
+        let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''
+            }`;
         // Add variables if present
         if (attr2) {
             newColumnName = `${newColumnName} ${attr2}`;
@@ -206,8 +205,6 @@ export async function addAggregateColumn(
 
         return newColumnName;
     }
-
-    return '';
 }
 
 export async function createAggregateTable(
@@ -238,15 +235,15 @@ export async function createAggregateTable(
     `;
 
     try {
-        try {
-            await vg.coordinator().exec([
-                `
-                    DROP TABLE IF EXISTS ${tableName}_aggregate;
-                `,
-            ]);
-        } catch (error) {
-            console.error(error);
-        }
+        // try {
+        //     await vg.coordinator().exec([
+        //         `
+        //             DROP TABLE IF EXISTS ${tableName}_aggregate;
+        //         `,
+        //     ]);
+        // } catch (error) {
+        //     console.error(error);
+        // }
         await vg.coordinator().exec([
             `
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
