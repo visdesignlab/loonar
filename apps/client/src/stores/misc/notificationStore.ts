@@ -21,7 +21,7 @@ export const useNotificationStore = defineStore('notificationStore', () => {
     const displayLevels: NotificationType[] = [
         'problem',
         'warning',
-        'success', // uncommont these to rurn these back on.
+        // 'success', // uncommont these to rurn these back on.
         'info',
     ];
 
