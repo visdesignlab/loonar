@@ -73,7 +73,7 @@ const contrastLimit = computed<[number, number][]>(() => {
 const _determineSelectedOrFiltered = (trackId: string) => {
     const frame = imageViewerStore.frameNumber;
     const location = currentLocationMetadata.value?.id;
-    let selected = false;
+    let selected = true;
     if (frame && location && highlightedCellIds.value) {
         // Generate Unique String to compare against list
         const unique_string = `${trackId}_${frame}_${location}`;
