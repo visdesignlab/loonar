@@ -57,7 +57,7 @@ export const useConditionSelectorStore = defineStore(
         }
 
         const datasetSelectionStore = useDatasetSelectionStore();
-        const { currentExperimentMetadata, experimentDataInitialized } =
+        const { currentExperimentMetadata, experimentDataInitialized, currentLocationMetadata } =
             storeToRefs(datasetSelectionStore);
         const selectionStore = useSelectionStore();
         // const mosaicSelectionStore = useMosaicSelectionStore();
@@ -221,6 +221,35 @@ export const useConditionSelectorStore = defineStore(
                         });
                     });
                     selectionStore.addConditionChartFilters(newFilters);
+
+                    // Changes imaging location if the current location gets filtered out.
+                    if (currentExperimentMetadata.value && currentLocationMetadata.value) {
+                        const tags = currentLocationMetadata.value.tags;
+                        if (tags) {
+                            const entries = Object.entries(tags);
+                            const keyString = keysToString(entries[0][0], entries[0][1], entries[1][0], entries[1][1])
+                            const isSelected = newSelectedGrid[keyString]
+                            if (!isSelected) {
+                                // Iterate through location metadata list until you find one that is selected
+                                const locationMetadata = currentExperimentMetadata.value.locationMetadataList;
+                                for (const currMetadata of locationMetadata) {
+                                    const currTags = currMetadata.tags;
+                                    if (currTags) {
+                                        const currEntries = Object.entries(currTags);
+                                        const currKeyString = keysToString(currEntries[0][0], currEntries[0][1], currEntries[1][0], currEntries[1][1]);
+                                        const currIsSelected = newSelectedGrid[currKeyString];
+                                        if (currIsSelected) {
+                                            // select location
+                                            datasetSelectionStore.selectImagingLocation(currMetadata);
+                                            break;
+                                        }
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                 }
                 isExternalGridUpdate = false;
             }),
