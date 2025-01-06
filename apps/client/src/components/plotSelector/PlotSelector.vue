@@ -195,7 +195,7 @@ function onToggleRelativeChart() {
                     flat
                     dense
                     round
-                    icon="mdi-chart-areaspline"
+                    icon="area_chart"
                     :color="isRelativeChartShown ? 'blue-8' : 'grey-7'"
                     @click="onToggleRelativeChart"
                 >

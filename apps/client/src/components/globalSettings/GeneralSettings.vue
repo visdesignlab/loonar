@@ -15,9 +15,9 @@ const globalSettings = useGlobalSettings();
                 <q-card-section>
                     <q-toggle
                         v-model="globalSettings.darkMode"
-                        checked-icon="mdi-weather-night"
+                        checked-icon="bedtime"
                         color="blue"
-                        unchecked-icon="mdi-weather-sunny"
+                        unchecked-icon="sunny"
                         label="Toggle Dark Mode"
                     />
                 </q-card-section>

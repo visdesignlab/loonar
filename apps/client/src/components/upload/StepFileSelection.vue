@@ -133,7 +133,7 @@ const colors = [
             />
             <l-btn
                 @click="openTagModal(index)"
-                icon="mdi-tag"
+                icon="sell"
                 :dark="globalSettings.darkMode"
                 class="self-stretch q-pl-sm q-pr-sm q-mr-none q-ml-none"
                 style="margin-bottom: 20px"
@@ -156,7 +156,7 @@ const colors = [
         label="Add Location"
         class="q-mt-lg"
         type="action"
-        icon-right="mdi-plus"
+        icon-right="add"
     />
     <q-dialog v-model="dialog" backdrop-filter="blur(4px)'">
         <q-card>
@@ -195,7 +195,7 @@ const colors = [
                 </template>
                 <l-btn
                     label="Add tag"
-                    icon-right="mdi-plus"
+                    icon-right="add"
                     @click="addTag()"
                     class="q-mt-lg"
                     type="action"

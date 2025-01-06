@@ -21,29 +21,29 @@ export const useNotificationStore = defineStore('notificationStore', () => {
     const displayLevels: NotificationType[] = [
         'problem',
         'warning',
-        // 'success', // uncommont these to rurn these back on.
-        // 'info',
+        'success', // uncommont these to rurn these back on.
+        'info',
     ];
 
     const typeToQNotify: Record<NotificationType, QNotification> = {
         problem: {
             color: 'negative',
-            icon: 'mdi-alert-box',
+            icon: 'priority_high',
             position: 'top',
         },
         warning: {
             color: 'warning',
-            icon: 'mdi-alert',
+            icon: 'alert',
             position: 'top',
         },
         success: {
             color: 'positive',
-            icon: 'mdi-check-circle',
+            icon: 'check_circle',
             position: 'top',
         },
         info: {
             color: 'info',
-            icon: 'mdi-information-outline',
+            icon: 'info',
             position: 'top',
         },
     };

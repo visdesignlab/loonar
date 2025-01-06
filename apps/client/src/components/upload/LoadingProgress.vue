@@ -68,12 +68,12 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                         item.processing === 'failed'
                     "
                     class="q-mr-sm"
-                    name="mdi-alert-box"
+                    name="error"
                     color="red"
                 />
                 <q-icon
                     v-if="item.uploading === 'not_started'"
-                    name="mdi-circle-outline"
+                    name="circle"
                     color="grey"
                     class="q-mr-sm"
                 />
@@ -92,7 +92,7 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                 />
                 <q-icon
                     v-else
-                    name="mdi-circle-outline"
+                    name="circle"
                     color="grey"
                     class="q-mr-sm"
                 />

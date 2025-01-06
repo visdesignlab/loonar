@@ -153,7 +153,7 @@ function handlePreviousStep(): void {
                     icon="upload"
                     :active-icon="
                         uploadStore.overallProgress.status == 'succeeded'
-                            ? 'mdi-check'
+                            ? 'check'
                             : 'upload'
                     "
                     :active-color="

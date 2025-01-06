@@ -54,22 +54,25 @@ function onSelectExperiment() {
 </script>
 
 <template>
-    <div class="flex row">
-        <q-select
-            label="Experiment"
-            v-model="datasetSelectionTrrackedStore.currentExperimentFilename"
-            :display-value="shortExpName"
-            :options="datasetSelectionStore.experimentFilenameList"
-            :dark="globalSettings.darkMode"
-            class="flex-grow-1"
-            @update:model-value="onSelectExperiment"
-        />
-        <q-btn
-            flat
-            icon="mdi-refresh"
-            @click="datasetSelectionStore.refreshFileNameList"
-        ></q-btn>
-    </div>
+    <q-select
+        label="Experiment"
+        v-model="datasetSelectionTrrackedStore.currentExperimentFilename"
+        :display-value="shortExpName"
+        :options="datasetSelectionStore.experimentFilenameList"
+        :dark="globalSettings.darkMode"
+        @update:model-value="onSelectExperiment"
+        
+    >        
+        <template v-slot:after>
+            <q-btn
+                flat
+                dense
+                icon="refresh"
+                @click="datasetSelectionStore.refreshFileNameList"
+                style="box-sizing: border-box;"
+            />
+        </template>
+    </q-select>
 
     <div
         v-if="

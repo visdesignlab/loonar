@@ -10,7 +10,8 @@ import {
     type DataSelection,
 } from '../interactionStores/selectionStore';
 import { keysToString, stringToKeys } from '@/util/conChartStringFunctions';
-// import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
+import { useNotificationStore } from '../misc/notificationStore';
+
 
 export type Axis = 'x-axis' | 'y-axis';
 
@@ -65,6 +66,7 @@ export const useConditionSelectorStore = defineStore(
         // Initialize starting tags as empty strings
         // Initialize as empty. Used to indicate what is selected.
 
+        const { notify } = useNotificationStore();
 
 
         const selectedIndividualYAxis = computed(() => {
@@ -241,6 +243,10 @@ export const useConditionSelectorStore = defineStore(
                                         if (currIsSelected) {
                                             // select location
                                             datasetSelectionStore.selectImagingLocation(currMetadata);
+                                            notify({
+                                                type: 'info',
+                                                message: `Attempting to change to location "${currMetadata.id}"`
+                                            })
                                             break;
                                         }
 
