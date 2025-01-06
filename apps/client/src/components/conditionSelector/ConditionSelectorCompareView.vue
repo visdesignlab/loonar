@@ -236,6 +236,56 @@ function createChart(xAxisName: string, yAxisName: string) {
         <div class="text-caption">Loading chart</div>
     </div>
     <div ref="chartContainer"></div>
+    <div class="flex justify-start full-width text-center">
+        <svg
+            class="legend-svg"
+            width="50"
+            style="position: relative; overflow: visible"
+            height="50"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <line
+                stroke="currentColor"
+                x1="0"
+                y1="20"
+                x2="15"
+                y2="20"
+                stroke-width="2"
+            />
+            <circle
+                cx="15"
+                cy="20"
+                r="2"
+            />
+            <text
+                x="20"
+                y="23"
+                font-family="Arial"
+                font-size="10"
+                fill="currentColor"
+            >
+
+                Selected
+            </text>
+            <line
+                stroke="currentColor"
+                x1="0"
+                y1="38"
+                x2="15"
+                y2="38"
+                stroke-width="1"
+            />
+            <text
+                x="20"
+                y="42"
+                font-family="Arial"
+                font-size="10"
+                fill="currentColor"
+            >
+                Unselected
+            </text>
+        </svg>
+    </div>
 </template>
 
 <style scoped lang="scss">
