@@ -8,6 +8,7 @@ import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
 import type { TextTransforms } from '@/util/datasetLoader';
+import type { SelectedLocationIds } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 
 import {
     type CsvParserResults,
@@ -189,6 +190,8 @@ export const useDatasetSelectionStore = defineStore(
                             type: 'success',
                             message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                         });
+                        // Selects default imaging location
+                        selectImagingLocation(currentExperimentMetadata.value.locationMetadataList[0]);
                     }
                 } catch (error) {
                     const typedError = error as Error;
@@ -211,6 +214,7 @@ export const useDatasetSelectionStore = defineStore(
             }
         });
 
+
         function selectImagingLocation(location: LocationMetadata): void {
             datasetSelectionTrrackedStore.$patch(() => {
                 for (const key in datasetSelectionTrrackedStore.selectedLocationIds) {
@@ -222,6 +226,8 @@ export const useDatasetSelectionStore = defineStore(
             });
         }
 
+
+
         // TODO: - update to support multi-location
         const currentLocationMetadata = computed<LocationMetadata | null>(
             () => {
@@ -230,7 +236,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                            location.id
+                        location.id
                         ]
                     ) {
                         return location;
@@ -239,6 +245,8 @@ export const useDatasetSelectionStore = defineStore(
                 return null;
             }
         );
+
+        const shownSelectedLocationIds = ref<SelectedLocationIds>({});
 
         watch(currentLocationMetadata, async () => {
             if (!currentLocationMetadata.value?.tabularDataFilename) {
@@ -250,29 +258,45 @@ export const useDatasetSelectionStore = defineStore(
             );
 
             fetchingTabularData.value = true;
-            await loadCurrentLocationCsvFile(tabularDataFileUrl);
-
-            const duckDbFileUrl = configStore.getDuckDbFileUrl(
-                currentLocationMetadata.value?.tabularDataFilename
-            );
-
             try {
-                await loadFileIntoDuckDb(
-                    duckDbFileUrl,
-                    'current_cell_metadata',
-                    'csv'
+                await loadCurrentLocationCsvFile(tabularDataFileUrl);
+
+                const duckDbFileUrl = configStore.getDuckDbFileUrl(
+                    currentLocationMetadata.value?.tabularDataFilename
                 );
-                notify({
-                    type: 'success',
-                    message: `Created DuckDb Table for ${duckDbFileUrl}.`,
-                });
+
+                try {
+                    await loadFileIntoDuckDb(
+                        duckDbFileUrl,
+                        'current_cell_metadata',
+                        'csv'
+                    );
+                    notify({
+                        type: 'success',
+                        message: `Created DuckDb Table for ${duckDbFileUrl}.`,
+                    });
+
+
+                    for (const key in shownSelectedLocationIds.value) {
+                        shownSelectedLocationIds.value[key] = false;
+                    }
+                    shownSelectedLocationIds.value[currentLocationMetadata.value.id] = true;
+
+                } catch (error) {
+                    const typedError = error as Error;
+                    notify({
+                        type: 'problem',
+                        message: typedError.message,
+                    });
+                }
             } catch (error) {
-                const typedError = error as Error;
                 notify({
                     type: 'problem',
-                    message: typedError.message,
+                    message: 'Failed to load location CSV file.',
                 });
             }
+            fetchingTabularData.value = false;
+
         });
 
         function refreshFileNameList() {
@@ -292,10 +316,7 @@ export const useDatasetSelectionStore = defineStore(
             try {
                 await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
             } catch (error) {
-                notify({
-                    type: 'problem',
-                    message: 'Failed to load location CSV file.',
-                });
+                throw error;
             }
         }
 
@@ -318,6 +339,7 @@ export const useDatasetSelectionStore = defineStore(
             refreshFileNameList,
             compTableName,
             aggTableName,
+            shownSelectedLocationIds
         };
     }
 );

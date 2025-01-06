@@ -88,7 +88,7 @@ function onSelectExperiment() {
                 clickable
                 v-ripple
                 :active="
-                    datasetSelectionTrrackedStore.selectedLocationIds[
+                    datasetSelectionStore.shownSelectedLocationIds[
                         location.id
                     ]
                 "
