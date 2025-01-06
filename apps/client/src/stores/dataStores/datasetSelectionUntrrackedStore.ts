@@ -308,7 +308,7 @@ export const useDatasetSelectionStore = defineStore(
                         selectImagingLocation(shownSelectedLocationMetadata.value);
                         notify({
                             type: 'problem',
-                            message: `${typedError.message}. Reverting to Location ${shownSelectedLocationMetadata.value.id}`,
+                            message: `${typedError.message}. Reverting to Location "${shownSelectedLocationMetadata.value.id}"`,
                         });
                     } else {
                         notify({
