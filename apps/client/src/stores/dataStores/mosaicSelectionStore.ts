@@ -439,17 +439,20 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
             // These tertiary statements end in "1 = 0" so that when no conditions are selected, we filter out ALL data.
 
             // Creates large predicate string for aggregate table
-            const isNull =
+            const aggNotNull =
                 newCondAggClauseList.filter((entry) => entry.predicate).length >
                 0;
-            const newAggPredicate = isNull
+            const compNotNull =
+                newCondCompClauseList.filter((entry) => entry.predicate).length > 0;
+
+            const newAggPredicate = aggNotNull
                 ? `((${newCondAggClauseList
                     .filter((entry) => entry.predicate)
                     .map((entry) => entry.predicate)
                     .join(') OR (')}))`
                 : `(1 = 0)`;
             // Creates large predicate string for comp table
-            const newCompPredicate = isNull
+            const newCompPredicate = compNotNull
                 ? `((${newCondCompClauseList
                     .filter((entry) => entry.predicate)
                     .map((entry) => entry.predicate)
@@ -623,12 +626,11 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     AND ${filPredicateString}
                 `;
 
+
                 const filterRes: QueryResult[] = await vg
                     .coordinator()
                     .query(filterQuery, { type: 'json' });
-
                 const resultIds = filterRes.map((entry) => entry.id);
-
                 // Update unfilteredTrackIds
                 unfilteredTrackIds.value = resultIds;
 

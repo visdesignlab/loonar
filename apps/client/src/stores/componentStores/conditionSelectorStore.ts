@@ -1,16 +1,15 @@
 import { ref, computed, watch, type Ref } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
 import {
-    useDatasetSelectionStore,
-    type LocationMetadata,
+    useDatasetSelectionStore
 } from '../dataStores/datasetSelectionUntrrackedStore';
-import { debounce } from 'quasar';
 import {
     useSelectionStore,
     type DataSelection,
 } from '../interactionStores/selectionStore';
 import { keysToString, stringToKeys } from '@/util/conChartStringFunctions';
 import { useNotificationStore } from '../misc/notificationStore';
+import { isEmpty } from 'lodash-es';
 
 
 export type Axis = 'x-axis' | 'y-axis';
@@ -58,8 +57,12 @@ export const useConditionSelectorStore = defineStore(
         }
 
         const datasetSelectionStore = useDatasetSelectionStore();
-        const { currentExperimentMetadata, experimentDataInitialized, currentLocationMetadata } =
-            storeToRefs(datasetSelectionStore);
+        const {
+            currentExperimentMetadata,
+            experimentDataInitialized,
+            currentLocationMetadata
+        } = storeToRefs(datasetSelectionStore);
+
         const selectionStore = useSelectionStore();
         // const mosaicSelectionStore = useMosaicSelectionStore();
 
@@ -125,10 +128,10 @@ export const useConditionSelectorStore = defineStore(
             (isInitialized) => {
                 if (
                     isInitialized &&
-                    Object.keys(currentExperimentTags.value).length > 1
+                    Object.keys(currentExperimentTags.value).length > 1 &&
+                    isEmpty(selectedGrid.value)
                 ) {
                     // Reset grid. Should always be reset
-                    selectedGrid.value = {};
                     clickConditionChartAll();
                     axesOptions.value = [
                         ...currentExperimentMetadata.value!.headers.map(
@@ -145,9 +148,7 @@ export const useConditionSelectorStore = defineStore(
                             .headerTransforms!.mass,
                     };
                 }
-            },
-            { immediate: true }
-        );
+            });
 
         const xLabels = computed<string[]>(() => {
             return currentExperimentTags.value[selectedXTag.value];
@@ -204,75 +205,59 @@ export const useConditionSelectorStore = defineStore(
         }
 
         // Boolean to avoid circular logic
-        let isExternalGridUpdate = false;
         watch(
             selectedGrid,
-            debounce((newSelectedGrid) => {
-                if (!isExternalGridUpdate) {
-                    const keys = Object.entries(newSelectedGrid)
-                        .filter((entry) => entry[1] === true)
-                        .map((entry) => entry[0]);
-                    const newFilters: DataSelection[] = [];
-                    keys.forEach((key) => {
-                        const [key1, value1, key2, value2] = stringToKeys(key);
-                        newFilters.push({
-                            plotName: `condition_chart_${key}`,
-                            type: 'conditionChart',
-                            range: [0, 0],
-                            predicate: `"${key1}" = '${value1}' AND "${key2}" = '${value2}'`,
-                        });
+            (newSelectedGrid) => {
+                const keys = Object.entries(newSelectedGrid)
+                    .filter((entry) => entry[1] === true)
+                    .map((entry) => entry[0]);
+                const newFilters: DataSelection[] = [];
+                keys.forEach((key) => {
+                    const [key1, value1, key2, value2] = stringToKeys(key);
+                    newFilters.push({
+                        plotName: `condition_chart_${key}`,
+                        type: 'conditionChart',
+                        range: [0, 0],
+                        predicate: `"${key1}" = '${value1}' AND "${key2}" = '${value2}'`,
                     });
-                    selectionStore.addConditionChartFilters(newFilters);
+                });
+                selectionStore.addConditionChartFilters(newFilters);
 
-                    // Changes imaging location if the current location gets filtered out.
-                    if (currentExperimentMetadata.value && currentLocationMetadata.value) {
-                        const tags = currentLocationMetadata.value.tags;
-                        if (tags) {
-                            const entries = Object.entries(tags);
-                            const keyString = keysToString(entries[0][0], entries[0][1], entries[1][0], entries[1][1])
-                            const isSelected = newSelectedGrid[keyString]
-                            if (!isSelected) {
-                                // Iterate through location metadata list until you find one that is selected
-                                const locationMetadata = currentExperimentMetadata.value.locationMetadataList;
-                                for (const currMetadata of locationMetadata) {
-                                    const currTags = currMetadata.tags;
-                                    if (currTags) {
-                                        const currEntries = Object.entries(currTags);
-                                        const currKeyString = keysToString(currEntries[0][0], currEntries[0][1], currEntries[1][0], currEntries[1][1]);
-                                        const currIsSelected = newSelectedGrid[currKeyString];
-                                        if (currIsSelected) {
-                                            // select location
-                                            datasetSelectionStore.selectImagingLocation(currMetadata);
-                                            notify({
-                                                type: 'info',
-                                                message: `Attempting to change to location "${currMetadata.id}"`
-                                            })
-                                            break;
-                                        }
-
+                // Changes imaging location if the current location gets filtered out.
+                if (currentExperimentMetadata.value && currentLocationMetadata.value) {
+                    const tags = currentLocationMetadata.value.tags;
+                    if (tags) {
+                        const entries = Object.entries(tags);
+                        const keyString = keysToString(entries[0][0], entries[0][1], entries[1][0], entries[1][1])
+                        const isSelected = newSelectedGrid[keyString]
+                        if (!isSelected) {
+                            // Iterate through location metadata list until you find one that is selected
+                            const locationMetadata = currentExperimentMetadata.value.locationMetadataList;
+                            for (const currMetadata of locationMetadata) {
+                                const currTags = currMetadata.tags;
+                                if (currTags) {
+                                    const currEntries = Object.entries(currTags);
+                                    const currKeyString = keysToString(currEntries[0][0], currEntries[0][1], currEntries[1][0], currEntries[1][1]);
+                                    const currIsSelected = newSelectedGrid[currKeyString];
+                                    if (currIsSelected) {
+                                        // select location
+                                        datasetSelectionStore.selectImagingLocation(currMetadata);
+                                        notify({
+                                            type: 'info',
+                                            message: `Attempting to change to location "${currMetadata.id}"`
+                                        })
+                                        break;
                                     }
+
                                 }
                             }
                         }
                     }
-
                 }
-                isExternalGridUpdate = false;
-            }),
-            { deep: true, immediate: true }
-        );
 
-        function clickConditionChartByName(name: string) {
-            const [key1, value1, key2, value2] = stringToKeys(name);
-            const idx = currentExperimentTags.value[
-                selectedXTag.value
-            ].findIndex((entry) => entry === value1);
-            const idy = currentExperimentTags.value[
-                selectedYTag.value
-            ].findIndex((entry) => entry === value2);
-            isExternalGridUpdate = true;
-            toggleConditionChart(idx, idy);
-        }
+            },
+            { deep: true }
+        );
 
         function toggleConditionChart(
             idx: number,
@@ -386,7 +371,6 @@ export const useConditionSelectorStore = defineStore(
             clickConditionChartAll,
             clickConditionChartColumn,
             clickConditionChartRow,
-            clickConditionChartByName,
             selectedGrid,
             getSelectedGridValue,
             allSelected,

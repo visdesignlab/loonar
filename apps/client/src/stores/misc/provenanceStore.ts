@@ -7,6 +7,7 @@ import { useImageViewerStore } from '../componentStores/imageViewerTrrackedStore
 import { useLooneageViewStore } from '../componentStores/looneageViewStore';
 import { useDataPointSelection } from '../interactionStores/dataPointSelectionTrrackedStore';
 import { useSelectionStore } from '../interactionStores/selectionStore';
+import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
 import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { defineStore } from 'pinia';
 import { initializeTrrack, Registry, type Trigger } from '@trrack/core';
@@ -38,6 +39,7 @@ export const useProvenanceStore = defineStore('provenanceStore', () => {
         useLooneageViewStore(),
         useDataPointSelection(),
         useSelectionStore(),
+        useConditionSelectorStore()
     ];
 
     const initialState: SubStores = {};

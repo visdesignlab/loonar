@@ -583,7 +583,7 @@ function createTrajectoryGhostLayer(): TripsLayer {
 const imageLayer = ref();
 function renderDeckGL(): void {
     if (deckgl == null) return;
-    if (!cellMetaData.dataInitialized || cellMetaData.selectedLineage == null) {
+    if (!cellMetaData.dataInitialized) {
         renderLoadingDeckGL();
         return;
     }

@@ -235,15 +235,15 @@ export async function createAggregateTable(
     `;
 
     try {
-        // try {
-        //     await vg.coordinator().exec([
-        //         `
-        //             DROP TABLE IF EXISTS ${tableName}_aggregate;
-        //         `,
-        //     ]);
-        // } catch (error) {
-        //     console.error(error);
-        // }
+        try {
+            await vg.coordinator().exec([
+                `
+                    DROP TABLE IF EXISTS ${tableName}_aggregate;
+                `,
+            ]);
+        } catch (error) {
+            console.error(error);
+        }
         await vg.coordinator().exec([
             `
                 CREATE TEMP TABLE IF NOT EXISTS ${tableName}_aggregate AS
