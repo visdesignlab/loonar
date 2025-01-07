@@ -236,7 +236,7 @@ function createChart(xAxisName: string, yAxisName: string) {
         <div class="text-caption">Loading chart</div>
     </div>
     <div ref="chartContainer"></div>
-    <div class="flex justify-start full-width text-center">
+    <div v-if="!isLoading" class="flex justify-start full-width text-center">
         <svg
             class="legend-svg"
             width="50"
@@ -256,6 +256,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 cx="15"
                 cy="20"
                 r="2"
+                fill="currentColor"
             />
             <text
                 x="20"

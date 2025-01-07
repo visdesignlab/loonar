@@ -244,7 +244,7 @@ export const useConditionSelectorStore = defineStore(
                                         datasetSelectionStore.selectImagingLocation(currMetadata);
                                         notify({
                                             type: 'info',
-                                            message: `Attempting to change to location "${currMetadata.id}"`
+                                            message: `Changing to location "${currMetadata.id}"`
                                         })
                                         break;
                                     }
