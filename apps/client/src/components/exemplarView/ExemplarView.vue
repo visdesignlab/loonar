@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core';
 import type { Layer } from '@deck.gl/core';
@@ -26,6 +26,7 @@ import {
 import { schemeBlues } from 'd3-scale-chromatic';
 import { isEqual } from 'lodash';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 const deckGlContainer = ref<HTMLCanvasElement | null>(null);
 const { width: deckGlWidth, height: deckGlHeight } =
@@ -48,6 +49,10 @@ const deckgl = ref<any | null>(null);
 
 // 1. Introduce exemplarDataInitialized
 const exemplarDataInitialized = ref(false);
+
+// Access the condition selector store
+const conditionSelector = useConditionSelectorStore();
+const { selectedYTag, currentExperimentTags } = storeToRefs(conditionSelector);
 
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
@@ -79,10 +84,10 @@ watch(
                 });
                 console.log('Deck.gl initialized.');
             }
-
-            // Add logging before and after generating exemplar tracks
-            console.log('Generating test exemplar tracks...');
+            // Generates the test exemplar tracks
             await exemplarViewStore.generateTestExemplarTracks();
+
+            // await exemplarViewStore.getExemplarTracks();
             console.log('Exemplar tracks generated.');
 
             // 2. Set exemplarDataInitialized to true after data generation
@@ -103,7 +108,8 @@ watch(
     { immediate: false } // We don't need to run this immediately on mount
 );
 
-// 4. Add a new watcher on exemplarDataInitialized
+// 4. Add a new watcher on exemplarDataInitialized.
+// TODO: Move exemplarDataInitialized to the store
 watch(
     exemplarDataInitialized,
     (initialized) => {
@@ -144,6 +150,35 @@ function renderDeckGL(): void {
     });
 }
 
+// Define the static list of colors (you can customize these)
+const DRUG_COLORS = [
+    [255, 99, 132], // Red
+    [54, 162, 235], // Blue
+    [255, 206, 86], // Yellow
+    [75, 192, 192], // Teal
+    [153, 102, 255], // Purple
+    [255, 159, 64], // Orange
+    // Add more colors as needed
+];
+
+// Compute unique drugs and assign colors
+const uniqueDrugs = computed(() => {
+    const drugs = new Set<string>();
+    exemplarTracks.value.forEach((exemplar) => {
+        drugs.add(exemplar.tags.drug);
+    });
+    return Array.from(drugs);
+});
+
+// Create a computed mapping from drug names to colors
+const drugColorMap = computed<Record<string, number[]>>(() => {
+    const map: Record<string, number[]> = {};
+    uniqueDrugs.value.forEach((drug, index) => {
+        map[drug] = DRUG_COLORS[index % DRUG_COLORS.length];
+    });
+    return map;
+});
+
 const exemplarYOffsets = ref(new Map<string, number>());
 
 function recalculateExemplarYOffsets(): void {
@@ -180,36 +215,36 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             viewConfiguration.value.horizonTimeBarGap;
 
         const geometryData = constructGeometry(exemplar);
-        horizonChartLayers.push(
-            new HorizonChartLayer({
-                id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
-                data: HORIZON_CHART_MOD_OFFSETS,
+        // horizonChartLayers.push(
+        //     new HorizonChartLayer({
+        //         id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
+        //         data: HORIZON_CHART_MOD_OFFSETS,
 
-                instanceData: geometryData,
-                destination: [
-                    yOffset,
-                    0,
-                    viewConfiguration.value.horizonChartWidth,
-                    viewConfiguration.value.horizonChartHeight,
-                ], // [bottom, left, width, height]
-                dataXExtent: [
-                    0,
-                    totalExperimentTime.value > 0
-                        ? totalExperimentTime.value
-                        : 150,
-                ],
+        //         instanceData: geometryData,
+        //         destination: [
+        //             yOffset,
+        //             0,
+        //             viewConfiguration.value.horizonChartWidth,
+        //             viewConfiguration.value.horizonChartHeight,
+        //         ], // [bottom, left, width, height]
+        //         dataXExtent: [
+        //             0,
+        //             totalExperimentTime.value > 0
+        //                 ? totalExperimentTime.value
+        //                 : 150,
+        //         ],
 
-                baseline: 0,
-                binSize: 200,
+        //         baseline: 0,
+        //         binSize: 200,
 
-                getModOffset: (d: any) => d,
-                positiveColors: hexListToRgba(schemeBlues[6]),
-                negativeColors: hexListToRgba(schemeBlues[6]),
-                updateTriggers: {
-                    instanceData: geometryData,
-                },
-            })
-        );
+        //         getModOffset: (d: number) => d,
+        //         positiveColors: hexListToRgba(schemeBlues[6]),
+        //         negativeColors: hexListToRgba(schemeBlues[6]),
+        //         updateTriggers: {
+        //             instanceData: geometryData,
+        //         },
+        //     })
+        // );
     }
     return horizonChartLayers;
 }
@@ -267,8 +302,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
 
     // Testing
     console.log('Total Experiment Time:', totalExperimentTime.value);
-
-    // Add background rectangle half as tall
+    // Total Experiment Time - 1/4 of the time bar height
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-snippet-background-placeholder`,
@@ -293,11 +327,15 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [0, yOffset - quarterHeight * 1.5],
                 ];
             },
-            getFillColor: [144, 238, 144, 255],
+
+            getFillColor: (exemplar: ExemplarTrack) =>
+                drugColorMap.value[exemplar.tags.drug],
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
     );
+
+    // Exemplar time window - Black bar on top of the total experiment time
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-time-window`,
@@ -360,18 +398,26 @@ function createSidewaysHistogramLayer(): any[] | null {
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
 
-        // Identify the first and last exemplar in the group
+        // Identify the first exemplar in the group
         const firstExemplar = group[0];
-        const lastExemplar = group[group.length - 1];
 
+        // Determine yTag value (assuming 'drug' is the y-axis tag)
+        const yTagValue = firstExemplar.tags[selectedYTag.value];
+        const yIndex =
+            currentExperimentTags.value[selectedYTag.value].indexOf(yTagValue);
+
+        const drug = firstExemplar.tags.drug;
+        const fillColor = drugColorMap.value[drug] || [128, 128, 128]; // Default to grey if not found
+        const lineColor = [0, 0, 0]; // You can choose to have a fixed line color or map it similarly
+
+        // Calculate the top and bottom boundaries of the group
         const firstOffset = exemplarYOffsets.value.get(
             uniqueExemplarKey(firstExemplar)
         )!;
         const lastOffset = exemplarYOffsets.value.get(
-            uniqueExemplarKey(lastExemplar)
+            uniqueExemplarKey(group[group.length - 1])
         )!;
 
-        // Calculate the top and bottom boundaries of the group
         const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
 
@@ -391,8 +437,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                         [-hGap - histWidth, groupBottom],
                     ];
                 },
-                getLineColor: [225, 30, 210, 200],
-                getFillColor: [225, 30, 210, 100],
+                getLineColor: lineColor,
+                getFillColor: fillColor,
                 getLineWidth: 0,
             })
         );
@@ -413,9 +459,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                     firstExemplar
                 )}`,
                 data: lineData,
-                getSourcePosition: (d) => d.coordinates[0],
-                getTargetPosition: (d) => d.coordinates[1],
-                getColor: [128, 128, 128], // Grey color for the line
+                getSourcePosition: (d: { coordinates: [number, number] }) =>
+                    d.coordinates[0],
+                getTargetPosition: (d: { coordinates: [number, number] }) =>
+                    d.coordinates[1],
+                getColor: [0, 0, 0], // Black color for the line
                 getWidth: 1, // Line width in pixels
             })
         );
@@ -446,7 +494,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeUnits: 'common',
                 sizeMaxPixels: 15,
                 getAngle: 90, // 90 degrees counter clockwise
-                getColor: [128, 128, 128], // Grey color
+                getColor: [0, 0, 0], // Black color
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',

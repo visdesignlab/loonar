@@ -3,9 +3,8 @@ import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
-//import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
-//const conditionSelector = useConditionSelectorStore();
-//const { currentExperimentTags } = storeToRefs(conditionSelector);
+
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 export interface ExemplarTrack {
     trackId: string;
@@ -41,6 +40,9 @@ export interface ViewConfiguration {
 }
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
+    const conditionSelector = useConditionSelectorStore();
+    const { currentExperimentTags } = storeToRefs(conditionSelector);
+
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
         snippetDisplayHeight: 80,
@@ -141,6 +143,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         //
         // Then the outer query:
         //   - Finds MIN and MAX of timeColumn for that chosen track_id.
+        // TODO: Use _aggregate table to get the avg attributes
         const query = `
             WITH avg_mass_per_cell AS (
             SELECT
@@ -257,54 +260,85 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             console.error('Error generating exemplar tracks:', error);
         }
     }
-    // async function getExemplarTrack(...tags: any[]) {
-    //     console.log('Generating exemplar tracks for tags:', tags);
-    // }
 
-    // async function getExemplarTracks(): Promise<void> {
-    //     exemplarTracks.value = [];
-    //     const trackPromises: Promise<ExemplarTrack>[] = [];
+    async function getExemplarTrack(...tags: any[]) {
+        console.log('Generating exemplar tracks for tags:', tags);
+    }
 
-    //     const allTags: Array<{ key: string; value: string }> = [];
+    async function getExemplarTracks(): Promise<ExemplarTrack[]> {
+        exemplarTracks.value = [];
+        const trackPromises: Promise<Any>[] = [];
 
-    //     for (const key in currentExperimentTags.value) {
-    //         const values = currentExperimentTags.value[key];
-    //         values.forEach((value) => {
-    //             allTags.push({ key, value });
-    //         });
-    //     }
+        const allTags: Array<{ key: string; value: string }> = [];
 
-    //     const generateCombinations = (
-    //         tags: Array<{ key: string; value: string }>
-    //     ): Array<Array<{ key: string; value: string }>> => {
-    //         const result: Array<Array<{ key: string; value: string }>> = [];
+        for (const key in currentExperimentTags.value) {
+            const values = currentExperimentTags.value[key];
+            values.forEach((value) => {
+                allTags.push({ key, value });
+            });
+        }
 
-    //         const backtrack = (
-    //             start: number,
-    //             current: Array<{ key: string; value: string }>
-    //         ) => {
-    //             for (let i = start; i < tags.length; i++) {
-    //                 current.push(tags[i]);
-    //                 result.push([...current]);
-    //                 backtrack(i + 1, current);
-    //                 current.pop();
-    //             }
-    //         };
+        const generateCombinations = (
+            tags: Array<{ key: string; value: string }>
+        ): Array<Array<{ key: string; value: string }>> => {
+            const tagMap: Record<string, string[]> = {};
 
-    //         backtrack(0, []);
-    //         return result;
-    //     };
+            tags.forEach((tag) => {
+                if (!tagMap[tag.key]) {
+                    tagMap[tag.key] = [];
+                }
+                tagMap[tag.key].push(tag.value);
+            });
 
-    //     const allCombinations = generateCombinations(allTags);
+            const keys = Object.keys(tagMap);
+            const valueLists = keys.map((key) =>
+                tagMap[key].map((value) => ({ key, value }))
+            );
 
-    //     allCombinations.forEach((combination) => {
-    //         getExemplarTrack(...combination);
-    //     });
-    // }
+            const combinations: Array<Array<{ key: string; value: string }>> =
+                [];
+
+            const cartesian = (
+                arr: Array<Array<{ key: string; value: string }>>,
+                depth = 0,
+                current: Array<{ key: string; value: string }> = []
+            ) => {
+                if (depth === arr.length) {
+                    combinations.push([...current]);
+                    return;
+                }
+                for (const item of arr[depth]) {
+                    current.push(item);
+                    cartesian(arr, depth + 1, current);
+                    current.pop();
+                }
+            };
+
+            cartesian(valueLists);
+
+            return combinations;
+        };
+
+        const allCombinations = generateCombinations(allTags);
+
+        allCombinations.forEach((combination) => {
+            trackPromises.push(getExemplarTrack(...combination));
+        });
+
+        try {
+            const tracks = await Promise.all(trackPromises);
+            exemplarTracks.value.push(...tracks);
+            console.log('Exemplar tracks successfully added:', tracks.length);
+            return tracks;
+        } catch (error) {
+            console.error('Error generating exemplar tracks:', error);
+            return exemplarTracks.value;
+        }
+    }
 
     return {
         generateTestExemplarTracks,
-        //getExemplarTracks,
+        getExemplarTracks,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,
