@@ -61,15 +61,14 @@ function onSelectExperiment() {
         :options="datasetSelectionStore.experimentFilenameList"
         :dark="globalSettings.darkMode"
         @update:model-value="onSelectExperiment"
-        
-    >        
+    >
         <template v-slot:after>
             <q-btn
                 flat
                 dense
                 icon="refresh"
                 @click="datasetSelectionStore.refreshFileNameList"
-                style="box-sizing: border-box;"
+                style="box-sizing: border-box"
             />
         </template>
     </q-select>
@@ -91,9 +90,7 @@ function onSelectExperiment() {
                 clickable
                 v-ripple
                 :active="
-                    datasetSelectionStore.shownSelectedLocationIds[
-                        location.id
-                    ]
+                    datasetSelectionStore.shownSelectedLocationIds[location.id]
                 "
                 active-class="bg-primary text-white"
                 @click="

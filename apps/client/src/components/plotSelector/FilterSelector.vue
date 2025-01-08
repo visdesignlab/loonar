@@ -47,7 +47,7 @@ interface ReadableDataFilter {
 }
 
 const readableDataFilters = computed(() => {
-    if(xLabels.value && yLabels.value){
+    if (xLabels.value && yLabels.value) {
         const nonConditionChartFilters = dataFilters.value.filter(
             (entry) => entry.type !== 'conditionChart'
         );
@@ -69,7 +69,7 @@ const readableDataFilters = computed(() => {
             ] as ReadableDataFilter[];
         }
     }
-    return []
+    return [];
 });
 
 const filtersCount = computed(() => readableDataFilters.value.length);

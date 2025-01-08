@@ -191,7 +191,10 @@ export const useDatasetSelectionStore = defineStore(
                             message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                         });
                         // Selects default imaging location
-                        selectImagingLocation(currentExperimentMetadata.value.locationMetadataList[0]);
+                        selectImagingLocation(
+                            currentExperimentMetadata.value
+                                .locationMetadataList[0]
+                        );
                     }
                 } catch (error) {
                     const typedError = error as Error;
@@ -214,7 +217,6 @@ export const useDatasetSelectionStore = defineStore(
             }
         });
 
-
         function selectImagingLocation(location: LocationMetadata): void {
             datasetSelectionTrrackedStore.$patch(() => {
                 for (const key in datasetSelectionTrrackedStore.selectedLocationIds) {
@@ -226,8 +228,6 @@ export const useDatasetSelectionStore = defineStore(
             });
         }
 
-
-
         // TODO: - update to support multi-location
         const currentLocationMetadata = computed<LocationMetadata | null>(
             () => {
@@ -236,7 +236,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                        location.id
+                            location.id
                         ]
                     ) {
                         return location;
@@ -255,17 +255,13 @@ export const useDatasetSelectionStore = defineStore(
                 if (currentExperimentMetadata.value == null) return null;
                 for (const location of currentExperimentMetadata.value
                     .locationMetadataList) {
-                    if (
-                        shownSelectedLocationIds.value[
-                        location.id
-                        ]
-                    ) {
+                    if (shownSelectedLocationIds.value[location.id]) {
                         return location;
                     }
                 }
                 return null;
             }
-        )
+        );
 
         watch(currentLocationMetadata, async () => {
             if (!currentLocationMetadata.value?.tabularDataFilename) {
@@ -295,17 +291,19 @@ export const useDatasetSelectionStore = defineStore(
                         message: `Created DuckDb Table for ${duckDbFileUrl}.`,
                     });
 
-
                     for (const key in shownSelectedLocationIds.value) {
                         shownSelectedLocationIds.value[key] = false;
                     }
-                    shownSelectedLocationIds.value[currentLocationMetadata.value.id] = true;
-
+                    shownSelectedLocationIds.value[
+                        currentLocationMetadata.value.id
+                    ] = true;
                 } catch (error) {
                     const typedError = error as Error;
 
                     if (shownSelectedLocationMetadata.value) {
-                        selectImagingLocation(shownSelectedLocationMetadata.value);
+                        selectImagingLocation(
+                            shownSelectedLocationMetadata.value
+                        );
                         notify({
                             type: 'problem',
                             message: `${typedError.message}. Reverting to Location "${shownSelectedLocationMetadata.value.id}"`,
@@ -316,10 +314,8 @@ export const useDatasetSelectionStore = defineStore(
                             message: typedError.message,
                         });
                     }
-
                 }
             } catch (error) {
-
                 // Revert back to previous location.
                 if (shownSelectedLocationMetadata.value) {
                     selectImagingLocation(shownSelectedLocationMetadata.value);
@@ -335,7 +331,6 @@ export const useDatasetSelectionStore = defineStore(
                 }
             }
             fetchingTabularData.value = false;
-
         });
 
         function refreshFileNameList() {
@@ -378,7 +373,7 @@ export const useDatasetSelectionStore = defineStore(
             refreshFileNameList,
             compTableName,
             aggTableName,
-            shownSelectedLocationIds
+            shownSelectedLocationIds,
         };
     }
 );

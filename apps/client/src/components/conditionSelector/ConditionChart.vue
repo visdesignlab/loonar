@@ -41,20 +41,11 @@ const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore);
 const chartContainer = ref<HTMLElement | null>(null);
 
 watch(
-    [
-        experimentDataInitialized,
-        chartContainer,
-        selectedIndividualYAxis,
-    ],
-    async ([
-        isInitialized,
-        newChartContainer,
-        newYAxis,
-    ]) => {
+    [experimentDataInitialized, chartContainer, selectedIndividualYAxis],
+    async ([isInitialized, newChartContainer, newYAxis]) => {
         if (!isInitialized || !newChartContainer || !newYAxis) {
             return;
         }
-
 
         await nextTick(); // Helps with hot reloading. On save, html ref will be temporarily none. This will wait until html has a ref.
         const chart = createChart(props.xAxisName, newYAxis);

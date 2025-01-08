@@ -1,8 +1,6 @@
 import { ref, computed, watch, type Ref } from 'vue';
 import { defineStore, storeToRefs } from 'pinia';
-import {
-    useDatasetSelectionStore
-} from '../dataStores/datasetSelectionUntrrackedStore';
+import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
 import {
     useSelectionStore,
     type DataSelection,
@@ -10,7 +8,6 @@ import {
 import { keysToString, stringToKeys } from '@/util/conChartStringFunctions';
 import { useNotificationStore } from '../misc/notificationStore';
 import { isEmpty } from 'lodash-es';
-
 
 export type Axis = 'x-axis' | 'y-axis';
 
@@ -32,8 +29,8 @@ const initialState = (): ConditionSelectorState => ({
     selectedYTag: ref<string>(''),
     selectedGrid: ref<Record<string, boolean>>({}),
     selectedIndividualAxes: ref<AxesOption | null>(null),
-    axesOptions: ref<AxesOption[]>([])
-})
+    axesOptions: ref<AxesOption[]>([]),
+});
 
 export const useConditionSelectorStore = defineStore(
     'conditionSelectorStore',
@@ -44,7 +41,7 @@ export const useConditionSelectorStore = defineStore(
             selectedYTag,
             selectedGrid,
             selectedIndividualAxes,
-            axesOptions
+            axesOptions,
         } = defaultState;
 
         function resetState(): void {
@@ -52,7 +49,8 @@ export const useConditionSelectorStore = defineStore(
             selectedXTag.value = newState.selectedXTag.value;
             selectedYTag.value = newState.selectedYTag.value;
             selectedGrid.value = newState.selectedGrid.value;
-            selectedIndividualAxes.value = newState.selectedIndividualAxes.value
+            selectedIndividualAxes.value =
+                newState.selectedIndividualAxes.value;
             axesOptions.value = newState.axesOptions.value;
         }
 
@@ -60,7 +58,7 @@ export const useConditionSelectorStore = defineStore(
         const {
             currentExperimentMetadata,
             experimentDataInitialized,
-            currentLocationMetadata
+            currentLocationMetadata,
         } = storeToRefs(datasetSelectionStore);
 
         const selectionStore = useSelectionStore();
@@ -70,7 +68,6 @@ export const useConditionSelectorStore = defineStore(
         // Initialize as empty. Used to indicate what is selected.
 
         const { notify } = useNotificationStore();
-
 
         const selectedIndividualYAxis = computed(() => {
             return selectedIndividualAxes.value?.value;
@@ -123,32 +120,28 @@ export const useConditionSelectorStore = defineStore(
         );
 
         // Initializes the condition chart as being all selected. Ensures that experiment tags are chosen.
-        watch(
-            experimentDataInitialized,
-            (isInitialized) => {
-                if (
-                    isInitialized &&
-                    Object.keys(currentExperimentTags.value).length > 1 &&
-                    isEmpty(selectedGrid.value)
-                ) {
-                    // Reset grid. Should always be reset
-                    clickConditionChartAll();
-                    axesOptions.value = [
-                        ...currentExperimentMetadata.value!.headers.map(
-                            (entry) => {
-                                return { label: entry, value: entry };
-                            }
-                        ),
-                        { label: 'Mass Norm', value: 'Mass Norm' },
-                    ];
-                    selectedIndividualAxes.value = {
-                        label: currentExperimentMetadata.value!
-                            .headerTransforms!.mass,
-                        value: currentExperimentMetadata.value!
-                            .headerTransforms!.mass,
-                    };
-                }
-            });
+        watch(experimentDataInitialized, (isInitialized) => {
+            if (
+                isInitialized &&
+                Object.keys(currentExperimentTags.value).length > 1 &&
+                isEmpty(selectedGrid.value)
+            ) {
+                // Reset grid. Should always be reset
+                clickConditionChartAll();
+                axesOptions.value = [
+                    ...currentExperimentMetadata.value!.headers.map((entry) => {
+                        return { label: entry, value: entry };
+                    }),
+                    { label: 'Mass Norm', value: 'Mass Norm' },
+                ];
+                selectedIndividualAxes.value = {
+                    label: currentExperimentMetadata.value!.headerTransforms!
+                        .mass,
+                    value: currentExperimentMetadata.value!.headerTransforms!
+                        .mass,
+                };
+            }
+        });
 
         const xLabels = computed<string[]>(() => {
             return currentExperimentTags.value[selectedXTag.value];
@@ -224,37 +217,54 @@ export const useConditionSelectorStore = defineStore(
                 selectionStore.addConditionChartFilters(newFilters);
 
                 // Changes imaging location if the current location gets filtered out.
-                if (currentExperimentMetadata.value && currentLocationMetadata.value) {
+                if (
+                    currentExperimentMetadata.value &&
+                    currentLocationMetadata.value
+                ) {
                     const tags = currentLocationMetadata.value.tags;
                     if (tags) {
                         const entries = Object.entries(tags);
-                        const keyString = keysToString(entries[0][0], entries[0][1], entries[1][0], entries[1][1])
-                        const isSelected = newSelectedGrid[keyString]
+                        const keyString = keysToString(
+                            entries[0][0],
+                            entries[0][1],
+                            entries[1][0],
+                            entries[1][1]
+                        );
+                        const isSelected = newSelectedGrid[keyString];
                         if (!isSelected) {
                             // Iterate through location metadata list until you find one that is selected
-                            const locationMetadata = currentExperimentMetadata.value.locationMetadataList;
+                            const locationMetadata =
+                                currentExperimentMetadata.value
+                                    .locationMetadataList;
                             for (const currMetadata of locationMetadata) {
                                 const currTags = currMetadata.tags;
                                 if (currTags) {
-                                    const currEntries = Object.entries(currTags);
-                                    const currKeyString = keysToString(currEntries[0][0], currEntries[0][1], currEntries[1][0], currEntries[1][1]);
-                                    const currIsSelected = newSelectedGrid[currKeyString];
+                                    const currEntries =
+                                        Object.entries(currTags);
+                                    const currKeyString = keysToString(
+                                        currEntries[0][0],
+                                        currEntries[0][1],
+                                        currEntries[1][0],
+                                        currEntries[1][1]
+                                    );
+                                    const currIsSelected =
+                                        newSelectedGrid[currKeyString];
                                     if (currIsSelected) {
                                         // select location
-                                        datasetSelectionStore.selectImagingLocation(currMetadata);
+                                        datasetSelectionStore.selectImagingLocation(
+                                            currMetadata
+                                        );
                                         notify({
                                             type: 'info',
-                                            message: `Changing to location "${currMetadata.id}"`
-                                        })
+                                            message: `Changing to location "${currMetadata.id}"`,
+                                        });
                                         break;
                                     }
-
                                 }
                             }
                         }
                     }
                 }
-
             },
             { deep: true }
         );
@@ -377,7 +387,7 @@ export const useConditionSelectorStore = defineStore(
             selectedIndividualAxes,
             axesOptions,
             selectedIndividualYAxis,
-            resetState
+            resetState,
         };
     }
 );

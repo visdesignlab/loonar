@@ -90,12 +90,7 @@ const getCurrProgressValue = (file: FileToUpload): number => {
                     color="success"
                     class="q-mr-sm"
                 />
-                <q-icon
-                    v-else
-                    name="circle"
-                    color="grey"
-                    class="q-mr-sm"
-                />
+                <q-icon v-else name="circle" color="grey" class="q-mr-sm" />
                 <div>{{ getLabel(item) }}</div>
             </div>
 

@@ -136,7 +136,7 @@ async function addTrackPlotFromMenu() {
     const attr2 = attr2Model.value ?? undefined;
     const functionName = aggregateFunctions[label].functionName;
     let customQuery;
-    
+
     const aggFunction = aggregateFunctions[label];
     if (isCustomAggregateFunction(aggFunction)) {
         customQuery = aggFunction.customQuery;

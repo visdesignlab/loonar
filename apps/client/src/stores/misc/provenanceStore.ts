@@ -39,7 +39,7 @@ export const useProvenanceStore = defineStore('provenanceStore', () => {
         useLooneageViewStore(),
         useDataPointSelection(),
         useSelectionStore(),
-        useConditionSelectorStore()
+        useConditionSelectorStore(),
     ];
 
     const initialState: SubStores = {};

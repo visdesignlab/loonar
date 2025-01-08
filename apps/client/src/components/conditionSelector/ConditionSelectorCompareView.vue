@@ -252,12 +252,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 y2="20"
                 stroke-width="2"
             />
-            <circle
-                cx="15"
-                cy="20"
-                r="2"
-                fill="currentColor"
-            />
+            <circle cx="15" cy="20" r="2" fill="currentColor" />
             <text
                 x="20"
                 y="23"
@@ -265,7 +260,6 @@ function createChart(xAxisName: string, yAxisName: string) {
                 font-size="10"
                 fill="currentColor"
             >
-
                 Selected
             </text>
             <line

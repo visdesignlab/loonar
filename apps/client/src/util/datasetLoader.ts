@@ -153,8 +153,9 @@ export async function addAggregateColumn(
         return newColumnName;
     } else {
         // Start new column name string
-        let newColumnName = `${label ? label : functionName}${attr1 ? ` ${attr1}` : ''
-            }`;
+        let newColumnName = `${label ? label : functionName}${
+            attr1 ? ` ${attr1}` : ''
+        }`;
         // Add variables if present
         if (attr2) {
             newColumnName = `${newColumnName} ${attr2}`;
