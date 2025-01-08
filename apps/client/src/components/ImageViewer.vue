@@ -70,7 +70,10 @@ const contrastLimit = computed<[number, number][]>(() => {
     return [[contrastLimitSlider.value.min, contrastLimitSlider.value.max]];
 });
 
-const _determineSelectedOrFiltered = (trackId: string) => {
+function _determineSelectedOrFiltered(trackId: string): {
+    selected: boolean;
+    filtered: boolean;
+} {
     const frame = imageViewerStore.frameNumber;
     const location = currentLocationMetadata.value?.id;
     let selected = true;
@@ -88,7 +91,7 @@ const _determineSelectedOrFiltered = (trackId: string) => {
             ? !unfilteredTrackIds.value.includes(trackId)
             : false,
     };
-};
+}
 
 let deckgl: any | null = null;
 onMounted(() => {
