@@ -347,11 +347,7 @@ export const useDatasetSelectionStore = defineStore(
         }
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
-            try {
-                await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
-            } catch (error) {
-                throw error;
-            }
+            await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
         }
 
         function handleFetchEntryError(message: string): void {
