@@ -83,8 +83,6 @@ function _determineSelectedOrFiltered(trackId: string): {
         selected = highlightedCellIds.value.includes(unique_string);
     }
 
-    // console.log(unfilteredTrackIds.value)
-
     return {
         selected,
         filtered: unfilteredTrackIds.value
@@ -416,23 +414,6 @@ function addSegmentsFromTrack(
     });
 
     return accumChildPositions;
-
-    // for (let i = 0; i < track.cells.length - 1; i++) {
-    // const start = track.cells[0];
-    // const end = track.cells[track.cells.length - 1];
-    // if (cellMetaData.getFrame(end) >= imageViewerStore.frameNumber) {
-    //     return;
-    // }
-    // segments.push({
-    //     trackId: track.trackId,
-    //     from: cellMetaData.getPosition(start),
-    //     to: cellMetaData.getPosition(end),
-    // });
-    // // }
-    // if (!track.children) return;
-    // for (let child of track.children) {
-    //     addSegmentsFromTrack(child, segments);
-    // }
 }
 
 function createLineageLayer(): LineLayer {
