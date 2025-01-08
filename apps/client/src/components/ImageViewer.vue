@@ -252,14 +252,6 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return hoverColorWithAlpha;
             }
-
-            // Fades out if filtered
-            const { filtered } = _determineSelectedOrFiltered(
-                info.properties?.id?.toString()
-            );
-            if (filtered) {
-                return [0, 0, 0, 80];
-            }
             return [0, 0, 0, 0];
         },
         getLineColor: (info) => {
@@ -281,10 +273,9 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             // Removes outline
             if (filtered) {
                 return [0, 0, 0];
-            } else {
-                if (!selected) {
-                    return [0, 0, 0];
-                }
+            }
+            if (selected) {
+                return colors.highlightedBoundary.rgb;
             }
             return colors.unselectedBoundary.rgb;
         },
@@ -295,7 +286,13 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return 3;
             }
-            return 2;
+            const { selected, filtered } = _determineSelectedOrFiltered(
+                info.properties?.id?.toString()
+            );
+            if (selected) {
+                return 2.5;
+            }
+            return 1.5;
         },
         pickable: true,
         onHover: onHover,
