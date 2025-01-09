@@ -1,7 +1,7 @@
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
 
 export const HORIZON_CHART_MOD_OFFSETS = [
-    -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5,
+    -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8,
 ];
 
 export interface TemporalDataPoint {
@@ -50,17 +50,49 @@ export function constructGeometryBase(
 }
 
 export function hexListToRgba(hexList: readonly string[]): number[] {
-    const rgbaList: number[] = [];
-    for (const colorHex of hexList) {
-        // convert coloHex to rgba array all values [0-1]
-        const color = [];
-        for (let i = 0; i < 3; i++) {
-            color.push(
-                parseInt(colorHex.slice(1 + i * 2, 1 + i * 2 + 2), 16) / 255
-            );
-        }
-        color.push(1.0);
-        rgbaList.push(...color);
-    }
-    return rgbaList;
+    // flatMap returns a single, flattened array by mapping each hex to [r, g, b, a]
+    // then concatenating them all together.
+    return hexList.flatMap((hex) => {
+        // Make sure your input is in the format '#RRGGBB' (7 chars total).
+        // If it might have a leading '#' missing or includes alpha, you'll need additional checks.
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+        // Always use the second argument `16` in parseInt for hex parsing.
+        // Divide by 255 to get a value in the [0, 1] range for WebGL / Canvas usage.
+        return [r, g, b, 1.0];
+    });
 }
+
+const positiveHorizonChartScheme = [
+    '#E0F7FA',
+    '#B3E5FC',
+    '#81D4FA',
+    '#4FC3F7',
+    '#29B6F6',
+    '#03A9F4',
+    '#039BE5',
+    '#0288D1',
+    '#0277BD',
+    '#01579B',
+    '#003366',
+    '#000000',
+    // Add more if needed
+];
+
+const negativeHorizonChartScheme = [
+    '#FFE0E0',
+    '#FFB3B3',
+    '#FF8181',
+    '#FF4F4F',
+    '#FF2929',
+    '#FF0303',
+    '#E50303',
+    '#D10202',
+    '#BD0202',
+    '#9B0202',
+    '#660202',
+    '#330202',
+    // Add more if needed
+];

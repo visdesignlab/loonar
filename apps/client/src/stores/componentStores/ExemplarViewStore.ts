@@ -144,42 +144,44 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
+        // Start of Selection
         const query = `
-            WITH avg_mass_per_cell AS (
-            SELECT
-                "${trackColumn}" AS track_id,
-                AVG("${massColumn}") AS avg_mass
-            FROM "${experimentName}_composite_experiment_cell_metadata"
-            WHERE "${drugColumn}" = '${drug}'
-            AND "${concColumn}" = '${conc}'
-            GROUP BY "${trackColumn}"
-            )
-            SELECT
-                CAST("${trackColumn}" AS INTEGER) AS track_id,
-                CAST("${locationColumn}" AS INTEGER) AS location,
-                MIN("${timeColumn}") AS birthTime,
-                MAX("${timeColumn}") AS deathTime,
-                array_agg(
-                    ARRAY[
-                        "${timeColumn}",
-                        "Frame ID",
-                        "${massColumn}"
-                    ]
-                ) AS data
-            FROM "${experimentName}_composite_experiment_cell_metadata"
-            WHERE "${trackColumn}" = (
-                SELECT track_id
-                FROM avg_mass_per_cell
-                WHERE avg_mass = (
-                    SELECT quantile_disc(avg_mass, ${pDecimal})
-                    FROM avg_mass_per_cell
+                WITH avg_mass_per_cell AS (
+                    SELECT
+                        "${trackColumn}" AS track_id,
+                        AVG("${massColumn}") AS avg_mass
+                    FROM "${experimentName}_composite_experiment_cell_metadata"
+                    WHERE "${drugColumn}" = '${drug}'
+                    AND "${concColumn}" = '${conc}'
+                    GROUP BY "${trackColumn}"
+                    HAVING COUNT(*) >= 50
                 )
-                LIMIT 1
-            )
-            GROUP BY
-                "${trackColumn}",
-                "${locationColumn}"
-            `;
+                SELECT
+                    CAST("${trackColumn}" AS INTEGER) AS track_id,
+                    CAST("${locationColumn}" AS INTEGER) AS location,
+                    MIN("${timeColumn}") AS birthTime,
+                    MAX("${timeColumn}") AS deathTime,
+                    array_agg(
+                        ARRAY[
+                            "${timeColumn}",
+                            "Frame ID",
+                            "${massColumn}"
+                        ]
+                    ) AS data
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${trackColumn}" = (
+                    SELECT track_id
+                    FROM avg_mass_per_cell
+                    WHERE avg_mass = (
+                        SELECT quantile_disc(avg_mass, ${pDecimal})
+                        FROM avg_mass_per_cell
+                    )
+                    LIMIT 1
+                )
+                GROUP BY
+                    "${trackColumn}",
+                    "${locationColumn}"
+                `;
 
         try {
             const result = await vg
@@ -240,6 +242,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     ): Promise<ExemplarTrack> {
         const { trackId, locationId, birthTime, deathTime, data } =
             await getExemplarTrackData(drug, conc, p);
+        console.log('Data', data);
         return {
             trackId: trackId,
             locationId: locationId,

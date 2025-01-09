@@ -175,3 +175,23 @@ export default class HorizonChartLayer<
         return model;
     }
 }
+
+export const horizonChartScheme = [
+    '#E0F7FA',
+    '#B3E5FC',
+    '#81D4FA',
+    '#4FC3F7',
+    '#29B6F6',
+    '#03A9F4',
+    '#039BE5',
+    '#0288D1',
+    '#0277BD',
+    '#01579B',
+    '#003366',
+    '#000000',
+    '#000033',
+    '#000066',
+    '#000099',
+    '#0000CC',
+    '#0000FF',
+];

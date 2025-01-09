@@ -205,6 +205,26 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
     return exemplar.trackId + '-' + exemplar.locationId;
 }
 
+const horizonChartScheme = [
+    '#E0F7FA',
+    '#B3E5FC',
+    '#81D4FA',
+    '#4FC3F7',
+    '#29B6F6',
+    '#03A9F4',
+    '#039BE5',
+    '#0288D1',
+    '#0277BD',
+    '#01579B',
+    '#003366',
+    '#000000',
+    '#000033',
+    '#000066',
+    '#000099',
+    '#0000CC',
+    '#0000FF',
+];
+
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
@@ -235,8 +255,8 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 binSize: 200,
 
                 getModOffset: (d: any) => d,
-                positiveColors: hexListToRgba(schemeBlues[6]),
-                negativeColors: hexListToRgba(schemeBlues[6]),
+                positiveColors: hexListToRgba(horizonChartScheme),
+                negativeColors: hexListToRgba(horizonChartScheme),
                 updateTriggers: {
                     instanceData: geometryData,
                 },
