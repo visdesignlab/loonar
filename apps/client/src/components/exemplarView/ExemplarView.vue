@@ -235,6 +235,10 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             );
         }
 
+        const exemplarXExtent: [number, number] = [
+            exemplar.minTime,
+            exemplar.maxTime,
+        ];
         try {
             const horizonChartLayer = new HorizonChartLayer({
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
@@ -247,7 +251,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
-                dataXExtent: [0, totalExperimentTime.value],
+                dataXExtent: exemplarXExtent,
 
                 baseline: 0,
                 binSize: 200,
