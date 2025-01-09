@@ -179,11 +179,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             if (result && result.length > 0) {
                 const { birthTime, deathTime, data } = result[0];
-                console.log(
-                    `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
-                );
-                console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
-                console.log('Data Array:', data);
+                // console.log(
+                //     `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
+                // );
+                // console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
+                // console.log('Data Array:', data);
 
                 // Map the returned array to DataPoint[]
                 const mappedData: DataPoint[] = data.map((d: any[]) => ({

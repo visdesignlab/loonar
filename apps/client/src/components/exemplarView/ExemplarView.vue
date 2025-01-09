@@ -209,14 +209,34 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
     for (const exemplar of exemplarTracks.value) {
+        // Log the current exemplar being processed
+        console.log('Processing exemplar:', exemplar);
+
         const yOffset =
             exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
             viewConfiguration.value.timeBarHeightOuter -
             viewConfiguration.value.horizonTimeBarGap;
 
         const geometryData = constructGeometry(exemplar);
-        horizonChartLayers.push(
-            new HorizonChartLayer({
+
+        // Log the geometry data for the current exemplar
+        console.log(
+            'Geometry data for exemplar:',
+            uniqueExemplarKey(exemplar),
+            geometryData
+        );
+
+        // Validate geometryData
+        if (!geometryData || geometryData.length === 0) {
+            throw new Error(
+                `Invalid or empty geometry data for exemplar: ${uniqueExemplarKey(
+                    exemplar
+                )}`
+            );
+        }
+
+        try {
+            const horizonChartLayer = new HorizonChartLayer({
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
 
@@ -227,24 +247,32 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
-                dataXExtent: [
-                    0,
-                    totalExperimentTime.value > 0
-                        ? totalExperimentTime.value
-                        : 150,
-                ],
+                dataXExtent: [0, totalExperimentTime.value],
 
                 baseline: 0,
                 binSize: 200,
 
-                getModOffset: (d: number) => d,
+                getModOffset: (d: any) => d,
                 positiveColors: hexListToRgba(schemeBlues[6]),
                 negativeColors: hexListToRgba(schemeBlues[6]),
                 updateTriggers: {
                     instanceData: geometryData,
                 },
-            })
-        );
+            });
+
+            // Log successful creation of the layer
+            console.log('HorizonChartLayer created:', horizonChartLayer.id);
+
+            horizonChartLayers.push(horizonChartLayer);
+        } catch (error) {
+            console.error(
+                `Error creating HorizonChartLayer for exemplar ${uniqueExemplarKey(
+                    exemplar
+                )}:`,
+                error
+            );
+            throw error; // Re-throw to halt further processing if desired
+        }
     }
     return horizonChartLayers;
 }
