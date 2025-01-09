@@ -129,6 +129,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conc: string,
         p: number
     ): Promise<{
+        trackId: string;
+        locationId: string;
         birthTime: number;
         deathTime: number;
         data: DataPoint[];
@@ -139,26 +141,31 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const concColumn = 'Concentration (um)';
         const massColumn = 'Mass (pg)';
         const trackColumn = 'track_id';
+        const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
         const query = `
             WITH avg_mass_per_cell AS (
-                SELECT
-                    "${trackColumn}" AS track_id,
-                    AVG("${massColumn}") AS avg_mass
-                FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${drugColumn}" = '${drug}'
-                    AND "${concColumn}" = '${conc}'
-                GROUP BY "${trackColumn}"
+            SELECT
+                "${trackColumn}" AS track_id,
+                AVG("${massColumn}") AS avg_mass
+            FROM "${experimentName}_composite_experiment_cell_metadata"
+            WHERE "${drugColumn}" = '${drug}'
+            AND "${concColumn}" = '${conc}'
+            GROUP BY "${trackColumn}"
             )
             SELECT
+                CAST("${trackColumn}" AS INTEGER) AS track_id,
+                CAST("${locationColumn}" AS INTEGER) AS location,
                 MIN("${timeColumn}") AS birthTime,
                 MAX("${timeColumn}") AS deathTime,
-                array_agg(ARRAY[
-                    "${timeColumn}",
-                    "Frame ID",
-                    "${massColumn}"
-                ]) AS data
+                array_agg(
+                    ARRAY[
+                        "${timeColumn}",
+                        "Frame ID",
+                        "${massColumn}"
+                    ]
+                ) AS data
             FROM "${experimentName}_composite_experiment_cell_metadata"
             WHERE "${trackColumn}" = (
                 SELECT track_id
@@ -169,8 +176,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 )
                 LIMIT 1
             )
-            GROUP BY "${trackColumn}"
-        `;
+            GROUP BY
+                "${trackColumn}",
+                "${locationColumn}"
+            `;
 
         try {
             const result = await vg
@@ -178,34 +187,49 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 .query(query, { type: 'json' });
 
             if (result && result.length > 0) {
-                const { birthTime, deathTime, data } = result[0];
+                const { track_id, location, birthTime, deathTime, data } =
+                    result[0];
                 // console.log(
                 //     `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
                 // );
                 // console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
                 // console.log('Data Array:', data);
 
-                // Map the returned array to DataPoint[]
+                // Map the returned array to DataPoint[] with BigInt conversion
                 const mappedData: DataPoint[] = data.map((d: any[]) => ({
-                    time: d[0],
-                    frame: d[1],
-                    value: d[2],
+                    time: d[0], // Convert BigInt to Number
+                    frame: d[1], // Convert BigInt to Number
+                    value: d[2], // Convert BigInt to Number
                 }));
 
                 return {
-                    birthTime: birthTime || 0,
-                    deathTime: deathTime || 100,
+                    trackId: track_id,
+                    locationId: location,
+                    birthTime: birthTime || 0, // Ensure Number type
+                    deathTime: deathTime || 100, // Ensure Number type
                     data: mappedData || [],
                 };
             } else {
-                return { birthTime: 0, deathTime: 100, data: [] };
+                return {
+                    trackId: '',
+                    locationId: '',
+                    birthTime: 0,
+                    deathTime: 100,
+                    data: [],
+                };
             }
         } catch (error) {
             console.error(
                 `Error querying times for ${drug}-${conc} with p=${p}:`,
                 error
             );
-            return { birthTime: 0, deathTime: 100, data: [] };
+            return {
+                trackId: '',
+                locationId: '',
+                birthTime: 0,
+                deathTime: 100,
+                data: [],
+            };
         }
     }
 
@@ -214,25 +238,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conc: string,
         p: number
     ): Promise<ExemplarTrack> {
-        // const data: DataPoint[] = [];
-        // const trackLength = 24;
-        // const tstart = Math.round(Math.random() * 24);
-        // for (let i = 0; i < trackLength; i++) {
-        //     const time = tstart + i + 0.2 * Math.random();
-        //     data.push({
-        //         time,
-        //         frame: tstart + i,
-        //         value: 100 + Math.random() * 1000,
-        //     });
-        // }
-        const { birthTime, deathTime, data } = await getExemplarTrackData(
-            drug,
-            conc,
-            p
-        );
+        const { trackId, locationId, birthTime, deathTime, data } =
+            await getExemplarTrackData(drug, conc, p);
         return {
-            trackId: `${drug}-${conc}-${p}`, // fake, but fine for now
-            locationId: `${drug}-${conc}`, // fake, but fine for now
+            trackId: trackId,
+            locationId: locationId,
             minTime: birthTime,
             maxTime: deathTime,
             data,

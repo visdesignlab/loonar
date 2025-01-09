@@ -208,39 +208,17 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
-    for (const exemplar of exemplarTracks.value) {
-        // Log the current exemplar being processed
-        console.log('Processing exemplar:', exemplar);
-
+    for (const exemplar of exemplarViewStore.exemplarTracks) {
         const yOffset =
             exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
             viewConfiguration.value.timeBarHeightOuter -
             viewConfiguration.value.horizonTimeBarGap;
 
+        // TODO: probably skip if not in viewport
+
         const geometryData = constructGeometry(exemplar);
-
-        // Log the geometry data for the current exemplar
-        console.log(
-            'Geometry data for exemplar:',
-            uniqueExemplarKey(exemplar),
-            geometryData
-        );
-
-        // Validate geometryData
-        if (!geometryData || geometryData.length === 0) {
-            throw new Error(
-                `Invalid or empty geometry data for exemplar: ${uniqueExemplarKey(
-                    exemplar
-                )}`
-            );
-        }
-
-        const exemplarXExtent: [number, number] = [
-            exemplar.minTime,
-            exemplar.maxTime,
-        ];
-        try {
-            const horizonChartLayer = new HorizonChartLayer({
+        horizonChartLayers.push(
+            new HorizonChartLayer({
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
 
@@ -251,7 +229,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
-                dataXExtent: exemplarXExtent,
+                dataXExtent: [exemplar.minTime, exemplar.maxTime],
 
                 baseline: 0,
                 binSize: 200,
@@ -262,21 +240,8 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 updateTriggers: {
                     instanceData: geometryData,
                 },
-            });
-
-            // Log successful creation of the layer
-            console.log('HorizonChartLayer created:', horizonChartLayer.id);
-
-            horizonChartLayers.push(horizonChartLayer);
-        } catch (error) {
-            console.error(
-                `Error creating HorizonChartLayer for exemplar ${uniqueExemplarKey(
-                    exemplar
-                )}:`,
-                error
-            );
-            throw error; // Re-throw to halt further processing if desired
-        }
+            })
+        );
     }
     return horizonChartLayers;
 }
