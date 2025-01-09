@@ -108,6 +108,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 result[0].max_time != null &&
                 result[0].min_time != null
             ) {
+                console.log(
+                    'getTotalExperimentTime - min_time:',
+                    result[0].min_time,
+                    'max_time:',
+                    result[0].max_time
+                );
                 return result[0].max_time - result[0].min_time;
             } else {
                 return 0;
@@ -118,13 +124,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    async function exemplarTotalCellTimes(
+    async function getExemplarTrackData(
         drug: string,
         conc: string,
         p: number
     ): Promise<{
         birthTime: number;
         deathTime: number;
+        data: DataPoint[];
     }> {
         const pDecimal = p / 100;
         const timeColumn = 'Time (h)';
@@ -134,72 +141,71 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const trackColumn = 'track_id';
         const experimentName = currentExperimentMetadata?.value?.name;
 
-        // This subquery aims to:
-        //   1) Selects each track_id, calculates the averageMass for that cell.
-        //   2) Uses PERCENTILE_CONT(p) to get the p-th percentile of averageMass
-        //      among all cells in the same drug/conc group.
-        //   3) Filters down to the single track_id whose averageMass == p-th percentile.
-        //   4) Limits to 1 track_id (in case multiple tie the exact percentile).
-        //
-        // Then the outer query:
-        //   - Finds MIN and MAX of timeColumn for that chosen track_id.
-        // TODO: Use _aggregate table to get the avg attributes
         const query = `
             WITH avg_mass_per_cell AS (
-            SELECT
-                "${trackColumn}"  AS track_id,
-                AVG("${massColumn}") AS avg_mass
-            FROM "${experimentName}_composite_experiment_cell_metadata"
-            WHERE "${drugColumn}" = '${drug}'
-                AND "${concColumn}" = '${conc}'
-            GROUP BY "${trackColumn}"
+                SELECT
+                    "${trackColumn}" AS track_id,
+                    AVG("${massColumn}") AS avg_mass
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${drugColumn}" = '${drug}'
+                    AND "${concColumn}" = '${conc}'
+                GROUP BY "${trackColumn}"
             )
             SELECT
-            MIN("${timeColumn}") AS birthTime,
-            MAX("${timeColumn}") AS deathTime
+                MIN("${timeColumn}") AS birthTime,
+                MAX("${timeColumn}") AS deathTime,
+                array_agg(ARRAY[
+                    "${timeColumn}",
+                    "Frame ID",
+                    "${massColumn}"
+                ]) AS data
             FROM "${experimentName}_composite_experiment_cell_metadata"
             WHERE "${trackColumn}" = (
-            SELECT track_id
-            FROM avg_mass_per_cell
-            WHERE avg_mass = (
-                SELECT quantile_disc(avg_mass, ${pDecimal})
+                SELECT track_id
                 FROM avg_mass_per_cell
+                WHERE avg_mass = (
+                    SELECT quantile_disc(avg_mass, ${pDecimal})
+                    FROM avg_mass_per_cell
+                )
+                LIMIT 1
             )
-            LIMIT 1
-            );
-            `;
+            GROUP BY "${trackColumn}"
+        `;
 
         try {
             const result = await vg
                 .coordinator()
                 .query(query, { type: 'json' });
 
-            console.log(
-                `Query Result for condition ${drug}-${conc} with p=${p}:`,
-                JSON.stringify(result, null, 2)
-            );
-
             if (result && result.length > 0) {
-                const { birthTime, deathTime } = result[0];
+                const { birthTime, deathTime, data } = result[0];
                 console.log(
-                    `Condition: ${drug}-${conc}, Birth Time: ${birthTime}, Death Time: ${deathTime}`
+                    `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
                 );
+                console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
+                console.log('Data Array:', data);
+
+                // Map the returned array to DataPoint[]
+                const mappedData: DataPoint[] = data.map((d: any[]) => ({
+                    time: d[0],
+                    frame: d[1],
+                    value: d[2],
+                }));
+
                 return {
                     birthTime: birthTime || 0,
                     deathTime: deathTime || 100,
+                    data: mappedData || [],
                 };
             } else {
-                console.warn(
-                    `No results found for condition ${drug}-${conc} with p=${p}`
-                );
-                return { birthTime: 0, deathTime: 100 };
+                return { birthTime: 0, deathTime: 100, data: [] };
             }
         } catch (error) {
             console.error(
                 `Error querying times for ${drug}-${conc} with p=${p}:`,
                 error
             );
-            return { birthTime: 0, deathTime: 100 };
+            return { birthTime: 0, deathTime: 100, data: [] };
         }
     }
 
@@ -208,18 +214,18 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conc: string,
         p: number
     ): Promise<ExemplarTrack> {
-        const data: DataPoint[] = [];
-        const trackLength = 24;
-        const tstart = Math.round(Math.random() * 24);
-        for (let i = 0; i < trackLength; i++) {
-            const time = tstart + i + 0.2 * Math.random();
-            data.push({
-                time,
-                frame: tstart + i,
-                value: 100 + Math.random() * 1000,
-            });
-        }
-        const { birthTime, deathTime } = await exemplarTotalCellTimes(
+        // const data: DataPoint[] = [];
+        // const trackLength = 24;
+        // const tstart = Math.round(Math.random() * 24);
+        // for (let i = 0; i < trackLength; i++) {
+        //     const time = tstart + i + 0.2 * Math.random();
+        //     data.push({
+        //         time,
+        //         frame: tstart + i,
+        //         value: 100 + Math.random() * 1000,
+        //     });
+        // }
+        const { birthTime, deathTime, data } = await getExemplarTrackData(
             drug,
             conc,
             p
@@ -261,13 +267,111 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    async function getExemplarTrack(...tags: any[]) {
-        console.log('Generating exemplar tracks for tags:', tags);
+    async function getExemplarTrack(...tags: any[]): Promise<ExemplarTrack> {
+        // Extract tags
+        const [drug, conc, p] = tags;
+
+        console.log('Drug:', drug, 'Conc:', conc, 'P:', p);
+
+        // Get the data for the exemplar track
+        const { birthTime, deathTime, data } = await getExemplarTrackData(
+            drug,
+            conc,
+            p
+        );
+
+        console.log(
+            'Birth Time:',
+            birthTime,
+            'Death Time:',
+            deathTime,
+            'Data:',
+            data
+        );
+
+        // Define columns and table
+        const timeColumn = 'Time (h)';
+        const massColumn = 'Mass (pg)';
+        const trackColumn = 'track_id';
+        const experimentName = currentExperimentMetadata.value?.name;
+
+        if (!experimentName) {
+            console.error('Experiment name is undefined.');
+            return {
+                trackId: `${drug}-${conc}-${p}`,
+                locationId: `${drug}-${conc}`,
+                minTime: birthTime,
+                maxTime: deathTime,
+                data: [],
+                tags: { drug, conc },
+                p: Number(p),
+                pinned: false,
+                starred: false,
+            };
+        }
+
+        const tableName = `${experimentName}_composite_experiment_cell_metadata`;
+
+        // Query to fetch mass over time for the specific cell
+        const query = `
+            SELECT "${timeColumn}" AS time, "${massColumn}" AS mass
+            FROM "${tableName}"
+            WHERE "${trackColumn}" = (
+                SELECT track_id
+                FROM "${tableName}"
+                WHERE "drug" = '${drug}'
+                  AND "conc" = '${conc}'
+                ORDER BY ABS(AVG("${massColumn}") - "p") ASC
+                LIMIT 1
+            )
+            AND "${timeColumn}" BETWEEN ${birthTime} AND ${deathTime}
+            ORDER BY "${timeColumn}" ASC
+        `;
+
+        try {
+            const result: { time: number; mass: number }[] = await vg
+                .coordinator()
+                .query(query, { type: 'json' });
+
+            const data: DataPoint[] = result.map((row) => ({
+                time: row.time,
+                frame: Math.floor(row.time), // Assuming frame is the integer part of time
+                value: row.mass,
+            }));
+
+            return {
+                trackId: `${drug}-${conc}-${p}`,
+                locationId: `${drug}-${conc}`,
+                minTime: birthTime,
+                maxTime: deathTime,
+                data,
+                tags: { drug, conc },
+                p: Number(p),
+                pinned: false,
+                starred: false,
+            };
+        } catch (error) {
+            console.error(
+                `Error fetching exemplar track for ${drug}-${conc}-${p}:`,
+                error
+            );
+            return {
+                trackId: `${drug}-${conc}-${p}`,
+                locationId: `${drug}-${conc}`,
+                minTime: birthTime,
+                maxTime: deathTime,
+                data: [],
+                tags: { drug, conc },
+                p: Number(p),
+                pinned: false,
+                starred: false,
+            };
+        }
     }
 
     async function getExemplarTracks(): Promise<ExemplarTrack[]> {
         exemplarTracks.value = [];
-        const trackPromises: Promise<Any>[] = [];
+        const trackPromises: Promise<ExemplarTrack>[] = [];
 
         const allTags: Array<{ key: string; value: string }> = [];
 
@@ -322,7 +426,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const allCombinations = generateCombinations(allTags);
 
         allCombinations.forEach((combination) => {
-            trackPromises.push(getExemplarTrack(...combination));
+            trackPromises.push(
+                getExemplarTrack(...combination.map((tag) => tag.value))
+            );
         });
 
         try {
@@ -343,6 +449,5 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         viewConfiguration,
         exemplarHeight,
         getTotalExperimentTime,
-        exemplarTotalCellTimes,
     };
 });

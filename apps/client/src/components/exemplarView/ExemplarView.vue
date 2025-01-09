@@ -215,36 +215,36 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             viewConfiguration.value.horizonTimeBarGap;
 
         const geometryData = constructGeometry(exemplar);
-        // horizonChartLayers.push(
-        //     new HorizonChartLayer({
-        //         id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
-        //         data: HORIZON_CHART_MOD_OFFSETS,
+        horizonChartLayers.push(
+            new HorizonChartLayer({
+                id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
+                data: HORIZON_CHART_MOD_OFFSETS,
 
-        //         instanceData: geometryData,
-        //         destination: [
-        //             yOffset,
-        //             0,
-        //             viewConfiguration.value.horizonChartWidth,
-        //             viewConfiguration.value.horizonChartHeight,
-        //         ], // [bottom, left, width, height]
-        //         dataXExtent: [
-        //             0,
-        //             totalExperimentTime.value > 0
-        //                 ? totalExperimentTime.value
-        //                 : 150,
-        //         ],
+                instanceData: geometryData,
+                destination: [
+                    yOffset,
+                    0,
+                    viewConfiguration.value.horizonChartWidth,
+                    viewConfiguration.value.horizonChartHeight,
+                ], // [bottom, left, width, height]
+                dataXExtent: [
+                    0,
+                    totalExperimentTime.value > 0
+                        ? totalExperimentTime.value
+                        : 150,
+                ],
 
-        //         baseline: 0,
-        //         binSize: 200,
+                baseline: 0,
+                binSize: 200,
 
-        //         getModOffset: (d: number) => d,
-        //         positiveColors: hexListToRgba(schemeBlues[6]),
-        //         negativeColors: hexListToRgba(schemeBlues[6]),
-        //         updateTriggers: {
-        //             instanceData: geometryData,
-        //         },
-        //     })
-        // );
+                getModOffset: (d: number) => d,
+                positiveColors: hexListToRgba(schemeBlues[6]),
+                negativeColors: hexListToRgba(schemeBlues[6]),
+                updateTriggers: {
+                    instanceData: geometryData,
+                },
+            })
+        );
     }
     return horizonChartLayers;
 }
