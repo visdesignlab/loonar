@@ -151,14 +151,14 @@ function renderDeckGL(): void {
 }
 
 // Define the static list of colors (you can customize these)
+// Start of Selection
 const DRUG_COLORS = [
-    [255, 99, 132], // Red
-    [54, 162, 235], // Blue
-    [255, 206, 86], // Yellow
-    [75, 192, 192], // Teal
-    [153, 102, 255], // Purple
-    [255, 159, 64], // Orange
-    // Add more colors as needed
+    hexListToRgba(['#C026D3']), // Fuchsia 600
+    hexListToRgba(['#0D9488']), // Teal 600
+    hexListToRgba(['#2563EB']), // Blue 600
+    hexListToRgba(['#65A30D']), // Lime 600
+    hexListToRgba(['#0EA5E9']), // Sky 500
+    hexListToRgba(['#E11D48']), // Rose 600
 ];
 
 // Compute unique drugs and assign colors
@@ -174,7 +174,9 @@ const uniqueDrugs = computed(() => {
 const drugColorMap = computed<Record<string, number[]>>(() => {
     const map: Record<string, number[]> = {};
     uniqueDrugs.value.forEach((drug, index) => {
-        map[drug] = DRUG_COLORS[index % DRUG_COLORS.length];
+        map[drug] = DRUG_COLORS[index % DRUG_COLORS.length].map(
+            (component) => component * 255
+        );
     });
     return map;
 });
