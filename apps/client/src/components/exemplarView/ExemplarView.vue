@@ -85,9 +85,9 @@ watch(
                 console.log('Deck.gl initialized.');
             }
             // Generates the test exemplar tracks
-            await exemplarViewStore.generateTestExemplarTracks();
+            // await exemplarViewStore.generateTestExemplarTracks();
 
-            // await exemplarViewStore.getExemplarTracks();
+            await exemplarViewStore.getExemplarTracks();
             console.log('Exemplar tracks generated.');
 
             // 2. Set exemplarDataInitialized to true after data generation
@@ -231,6 +231,10 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
     for (const exemplar of exemplarViewStore.exemplarTracks) {
+        if (!exemplar.data || exemplar.data.length === 0) {
+            continue; // Skip this exemplar if there's no data
+        }
+
         const yOffset =
             exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
             viewConfiguration.value.timeBarHeightOuter -

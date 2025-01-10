@@ -235,14 +235,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    async function generateTestExemplarTrack(
+    async function getExemplarTrack(
         drug: string,
         conc: string,
         p: number
     ): Promise<ExemplarTrack> {
         const { trackId, locationId, birthTime, deathTime, data } =
             await getExemplarTrackData(drug, conc, p);
-        console.log('Data', data);
+        console.log(
+            `ExemplarTrack - Drug: ${drug}, Concentration: ${conc}, p: ${p}`,
+            data
+        );
         return {
             trackId: trackId,
             locationId: locationId,
@@ -265,9 +268,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         for (const drug of ['4HT', 'lap', 'dox']) {
             for (const conc of ['0.0016 um', '0.016 um', '0.08 um']) {
                 for (const p of [5, 50, 95]) {
-                    trackPromises.push(
-                        generateTestExemplarTrack(drug, conc, p)
-                    );
+                    trackPromises.push(getExemplarTrack(drug, conc, p));
                 }
             }
         }
@@ -280,109 +281,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    async function getExemplarTrack(...tags: any[]): Promise<ExemplarTrack> {
-        // Extract tags
-        const [drug, conc, p] = tags;
-
-        console.log('Drug:', drug, 'Conc:', conc, 'P:', p);
-
-        // Get the data for the exemplar track
-        const { birthTime, deathTime, data } = await getExemplarTrackData(
-            drug,
-            conc,
-            p
-        );
-
-        console.log(
-            'Birth Time:',
-            birthTime,
-            'Death Time:',
-            deathTime,
-            'Data:',
-            data
-        );
-
-        // Define columns and table
-        const timeColumn = 'Time (h)';
-        const massColumn = 'Mass (pg)';
-        const trackColumn = 'track_id';
-        const experimentName = currentExperimentMetadata.value?.name;
-
-        if (!experimentName) {
-            console.error('Experiment name is undefined.');
-            return {
-                trackId: `${drug}-${conc}-${p}`,
-                locationId: `${drug}-${conc}`,
-                minTime: birthTime,
-                maxTime: deathTime,
-                data: [],
-                tags: { drug, conc },
-                p: Number(p),
-                pinned: false,
-                starred: false,
-            };
-        }
-
-        const tableName = `${experimentName}_composite_experiment_cell_metadata`;
-
-        // Query to fetch mass over time for the specific cell
-        const query = `
-            SELECT "${timeColumn}" AS time, "${massColumn}" AS mass
-            FROM "${tableName}"
-            WHERE "${trackColumn}" = (
-                SELECT track_id
-                FROM "${tableName}"
-                WHERE "drug" = '${drug}'
-                  AND "conc" = '${conc}'
-                ORDER BY ABS(AVG("${massColumn}") - "p") ASC
-                LIMIT 1
-            )
-            AND "${timeColumn}" BETWEEN ${birthTime} AND ${deathTime}
-            ORDER BY "${timeColumn}" ASC
-        `;
-
-        try {
-            const result: { time: number; mass: number }[] = await vg
-                .coordinator()
-                .query(query, { type: 'json' });
-
-            const data: DataPoint[] = result.map((row) => ({
-                time: row.time,
-                frame: Math.floor(row.time), // Assuming frame is the integer part of time
-                value: row.mass,
-            }));
-
-            return {
-                trackId: `${drug}-${conc}-${p}`,
-                locationId: `${drug}-${conc}`,
-                minTime: birthTime,
-                maxTime: deathTime,
-                data,
-                tags: { drug, conc },
-                p: Number(p),
-                pinned: false,
-                starred: false,
-            };
-        } catch (error) {
-            console.error(
-                `Error fetching exemplar track for ${drug}-${conc}-${p}:`,
-                error
-            );
-            return {
-                trackId: `${drug}-${conc}-${p}`,
-                locationId: `${drug}-${conc}`,
-                minTime: birthTime,
-                maxTime: deathTime,
-                data: [],
-                tags: { drug, conc },
-                p: Number(p),
-                pinned: false,
-                starred: false,
-            };
-        }
-    }
-
-    async function getExemplarTracks(): Promise<ExemplarTrack[]> {
+    async function getExemplarTracks(): Promise<void> {
         exemplarTracks.value = [];
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
@@ -437,21 +336,30 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         };
 
         const allCombinations = generateCombinations(allTags);
+        console.log('All Combinations:', allCombinations);
 
+        // TODO: Make sure this works for any tag types, not hard coded Drug and Concentration (um).
         allCombinations.forEach((combination) => {
-            trackPromises.push(
-                getExemplarTrack(...combination.map((tag) => tag.value))
-            );
+            // Extract 'drug' and 'conc' from the combination
+            const drug = combination.find((c) => c.key === 'Drug')?.value;
+            const conc = combination.find(
+                (c) => c.key === 'Concentration (um)'
+            )?.value;
+
+            // Only proceed if both 'drug' and 'conc' are defined
+            if (drug && conc) {
+                for (const p of [5, 50, 95]) {
+                    trackPromises.push(getExemplarTrack(drug, conc, p));
+                }
+            }
         });
 
         try {
             const tracks = await Promise.all(trackPromises);
             exemplarTracks.value.push(...tracks);
             console.log('Exemplar tracks successfully added:', tracks.length);
-            return tracks;
         } catch (error) {
             console.error('Error generating exemplar tracks:', error);
-            return exemplarTracks.value;
         }
     }
 
