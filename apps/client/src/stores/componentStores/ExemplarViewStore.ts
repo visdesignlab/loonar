@@ -285,73 +285,21 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         exemplarTracks.value = [];
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
-        const allTags: Array<{ key: string; value: string }> = [];
+        // Pull out the arrays of Drug and Concentration tags from currentExperimentTags
+        const drugTags = currentExperimentTags.value?.['Drug'] || [];
+        const concTags =
+            currentExperimentTags.value?.['Concentration (um)'] || [];
 
-        for (const key in currentExperimentTags.value) {
-            const values = currentExperimentTags.value[key];
-            values.forEach((value) => {
-                allTags.push({ key, value });
+        // Loop through all possible drugs and concentrations
+        drugTags.forEach((drug) => {
+            concTags.forEach((conc) => {
+                // Only proceed if both 'drug' and 'conc' are defined
+                if (drug && conc) {
+                    for (const p of [5, 50, 95]) {
+                        trackPromises.push(getExemplarTrack(drug, conc, p));
+                    }
+                }
             });
-        }
-
-        const generateCombinations = (
-            tags: Array<{ key: string; value: string }>
-        ): Array<Array<{ key: string; value: string }>> => {
-            const tagMap: Record<string, string[]> = {};
-
-            tags.forEach((tag) => {
-                if (!tagMap[tag.key]) {
-                    tagMap[tag.key] = [];
-                }
-                tagMap[tag.key].push(tag.value);
-            });
-
-            const keys = Object.keys(tagMap);
-            const valueLists = keys.map((key) =>
-                tagMap[key].map((value) => ({ key, value }))
-            );
-
-            const combinations: Array<Array<{ key: string; value: string }>> =
-                [];
-
-            const cartesian = (
-                arr: Array<Array<{ key: string; value: string }>>,
-                depth = 0,
-                current: Array<{ key: string; value: string }> = []
-            ) => {
-                if (depth === arr.length) {
-                    combinations.push([...current]);
-                    return;
-                }
-                for (const item of arr[depth]) {
-                    current.push(item);
-                    cartesian(arr, depth + 1, current);
-                    current.pop();
-                }
-            };
-
-            cartesian(valueLists);
-
-            return combinations;
-        };
-
-        const allCombinations = generateCombinations(allTags);
-        console.log('All Combinations:', allCombinations);
-
-        // TODO: Make sure this works for any tag types, not hard coded Drug and Concentration (um).
-        allCombinations.forEach((combination) => {
-            // Extract 'drug' and 'conc' from the combination
-            const drug = combination.find((c) => c.key === 'Drug')?.value;
-            const conc = combination.find(
-                (c) => c.key === 'Concentration (um)'
-            )?.value;
-
-            // Only proceed if both 'drug' and 'conc' are defined
-            if (drug && conc) {
-                for (const p of [5, 50, 95]) {
-                    trackPromises.push(getExemplarTrack(drug, conc, p));
-                }
-            }
         });
 
         try {
