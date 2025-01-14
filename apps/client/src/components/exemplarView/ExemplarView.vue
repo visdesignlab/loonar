@@ -208,23 +208,16 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
 }
 
 const horizonChartScheme = [
-    '#E0F7FA',
-    '#B3E5FC',
-    '#81D4FA',
-    '#4FC3F7',
-    '#29B6F6',
-    '#03A9F4',
-    '#039BE5',
-    '#0288D1',
-    '#0277BD',
-    '#01579B',
-    '#003366',
-    '#000000',
-    '#000033',
-    '#000066',
-    '#000099',
-    '#0000CC',
-    '#0000FF',
+    '#e6f9ff', // Light Blue 100
+    '#99e6ff', // Light Blue 300
+    '#1ac6ff', // Blue 500
+    '#00ace6', // Blue 700
+    '#0099cc',
+    '#007399', // Dark Blue 900
+    '#004d66', // Dark Blue 950
+    '#00394d', // Dark Blue 1000
+    '#002633', // Near Black
+    '#000000', // Black
 ];
 
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
