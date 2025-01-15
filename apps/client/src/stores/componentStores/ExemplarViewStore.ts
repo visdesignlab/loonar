@@ -1,7 +1,10 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
-import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import {
+    useDatasetSelectionStore,
+    type LocationMetadata,
+} from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
 
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
@@ -285,22 +288,59 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         exemplarTracks.value = [];
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
-        // Pull out the arrays of Drug and Concentration tags from currentExperimentTags
-        const drugTags = currentExperimentTags.value?.['Drug'] || [];
-        const concTags =
-            currentExperimentTags.value?.['Concentration (um)'] || [];
+        // // Pull out the arrays of Drug and Concentration tags from currentExperimentTags
+        // const drugTags = currentExperimentTags.value?.['Drug'] || [];
+        // const concTags =
+        //     currentExperimentTags.value?.['Concentration (um)'] || [];
 
-        // Loop through all possible drugs and concentrations
-        drugTags.forEach((drug) => {
-            concTags.forEach((conc) => {
-                // Only proceed if both 'drug' and 'conc' are defined
-                if (drug && conc) {
-                    for (const p of [5, 50, 95]) {
-                        trackPromises.push(getExemplarTrack(drug, conc, p));
-                    }
+        // // Loop through all possible drugs and concentrations
+        // drugTags.forEach((drug) => {
+        //     concTags.forEach((conc) => {
+        //         // Only proceed if both 'drug' and 'conc' are defined
+        //         if (drug && conc) {
+        //             for (const p of [5, 50, 95]) {
+        //                 trackPromises.push(getExemplarTrack(drug, conc, p));
+        //             }
+        //         }
+        //     });
+        // });
+        // 1. Build a mapping of drug -> set of concentrations
+        const drugOrder: string[] = []; // helps preserve the order of first appearance
+        const drugToConcs = new Map<string, Set<string>>();
+
+        for (const locationMetadata of currentExperimentMetadata.value
+            ?.locationMetadataList ?? []) {
+            // Skip if no tags
+            if (!locationMetadata.tags) continue;
+
+            // Directly pull out the Drug and Concentration tags
+            const drug = locationMetadata.tags['Drug'];
+            const conc = locationMetadata.tags['Concentration (um)'];
+
+            // If both exist
+            if (drug && conc) {
+                // If it's the first time we see this drug, remember its order
+                if (!drugToConcs.has(drug)) {
+                    drugToConcs.set(drug, new Set<string>());
+                    drugOrder.push(drug);
                 }
-            });
-        });
+
+                // Add the concentration to the Set
+                drugToConcs.get(drug)?.add(conc);
+            }
+        }
+
+        // 2. Now enqueue promises grouped by each drug
+        for (const drug of drugOrder) {
+            const concs = drugToConcs.get(drug);
+            if (!concs) continue;
+
+            for (const conc of concs) {
+                for (const p of [5, 50, 95]) {
+                    trackPromises.push(getExemplarTrack(drug, conc, p));
+                }
+            }
+        }
 
         try {
             const tracks = await Promise.all(trackPromises);
