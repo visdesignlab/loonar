@@ -36,11 +36,28 @@ export interface ViewConfiguration {
     horizonTimeBarGap: number;
     timeBarHeightOuter: number;
     timeBarHeightInner: number;
-    betweeenExemplarGap: number;
+    betweenExemplarGap: number;
     betweenConditionGap: number;
     horizonHistogramGap: number;
     histogramWidth: number;
 }
+
+// 1. Add fakeHistogramData and histogramDomains
+const fakeHistogramData = ref<number[]>([
+    5, 12, 9, 14, 7, 10, 8, 13, 6, 11, 4, 15, 3, 16, 2, 17, 1, 18, 0, 19,
+]);
+
+const histogramDomains = ref<{
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}>({
+    minX: 0, // Min value for histogram scaling (x-axis after rotation)
+    maxX: 20, // Max value for histogram scaling (x-axis after rotation)
+    minY: 0, // Min index for histogram bins
+    maxY: 20, // Max index for histogram bins
+});
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const conditionSelector = useConditionSelectorStore();
@@ -55,7 +72,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         horizonTimeBarGap: 5,
         timeBarHeightOuter: 12,
         timeBarHeightInner: 2,
-        betweeenExemplarGap: 20,
+        betweenExemplarGap: 20,
         betweenConditionGap: 20,
         horizonHistogramGap: 5,
         histogramWidth: 150,
@@ -68,6 +85,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             viewConfiguration.value.horizonChartHeight +
             viewConfiguration.value.horizonTimeBarGap +
             viewConfiguration.value.timeBarHeightOuter
+        );
+    });
+
+    const conditionGroupHeight = computed(() => {
+        return (
+            exemplarHeight.value * 3 +
+            viewConfiguration.value.betweenExemplarGap * 2
         );
     });
 
@@ -351,12 +375,20 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    // 2. Expose fakeHistogramData and histogramDomains
+    const getFakeHistogramData = computed(() => fakeHistogramData.value);
+    const getHistogramDomains = computed(() => histogramDomains.value);
+
     return {
         generateTestExemplarTracks,
         getExemplarTracks,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,
+        conditionGroupHeight,
         getTotalExperimentTime,
+        // Expose the new state
+        getFakeHistogramData,
+        getHistogramDomains,
     };
 });

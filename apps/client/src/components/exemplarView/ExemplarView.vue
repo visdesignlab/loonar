@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core';
-import type { Layer } from '@deck.gl/core';
+import { Layer } from '@deck.gl/core';
 import {
     ScatterplotLayer,
     PolygonLayer,
@@ -38,8 +38,12 @@ const cellMetaData = useCellMetaData();
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
 
-const { viewConfiguration, exemplarTracks, exemplarHeight } =
-    storeToRefs(exemplarViewStore);
+const {
+    viewConfiguration,
+    exemplarTracks,
+    exemplarHeight,
+    conditionGroupHeight,
+} = storeToRefs(exemplarViewStore);
 
 // Reactive reference for totalExperimentTime
 const totalExperimentTime = ref(0);
@@ -192,7 +196,7 @@ function recalculateExemplarYOffsets(): void {
         yOffset += exemplarHeight.value;
         if (i !== 0) {
             if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                yOffset += viewConfiguration.value.betweeenExemplarGap;
+                yOffset += viewConfiguration.value.betweenExemplarGap;
             } else {
                 yOffset += viewConfiguration.value.betweenConditionGap;
             }
@@ -403,7 +407,7 @@ interface TextDatum {
 }
 
 function createSidewaysHistogramLayer(): any[] | null {
-    const placeholderLayer: any[] = [];
+    const layers: any[] = [];
 
     // Group exemplars by their condition
     const groupedExemplars = groupExemplarsByCondition(exemplarTracks.value);
@@ -414,14 +418,8 @@ function createSidewaysHistogramLayer(): any[] | null {
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
 
-        // Identify the first exemplar in the group
+        // Find drug for this group
         const firstExemplar = group[0];
-
-        // Determine yTag value (assuming 'drug' is the y-axis tag)
-        const yTagValue = firstExemplar.tags[selectedYTag.value];
-        const yIndex =
-            currentExperimentTags.value[selectedYTag.value].indexOf(yTagValue);
-
         const drug = firstExemplar.tags.drug;
         const fillColor = drugColorMap.value[drug] || [128, 128, 128]; // Default to grey if not found
         const lineColor = [0, 0, 0]; // You can choose to have a fixed line color or map it similarly
@@ -437,8 +435,8 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
 
-        // Create a single histogram layer that spans the full vertical extent of the group
-        placeholderLayer.push(
+        // Box for the condition group
+        layers.push(
             new PolygonLayer({
                 id: `exemplar-sideways-histogram-${uniqueExemplarKey(
                     firstExemplar
@@ -459,31 +457,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             })
         );
 
-        // Add line layers for the entire group to show division lines
-        const lineData = [
-            {
-                coordinates: [
-                    [-hGap - 0.25 * histWidth, groupBottom],
-                    [-hGap - 0.25 * histWidth, groupTop],
-                ],
-            },
-        ];
-
-        placeholderLayer.push(
-            new LineLayer({
-                id: `exemplar-sideways-histogram-line-${uniqueExemplarKey(
-                    firstExemplar
-                )}`,
-                data: lineData,
-                getSourcePosition: (d: { coordinates: [number, number] }) =>
-                    d.coordinates[0],
-                getTargetPosition: (d: { coordinates: [number, number] }) =>
-                    d.coordinates[1],
-                getColor: [0, 0, 0], // Black color for the line
-                getWidth: 1, // Line width in pixels
-            })
-        );
-
+        // Text Layer
         const yOffset = (groupBottom + groupTop) / 2; // Centered vertically
 
         const textData: TextDatum[] = [
@@ -497,8 +471,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             },
         ];
 
-        // Updated TextLayer to use dynamic text
-        placeholderLayer.push(
+        layers.push(
             new TextLayer({
                 id: `exemplar-sideways-histogram-text-${uniqueExemplarKey(
                     firstExemplar
@@ -516,9 +489,54 @@ function createSidewaysHistogramLayer(): any[] | null {
                 alignmentBaseline: 'middle',
             })
         );
+
+        // Histogram Layer
+        const histogramData = exemplarViewStore.getFakeHistogramData;
+        const domains = exemplarViewStore.getHistogramDomains;
+
+        const groupHeight = groupBottom - groupTop;
+        const binWidth = groupHeight / histogramData.length;
+
+        const histogramPolygons = histogramData.map((value, index) => {
+            // base Y offset for *this* group
+            const baseY = groupTop;
+
+            const y0 = baseY + index * binWidth;
+            const y1 = y0 + binWidth;
+            const x0 = hGap + 0.25 * histWidth + 1;
+            const x1 =
+                x0 +
+                (value / domains.maxX) *
+                    (viewConfiguration.value.histogramWidth * 0.75);
+
+            return [
+                [-x0, y0],
+                [-x1, y0],
+                [-x1, y1],
+                [-x0, y1],
+                [-x0, y0],
+            ];
+        });
+
+        layers.push(
+            new PolygonLayer({
+                id: `sideways-histogram-layer-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: histogramPolygons,
+                pickable: false,
+                stroked: false,
+                filled: true,
+                extruded: false,
+                getPolygon: (d: any[]) => d,
+                getFillColor: [100, 200, 255, 180], // Customize color as needed
+                getLineColor: [0, 0, 0, 0],
+                getElevation: 0,
+            })
+        );
     }
 
-    return placeholderLayer;
+    return layers;
 }
 
 function groupExemplarsByCondition(
