@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import {
     useCellMetaData,
     type Cell,
@@ -11,12 +11,16 @@ import { useLooneageViewStore } from './looneageViewStore';
 
 import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
+import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
+import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
 
 export interface AggLine {
     data: AggLineData;
     muted: boolean;
     relation: 'ancestor' | 'left' | 'right' | 'other';
     trackId: string;
+    highlighted?: boolean;
+    filtered?: boolean;
 }
 export interface AggLineData extends Array<AggDataPoint> {}
 export interface AggDataPoint {
@@ -24,6 +28,7 @@ export interface AggDataPoint {
     value: number; // avg or total or median or ...
     count: number;
     variance?: [number, number];
+    highlighted?: boolean;
 }
 
 function storeSetup() {
@@ -33,6 +38,13 @@ function storeSetup() {
     const dataPointSelection = useDataPointSelection();
     const looneageViewStore = useLooneageViewStore();
     const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+    const { currentExperimentMetadata, currentLocationMetadata } = storeToRefs(
+        useDatasetSelectionStore()
+    );
+
+    const mosaicSelectionStore = useMosaicSelectionStore();
+    const { highlightedCellIds, unfilteredTrackIds } =
+        storeToRefs(mosaicSelectionStore);
 
     const aggregatorKey = ref<string>('average');
     const aggregatorOptions = ['average', 'total', 'min', 'median', 'max'];
@@ -447,17 +459,23 @@ function storeSetup() {
                 const result: AggLine[] = [];
                 for (const track of cellMetaData.trackArray) {
                     const aggLineData: AggLineData = [];
+
                     for (const cell of track.cells) {
                         const time = cellMetaData.getTime(cell);
                         const value = accessor.value(cell);
                         const count = 1;
-                        aggLineData.push({ time, value, count });
+                        const highlighted = _determineCellHighlighted(cell);
+                        aggLineData.push({ time, value, count, highlighted });
                     }
+
+                    const filtered = _determineTrackFiltered(track);
+
                     result.push({
-                        data: medianFilterSmooth(aggLineData),
+                        data: aggLineData,
                         muted: true,
                         trackId: track.trackId,
                         relation: 'other',
+                        filtered,
                     });
                 }
                 return result;
@@ -499,6 +517,34 @@ function storeSetup() {
             targetKey.value == 'entire location combined'
         );
     });
+
+    function _determineCellHighlighted(cell: Cell) {
+        // List initializes as null. Nothing highlighted.
+        if (!highlightedCellIds.value) return false;
+
+        const frameColumn =
+            currentExperimentMetadata.value?.headerTransforms?.['frame'];
+        const locationId = currentLocationMetadata.value?.id;
+        if (frameColumn && locationId && cell.attrNum[frameColumn]) {
+            const uniqueString = `${cell.trackId}_${cell.attrNum[frameColumn]}_${locationId}`;
+            return highlightedCellIds.value.includes(uniqueString);
+        }
+        return true;
+    }
+
+    function _determineTrackFiltered(track: Track) {
+        // The highlightedCellIds list is a set of strings like "trackId_frame_location"
+        // Extract only track Ids
+        // If track Id is present in this new set, include the track.
+        // const selected =
+        //     highlightedCellIds.value ?
+        //         [...new Set(highlightedCellIds.value.map(entry => entry.split('_')[0]))].includes(track.trackId)
+        //         : false
+
+        return unfilteredTrackIds.value
+            ? !unfilteredTrackIds.value.includes(track.trackId)
+            : false;
+    }
 
     return {
         accessor,

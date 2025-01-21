@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import LBtn from '../custom/LBtn.vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { defineEmits } from 'vue';
 import {
     QMenu,
     QItem,
@@ -10,24 +12,40 @@ import {
     QCardSection,
     QForm,
     QInput,
-    QBtn,
     QBanner,
 } from 'quasar';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
 
 const globalSettings = useGlobalSettings();
 const props = defineProps<{
     plotName: string;
     initialMin: number;
     initialMax: number;
-    type: 'selection' | 'filter';
+    filterType: 'selection' | 'filter';
+    attributeType: DataSelection['type'];
 }>();
 
 const emit = defineEmits(['update:range']);
 
 const selectionStore = useSelectionStore();
-const filterStore = useFilterStore();
+
+// Plot Deletion -----------------
+const deleteDialogOpen = ref(false);
+
+function confirmDeletePlot() {
+    deleteDialogOpen.value = true;
+}
+function deletePlot() {
+    selectionStore.removePlotByName(props.plotName);
+    deleteDialogOpen.value = false;
+}
+
+function cancelDelete() {
+    deleteDialogOpen.value = false;
+}
 
 const showRangeDialog = ref(false);
 const minInput = ref(props.initialMin);
@@ -43,15 +61,16 @@ function onSubmit() {
     if (
         typeof minInput.value === 'undefined' ||
         typeof maxInput.value === 'undefined'
-    )
+    ) {
         return;
+    }
 
     const newRange: [number, number] = [minInput.value, maxInput.value];
 
-    if (props.type === 'selection') {
+    if (props.filterType === 'selection') {
         selectionStore.updateSelection(props.plotName, newRange);
-    } else if (props.type === 'filter') {
-        filterStore.updateFilter(props.plotName, newRange);
+    } else if (props.filterType === 'filter') {
+        selectionStore.updateFilter(props.plotName, newRange);
     }
 
     emit('update:range', { min: newRange[0], max: newRange[1] });
@@ -60,13 +79,16 @@ function onSubmit() {
 
 const minMaxFormError = computed<string | boolean>(() => {
     // @ts-ignore: actually it can be '', I would expect quasar to make this undefined or null, but it doesn't
-    if (typeof minInput.value === 'undefined' || minInput.value === '')
+    if (typeof minInput.value === 'undefined' || minInput.value === '') {
         return 'Min cannot be undefined.';
+    }
     // @ts-ignore: actually it can be '', I would expect quasar to make this undefined or null, but it doesn't
-    if (typeof maxInput.value === 'undefined' || maxInput.value === '')
+    if (typeof maxInput.value === 'undefined' || maxInput.value === '') {
         return 'Max cannot be undefined.';
-    if (minInput.value > maxInput.value)
+    }
+    if (minInput.value > maxInput.value) {
         return 'Min should be less than or equal to Max.';
+    }
     return false;
 });
 
@@ -80,6 +102,16 @@ const minMaxFormValid = computed<boolean>(() => {
         <q-item
             clickable
             v-close-popup
+            @click="confirmDeletePlot"
+            :dark="globalSettings.darkMode"
+        >
+            <q-item-section :dark="globalSettings.darkMode" class="text-red"
+                >Delete</q-item-section
+            >
+        </q-item>
+        <q-item
+            clickable
+            v-close-popup
             @click="openRangeDialog"
             :dark="globalSettings.darkMode"
         >
@@ -88,6 +120,28 @@ const minMaxFormValid = computed<boolean>(() => {
             >
         </q-item>
     </q-menu>
+    <!-- Confirmation Dialog -->
+    <q-dialog v-model="deleteDialogOpen" persistent>
+        <q-card :dark="globalSettings.darkMode">
+            <q-card-section>
+                <div class="text-h6">Delete plot "{{ props.plotName }}"?</div>
+                <div class="text-caption">
+                    This will remove all associated selections and filters.
+                </div>
+            </q-card-section>
+            <q-card-actions>
+                <l-btn
+                    flat
+                    label="Cancel"
+                    color="primary"
+                    @click="cancelDelete"
+                />
+                <q-space />
+
+                <l-btn flat label="Delete" color="red" @click="deletePlot" />
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
 
     <q-dialog v-model="showRangeDialog">
         <q-card :dark="globalSettings.darkMode">
@@ -125,19 +179,20 @@ const minMaxFormValid = computed<boolean>(() => {
                         v-if="minMaxFormError"
                         dense
                         class="text-white bg-red"
-                        >{{ minMaxFormError }}
                         :dark="globalSettings.darkMode"
+                    >
+                        {{ minMaxFormError }}
                     </q-banner>
 
                     <div>
-                        <q-btn
+                        <l-btn
                             label="Submit"
-                            type="submit"
+                            @click="onSubmit"
                             color="primary"
                             :disable="!minMaxFormValid"
                             :dark="globalSettings.darkMode"
                         />
-                        <q-btn
+                        <l-btn
                             label="Cancel"
                             color="primary"
                             flat

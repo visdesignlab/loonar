@@ -11,7 +11,8 @@ const uploadStore = useUploadStore();
         <div class="flex-row q-mt-md">
             <template
                 v-if="
-                    uploadStore.overallProgress.status === 'not_started' || uploadStore.overallProgress.status === 'running'
+                    uploadStore.overallProgress.status === 'not_started' ||
+                    uploadStore.overallProgress.status === 'running'
                 "
             >
                 <l-banner
@@ -20,7 +21,9 @@ const uploadStore = useUploadStore();
                     :message="uploadStore.overallProgress.message"
                 />
             </template>
-            <template v-else-if="uploadStore.overallProgress.status === 'failed'">
+            <template
+                v-else-if="uploadStore.overallProgress.status === 'failed'"
+            >
                 <l-banner
                     type="error"
                     class="q-mb-md"
@@ -43,5 +46,4 @@ const uploadStore = useUploadStore();
     </div>
 </template>
 
-<style scoped lang="scss">
-</style>
+<style scoped lang="scss"></style>

@@ -6,7 +6,8 @@ import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSel
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 const globalSettings = useGlobalSettings();
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -14,7 +15,8 @@ const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const $q = useQuasar();
 
 const selectionStore = useSelectionStore();
-const filterStore = useFilterStore();
+const mosaicSelectionStore = useMosaicSelectionStore();
+const conditionSelectorStore = useConditionSelectorStore();
 
 watch(
     () => datasetSelectionStore.fetchingTabularData,
@@ -30,9 +32,6 @@ watch(
 );
 
 function onClickLocation(location: any) {
-    //console.log('clicked location: ', location);
-    selectionStore.clearAllSelections();
-    filterStore.clearAllFilters();
     datasetSelectionStore.selectImagingLocation(location);
 }
 
@@ -48,28 +47,31 @@ const shortExpName = computed<string>(() => {
 });
 
 function onSelectExperiment() {
-    selectionStore.clearAllSelections();
-    filterStore.clearAllFilters();
+    selectionStore.resetState();
+    mosaicSelectionStore.resetState();
+    conditionSelectorStore.resetState();
 }
 </script>
 
 <template>
-    <div class="flex row">
-        <q-select
-            label="Experiment"
-            v-model="datasetSelectionTrrackedStore.currentExperimentFilename"
-            :display-value="shortExpName"
-            :options="datasetSelectionStore.experimentFilenameList"
-            :dark="globalSettings.darkMode"
-            class="flex-grow-1"
-            @update:model-value="onSelectExperiment"
-        />
-        <q-btn
-            flat
-            icon="mdi-refresh"
-            @click="datasetSelectionStore.refreshFileNameList"
-        ></q-btn>
-    </div>
+    <q-select
+        label="Experiment"
+        v-model="datasetSelectionTrrackedStore.currentExperimentFilename"
+        :display-value="shortExpName"
+        :options="datasetSelectionStore.experimentFilenameList"
+        :dark="globalSettings.darkMode"
+        @update:model-value="onSelectExperiment"
+    >
+        <template v-slot:after>
+            <q-btn
+                flat
+                dense
+                icon="refresh"
+                @click="datasetSelectionStore.refreshFileNameList"
+                style="box-sizing: border-box"
+            />
+        </template>
+    </q-select>
 
     <div
         v-if="
@@ -88,10 +90,9 @@ function onSelectExperiment() {
                 clickable
                 v-ripple
                 :active="
-                    datasetSelectionTrrackedStore.selectedLocationIds[
-                        location.id
-                    ]
+                    datasetSelectionStore.shownSelectedLocationIds[location.id]
                 "
+                active-class="bg-primary text-white"
                 @click="
                     () => {
                         onClickLocation(location);

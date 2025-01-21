@@ -1,13 +1,24 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
 import mitt from 'mitt';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { ref, computed, watch, type Ref } from 'vue';
+import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
+
+export type SelectionType = 'cell' | 'track' | 'lineage' | 'conditionChart';
 
 export interface DataSelection {
     plotName: string;
-    type: 'cell' | 'track' | 'lineage'; // Unused, but will be needed if we have track-level and lineage-level attributes here
+    type: SelectionType; // Unused, but will be needed if we have track-level and lineage-level attributes here
     range: [number, number]; // The current range selected
-    maxRange: [number, number]; // The maximum range of the data
-    displayChart: boolean; // controls if the chart is shown or not, true by default
+    predicate?: string;
+}
+
+export interface AttributeChart {
+    plotName: string;
+    type: SelectionType;
+    maxRange: [number, number];
+    range: [number, number];
 }
 
 type Events = {
@@ -17,154 +28,320 @@ type Events = {
 export const emitter = mitt<Events>();
 //const emit = defineEmits(['plot-error']);
 
-export const useSelectionStore = defineStore('Selection', {
-    state: () => ({
-        dataSelections: [] as DataSelection[],
-    }),
-    getters: {
-        modifiedSelections: (state) => {
-            return state.dataSelections.filter(
-                (s) =>
-                    s.range[0] !== s.maxRange[0] || s.range[1] !== s.maxRange[1]
-            );
-        },
-    },
-    actions: {
-        addSelection(selection: DataSelection) {
-            const existingIndex = this.dataSelections.findIndex(
-                (s) => s.plotName === selection.plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataSelections[existingIndex] = selection;
-            } else {
-                this.dataSelections.push(selection);
-            }
-        },
-        clearAllSelections() {
-            this.dataSelections = [];
-        },
-        removeSelection(index: number) {
-            this.dataSelections[index].range = [
-                ...this.dataSelections[index].maxRange,
-            ];
-        },
-        updateSelection(plotName: string, range: [number, number]) {
-            const existingIndex = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (existingIndex !== -1) {
-                this.dataSelections[existingIndex].range = range;
-            } else {
-                this.addSelection({
-                    plotName,
-                    range,
-                    type: 'cell', // Default value
-                    maxRange: [...range], // Using the provided range as maxRange
-                    displayChart: true, // Default value
-                });
-            }
-        },
-        removeSelectionByPlotName(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            window.dispatchEvent(
-                new CustomEvent('selectionRemoved', { detail: plotName })
-            );
-            this.removeSelection(index);
-        },
-        removePlotWithErrors(plotName: string) {
-            const index = this.dataSelections.findIndex(
-                (s) => s.plotName === plotName
-            );
-            if (index === -1) return;
-            this.dataSelections.splice(index, 1);
-        },
-        getSelection(name: string): DataSelection | null {
-            const s = this.dataSelections.find(
-                (s: DataSelection) => s.plotName === name
-            );
-            if (typeof s === 'undefined') return null;
-            return s;
-        },
-        addPlot(name: string) {
+interface SelectionState {
+    attributeCharts: Ref<AttributeChart[]>;
+    dataSelections: Ref<DataSelection[]>;
+    dataFilters: Ref<DataSelection[]>;
+}
+
+const initialState = (): SelectionState => ({
+    attributeCharts: ref<AttributeChart[]>([]),
+    dataSelections: ref<DataSelection[]>([]),
+    dataFilters: ref<DataSelection[]>([]),
+});
+
+export const useSelectionStore = defineStore('selectionStore', () => {
+    // Declare initial state
+    const { attributeCharts, dataSelections, dataFilters } = initialState();
+
+    // create resetState function
+    function resetState(): void {
+        const newState = initialState();
+        attributeCharts.value = newState.attributeCharts.value;
+        dataSelections.value = newState.dataSelections.value;
+        dataFilters.value = newState.dataFilters.value;
+    }
+
+    // Toggle button for showing relative charts.
+    const showRelativeCell = ref<boolean>(false);
+    const showRelativeTrack = ref<boolean>(false);
+
+    const datasetSelectionStore = useDatasetSelectionStore();
+    const { currentExperimentMetadata, experimentDataInitialized } =
+        storeToRefs(datasetSelectionStore);
+    const conditionSelectorStore = useConditionSelectorStore();
+    // Watches for new experiment data. Initializes with basic attribute charts.
+    watch(
+        [experimentDataInitialized, currentExperimentMetadata],
+        ([isInitialized, newExperimentMetadata], [prevInit, prevMeta]) => {
+            // Resets state when initialization or experiment data changes.
             if (
-                this.dataSelections.some(
-                    (s: DataSelection) => s.plotName === name
-                )
+                isInitialized &&
+                newExperimentMetadata &&
+                newExperimentMetadata.headerTransforms
             ) {
-                // plot is already here, do not add again
-                return;
+                const { mass } = newExperimentMetadata.headerTransforms;
+                // Add mass plot.
+                addPlot(mass, 'cell');
+                // Add average mass plot.
+                addPlot(`Average ${mass}`, 'track');
             }
-            const selection: DataSelection = {
-                plotName: name,
-                range: [-Infinity, Infinity],
-                maxRange: [-Infinity, Infinity],
-                type: 'cell',
-                displayChart: true,
-            };
-            this.dataSelections.push(selection);
-            this.setMaxRange(name);
         },
-        async getMaxRange(plotName: string): Promise<[number, number]> {
-            try {
-                // Loading
-                let minVal = -Infinity;
-                let maxVal = Infinity;
+        { immediate: true, deep: true }
+    );
 
-                if (!plotName || plotName.trim() === '') {
-                    throw new Error('Invalid or empty plot name');
-                }
+    // Private
+    async function _getInitialMaxRange(
+        plotName: string,
+        type: SelectionType
+    ): Promise<[number, number]> {
+        try {
+            // Loading
+            let minVal = -Infinity;
+            let maxVal = Infinity;
 
-                // Escape the column name to handle spaces and special characters
-                const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
+            if (!plotName || plotName.trim() === '') {
+                throw new Error('Invalid or empty plot name');
+            }
 
-                const query = `
-                    SELECT
-                        MIN("${escapedPlotName}") AS min_value,
-                        MAX("${escapedPlotName}") AS max_value
-                    FROM composite_experiment_cell_metadata
-                `;
+            // Escape the column name to handle spaces and special characters
+            const escapedPlotName = `${plotName.replace(/"/g, '""')}`;
 
-                console.log('Constructed query:', query);
+            const tablePrefix = `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
+            const tableName =
+                type === 'cell' ? tablePrefix : `${tablePrefix}_aggregate`;
 
-                const result = await vg.coordinator().query(query);
+            // Cast as varchar. Will convert back to number
+            const query = `
+                SELECT
+                    CAST(MIN("${escapedPlotName}") AS VARCHAR) AS min_value,
+                    CAST(MAX("${escapedPlotName}") AS VARCHAR) AS max_value
+                FROM ${tableName}
+            `;
 
-                if (
-                    !result ||
-                    !result.batches ||
-                    result.batches.length === 0 ||
-                    result.batches[0].numRows === 0
-                ) {
-                    throw new Error('No data returned from query');
-                }
+            const result = await vg
+                .coordinator()
+                .query(query, { type: 'json' });
 
-                minVal = Number(result.batches[0].get(0).min_value);
-                maxVal = Number(result.batches[0].get(0).max_value);
+            minVal = Number(result[0].min_value);
+            maxVal = Number(result[0].max_value);
 
-                if (isNaN(minVal) || isNaN(maxVal)) {
-                    emitter.emit('plot-error', plotName);
-                    //throw new Error('NaN values detected in the data');
-                }
-
-                return [minVal, maxVal];
-            } catch (error) {
-                console.error('Error fetching data range:', error);
-                // TODO: can't emit from store
+            if (isNaN(minVal) || isNaN(maxVal)) {
                 emitter.emit('plot-error', plotName);
-                //throw error;
-                return [0, 0];
+                //throw new Error('NaN values detected in the data');
             }
-        },
-        async setMaxRange(plotName: string) {
-            const selection = this.getSelection(plotName);
-            if (selection === null) {
-                throw Error(`Selection ${plotName} does not exist`);
+
+            return [minVal, maxVal];
+        } catch (error) {
+            console.error('Error fetching data range:', error);
+            // TODO: can't emit from store
+            emitter.emit('plot-error', plotName);
+            //throw error;
+            return [0, 0];
+        }
+    }
+
+    function addSelection(selection: DataSelection) {
+        const existingIndex = dataSelections.value.findIndex(
+            (s) => s.plotName === selection.plotName
+        );
+        if (existingIndex !== -1) {
+            dataSelections.value[existingIndex] = selection;
+        } else {
+            dataSelections.value.push(selection);
+        }
+    }
+
+    function clearAllSelections() {
+        dataSelections.value = [];
+    }
+
+    function convertToFilters() {
+        dataSelections.value.forEach((selection) => {
+            addFilter({
+                ...selection,
+                range: [...selection.range],
+            });
+        });
+        clearAllSelections();
+    }
+
+    function updateSelection(plotName: string, range: [number, number]) {
+        const selection = dataSelections.value.find(
+            (s) => s.plotName === plotName
+        );
+        const chart = attributeCharts.value.find(
+            (s) => s.plotName === plotName
+        );
+
+        if (selection) {
+            selection.range = [...range];
+            if (chart) {
+                chart.range = [...range];
+            } else {
+                console.error('Could not find corresponding plot.');
             }
-            const [minVal, maxVal] = await this.getMaxRange(plotName);
-            selection.range = [minVal, maxVal];
-            selection.maxRange = [minVal, maxVal];
-        },
-    },
+        }
+    }
+
+    function removePlotByName(plotName: string) {
+        const chartIndex = attributeCharts.value.findIndex(
+            (chart: AttributeChart) => chart.plotName === plotName
+        );
+        if (chartIndex === -1) return;
+
+        attributeCharts.value.splice(chartIndex, 1);
+        removeSelectionByPlotName(plotName);
+        removeFilterByPlotName(plotName);
+    }
+
+    function removeFilterByPlotName(plotName: string) {
+        if (plotName === 'Condition Charts') {
+            // When removing this filter, same as clicking "All" when not all selected.
+            // Situation of deleting this filter when all are selected is impossible.
+            conditionSelectorStore.clickConditionChartAll();
+            return;
+        }
+        const index = dataFilters.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+
+        if (index === -1) return;
+
+        removeFilter(index);
+    }
+
+    function removeSelectionByPlotName(plotName: string) {
+        const index = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index !== -1) {
+            dataSelections.value.splice(index, 1);
+
+            // Update selection range when removing selection.
+            const correspondingAttributeChart = attributeCharts.value.find(
+                (entry) => entry.plotName === plotName
+            );
+            if (correspondingAttributeChart) {
+                correspondingAttributeChart.range = [
+                    ...correspondingAttributeChart.maxRange,
+                ];
+            }
+        }
+    }
+
+    function removePlotWithErrors(plotName: string) {
+        const index = dataSelections.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (index === -1) return;
+        dataSelections.value.splice(index, 1);
+    }
+
+    function getSelection(name: string): DataSelection | null {
+        const s = dataSelections.value.find(
+            (s: DataSelection) => s.plotName === name
+        );
+        if (typeof s === 'undefined') return null;
+        return s;
+    }
+
+    async function addPlot(name: string, type: DataSelection['type']) {
+        const existingIndex = attributeCharts.value.findIndex(
+            (s) => s.plotName === name
+        );
+        if (existingIndex !== -1) {
+            // Not sure when above would ever be triggered. Just warning for now, do nothing otherwise.
+            console.warn('Chart already exists.');
+            return;
+        }
+
+        // Get initial range
+        const [minVal, maxVal] = await _getInitialMaxRange(name, type);
+
+        // Create chart.
+        const chart: AttributeChart = {
+            plotName: name,
+            range: [minVal, maxVal],
+            maxRange: [minVal, maxVal],
+            type: type,
+        };
+        attributeCharts.value.push(chart);
+    }
+
+    function addFilter(filter: DataSelection) {
+        const existingIndex = dataFilters.value.findIndex(
+            (s) => s.plotName === filter.plotName
+        );
+        if (existingIndex !== -1) {
+            dataFilters.value[existingIndex] = filter;
+        } else {
+            dataFilters.value.push(filter);
+        }
+    }
+
+    // Function to add multiple filters at once in order to avoid multiple watch triggers.
+    function addConditionChartFilters(filters: DataSelection[]) {
+        // Create deep copy temp data filters
+        const tempDataFilters: DataSelection[] = dataFilters.value
+            .filter((item) => !item.plotName.startsWith('condition_chart'))
+            .map((item) => {
+                return { ...item };
+            });
+        filters.forEach((filter) => {
+            const existingIndex = tempDataFilters.findIndex(
+                (s) => s.plotName === filter.plotName
+            );
+
+            if (existingIndex !== -1) {
+                tempDataFilters[existingIndex] = filter;
+            } else {
+                tempDataFilters.push(filter);
+            }
+        });
+        dataFilters.value = tempDataFilters;
+    }
+
+    function removeFilter(index: number) {
+        dataFilters.value.splice(index, 1);
+    }
+
+    function updateFilter(
+        plotName: string,
+        range: [number, number],
+        type?: DataSelection['type']
+    ) {
+        const existingIndex = dataFilters.value.findIndex(
+            (s) => s.plotName === plotName
+        );
+        if (existingIndex !== -1) {
+            dataFilters.value[existingIndex].range = range;
+        } else {
+            addFilter({
+                plotName,
+                range,
+                type: type ?? 'cell',
+            });
+        }
+    }
+
+    // When we remove all filters (which is currently only happening when locations change), we need to "clickAll" for the condition chart again and ensure everything is selected.
+    function clearAllFilters() {
+        dataFilters.value = [];
+        conditionSelectorStore.clickConditionChartAll();
+    }
+
+    return {
+        dataSelections,
+        dataFilters,
+        attributeCharts,
+        showRelativeCell,
+        showRelativeTrack,
+        resetState,
+        clearAllSelections,
+        updateSelection,
+        updateFilter,
+        clearAllFilters,
+        removeSelectionByPlotName,
+        removeFilterByPlotName,
+        removePlotWithErrors,
+        addPlot,
+        getSelection,
+        addSelection,
+        addFilter,
+        addConditionChartFilters,
+        removeFilter,
+        convertToFilters,
+        removePlotByName,
+    };
 });

@@ -285,6 +285,20 @@ export const useGridstackLayoutStore = defineStore(
         }
         const allEqualItems: LayoutItem[] = setEqualItems([
             {
+                component: 'ConditionSelector',
+                displayName: 'Condition Selector',
+                id: 'ConditionSelector',
+                icon: 'apps',
+                noPadding: true,
+            },
+            // {
+            //     component: 'ExemplarView',
+            //     displayName: 'Exemplar View',
+            //     id: 'ExemplarView',
+            //     icon: 'table_chart',
+            //     noPadding: true,
+            // },
+            {
                 component: 'LooneageViewGL',
                 displayName: 'Looneage',
                 id: 'LooneageViewGL',

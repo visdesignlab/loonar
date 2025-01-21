@@ -7,10 +7,7 @@
             "@/*": ["./src/*"]
         },
         "types": ["vite/client"],
-        "lib":[
-            "dom",
-            "ES2021.String"
-        ]
+        "lib": ["dom", "ES2021.String"]
     },
     "references": [
         {

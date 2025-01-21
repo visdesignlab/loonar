@@ -21,7 +21,6 @@ import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 
-
 import {
     loadOmeTiff,
     getChannelStats,
@@ -42,6 +41,7 @@ import { TripsLayer } from '@deck.gl/geo-layers';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
+import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -57,6 +57,10 @@ const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
+const mosaicSelectionStore = useMosaicSelectionStore();
+const { highlightedCellIds, unfilteredTrackIds } =
+    storeToRefs(mosaicSelectionStore);
+
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
     useElementSize(deckGlContainer);
@@ -65,6 +69,27 @@ const colormapExtension = new AdditiveColormapExtension();
 const contrastLimit = computed<[number, number][]>(() => {
     return [[contrastLimitSlider.value.min, contrastLimitSlider.value.max]];
 });
+
+function _determineSelectedOrFiltered(trackId: string): {
+    selected: boolean;
+    filtered: boolean;
+} {
+    const frame = imageViewerStore.frameNumber;
+    const location = currentLocationMetadata.value?.id;
+    let selected = true;
+    if (frame && location && highlightedCellIds.value) {
+        // Generate Unique String to compare against list
+        const unique_string = `${trackId}_${frame}_${location}`;
+        selected = highlightedCellIds.value.includes(unique_string);
+    }
+
+    return {
+        selected,
+        filtered: unfilteredTrackIds.value
+            ? !unfilteredTrackIds.value.includes(trackId)
+            : false,
+    };
+}
 
 let deckgl: any | null = null;
 onMounted(() => {
@@ -121,7 +146,6 @@ onMounted(() => {
         // onLoad: () => console.log('onLoad'),
 
         getTooltip: ({ object }) => {
-            console.log(object);
             if (!object) return null;
             let { id, frame } = object.properties;
             if (id == null) return null;
@@ -218,7 +242,7 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
         ),
         lineWidthUnits: 'pixels',
         id: 'segmentations',
-        opacity: 0.4,
+        opacity: 1,
         stroked: true,
         filled: true,
         getFillColor: (info) => {
@@ -242,6 +266,17 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return colors.hovered.rgb;
             }
+
+            const { selected, filtered } = _determineSelectedOrFiltered(
+                info.properties?.id?.toString()
+            );
+            // Removes outline
+            if (filtered) {
+                return [0, 0, 0];
+            }
+            if (selected) {
+                return colors.highlightedBoundary.rgb;
+            }
             return colors.unselectedBoundary.rgb;
         },
         getLineWidth: (info) => {
@@ -251,15 +286,21 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
             ) {
                 return 3;
             }
-            return 2;
+            const { selected, filtered } = _determineSelectedOrFiltered(
+                info.properties?.id?.toString()
+            );
+            if (selected) {
+                return 2.5;
+            }
+            return 1.5;
         },
         pickable: true,
         onHover: onHover,
         onClick: onClick,
         updateTriggers: {
-            getFillColor: dataPointSelectionUntrracked.hoveredTrackId,
-            getLineColor: dataPointSelection.selectedTrackId,
-            getLineWidth: dataPointSelection.selectedTrackId,
+            getFillColor: [dataPointSelectionUntrracked.hoveredTrackId],
+            getLineColor: [dataPointSelection.selectedTrackId],
+            getLineWidth: [dataPointSelection.selectedTrackId],
         },
     });
 }
@@ -370,23 +411,6 @@ function addSegmentsFromTrack(
     });
 
     return accumChildPositions;
-
-    // for (let i = 0; i < track.cells.length - 1; i++) {
-    // const start = track.cells[0];
-    // const end = track.cells[track.cells.length - 1];
-    // if (cellMetaData.getFrame(end) >= imageViewerStore.frameNumber) {
-    //     return;
-    // }
-    // segments.push({
-    //     trackId: track.trackId,
-    //     from: cellMetaData.getPosition(start),
-    //     to: cellMetaData.getPosition(end),
-    // });
-    // // }
-    // if (!track.children) return;
-    // for (let child of track.children) {
-    //     addSegmentsFromTrack(child, segments);
-    // }
 }
 
 function createLineageLayer(): LineLayer {
@@ -453,17 +477,24 @@ function createCenterPointLayer(): ScatterplotLayer {
             if (d.trackId === dataPointSelection.selectedTrackId) {
                 return globalSettings.normalizedSelectedRgb;
             }
+
+            // const { filtered } = _determineSelectedOrFiltered(d.trackId);
+
+            // if (filtered) {
+            //     return [0, 0, 0, 0];
+            // }
+
             return [228, 26, 28];
         },
         getStrokeWidth: 1,
         updateTriggers: {
             getFillColor: {
-                selected: dataPointSelection.selectedTrackId,
-                hovered: dataPointSelectionUntrracked.hoveredTrackId,
+                selected: [dataPointSelection.selectedTrackId],
+                hovered: [dataPointSelectionUntrracked.hoveredTrackId],
             },
             getLineColor: {
-                selected: dataPointSelection.selectedTrackId,
-                hovered: dataPointSelectionUntrracked.hoveredTrackId,
+                selected: [dataPointSelection.selectedTrackId],
+                hovered: [dataPointSelectionUntrracked.hoveredTrackId],
             },
         },
     });
@@ -533,7 +564,7 @@ function createTrajectoryGhostLayer(): TripsLayer {
 const imageLayer = ref();
 function renderDeckGL(): void {
     if (deckgl == null) return;
-    if (!cellMetaData.dataInitialized || cellMetaData.selectedLineage == null) {
+    if (!cellMetaData.dataInitialized) {
         renderLoadingDeckGL();
         return;
     }
@@ -652,6 +683,8 @@ watch(currentTrackArray, renderDeckGL);
 watch(dataPointSelection.$state, renderDeckGL);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
+watch(highlightedCellIds, renderDeckGL);
+watch(unfilteredTrackIds, renderDeckGL);
 
 function clearSelection() {
     dataPointSelection.selectedTrackId = null;

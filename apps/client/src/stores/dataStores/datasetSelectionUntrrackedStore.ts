@@ -8,25 +8,29 @@ import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
 import type { TextTransforms } from '@/util/datasetLoader';
+import type { SelectedLocationIds } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 
 import {
     type CsvParserResults,
     loadCsv,
     loadFileIntoDuckDb,
+    createAggregateTable,
+    addAdditionalCellColumns,
 } from '@/util/datasetLoader';
 import { useNotificationStore } from '../misc/notificationStore';
 
 export interface ExperimentMetadata {
-    // name?: string; // user friendly name
+    name: string; // user friendly name
     filename: string;
     headers: string[];
     headerTransforms?: TextTransforms; // maps things like "Time (h)" to "time"
     // valueRanges?: { string: { min: number; max: number } };
     // can precompute min/max for each column across experiments
-    // conditions?: string[]; // TODO: - does this need to be 2d?
     locationMetadataList: LocationMetadata[];
     compositeTabularDataFilename?: string;
 }
+
+export type Tags = Record<string, string>;
 
 export interface LocationMetadata {
     // data related to a single imaging location
@@ -34,6 +38,7 @@ export interface LocationMetadata {
     tabularDataFilename: string;
     imageDataFilename?: string;
     segmentationsFolder?: string;
+    tags?: Tags;
     // name?: string; // user friendly name
     // condition?: string; // experimental condition // TODO: - does this need to be an array
     // plate?: string;
@@ -61,6 +66,20 @@ export const useDatasetSelectionStore = defineStore(
             return experimentDataLoaded.value;
         });
         let controller: AbortController;
+
+        const compTableName = computed(() => {
+            if (currentExperimentMetadata.value) {
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata`;
+            }
+            return null;
+        });
+
+        const aggTableName = computed(() => {
+            if (currentExperimentMetadata.value) {
+                return `${currentExperimentMetadata.value?.name}_composite_experiment_cell_metadata_aggregate`;
+            }
+            return null;
+        });
 
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
@@ -110,6 +129,8 @@ export const useDatasetSelectionStore = defineStore(
         // Sets location Metadata
         const currentExperimentMetadata =
             computedAsync<ExperimentMetadata | null>(async () => {
+                // If experiment data has changed, need to ensure that we set 'loaded' to false.
+                experimentDataLoaded.value = false;
                 if (
                     datasetSelectionTrrackedStore.currentExperimentFilename ==
                     null
@@ -120,7 +141,6 @@ export const useDatasetSelectionStore = defineStore(
                 );
                 const response = await fetch(fullURL, {});
                 const data = await response.json();
-                console.log(data);
                 return data;
             });
 
@@ -129,21 +149,53 @@ export const useDatasetSelectionStore = defineStore(
             if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
                 fetchingTabularData.value = true;
 
-                let duckDbFileUrl = configStore.getDuckDbFileUrl(
+                const duckDbFileUrl = configStore.getDuckDbFileUrl(
                     currentExperimentMetadata.value
                         ?.compositeTabularDataFilename
                 );
                 try {
-                    console.log('here')
-                    await loadFileIntoDuckDb(
-                        duckDbFileUrl,
-                        'composite_experiment_cell_metadata',
-                        'parquet'
-                    );
-                    notify({
-                        type: 'success',
-                        message: `Created DuckDb Table for ${duckDbFileUrl}.`,
-                    });
+                    if (compTableName.value) {
+                        await loadFileIntoDuckDb(
+                            duckDbFileUrl,
+                            compTableName.value,
+                            'parquet'
+                        );
+                        try {
+                            await addAdditionalCellColumns(
+                                compTableName.value,
+                                currentExperimentMetadata.value.headers,
+                                currentExperimentMetadata.value.headerTransforms
+                            );
+                        } catch (error) {
+                            console.error(error);
+                        }
+                        try {
+                            await createAggregateTable(
+                                `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
+                                currentExperimentMetadata.value.headers,
+                                currentExperimentMetadata.value.headerTransforms
+                            );
+                            notify({
+                                type: 'success',
+                                message: `Created Aggregate DuckDB Table for ${duckDbFileUrl}.`,
+                            });
+                        } catch (error) {
+                            const typedError = error as Error;
+                            notify({
+                                type: 'problem',
+                                message: typedError.message,
+                            });
+                        }
+                        notify({
+                            type: 'success',
+                            message: `Created DuckDb Table for ${duckDbFileUrl}.`,
+                        });
+                        // Selects default imaging location
+                        selectImagingLocation(
+                            currentExperimentMetadata.value
+                                .locationMetadataList[0]
+                        );
+                    }
                 } catch (error) {
                     const typedError = error as Error;
                     notify({
@@ -184,9 +236,26 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                        location.id
+                            location.id
                         ]
                     ) {
+                        return location;
+                    }
+                }
+                return null;
+            }
+        );
+
+        // Location shown in list
+        const shownSelectedLocationIds = ref<SelectedLocationIds>({});
+
+        // Holds most recent, working location metadata
+        const shownSelectedLocationMetadata = computed<LocationMetadata | null>(
+            () => {
+                if (currentExperimentMetadata.value == null) return null;
+                for (const location of currentExperimentMetadata.value
+                    .locationMetadataList) {
+                    if (shownSelectedLocationIds.value[location.id]) {
                         return location;
                     }
                 }
@@ -204,29 +273,64 @@ export const useDatasetSelectionStore = defineStore(
             );
 
             fetchingTabularData.value = true;
-            await loadCurrentLocationCsvFile(tabularDataFileUrl);
-
-            const duckDbFileUrl = configStore.getDuckDbFileUrl(
-                currentLocationMetadata.value?.tabularDataFilename
-            );
-
             try {
-                await loadFileIntoDuckDb(
-                    duckDbFileUrl,
-                    'current_cell_metadata',
-                    'csv'
+                await loadCurrentLocationCsvFile(tabularDataFileUrl);
+
+                const duckDbFileUrl = configStore.getDuckDbFileUrl(
+                    currentLocationMetadata.value?.tabularDataFilename
                 );
-                notify({
-                    type: 'success',
-                    message: `Created DuckDb Table for ${duckDbFileUrl}.`,
-                });
+
+                try {
+                    await loadFileIntoDuckDb(
+                        duckDbFileUrl,
+                        'current_cell_metadata',
+                        'csv'
+                    );
+                    notify({
+                        type: 'success',
+                        message: `Created DuckDb Table for ${duckDbFileUrl}.`,
+                    });
+
+                    for (const key in shownSelectedLocationIds.value) {
+                        shownSelectedLocationIds.value[key] = false;
+                    }
+                    shownSelectedLocationIds.value[
+                        currentLocationMetadata.value.id
+                    ] = true;
+                } catch (error) {
+                    const typedError = error as Error;
+
+                    if (shownSelectedLocationMetadata.value) {
+                        selectImagingLocation(
+                            shownSelectedLocationMetadata.value
+                        );
+                        notify({
+                            type: 'problem',
+                            message: `${typedError.message}. Reverting to Location "${shownSelectedLocationMetadata.value.id}"`,
+                        });
+                    } else {
+                        notify({
+                            type: 'problem',
+                            message: typedError.message,
+                        });
+                    }
+                }
             } catch (error) {
-                const typedError = error as Error;
-                notify({
-                    type: 'problem',
-                    message: typedError.message,
-                });
+                // Revert back to previous location.
+                if (shownSelectedLocationMetadata.value) {
+                    selectImagingLocation(shownSelectedLocationMetadata.value);
+                    notify({
+                        type: 'problem',
+                        message: `Failed to load location CSV file. Reverting to Location ${shownSelectedLocationMetadata.value.id}`,
+                    });
+                } else {
+                    notify({
+                        type: 'problem',
+                        message: `Failed to load location CSV file. No location chosen.`,
+                    });
+                }
             }
+            fetchingTabularData.value = false;
         });
 
         function refreshFileNameList() {
@@ -243,14 +347,7 @@ export const useDatasetSelectionStore = defineStore(
         }
 
         async function loadCurrentLocationCsvFile(tabularDataFileUrl: string) {
-            try {
-                await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
-            } catch (error) {
-                notify({
-                    type: 'problem',
-                    message: 'Failed to load location CSV file.',
-                });
-            }
+            await loadCsv(tabularDataFileUrl, initializeLocationCsvFile);
         }
 
         function handleFetchEntryError(message: string): void {
@@ -270,6 +367,9 @@ export const useDatasetSelectionStore = defineStore(
             fetchingTabularData,
             selectImagingLocation,
             refreshFileNameList,
+            compTableName,
+            aggTableName,
+            shownSelectedLocationIds,
         };
     }
 );

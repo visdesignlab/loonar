@@ -2,41 +2,77 @@
 import { computed, ref } from 'vue';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import PlotSelector from './PlotSelector.vue';
-import { useFilterStore } from '@/stores/componentStores/filterStore';
-import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import {
+    useSelectionStore,
+    type DataSelection,
+} from '@/stores/interactionStores/selectionStore';
 import { storeToRefs } from 'pinia';
 import FilterEditMenu from './FilterEditMenu.vue';
+import { stringToKeys } from '@/util/conChartStringFunctions';
+import type { SelectionType } from '@/stores/interactionStores/selectionStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 const globalSettings = useGlobalSettings();
-const filterStore = useFilterStore();
 const selectionStore = useSelectionStore();
-const { filters } = storeToRefs(filterStore);
+const { dataFilters, dataSelections } = storeToRefs(selectionStore);
+const conditionSelectorStore = useConditionSelectorStore();
+const { xLabels, yLabels, selectedXTag, selectedYTag, selectedGrid } =
+    storeToRefs(conditionSelectorStore);
 
-const selectionsCount = computed(
-    () => selectionStore.modifiedSelections.length
-);
-const filtersCount = computed(() => filters.value.length);
+const selectionsCount = computed(() => dataSelections.value.length);
 
-function removeFilter(index: number) {
-    filterStore.removeFilter(index);
+function removeFilter(plotName: string) {
+    selectionStore.removeFilterByPlotName(plotName);
 }
 function removeSelection(plotName: string) {
     selectionStore.removeSelectionByPlotName(plotName);
 }
-function addFilter() {
-    for (const selection of selectionStore.modifiedSelections) {
-        filterStore.addFilter({
-            plotName: selection.plotName,
-            range: [selection.range[0], selection.range[1]],
-        });
-    }
+function convertToFilters() {
+    selectionStore.convertToFilters();
 }
 
 const cellAttributesOpen = ref(true);
+const trackAttributesOpen = ref(true);
 
 const mutedTextClass = computed(() =>
     globalSettings.darkMode ? 'text-grey-5' : 'text-grey-8'
 );
+
+// Just for additional styling of existing filters.
+interface ReadableDataFilter {
+    plotName: string;
+    type: SelectionType;
+    range: [number, number];
+    subName?: string;
+}
+
+const readableDataFilters = computed(() => {
+    if (xLabels.value && yLabels.value) {
+        const nonConditionChartFilters = dataFilters.value.filter(
+            (entry) => entry.type !== 'conditionChart'
+        );
+        const conditionChartLength =
+            dataFilters.value.filter((entry) => entry.type === 'conditionChart')
+                .length / 2;
+        const totalLength = xLabels.value.length * yLabels.value.length;
+        if (totalLength === conditionChartLength) {
+            return nonConditionChartFilters as ReadableDataFilter[];
+        } else {
+            return [
+                ...nonConditionChartFilters,
+                {
+                    plotName: `Condition Charts`,
+                    subName: `${conditionChartLength} out of ${totalLength} selected.`,
+                    type: 'conditionChart' as SelectionType,
+                    range: [0, 0],
+                },
+            ] as ReadableDataFilter[];
+        }
+    }
+    return [];
+});
+
+const filtersCount = computed(() => readableDataFilters.value.length);
 </script>
 
 <template>
@@ -58,16 +94,15 @@ const mutedTextClass = computed(() =>
             </template>
             <q-list>
                 <q-item
-                    v-for="(
-                        selection, index
-                    ) in selectionStore.modifiedSelections"
+                    v-for="(selection, index) in selectionStore.dataSelections"
                     :key="index"
                 >
                     <FilterEditMenu
                         :plot-name="selection.plotName"
                         :initial-min="selection.range[0]"
                         :initial-max="selection.range[1]"
-                        type="selection"
+                        filterType="selection"
+                        :attributeType="selection.type"
                     />
 
                     <q-item-section
@@ -75,7 +110,13 @@ const mutedTextClass = computed(() =>
                         left
                         class="q-pa-none q-mr-xs flex-grow-0"
                     >
-                        <q-avatar icon="scatter_plot" />
+                        <q-avatar
+                            :icon="
+                                selection.type === 'cell'
+                                    ? 'scatter_plot'
+                                    : 'linear_scale'
+                            "
+                        />
                     </q-item-section>
 
                     <q-item-section>
@@ -93,7 +134,6 @@ const mutedTextClass = computed(() =>
 
                     <q-item-section side>
                         <q-btn
-                            class="gt-xs"
                             @click="removeSelection(selection.plotName)"
                             size="md"
                             flat
@@ -114,7 +154,7 @@ const mutedTextClass = computed(() =>
             no-caps
             class="filter-style w-100"
             dense
-            @click="addFilter"
+            @click="convertToFilters"
         />
         <q-separator />
         <q-expansion-item>
@@ -133,12 +173,17 @@ const mutedTextClass = computed(() =>
                 </q-item-section>
             </template>
             <q-list>
-                <q-item v-for="(filter, index) in filters" :key="index">
+                <q-item
+                    v-for="(filter, index) in readableDataFilters"
+                    :key="index"
+                >
                     <FilterEditMenu
+                        v-if="filter.type !== 'conditionChart'"
                         :plot-name="filter.plotName"
                         :initial-min="filter.range[0]"
                         :initial-max="filter.range[1]"
-                        type="filter"
+                        filterType="filter"
+                        :attributeType="filter.type"
                     />
 
                     <q-item-section
@@ -146,14 +191,22 @@ const mutedTextClass = computed(() =>
                         left
                         class="q-pa-none q-mr-xs flex-grow-0"
                     >
-                        <q-avatar icon="scatter_plot" />
+                        <q-avatar
+                            :icon="
+                                filter.type === 'cell'
+                                    ? 'scatter_plot'
+                                    : 'linear_scale'
+                            "
+                        />
                     </q-item-section>
 
                     <q-item-section>
                         <q-item-label class="text-body2">
                             {{ filter.plotName }}
+                            <div class="text-caption">{{ filter.subName }}</div>
                         </q-item-label>
                         <q-item-label
+                            v-if="filter.type !== 'conditionChart'"
                             :class="`text-caption ${mutedTextClass}`"
                             :dark="globalSettings.darkMode"
                         >
@@ -164,8 +217,7 @@ const mutedTextClass = computed(() =>
 
                     <q-item-section side>
                         <q-btn
-                            class="gt-xs"
-                            @click="removeFilter(index)"
+                            @click="removeFilter(filter.plotName)"
                             size="md"
                             flat
                             dense
@@ -184,11 +236,21 @@ const mutedTextClass = computed(() =>
             label="Cell Attributes"
         >
             <q-card :dark="globalSettings.darkMode">
-                <PlotSelector></PlotSelector>
+                <PlotSelector selector-type="cell"></PlotSelector>
             </q-card>
         </q-expansion-item>
 
-        <q-separator />
+        <q-separator class="q-my-sm" />
+
+        <q-expansion-item
+            v-model="trackAttributesOpen"
+            icon="linear_scale"
+            label="Track Attributes"
+        >
+            <q-card :dark="globalSettings.darkMode">
+                <PlotSelector selector-type="track"></PlotSelector>
+            </q-card>
+        </q-expansion-item>
     </q-list>
 </template>
 
