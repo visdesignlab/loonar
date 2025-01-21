@@ -13,6 +13,8 @@ import {
     type DataPoint,
     type ExemplarTrack,
     useExemplarViewStore,
+    type HistogramData,
+    type HistogramDomains,
 } from '@/stores/componentStores/ExemplarViewStore';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
@@ -43,6 +45,9 @@ const {
     exemplarTracks,
     exemplarHeight,
     conditionGroupHeight,
+    histogramData,
+    histogramDomains,
+    getHistogramData,
 } = storeToRefs(exemplarViewStore);
 
 // Reactive reference for totalExperimentTime
@@ -69,6 +74,12 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
+            await exemplarViewStore.getExemplarTracks();
+            console.log('Exemplar tracks generated.');
+
+            await exemplarViewStore.getHistogramData();
+            console.log('Histogram data fetched.');
+
             // Initialize Deck.gl if not already initialized
             if (!deckgl.value) {
                 deckgl.value = new Deck({
@@ -90,9 +101,6 @@ watch(
             }
             // Generates the test exemplar tracks
             // await exemplarViewStore.generateTestExemplarTracks();
-
-            await exemplarViewStore.getExemplarTracks();
-            console.log('Exemplar tracks generated.');
 
             // 2. Set exemplarDataInitialized to true after data generation
             exemplarDataInitialized.value = true;
@@ -418,13 +426,18 @@ function createSidewaysHistogramLayer(): any[] | null {
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
 
-        // Find drug for this group
         const firstExemplar = group[0];
         const drug = firstExemplar.tags.drug;
-        const fillColor = drugColorMap.value[drug] || [128, 128, 128]; // Default to grey if not found
-        const lineColor = [0, 0, 0]; // You can choose to have a fixed line color or map it similarly
+        const conc = firstExemplar.tags.conc;
+        const key = `${drug}+${conc}`;
+        // const histogramDataForGroup = histogramData.value[key] || [];
+        const histogramDataForGroup = [400, 500, 600];
+        const domains = histogramDomains.value;
+        console.log('Domains:', domains.minX, domains.maxX);
 
-        // Calculate the top and bottom boundaries of the group
+        const fillColor = drugColorMap.value[drug] || [128, 128, 128];
+        const lineColor = [0, 0, 0];
+
         const firstOffset = exemplarYOffsets.value.get(
             uniqueExemplarKey(firstExemplar)
         )!;
@@ -441,7 +454,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 id: `exemplar-sideways-histogram-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
-                data: [group], // Just need one polygon for the group
+                data: [group],
                 getPolygon: () => {
                     return [
                         [-hGap - histWidth, groupBottom],
@@ -458,16 +471,13 @@ function createSidewaysHistogramLayer(): any[] | null {
         );
 
         // Text Layer
-        const yOffset = (groupBottom + groupTop) / 2; // Centered vertically
+        const yOffset = (groupBottom + groupTop) / 2;
 
         const textData: TextDatum[] = [
             {
-                coordinates: [
-                    -hGap - 0.125 * histWidth, // Offset slightly to the right
-                    yOffset,
-                ],
-                drug: firstExemplar.tags.drug,
-                conc: firstExemplar.tags.conc,
+                coordinates: [-hGap - 0.125 * histWidth, yOffset],
+                drug: drug,
+                conc: conc,
             },
         ];
 
@@ -482,8 +492,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeScale: 1,
                 sizeUnits: 'common',
                 sizeMaxPixels: 15,
-                getAngle: 90, // 90 degrees counter clockwise
-                getColor: [0, 0, 0], // Black color
+                getAngle: 90,
+                getColor: [0, 0, 0],
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
@@ -491,14 +501,10 @@ function createSidewaysHistogramLayer(): any[] | null {
         );
 
         // Histogram Layer
-        const histogramData = exemplarViewStore.getFakeHistogramData;
-        const domains = exemplarViewStore.getHistogramDomains;
-
         const groupHeight = groupBottom - groupTop;
-        const binWidth = groupHeight / histogramData.length;
+        const binWidth = groupHeight / histogramDataForGroup.length;
 
-        const histogramPolygons = histogramData.map((value, index) => {
-            // base Y offset for *this* group
+        const histogramPolygons = histogramDataForGroup.map((value, index) => {
             const baseY = groupTop;
 
             const y0 = baseY + index * binWidth;
@@ -529,7 +535,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 filled: true,
                 extruded: false,
                 getPolygon: (d: any[]) => d,
-                getFillColor: [100, 200, 255, 180], // Customize color as needed
+                getFillColor: [100, 200, 255, 180],
                 getLineColor: [0, 0, 0, 0],
                 getElevation: 0,
             })

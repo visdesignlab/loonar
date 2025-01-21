@@ -42,21 +42,24 @@ export interface ViewConfiguration {
     histogramWidth: number;
 }
 
-// 1. Add fakeHistogramData and histogramDomains
-const fakeHistogramData = ref<number[]>([
-    5, 12, 9, 14, 7, 10, 8, 13, 6, 11, 4, 15, 3, 16, 2, 17, 1, 18, 0, 19,
-]);
+export interface HistogramData {
+    [key: string]: number[];
+}
 
-const histogramDomains = ref<{
+export interface HistogramDomains {
     minX: number;
     maxX: number;
     minY: number;
     maxY: number;
-}>({
-    minX: 0, // Min value for histogram scaling (x-axis after rotation)
-    maxX: 20, // Max value for histogram scaling (x-axis after rotation)
-    minY: 0, // Min index for histogram bins
-    maxY: 20, // Max index for histogram bins
+}
+
+// 1. Add histogramData and histogramDomains
+const histogramData = ref<HistogramData>({});
+const histogramDomains = ref<HistogramDomains>({
+    minX: 0,
+    maxX: 0,
+    minY: 0,
+    maxY: 0,
 });
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
@@ -148,6 +151,72 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         } catch (error) {
             console.error('Error fetching total experiment time:', error);
             return 0;
+        }
+    }
+
+    async function getHistogramData(): Promise<void> {
+        if (
+            !experimentDataInitialized.value ||
+            !currentExperimentMetadata.value
+        ) {
+            return;
+        }
+
+        const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
+
+        // First Query: Fetch histogram data grouped by drug and concentration
+        const histogramQuery = `
+            SELECT
+            "Drug" || '+' || "Concentration (um)" AS drug_conc,
+            CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass,
+            CAST(COUNT(*) AS DOUBLE PRECISION) AS count
+            FROM "${tableName}"
+            GROUP BY drug_conc;
+        `;
+
+        // Second Query: Fetch the minimum and maximum average mass across all groups
+        const domainQuery = `
+           SELECT
+            MIN(avg_mass) AS min_cell_avg,
+            MAX(avg_mass) AS max_cell_avg
+            FROM (
+            SELECT "track_id", CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
+            FROM "${tableName}"
+            GROUP BY "track_id"
+            ) AS subquery;
+
+        `;
+
+        try {
+            // Execute the first query to get histogram data
+            const histogramResult: any[] = await vg
+                .coordinator()
+                .query(histogramQuery, { type: 'json' });
+
+            console.log('Histogram result:', histogramResult);
+            // Populate histogramData with the results
+            histogramResult.forEach((row: any) => {
+                histogramData.value[row.drug_conc] = Array(row.count).fill(
+                    row.avg_mass
+                );
+            });
+
+            // // Execute the second query to get min and max average mass
+            const domainResult: any[] = await vg
+                .coordinator()
+                .query(domainQuery, { type: 'json' });
+
+            // Domain Result
+            console.log('Domain result:', domainResult);
+
+            if (domainResult.length > 0) {
+                histogramDomains.value.minX = domainResult[0].min_cell_avg;
+                histogramDomains.value.maxX = domainResult[0].max_cell_avg;
+            }
+
+            console.log('Histogram data fetched successfully.');
+        } catch (error) {
+            console.error('Error fetching histogram data:', error);
         }
     }
 
@@ -312,22 +381,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         exemplarTracks.value = [];
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
-        // // Pull out the arrays of Drug and Concentration tags from currentExperimentTags
-        // const drugTags = currentExperimentTags.value?.['Drug'] || [];
-        // const concTags =
-        //     currentExperimentTags.value?.['Concentration (um)'] || [];
-
-        // // Loop through all possible drugs and concentrations
-        // drugTags.forEach((drug) => {
-        //     concTags.forEach((conc) => {
-        //         // Only proceed if both 'drug' and 'conc' are defined
-        //         if (drug && conc) {
-        //             for (const p of [5, 50, 95]) {
-        //                 trackPromises.push(getExemplarTrack(drug, conc, p));
-        //             }
-        //         }
-        //     });
-        // });
         // 1. Build a mapping of drug -> set of concentrations
         const drugOrder: string[] = []; // helps preserve the order of first appearance
         const drugToConcs = new Map<string, Set<string>>();
@@ -375,9 +428,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    // 2. Expose fakeHistogramData and histogramDomains
-    const getFakeHistogramData = computed(() => fakeHistogramData.value);
-    const getHistogramDomains = computed(() => histogramDomains.value);
+    // Expose the new histogram data
+    const getHistogramDataComputed = computed(() => histogramData.value);
+    const getHistogramDomainsComputed = computed(() => histogramDomains.value);
 
     return {
         generateTestExemplarTracks,
@@ -387,8 +440,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         exemplarHeight,
         conditionGroupHeight,
         getTotalExperimentTime,
-        // Expose the new state
-        getFakeHistogramData,
-        getHistogramDomains,
+        getHistogramData,
+        histogramData: getHistogramDataComputed,
+        histogramDomains: getHistogramDomainsComputed,
     };
 });
