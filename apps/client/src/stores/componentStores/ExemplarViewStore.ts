@@ -42,20 +42,28 @@ export interface ViewConfiguration {
     histogramWidth: number;
 }
 
-export interface HistogramData {
-    [key: string]: number[];
+export interface conditionHistogram {
+    condition: Record<string, string>;
+    histogramData: number[];
+}
+
+export interface HistogramBin {
+    min: number;
+    max: number;
 }
 
 export interface HistogramDomains {
+    histogramBinRanges: HistogramBin[];
     minX: number;
     maxX: number;
     minY: number;
     maxY: number;
 }
 
-// 1. Add histogramData and histogramDomains
-const histogramData = ref<HistogramData>({});
+// Remove histogramData and replace with conditionHistograms
+const conditionHistograms = ref<conditionHistogram[]>([]);
 const histogramDomains = ref<HistogramDomains>({
+    histogramBinRanges: [],
     minX: 0,
     maxX: 0,
     minY: 0,
@@ -159,62 +167,174 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             !experimentDataInitialized.value ||
             !currentExperimentMetadata.value
         ) {
+            console.warn(
+                'Experiment data not initialized or metadata missing.'
+            );
             return;
         }
 
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
-
-        // First Query: Fetch histogram data grouped by drug and concentration
-        const histogramQuery = `
-            SELECT
-            "Drug" || '+' || "Concentration (um)" AS drug_conc,
-            CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass,
-            CAST(COUNT(*) AS DOUBLE PRECISION) AS count
-            FROM "${tableName}"
-            GROUP BY drug_conc;
-        `;
-
-        // Second Query: Fetch the minimum and maximum average mass across all groups
-        const domainQuery = `
-           SELECT
-            MIN(avg_mass) AS min_cell_avg,
-            MAX(avg_mass) AS max_cell_avg
-            FROM (
-            SELECT "track_id", CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
-            FROM "${tableName}"
-            GROUP BY "track_id"
-            ) AS subquery;
-
-        `;
+        console.log(`Fetching histogram data from table: ${tableName}`);
 
         try {
-            // Execute the first query to get histogram data
-            const histogramResult: any[] = await vg
-                .coordinator()
-                .query(histogramQuery, { type: 'json' });
+            //
+            // 1) Get global minX / maxX of average mass, ensuring they are double
+            //
+            const domainQuery = `
+            SELECT
+              CAST(MIN(avg_mass) AS DOUBLE PRECISION) AS min_mass,
+              CAST(MAX(avg_mass) AS DOUBLE PRECISION) AS max_mass
+            FROM (
+                SELECT
+                    "track_id",
+                    CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
+                FROM "${tableName}"
+                GROUP BY "track_id"
+            ) AS subquery
+          `;
+            console.log('Executing domainQuery:', domainQuery);
 
-            console.log('Histogram result:', histogramResult);
-            // Populate histogramData with the results
-            histogramResult.forEach((row: any) => {
-                histogramData.value[row.drug_conc] = Array(row.count).fill(
-                    row.avg_mass
-                );
+            const domainResult = await vg.coordinator().query(domainQuery, {
+                type: 'json',
             });
+            console.log('domainQuery result:', domainResult);
 
-            // // Execute the second query to get min and max average mass
-            const domainResult: any[] = await vg
-                .coordinator()
-                .query(domainQuery, { type: 'json' });
-
-            // Domain Result
-            console.log('Domain result:', domainResult);
-
-            if (domainResult.length > 0) {
-                histogramDomains.value.minX = domainResult[0].min_cell_avg;
-                histogramDomains.value.maxX = domainResult[0].max_cell_avg;
+            if (!domainResult || domainResult.length === 0) {
+                console.warn('No results returned from domainQuery.');
+                return;
             }
 
-            console.log('Histogram data fetched successfully.');
+            const { min_mass, max_mass } = domainResult[0];
+            console.log(`Min mass: ${min_mass}, Max mass: ${max_mass}`);
+
+            if (min_mass >= max_mass) {
+                console.error(
+                    `Invalid mass range: min_mass (${min_mass}) >= max_mass (${max_mass}). Skipping histogram.`
+                );
+                return;
+            }
+
+            // Fill in histogramDomains
+            histogramDomains.value.minX = min_mass;
+            histogramDomains.value.maxX = max_mass;
+
+            //
+            // 2) Build bin ranges (we store these in histogramDomains).
+            //    These will be purely in JavaScript as standard numbers.
+            //
+            const binCount = 100;
+            const binSize = (max_mass - min_mass) / binCount;
+            histogramDomains.value.histogramBinRanges = Array.from(
+                { length: binCount },
+                (_, i) => ({
+                    min: min_mass + binSize * i,
+                    max: min_mass + binSize * (i + 1),
+                })
+            );
+
+            console.log(
+                'Computed bin ranges:',
+                histogramDomains.value.histogramBinRanges
+            );
+
+            //
+            // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
+            //
+            const histogramConditionQuery = `
+            WITH avg_mass_per_track AS (
+              SELECT
+                "track_id",
+                "Drug",
+                "Concentration (um)",
+                CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
+              FROM "${tableName}"
+              GROUP BY "track_id", "Drug", "Concentration (um)"
+            ),
+            bins AS (
+              SELECT
+                CAST(bin_index AS INTEGER) AS bin_index,
+                CAST(${min_mass} AS DOUBLE PRECISION)
+                  + ((CAST(${max_mass} AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
+                  * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
+                CAST(${min_mass} AS DOUBLE PRECISION)
+                  + ((CAST(${max_mass} AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
+                  * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
+              FROM (
+                SELECT generate_series AS bin_index
+                FROM generate_series(0, ${binCount - 1})
+              ) t
+            )
+            SELECT
+              avg_mass_per_track."Drug" AS drug,
+              avg_mass_per_track."Concentration (um)" AS conc,
+              bins.bin_index,
+              CAST(COUNT(*) AS DOUBLE PRECISION) AS count
+            FROM avg_mass_per_track
+            CROSS JOIN bins
+            WHERE avg_mass_per_track.avg_mass >= bins.bin_min
+              AND avg_mass_per_track.avg_mass < bins.bin_max
+            GROUP BY drug, conc, bins.bin_index
+            ORDER BY drug, conc, bins.bin_index
+          `;
+            console.log(
+                'Executing histogramConditionQuery:',
+                histogramConditionQuery
+            );
+
+            const histogramCounts = await vg
+                .coordinator()
+                .query(histogramConditionQuery, { type: 'json' });
+            console.log('histogramConditionQuery result:', histogramCounts);
+
+            if (!histogramCounts || histogramCounts.length === 0) {
+                console.warn('No histogram counts found.');
+                conditionHistograms.value = [];
+                return;
+            }
+
+            // 4) Construct conditionHistograms from the query result
+            const conditionMap = new Map<string, number[]>();
+
+            for (const row of histogramCounts) {
+                // row.bin_index, row.count, row.drug, row.conc are guaranteed to be numbers/strings now
+                const binIndex = row.bin_index;
+                const count = row.count;
+                const drug = row.drug;
+                const conc = row.conc;
+
+                const conditionKey = `${drug}__${conc}`;
+                if (!conditionMap.has(conditionKey)) {
+                    conditionMap.set(conditionKey, Array(binCount).fill(0));
+                }
+                conditionMap.get(conditionKey)![binIndex] = count;
+            }
+
+            conditionHistograms.value = Array.from(conditionMap.entries()).map(
+                ([key, counts]) => {
+                    const [drug, concentration] = key.split('__');
+                    return {
+                        condition: {
+                            Drug: drug,
+                            'Concentration (um)': concentration,
+                        },
+                        histogramData: counts,
+                    };
+                }
+            );
+
+            // 5) Optionally set histogramDomains for the Y range
+            histogramDomains.value.minY = 0;
+            histogramDomains.value.maxY = Math.max(
+                ...conditionHistograms.value.flatMap((c) => c.histogramData)
+            );
+
+            // Final logs
+            console.log(
+                'Final Condition Histograms:',
+                conditionHistograms.value
+            );
+            console.log('Final Histogram Domains:', histogramDomains.value);
+            console.log('Histogram data fetched and processed successfully.');
         } catch (error) {
             console.error('Error fetching histogram data:', error);
         }
@@ -428,9 +548,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    // Expose the new histogram data
-    const getHistogramDataComputed = computed(() => histogramData.value);
-    const getHistogramDomainsComputed = computed(() => histogramDomains.value);
+    // Remove histogramData related computed properties
+    // const getHistogramDataComputed = computed(() => histogramData.value);
+    const conditionHistogramsComputed = computed(
+        () => conditionHistograms.value
+    );
+    const histogramDomainsComputed = computed(() => histogramDomains.value);
 
     return {
         generateTestExemplarTracks,
@@ -441,7 +564,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionGroupHeight,
         getTotalExperimentTime,
         getHistogramData,
-        histogramData: getHistogramDataComputed,
-        histogramDomains: getHistogramDomainsComputed,
+        conditionHistograms: conditionHistogramsComputed,
+        histogramDomains: histogramDomainsComputed,
     };
 });

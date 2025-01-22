@@ -13,7 +13,6 @@ import {
     type DataPoint,
     type ExemplarTrack,
     useExemplarViewStore,
-    type HistogramData,
     type HistogramDomains,
 } from '@/stores/componentStores/ExemplarViewStore';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
@@ -45,7 +44,7 @@ const {
     exemplarTracks,
     exemplarHeight,
     conditionGroupHeight,
-    histogramData,
+    conditionHistograms,
     histogramDomains,
     getHistogramData,
 } = storeToRefs(exemplarViewStore);
@@ -430,8 +429,13 @@ function createSidewaysHistogramLayer(): any[] | null {
         const drug = firstExemplar.tags.drug;
         const conc = firstExemplar.tags.conc;
         const key = `${drug}+${conc}`;
-        // const histogramDataForGroup = histogramData.value[key] || [];
-        const histogramDataForGroup = [400, 500, 600];
+        const histogramDataForGroup =
+            conditionHistograms.value.find(
+                (ch) =>
+                    ch.condition.Drug === drug &&
+                    ch.condition['Concentration (um)'] === conc
+            )?.histogramData || [];
+
         const domains = histogramDomains.value;
         console.log('Domains:', domains.minX, domains.maxX);
 
@@ -488,7 +492,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 )}`,
                 data: textData,
                 getPosition: (d: TextDatum) => d.coordinates,
-                getText: (d: TextDatum) => `${d.drug} ${d.conc}um`,
+                getText: (d: TextDatum) => `${d.drug} ${d.conc}`,
                 sizeScale: 1,
                 sizeUnits: 'common',
                 sizeMaxPixels: 15,
@@ -512,7 +516,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             const x0 = hGap + 0.25 * histWidth + 1;
             const x1 =
                 x0 +
-                (value / domains.maxX) *
+                (value / domains.maxY) *
                     (viewConfiguration.value.histogramWidth * 0.75);
 
             return [
