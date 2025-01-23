@@ -148,11 +148,12 @@ function renderDeckGL(): void {
     recalculateExemplarYOffsets();
 
     const layers = [];
+
+    layers.push(createSidewaysHistogramLayer());
     layers.push(createHorizonChartLayer());
     layers.push(createImageSnippetLayer());
     layers.push(createSnippetBoundaryLayer());
     layers.push(createTimeWindowLayer());
-    layers.push(createSidewaysHistogramLayer());
     layers.push(createPinsAndLinesLayer());
 
     deckgl.value.setProps({
@@ -413,14 +414,28 @@ interface TextDatum {
     conc: string;
 }
 
+function getAverageMass(exemplar: ExemplarTrack): number {
+    if (!exemplar.data || exemplar.data.length === 0) return 0;
+    const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
+    return sum / exemplar.data.length;
+}
+
 function createSidewaysHistogramLayer(): any[] | null {
     const layers: any[] = [];
 
-    // Group exemplars by their condition
+    // Group exemplars by condition (drug + conc)
     const groupedExemplars = groupExemplarsByCondition(exemplarTracks.value);
 
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
+    const domains = histogramDomains.value; // { histogramBinRanges, minX, maxX, minY, maxY }
+
+    // Helper function to compute average mass
+    function getAverageMass(exemplar: ExemplarTrack): number {
+        if (!exemplar.data || exemplar.data.length === 0) return 0;
+        const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
+        return sum / exemplar.data.length;
+    }
 
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
@@ -428,7 +443,8 @@ function createSidewaysHistogramLayer(): any[] | null {
         const firstExemplar = group[0];
         const drug = firstExemplar.tags.drug;
         const conc = firstExemplar.tags.conc;
-        const key = `${drug}+${conc}`;
+
+        // Find histogram data for this group
         const histogramDataForGroup =
             conditionHistograms.value.find(
                 (ch) =>
@@ -436,64 +452,189 @@ function createSidewaysHistogramLayer(): any[] | null {
                     ch.condition['Concentration (um)'] === conc
             )?.histogramData || [];
 
-        const domains = histogramDomains.value;
-        console.log('Domains:', domains.minX, domains.maxX);
-
-        const fillColor = drugColorMap.value[drug] || [128, 128, 128];
-        const lineColor = [0, 0, 0];
-
+        // Basic geometry for the condition grouping
         const firstOffset = exemplarYOffsets.value.get(
             uniqueExemplarKey(firstExemplar)
         )!;
         const lastOffset = exemplarYOffsets.value.get(
             uniqueExemplarKey(group[group.length - 1])
         )!;
-
         const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
+        const groupHeight = groupBottom - groupTop;
+        const binWidth = groupHeight / histogramDataForGroup.length;
 
-        // Boxes for the condition group
+        const fillColor = drugColorMap.value[drug] || [128, 128, 128];
+        const lineColor = [0, 0, 0];
+
+        // Draw the base box and translucent background
+        layers.push(
+            ...[
+                new PolygonLayer({
+                    id: `exemplar-sideways-histogram-base-box-${uniqueExemplarKey(
+                        firstExemplar
+                    )}`,
+                    data: [group],
+                    getPolygon: () => {
+                        return [
+                            [-hGap - histWidth * 0.25, groupBottom],
+                            [-hGap, groupBottom],
+                            [-hGap, groupTop],
+                            [-hGap - histWidth * 0.25, groupTop],
+                            [-hGap - histWidth * 0.25, groupBottom],
+                        ];
+                    },
+                    getLineColor: lineColor,
+                    getFillColor: fillColor,
+                    getLineWidth: 0,
+                }),
+
+                new PolygonLayer({
+                    id: `exemplar-sideways-histogram-background-box-${uniqueExemplarKey(
+                        firstExemplar
+                    )}`,
+                    data: [group],
+                    getPolygon: () => {
+                        return [
+                            [-hGap - histWidth, groupBottom],
+                            [-hGap, groupBottom],
+                            [-hGap, groupTop],
+                            [-hGap - histWidth, groupTop],
+                            [-hGap - histWidth, groupBottom],
+                        ];
+                    },
+                    getLineColor: lineColor,
+                    getFillColor: fillColor,
+                    opacity: 0.006,
+                    getLineWidth: 0,
+                }),
+            ]
+        );
+
+        // Draw the “filled” sideways histogram bins
+        const histogramPolygons = histogramDataForGroup.map((count, index) => {
+            const y0 = groupTop + index * binWidth;
+            const y1 = y0 + binWidth;
+            const x0 = hGap + 0.25 * histWidth;
+            const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
+
+            return [
+                [-x0, y0],
+                [-x1, y0],
+                [-x1, y1],
+                [-x0, y1],
+                [-x0, y0],
+            ];
+        });
+
         layers.push(
             new PolygonLayer({
-                id: `exemplar-sideways-histogram-base-box${uniqueExemplarKey(
+                id: `sideways-histogram-layer-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
-                data: [group],
-                getPolygon: () => {
-                    return [
-                        [-hGap - histWidth * 0.25, groupBottom],
-                        [-hGap, groupBottom],
-                        [-hGap, groupTop],
-                        [-hGap - histWidth * 0.25, groupTop],
-                        [-hGap - histWidth * 0.25, groupBottom],
-                    ];
-                },
-                getLineColor: lineColor,
-                getFillColor: fillColor,
-                getLineWidth: 0,
+                data: histogramPolygons,
+                pickable: false,
+                stroked: false,
+                filled: true,
+                extruded: false,
+                getPolygon: (d: any) => d,
+                getFillColor: [100, 200, 255, 180],
+                getElevation: 0,
             })
         );
+
+        //
+        // ADD HORIZONTAL “TICK” LINES AND VERTICAL CONNECTOR LINES FOR EACH EXEMPLAR
+        //
+        // 1. Compute average mass.
+        // 2. Find which bin it falls into.
+        // 3. Compute y-mid of that bin & x-range of that bin’s polygon.
+        // 4. Store line data for LineLayer.
+        // 5. Add a vertical line connecting to the horizon chart.
+        //
+        const lineData: {
+            source: [number, number];
+            target: [number, number];
+        }[] = [];
+
+        // To collect circle positions
+        const circlePositions: [number, number][] = [];
+
+        for (const exemplar of group) {
+            const yOffset =
+                exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
+                viewConfiguration.value.timeBarHeightOuter -
+                viewConfiguration.value.horizonTimeBarGap;
+            const avgMass = getAverageMass(exemplar);
+
+            // Find bin index by checking the histogramDomains bin ranges
+            const binIndex = domains.histogramBinRanges.findIndex(
+                (bin) => avgMass >= bin.min && avgMass < bin.max
+            );
+            if (binIndex < 0) {
+                // If out of range, skip
+                continue;
+            }
+
+            // Compute y-mid of the bin
+            const y0 = groupTop + binIndex * binWidth;
+            const y1 = y0 + binWidth;
+            const yMid = (y0 + y1) / 2;
+
+            // Fixed horizontal length: histWidth * 0.75
+            const fixedLineLength = histWidth * 0.75;
+            const x0 = hGap + 0.25 * histWidth;
+            const x1 = x0 + fixedLineLength;
+
+            // Draw horizontal line from -x0 to -(x0 + fixedLineLength) at yMid
+            lineData.push({
+                source: [-x0, yMid],
+                target: [-(x0 + fixedLineLength), yMid],
+            });
+
+            // Draw vertical connector line from end of horizontal line to horizon chart
+            lineData.push({
+                source: [-x0, yMid],
+                target: [hGap, yOffset],
+            });
+
+            // Collect circle position at the left end (-x0, yMid)
+            circlePositions.push([-x1, yMid]);
+        }
+
+        // Push a new LineLayer to draw these lines with thinner stroke
         layers.push(
-            new PolygonLayer({
-                id: `exemplar-sideways-histogram-background-box${uniqueExemplarKey(
+            new LineLayer({
+                id: `exemplar-sideways-histogram-lines-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
-                data: [group],
-                getPolygon: () => {
-                    return [
-                        [-hGap - histWidth, groupBottom],
-                        [-hGap, groupBottom],
-                        [-hGap, groupTop],
-                        [-hGap - histWidth, groupTop],
-                        [-hGap - histWidth, groupBottom],
-                    ];
-                },
-                getLineColor: lineColor,
-                getFillColor: fillColor,
-                opacity: 0.006,
-                getLineWidth: 0,
+                data: lineData,
+                pickable: false,
+                getSourcePosition: (d: any) => d.source,
+                getTargetPosition: (d: any) => d.target,
+                getColor: [0, 0, 0, 255], // Black lines
+                getWidth: 1.5, // Thinner stroke width
+                opacity: 0.05,
             })
         );
+
+        // Push a ScatterplotLayer to draw tiny circles at the left end of the horizontal lines
+        if (circlePositions.length > 0) {
+            layers.push(
+                new ScatterplotLayer({
+                    id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
+                        firstExemplar
+                    )}`,
+                    data: circlePositions,
+                    getPosition: (d: [number, number]) => d,
+                    getRadius: 3, // Tiny circle radius
+                    getFillColor: [0, 0, 0, 255], // Black circles
+                    radiusMinPixels: 2,
+                    radiusMaxPixels: 4,
+                    pickable: false,
+                })
+            );
+        }
 
         // Text Layer
         const yOffset = (groupBottom + groupTop) / 2;
@@ -522,47 +663,6 @@ function createSidewaysHistogramLayer(): any[] | null {
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
-            })
-        );
-
-        // Histogram Layer
-        const groupHeight = groupBottom - groupTop;
-        const binWidth = groupHeight / histogramDataForGroup.length;
-
-        const histogramPolygons = histogramDataForGroup.map((value, index) => {
-            const baseY = groupTop;
-
-            const y0 = baseY + index * binWidth;
-            const y1 = y0 + binWidth;
-            const x0 = hGap + 0.25 * histWidth;
-            const x1 =
-                x0 +
-                (value / domains.maxY) *
-                    (viewConfiguration.value.histogramWidth * 0.75);
-
-            return [
-                [-x0, y0],
-                [-x1, y0],
-                [-x1, y1],
-                [-x0, y1],
-                [-x0, y0],
-            ];
-        });
-
-        layers.push(
-            new PolygonLayer({
-                id: 'sideways-histogram-layer',
-                data: histogramPolygons,
-                pickable: false,
-                stroked: true, // enable outlines
-                filled: true,
-                extruded: false,
-                getPolygon: (d: [number, number][]) => d,
-                getFillColor: [100, 200, 255, 180],
-                getLineColor: [0, 0, 0, 255], // black, fully opaque
-                getLineWidth: 0.5,
-                lineWidthMinPixels: 0.5, // makes sure the stroke is visible in pixel units
-                getElevation: 0,
             })
         );
     }
