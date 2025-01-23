@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
 import {
@@ -74,6 +74,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const conditionSelector = useConditionSelectorStore();
     const { currentExperimentTags } = storeToRefs(conditionSelector);
 
+    const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
+    const selectedAggregation = ref<string>('AVG'); // Default aggregation
+
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
         snippetDisplayHeight: 80,
@@ -85,7 +88,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         timeBarHeightInner: 2,
         betweenExemplarGap: 20,
         betweenConditionGap: 20,
-        horizonHistogramGap: 5,
+        horizonHistogramGap: 0,
         histogramWidth: 250,
     });
 
@@ -178,16 +181,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
         try {
             //
-            // 1) Get global minX / maxX of average mass, ensuring they are double
+            // 1) Get global minX / maxX of selected attribute, ensuring they are double
             //
             const domainQuery = `
             SELECT
-              CAST(MIN(avg_mass) AS DOUBLE PRECISION) AS min_mass,
-              CAST(MAX(avg_mass) AS DOUBLE PRECISION) AS max_mass
+              CAST(MIN(avg_attr) AS DOUBLE PRECISION) AS min_attr,
+              CAST(MAX(avg_attr) AS DOUBLE PRECISION) AS max_attr
             FROM (
                 SELECT
                     "track_id",
-                    CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
+                    CAST(${selectedAggregation.value}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS avg_attr
                 FROM "${tableName}"
                 GROUP BY "track_id"
             ) AS subquery
@@ -204,31 +207,33 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 return;
             }
 
-            const { min_mass, max_mass } = domainResult[0];
-            console.log(`Min mass: ${min_mass}, Max mass: ${max_mass}`);
+            const { min_attr, max_attr } = domainResult[0];
+            console.log(
+                `Min ${selectedAttribute.value}: ${min_attr}, Max ${selectedAttribute.value}: ${max_attr}`
+            );
 
-            if (min_mass >= max_mass) {
+            if (min_attr >= max_attr) {
                 console.error(
-                    `Invalid mass range: min_mass (${min_mass}) >= max_mass (${max_mass}). Skipping histogram.`
+                    `Invalid attribute range: min_attr (${min_attr}) >= max_attr (${max_attr}). Skipping histogram.`
                 );
                 return;
             }
 
             // Fill in histogramDomains
-            histogramDomains.value.minX = min_mass;
-            histogramDomains.value.maxX = max_mass / 10;
+            histogramDomains.value.minX = min_attr;
+            histogramDomains.value.maxX = max_attr / 10;
 
             //
             // 2) Build bin ranges (we store these in histogramDomains).
             //    These will be purely in JavaScript as standard numbers.
             //
             const binCount = 70;
-            const binSize = (max_mass / 10 - min_mass) / binCount;
+            const binSize = (max_attr / 10 - min_attr) / binCount;
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
                 (_, i) => ({
-                    min: min_mass + binSize * i,
-                    max: min_mass + binSize * (i + 1),
+                    min: min_attr + binSize * i,
+                    max: min_attr + binSize * (i + 1),
                 })
             );
 
@@ -241,44 +246,44 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
             //
             const histogramConditionQuery = `
-                WITH avg_mass_per_track AS (
+                WITH aggregated_data AS (
                     SELECT
-                    "track_id",
-                    "Drug",
-                    "Concentration (um)",
-                    CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass,
-                    COUNT(*) AS row_count
+                        "track_id",
+                        "Drug",
+                        "Concentration (um)",
+                        CAST(${selectedAggregation.value}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS agg_value,
+                        COUNT(*) AS row_count
                     FROM "${tableName}"
                     GROUP BY "track_id", "Drug", "Concentration (um)"
                 ),
                 bins AS (
                     SELECT
-                    CAST(bin_index AS INTEGER) AS bin_index,
-                    CAST(${min_mass} AS DOUBLE PRECISION)
-                        + (
-                        (CAST((${max_mass} / 10) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) 
-                        / ${binCount}
-                        ) * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
-                    CAST(${min_mass} AS DOUBLE PRECISION)
-                        + (
-                        (CAST((${max_mass} / 10) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) 
-                        / ${binCount}
-                        ) * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
+                        CAST(bin_index AS INTEGER) AS bin_index,
+                        CAST(${min_attr} AS DOUBLE PRECISION)
+                            + (
+                            (CAST((${max_attr} / 10) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
+                            / ${binCount}
+                            ) * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
+                        CAST(${min_attr} AS DOUBLE PRECISION)
+                            + (
+                            (CAST((${max_attr} / 10) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
+                            / ${binCount}
+                            ) * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
                     FROM (
                     SELECT generate_series AS bin_index
                     FROM generate_series(0, ${binCount} - 1)
                     ) t
                 )
                 SELECT
-                    avg_mass_per_track."Drug" AS drug,
-                    avg_mass_per_track."Concentration (um)" AS conc,
+                    aggregated_data."Drug" AS drug,
+                    aggregated_data."Concentration (um)" AS conc,
                     bins.bin_index,
                     CAST(COUNT(*) AS DOUBLE PRECISION) AS count
-                FROM avg_mass_per_track
+                FROM aggregated_data
                 CROSS JOIN bins
-                WHERE avg_mass_per_track.row_count > 50
-                    AND avg_mass_per_track.avg_mass >= bins.bin_min
-                    AND avg_mass_per_track.avg_mass < bins.bin_max
+                WHERE aggregated_data.row_count > 50
+                    AND aggregated_data.agg_value >= bins.bin_min
+                    AND aggregated_data.agg_value < bins.bin_max
                 GROUP BY drug, conc, bins.bin_index
                 ORDER BY drug, conc, bins.bin_index
                 `;
@@ -362,17 +367,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const timeColumn = 'Time (h)';
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
-        const massColumn = 'Mass (pg)';
+        const attributeColumn = selectedAttribute.value; // Use selected attribute
         const trackColumn = 'track_id';
         const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
         // Start of Selection
         const query = `
-                WITH avg_mass_per_cell AS (
+                WITH aggregated_data AS (
                     SELECT
                         "${trackColumn}" AS track_id,
-                        AVG("${massColumn}") AS avg_mass
+                        AVG("${attributeColumn}") AS avg_attr
                     FROM "${experimentName}_composite_experiment_cell_metadata"
                     WHERE "${drugColumn}" = '${drug}'
                     AND "${concColumn}" = '${conc}'
@@ -388,16 +393,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         ARRAY[
                             "${timeColumn}",
                             "Frame ID",
-                            "${massColumn}"
+                            "${attributeColumn}"
                         ]
                     ) AS data
                 FROM "${experimentName}_composite_experiment_cell_metadata"
                 WHERE "${trackColumn}" = (
                     SELECT track_id
-                    FROM avg_mass_per_cell
-                    WHERE avg_mass = (
-                        SELECT quantile_disc(avg_mass, ${pDecimal})
-                        FROM avg_mass_per_cell
+                    FROM aggregated_data
+                    WHERE avg_attr = (
+                        SELECT quantile_disc(avg_attr, ${pDecimal})
+                        FROM aggregated_data
                     )
                     LIMIT 1
                 )
@@ -551,6 +556,20 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    // Update watchers to reactively fetch data based on selected attribute and aggregation
+    watch(
+        () => [selectedAttribute.value, selectedAggregation.value],
+        async ([newAttr, newAgg]) => {
+            console.log(
+                `Attribute or Aggregation changed: ${newAttr}, ${newAgg}. Fetching new histogram data...`
+            );
+            await getHistogramData();
+            await getExemplarTracks();
+            // Optionally, you can also update other dependent data here
+        },
+        { immediate: false }
+    );
+
     // Remove histogramData related computed properties
     // const getHistogramDataComputed = computed(() => histogramData.value);
     const conditionHistogramsComputed = computed(
@@ -565,6 +584,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         viewConfiguration,
         exemplarHeight,
         conditionGroupHeight,
+        selectedAttribute,
+        selectedAggregation,
         getTotalExperimentTime,
         getHistogramData,
         conditionHistograms: conditionHistogramsComputed,

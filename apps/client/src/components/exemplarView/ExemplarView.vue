@@ -46,8 +46,8 @@ const {
     conditionGroupHeight,
     conditionHistograms,
     histogramDomains,
-    getHistogramData,
 } = storeToRefs(exemplarViewStore);
+const { getHistogramData } = exemplarViewStore;
 
 // Reactive reference for totalExperimentTime
 const totalExperimentTime = ref(0);
@@ -76,7 +76,7 @@ watch(
             await exemplarViewStore.getExemplarTracks();
             console.log('Exemplar tracks generated.');
 
-            await exemplarViewStore.getHistogramData();
+            await getHistogramData();
             console.log('Histogram data fetched.');
 
             // Initialize Deck.gl if not already initialized
@@ -220,15 +220,15 @@ function uniqueExemplarKey(exemplar: ExemplarTrack): string {
 }
 
 const horizonChartScheme = [
-    '#e6f9ff', // Light Blue 100
-    '#99e6ff', // Light Blue 300
-    '#1ac6ff', // Blue 500
-    '#00ace6', // Blue 700
-    '#0099cc',
-    '#007399', // Dark Blue 900
-    '#004d66', // Dark Blue 950
-    '#00394d', // Dark Blue 1000
-    '#002633', // Near Black
+    '#e6e3e3', // Light Grey 1
+    '#cccccc', // Light Grey 2
+    '#b3b3b3', // Grey 3
+    '#999999', // Grey 4
+    '#808080', // Grey 5
+    '#666666', // Grey 6
+    '#4d4d4d', // Grey 7
+    '#333333', // Grey 8
+    '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
 
@@ -355,10 +355,9 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [0, yOffset - quarterHeight * 1.5],
                 ];
             },
-
-            getFillColor: (exemplar: ExemplarTrack) =>
-                drugColorMap.value[exemplar.tags.drug],
+            getFillColor: [0, 0, 0, 255],
             getLineWidth: 0,
+            opacity: 0.05,
             lineWidthUnits: 'pixels',
         })
     );
@@ -399,7 +398,10 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [cellBirthXValue, yOffset],
                 ];
             },
-            getFillColor: [0, 0, 0, 255],
+
+            getFillColor: (exemplar: ExemplarTrack) =>
+                drugColorMap.value[exemplar.tags.drug],
+
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
@@ -414,7 +416,7 @@ interface TextDatum {
     conc: string;
 }
 
-function getAverageMass(exemplar: ExemplarTrack): number {
+function getAverageAttr(exemplar: ExemplarTrack): number {
     if (!exemplar.data || exemplar.data.length === 0) return 0;
     const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
     return sum / exemplar.data.length;
@@ -429,13 +431,6 @@ function createSidewaysHistogramLayer(): any[] | null {
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
     const domains = histogramDomains.value; // { histogramBinRanges, minX, maxX, minY, maxY }
-
-    // Helper function to compute average mass
-    function getAverageMass(exemplar: ExemplarTrack): number {
-        if (!exemplar.data || exemplar.data.length === 0) return 0;
-        const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
-        return sum / exemplar.data.length;
-    }
 
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
@@ -465,53 +460,25 @@ function createSidewaysHistogramLayer(): any[] | null {
         const binWidth = groupHeight / histogramDataForGroup.length;
 
         const fillColor = drugColorMap.value[drug] || [128, 128, 128];
-        const lineColor = [0, 0, 0];
 
-        // Draw the base box and translucent background
+        // Start of Selection
+        // Draw the base thick line
         layers.push(
-            ...[
-                new PolygonLayer({
-                    id: `exemplar-sideways-histogram-base-box-${uniqueExemplarKey(
-                        firstExemplar
-                    )}`,
-                    data: [group],
-                    getPolygon: () => {
-                        return [
-                            [-hGap - histWidth * 0.25, groupBottom],
-                            [-hGap, groupBottom],
-                            [-hGap, groupTop],
-                            [-hGap - histWidth * 0.25, groupTop],
-                            [-hGap - histWidth * 0.25, groupBottom],
-                        ];
-                    },
-                    getLineColor: lineColor,
-                    getFillColor: fillColor,
-                    getLineWidth: 0,
-                }),
-
-                new PolygonLayer({
-                    id: `exemplar-sideways-histogram-background-box-${uniqueExemplarKey(
-                        firstExemplar
-                    )}`,
-                    data: [group],
-                    getPolygon: () => {
-                        return [
-                            [-hGap - histWidth, groupBottom],
-                            [-hGap, groupBottom],
-                            [-hGap, groupTop],
-                            [-hGap - histWidth, groupTop],
-                            [-hGap - histWidth, groupBottom],
-                        ];
-                    },
-                    getLineColor: lineColor,
-                    getFillColor: fillColor,
-                    opacity: 0.006,
-                    getLineWidth: 0,
-                }),
-            ]
+            new LineLayer({
+                id: `exemplar-sideways-histogram-base-line-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: [group],
+                getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
+                getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
+                getColor: fillColor,
+                // Start of Selection
+                lineWidthUnits: 'common',
+                lineWidth: 7, // Adjust thickness as needed
+            })
         );
 
-        // Draw the “filled” sideways histogram bins
+        // Draw the "filled" sideways histogram bins
         const histogramPolygons = histogramDataForGroup.map((count, index) => {
             const y0 = groupTop + index * binWidth;
             const y1 = y0 + binWidth;
@@ -538,17 +505,17 @@ function createSidewaysHistogramLayer(): any[] | null {
                 filled: true,
                 extruded: false,
                 getPolygon: (d: any) => d,
-                getFillColor: [100, 200, 255, 180],
+                getFillColor: [153, 153, 153],
                 getElevation: 0,
             })
         );
 
         //
-        // ADD HORIZONTAL “TICK” LINES AND VERTICAL CONNECTOR LINES FOR EACH EXEMPLAR
+        // ADD HORIZONTAL "TICK" LINES AND VERTICAL CONNECTOR LINES FOR EACH EXEMPLAR
         //
         // 1. Compute average mass.
         // 2. Find which bin it falls into.
-        // 3. Compute y-mid of that bin & x-range of that bin’s polygon.
+        // 3. Compute y-mid of that bin & x-range of that bin's polygon.
         // 4. Store line data for LineLayer.
         // 5. Add a vertical line connecting to the horizon chart.
         //
@@ -565,11 +532,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                 exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
                 viewConfiguration.value.timeBarHeightOuter -
                 viewConfiguration.value.horizonTimeBarGap;
-            const avgMass = getAverageMass(exemplar);
+            const avgAttr = getAverageAttr(exemplar);
 
             // Find bin index by checking the histogramDomains bin ranges
             const binIndex = domains.histogramBinRanges.findIndex(
-                (bin) => avgMass >= bin.min && avgMass < bin.max
+                (bin) => avgAttr >= bin.min && avgAttr < bin.max
             );
             if (binIndex < 0) {
                 // If out of range, skip
@@ -612,9 +579,9 @@ function createSidewaysHistogramLayer(): any[] | null {
                 pickable: false,
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
-                getColor: [0, 0, 0, 255], // Black lines
+                getColor: fillColor, // Black lines
                 getWidth: 1.5, // Thinner stroke width
-                opacity: 0.05,
+                opacity: 0.03,
             })
         );
 
@@ -628,7 +595,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                     data: circlePositions,
                     getPosition: (d: [number, number]) => d,
                     getRadius: 3, // Tiny circle radius
-                    getFillColor: [0, 0, 0, 255], // Black circles
+                    getFillColor: fillColor, // Black circles
                     radiusMinPixels: 2,
                     radiusMaxPixels: 4,
                     pickable: false,
@@ -641,7 +608,7 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         const textData: TextDatum[] = [
             {
-                coordinates: [-hGap - 0.125 * histWidth, yOffset],
+                coordinates: [-hGap - 0.1 * histWidth, yOffset],
                 drug: drug,
                 conc: conc,
             },
@@ -657,9 +624,9 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getText: (d: TextDatum) => `${d.drug} ${d.conc}`,
                 sizeScale: 1,
                 sizeUnits: 'common',
-                sizeMaxPixels: 15,
+                sizeMaxPixels: 25,
                 getAngle: 90,
-                getColor: [0, 0, 0],
+                getColor: fillColor,
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
@@ -700,6 +667,39 @@ function createPinsAndLinesLayer(): null {
     // TODO: implement
     return null;
 }
+
+// 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
+watch(
+    () => [histogramDomains.value, conditionHistograms.value],
+    () => {
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
+    },
+    { deep: true }
+);
+
+// 2. Also watch for changes in exemplarTracks
+watch(
+    () => exemplarTracks.value,
+    () => {
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
+    },
+    { deep: true }
+);
+
+// Optionally, watch selectedAttribute and selectedAggregation for debugging
+watch(
+    () => [
+        exemplarViewStore.selectedAttribute,
+        exemplarViewStore.selectedAggregation,
+    ],
+    (newValues) => {
+        console.log('Selected Attribute and Aggregation changed:', newValues);
+    }
+);
 </script>
 
 <template>
