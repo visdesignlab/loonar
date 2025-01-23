@@ -452,10 +452,30 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
 
-        // Box for the condition group
+        // Boxes for the condition group
         layers.push(
             new PolygonLayer({
-                id: `exemplar-sideways-histogram-${uniqueExemplarKey(
+                id: `exemplar-sideways-histogram-base-box${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: [group],
+                getPolygon: () => {
+                    return [
+                        [-hGap - histWidth * 0.25, groupBottom],
+                        [-hGap, groupBottom],
+                        [-hGap, groupTop],
+                        [-hGap - histWidth * 0.25, groupTop],
+                        [-hGap - histWidth * 0.25, groupBottom],
+                    ];
+                },
+                getLineColor: lineColor,
+                getFillColor: fillColor,
+                getLineWidth: 0,
+            })
+        );
+        layers.push(
+            new PolygonLayer({
+                id: `exemplar-sideways-histogram-background-box${uniqueExemplarKey(
                     firstExemplar
                 )}`,
                 data: [group],
@@ -470,6 +490,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 },
                 getLineColor: lineColor,
                 getFillColor: fillColor,
+                opacity: 0.006,
                 getLineWidth: 0,
             })
         );
@@ -513,7 +534,7 @@ function createSidewaysHistogramLayer(): any[] | null {
 
             const y0 = baseY + index * binWidth;
             const y1 = y0 + binWidth;
-            const x0 = hGap + 0.25 * histWidth + 1;
+            const x0 = hGap + 0.25 * histWidth;
             const x1 =
                 x0 +
                 (value / domains.maxY) *
@@ -530,17 +551,17 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         layers.push(
             new PolygonLayer({
-                id: `sideways-histogram-layer-${uniqueExemplarKey(
-                    firstExemplar
-                )}`,
+                id: 'sideways-histogram-layer',
                 data: histogramPolygons,
                 pickable: false,
-                stroked: false,
+                stroked: true, // enable outlines
                 filled: true,
                 extruded: false,
-                getPolygon: (d: any[]) => d,
+                getPolygon: (d) => d,
                 getFillColor: [100, 200, 255, 180],
-                getLineColor: [0, 0, 0, 0],
+                getLineColor: [0, 0, 0, 255], // black, fully opaque
+                getLineWidth: 0.5,
+                lineWidthMinPixels: 0.5, // makes sure the stroke is visible in pixel units
                 getElevation: 0,
             })
         );

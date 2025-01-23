@@ -86,7 +86,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         betweenExemplarGap: 20,
         betweenConditionGap: 20,
         horizonHistogramGap: 5,
-        histogramWidth: 150,
+        histogramWidth: 250,
     });
 
     const exemplarHeight = computed(() => {
@@ -458,10 +458,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     ): Promise<ExemplarTrack> {
         const { trackId, locationId, birthTime, deathTime, data } =
             await getExemplarTrackData(drug, conc, p);
-        console.log(
-            `ExemplarTrack - Drug: ${drug}, Concentration: ${conc}, p: ${p}`,
-            data
-        );
         return {
             trackId: trackId,
             locationId: locationId,
