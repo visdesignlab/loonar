@@ -557,7 +557,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 stroked: true, // enable outlines
                 filled: true,
                 extruded: false,
-                getPolygon: (d) => d,
+                getPolygon: (d: [number, number][]) => d,
                 getFillColor: [100, 200, 255, 180],
                 getLineColor: [0, 0, 0, 255], // black, fully opaque
                 getLineWidth: 0.5,

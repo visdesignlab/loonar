@@ -216,14 +216,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             // Fill in histogramDomains
             histogramDomains.value.minX = min_mass;
-            histogramDomains.value.maxX = max_mass;
+            histogramDomains.value.maxX = max_mass / 3;
 
             //
             // 2) Build bin ranges (we store these in histogramDomains).
             //    These will be purely in JavaScript as standard numbers.
             //
-            const binCount = 300;
-            const binSize = (max_mass - min_mass) / binCount;
+            const binCount = 50;
+            const binSize = (max_mass / 3 - min_mass) / binCount;
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
                 (_, i) => ({
