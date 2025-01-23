@@ -222,7 +222,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // 2) Build bin ranges (we store these in histogramDomains).
             //    These will be purely in JavaScript as standard numbers.
             //
-            const binCount = 100;
+            const binCount = 300;
             const binSize = (max_mass - min_mass) / binCount;
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
@@ -254,10 +254,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
               SELECT
                 CAST(bin_index AS INTEGER) AS bin_index,
                 CAST(${min_mass} AS DOUBLE PRECISION)
-                  + ((CAST(${max_mass} AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
+                  + ((CAST((${max_mass} / 3) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
                   * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
                 CAST(${min_mass} AS DOUBLE PRECISION)
-                  + ((CAST(${max_mass} AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
+                  + ((CAST((${max_mass} / 3) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
                   * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
               FROM (
                 SELECT generate_series AS bin_index
