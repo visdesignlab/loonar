@@ -216,14 +216,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             // Fill in histogramDomains
             histogramDomains.value.minX = min_mass;
-            histogramDomains.value.maxX = max_mass / 3;
+            histogramDomains.value.maxX = max_mass / 10;
 
             //
             // 2) Build bin ranges (we store these in histogramDomains).
             //    These will be purely in JavaScript as standard numbers.
             //
-            const binCount = 50;
-            const binSize = (max_mass / 3 - min_mass) / binCount;
+            const binCount = 70;
+            const binSize = (max_mass / 10 - min_mass) / binCount;
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
                 (_, i) => ({
@@ -241,41 +241,48 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
             //
             const histogramConditionQuery = `
-            WITH avg_mass_per_track AS (
-              SELECT
-                "track_id",
-                "Drug",
-                "Concentration (um)",
-                CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass
-              FROM "${tableName}"
-              GROUP BY "track_id", "Drug", "Concentration (um)"
-            ),
-            bins AS (
-              SELECT
-                CAST(bin_index AS INTEGER) AS bin_index,
-                CAST(${min_mass} AS DOUBLE PRECISION)
-                  + ((CAST((${max_mass} / 3) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
-                  * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
-                CAST(${min_mass} AS DOUBLE PRECISION)
-                  + ((CAST((${max_mass} / 3) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) / ${binCount})
-                  * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
-              FROM (
-                SELECT generate_series AS bin_index
-                FROM generate_series(0, ${binCount - 1})
-              ) t
-            )
-            SELECT
-              avg_mass_per_track."Drug" AS drug,
-              avg_mass_per_track."Concentration (um)" AS conc,
-              bins.bin_index,
-              CAST(COUNT(*) AS DOUBLE PRECISION) AS count
-            FROM avg_mass_per_track
-            CROSS JOIN bins
-            WHERE avg_mass_per_track.avg_mass >= bins.bin_min
-              AND avg_mass_per_track.avg_mass < bins.bin_max
-            GROUP BY drug, conc, bins.bin_index
-            ORDER BY drug, conc, bins.bin_index
-          `;
+                WITH avg_mass_per_track AS (
+                    SELECT
+                    "track_id",
+                    "Drug",
+                    "Concentration (um)",
+                    CAST(AVG("Mass (pg)") AS DOUBLE PRECISION) AS avg_mass,
+                    COUNT(*) AS row_count
+                    FROM "${tableName}"
+                    GROUP BY "track_id", "Drug", "Concentration (um)"
+                ),
+                bins AS (
+                    SELECT
+                    CAST(bin_index AS INTEGER) AS bin_index,
+                    CAST(${min_mass} AS DOUBLE PRECISION)
+                        + (
+                        (CAST((${max_mass} / 10) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) 
+                        / ${binCount}
+                        ) * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
+                    CAST(${min_mass} AS DOUBLE PRECISION)
+                        + (
+                        (CAST((${max_mass} / 10) AS DOUBLE PRECISION) - CAST(${min_mass} AS DOUBLE PRECISION)) 
+                        / ${binCount}
+                        ) * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
+                    FROM (
+                    SELECT generate_series AS bin_index
+                    FROM generate_series(0, ${binCount} - 1)
+                    ) t
+                )
+                SELECT
+                    avg_mass_per_track."Drug" AS drug,
+                    avg_mass_per_track."Concentration (um)" AS conc,
+                    bins.bin_index,
+                    CAST(COUNT(*) AS DOUBLE PRECISION) AS count
+                FROM avg_mass_per_track
+                CROSS JOIN bins
+                WHERE avg_mass_per_track.row_count > 50
+                    AND avg_mass_per_track.avg_mass >= bins.bin_min
+                    AND avg_mass_per_track.avg_mass < bins.bin_max
+                GROUP BY drug, conc, bins.bin_index
+                ORDER BY drug, conc, bins.bin_index
+                `;
+
             console.log(
                 'Executing histogramConditionQuery:',
                 histogramConditionQuery
