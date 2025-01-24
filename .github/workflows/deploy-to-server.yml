@@ -1,7 +1,7 @@
 name: Deploy To Server
 on:
   pull_request:
-    branches: [dev]
+    branches: [main]
     types: [closed]
 jobs:
   deployment:
