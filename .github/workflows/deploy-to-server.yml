@@ -1,0 +1,14 @@
+name: Deploy To Server
+on:
+  pull_request:
+    branches: [dev]
+    types: [closed]
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit Deployment API
+        run: |
+          curl --location 'https://loonsw.sci.utah.edu:8443/deploy' \
+          --header 'Authorization: ${{secrets.DEPLOYMENT_AUTH_TOKEN}}' \
+          --max-time 600

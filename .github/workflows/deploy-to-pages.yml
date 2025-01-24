@@ -1,0 +1,56 @@
+name: Deploy Docusaurus Site
+on:
+  pull_request:
+    branches: [dev]
+    types: [closed]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Setup Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+
+
+    # Install dependencies
+    - name: Install dependencies
+      working-directory: ./apps/docs-website  # Change this to your Docusaurus directory
+      run: yarn install
+
+      # Make versioning stuff here
+
+    - name: Print docusaurus.config.ts before update
+      working-directory: ./apps/docs-website
+      run: |
+        echo "Contents of docusaurus.config.ts before update:"
+        cat docusaurus.config.ts
+
+    - name: Update baseURL
+      working-directory: ./apps/docs-website
+      run: |
+        sed -i 's/baseUrl: "\/"/baseUrl: "\/loonar\/"/g' docusaurus.config.ts
+
+    - name: Print docusaurus.config.ts after update
+      working-directory: ./apps/docs-website
+      run: |
+        echo "Contents of docusaurus.config.ts after update:"
+        cat docusaurus.config.ts
+
+    # Build the Docusaurus site
+    - name: Build Docusaurus
+      working-directory: ./apps/docs-website  # Change this to your Docusaurus directory
+      run: yarn build
+
+    # Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./apps/docs-website/build  # Change this to the build output directory

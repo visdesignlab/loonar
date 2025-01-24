@@ -1,7 +1,7 @@
-name: Build Docker Images
+name: Build Local Docker Image
 on:
   pull_request:
-    branches: [main]
+    branches: [dev]
     types: [closed]
 jobs:
     build:
@@ -21,6 +21,13 @@ jobs:
           run: |
             ls -la 
             docker build -f ./.build-files/Dockerfile.loon.local -t local-loon:latest .
+        - name: tag the docker image
+          id: tag-docker-images
+          run: |
+            docker tag local-loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/local-loon:${{ github.event.pull_request.title }}
+            docker tag local-loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/local-loon:latest
         - name: push the docker image
           id: push-docker-image
-          run: docker push ${{secrets.DOCKERHUB_USERNAME}}/local-loon:latest
+          run: |
+            docker push ${{secrets.DOCKERHUB_USERNAME}}/local-loon:${{ github.event.pull_request.title }}
+            docker push ${{secrets.DOCKERHUB_USERNAME}}/local-loon:latest
