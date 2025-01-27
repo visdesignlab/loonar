@@ -112,15 +112,16 @@ export const useDatasetSelectionStore = defineStore(
             fetchingEntryFile.value = false;
             serverUrlValid.value = true;
 
-            const connector = vg.socketConnector(
-                configStore.duckDbWebSocketUrl
-            );
+            // const connector = vg.socketConnector(
+            //     configStore.duckDbWebSocketUrl
+            // );
 
             // If you need to use web instance of duckdb instead, you can use this connector rather than the one above.
-            // const connector = vg.wasmConnector();
+            const connector = vg.wasmConnector();
 
             // Initialize Duckdb Socket Connection
             vg.coordinator().databaseConnector(connector);
+
 
             const data = await response.json();
             return data.experiments;
@@ -236,7 +237,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                            location.id
+                        location.id
                         ]
                     ) {
                         return location;
