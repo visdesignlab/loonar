@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core';
+import type { PickingInfo, MjolnirEvent } from '@deck.gl/core';
+import { Deck, OrthographicView } from '@deck.gl/core';
 import { Layer } from '@deck.gl/core';
 import {
     ScatterplotLayer,
@@ -62,6 +63,9 @@ const exemplarDataInitialized = ref(false);
 const conditionSelector = useConditionSelectorStore();
 const { selectedYTag, currentExperimentTags } = storeToRefs(conditionSelector);
 
+// 1. Add a reactive reference for the hovered exemplar
+const hoveredExemplarKey = ref<string | null>(null);
+
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
     () => experimentDataInitialized.value,
@@ -88,6 +92,7 @@ watch(
                         minZoom: -8,
                         maxZoom: 8,
                     },
+                    pickingRadius: 5,
                     canvas: deckGlContainer.value,
                     views: new OrthographicView({
                         id: 'exemplarController',
@@ -118,6 +123,12 @@ watch(
     },
     { immediate: false } // We don't need to run this immediately on mount
 );
+
+watch(hoveredExemplarKey, () => {
+    if (exemplarDataInitialized.value) {
+        renderDeckGL();
+    }
+});
 
 // 4. Add a new watcher on exemplarDataInitialized.
 // TODO: Move exemplarDataInitialized to the store
@@ -231,7 +242,20 @@ const horizonChartScheme = [
     '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
-
+function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
+    if (info.index !== -1) {
+        // pointer is over the layer
+        hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
+        console.log(
+            'Hovered horizon chart for exemplar:',
+            hoveredExemplarKey.value
+        );
+    } else {
+        // pointer left the layer
+        hoveredExemplarKey.value = null;
+        console.log('No horizon chart hovered');
+    }
+}
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
@@ -252,7 +276,9 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             new HorizonChartLayer({
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
-
+                pickable: true,
+                onHover: (info: PickingInfo) =>
+                    handleHorizonHover(info, exemplar),
                 instanceData: geometryData,
                 destination: [
                     yOffset,
@@ -275,6 +301,18 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         );
     }
     return horizonChartLayers;
+}
+
+function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
+    if (info.index !== -1) {
+        // we hovered the horizon chart
+        hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
+        console.log('Hovered HorizonChart Exemplar:', hoveredExemplarKey.value);
+    } else {
+        // pointer left the horizon chart
+        hoveredExemplarKey.value = null;
+        console.log('No HorizonChart hovered');
+    }
 }
 
 function constructGeometry(track: ExemplarTrack): number[] {
@@ -460,6 +498,11 @@ function createSidewaysHistogramLayer(): any[] | null {
         const binWidth = groupHeight / histogramDataForGroup.length;
 
         const fillColor = drugColorMap.value[drug] || [128, 128, 128];
+        const isHovered =
+            hoveredExemplarKey.value === uniqueExemplarKey(firstExemplar);
+
+        // default circle is 3, so double is 6
+        const circleRadius = isHovered ? 6 : 3;
 
         // Start of Selection
         // Draw the base thick line
@@ -522,10 +565,12 @@ function createSidewaysHistogramLayer(): any[] | null {
         const lineData: {
             source: [number, number];
             target: [number, number];
+            exemplar: ExemplarTrack;
         }[] = [];
-
-        // To collect circle positions
-        const circlePositions: [number, number][] = [];
+        const circlePositions: {
+            position: [number, number];
+            exemplar: ExemplarTrack;
+        }[] = [];
 
         for (const exemplar of group) {
             const yOffset =
@@ -557,16 +602,21 @@ function createSidewaysHistogramLayer(): any[] | null {
             lineData.push({
                 source: [-x0, yMid],
                 target: [-(x0 + fixedLineLength), yMid],
+                exemplar,
             });
 
             // Draw vertical connector line from end of horizontal line to horizon chart
             lineData.push({
                 source: [-x0, yMid],
                 target: [hGap, yOffset],
+                exemplar,
             });
 
             // Collect circle position at the left end (-x0, yMid)
-            circlePositions.push([-x1, yMid]);
+            circlePositions.push({
+                position: [-x1, yMid],
+                exemplar,
+            });
         }
 
         // Push a new LineLayer to draw these lines with thinner stroke
@@ -580,28 +630,42 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
                 getColor: fillColor, // Black lines
-                getWidth: 1.5, // Thinner stroke width
+                getWidth: (d: {
+                    source: [number, number];
+                    target: [number, number];
+                    exemplar: ExemplarTrack;
+                }) =>
+                    hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                        ? 4
+                        : 1, // Thinner stroke width
                 opacity: 0.03,
             })
         );
 
         // Push a ScatterplotLayer to draw tiny circles at the left end of the horizontal lines
-        if (circlePositions.length > 0) {
-            layers.push(
-                new ScatterplotLayer({
-                    id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
-                        firstExemplar
-                    )}`,
-                    data: circlePositions,
-                    getPosition: (d: [number, number]) => d,
-                    getRadius: 3, // Tiny circle radius
-                    getFillColor: fillColor, // Black circles
-                    radiusMinPixels: 2,
-                    radiusMaxPixels: 4,
-                    pickable: false,
-                })
-            );
-        }
+        layers.push(
+            new ScatterplotLayer({
+                id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: circlePositions,
+                pickable: true, // Important: enabling picking
+                getPosition: (d) => d.position,
+                // Updated to dynamically adjust radius based on hover state and added type annotation
+                getRadius: (d: {
+                    position: [number, number];
+                    exemplar: ExemplarTrack;
+                }) =>
+                    hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                        ? 6
+                        : 3,
+                getFillColor: fillColor,
+                // Removed fixed radius constraints to allow dynamic sizing
+                // radiusMinPixels: 2,
+                // radiusMaxPixels: 4,
+                onHover: handleHover,
+            })
+        );
 
         // Text Layer
         const yOffset = (groupBottom + groupTop) / 2;
@@ -700,6 +764,18 @@ watch(
         console.log('Selected Attribute and Aggregation changed:', newValues);
     }
 );
+
+// Function to handle hover events
+function handleHover(info: PickingInfo) {
+    // If we hovered over a circle from our scatterplot data:
+    if (info.object && (info.object as any).exemplar) {
+        const pickedExemplar = (info.object as any).exemplar;
+        const newHoveredKey = uniqueExemplarKey(pickedExemplar);
+        hoveredExemplarKey.value = newHoveredKey;
+    } else {
+        hoveredExemplarKey.value = null;
+    }
+}
 </script>
 
 <template>
