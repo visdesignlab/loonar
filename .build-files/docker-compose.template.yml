@@ -135,7 +135,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ${MINIO_VOLUME_LOCATION}:/data
+      - minio_data:/data
   duckdb:
     build:
       context: ../ # relative to docker compose
@@ -148,3 +148,9 @@ services:
 volumes:
   mysql-data:
   duckdb-data:
+  minio_data:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=155.98.58.123,vers=3,soft"
+      device: ":${MINIO_VOLUME_LOCATION}"
