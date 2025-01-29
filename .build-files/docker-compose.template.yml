@@ -122,6 +122,7 @@ services:
         DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
     # When run with a TTY, minio prints credentials on startup
     tty: true
+    user: 50097:606
     environment:
       MINIO_ROOT_USER: ${MINIO_STORAGE_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_STORAGE_SECRET_KEY}
