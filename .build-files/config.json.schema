@@ -71,6 +71,37 @@
                             "message":"Invalid source volume location formatting. Must not be empty."    
                         }
                     ]
+                },
+                "volumeType":{
+                    "type": "string",
+                    "required": false
+                },
+                "userGroupPermissions":{
+                    "type":"string",
+                    "required":true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
+                },
+                "nfsVersion":{
+                    "type": "integer",
+                    "required": true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
+                },
+                "ipAddress":{
+                    "type": "string",
+                    "required": true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
                 }
             }
         },

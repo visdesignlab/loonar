@@ -71,10 +71,12 @@ def overwrite_config(config_file):
         return new_config_file_name
 
 
-def createComposeFile(local=False):
+def createComposeFile(local=False, nfs=False):
     docker_compose_template = '.build-files/docker-compose.template.yml'
     if local:
         docker_compose_template = '.build-files/docker-compose-local.template.yml'
+    elif nfs:
+        docker_compose_template = '.build-files/docker-compose-nfs.template.yml'
 
     shutil.copy(docker_compose_template, '.build-files/docker-compose.yml')
 
@@ -151,6 +153,13 @@ def createEnvFile(configFileName, envFileName):
         buildConfig.set('MINIO_STORAGE_STATIC_BUCKET_NAME', 'static')
         buildConfig.set('MINIO_STORAGE_MEDIA_URL', f'{base_url}/data')
         buildConfig.set('MINIO_STORAGE_STATIC_URL', f'{base_url}/data')
+        if buildConfig.nfs is True:
+            buildConfig.set('MINIO_NFS_VOLUME_VERSION',
+                            buildConfig.get('minioSettings.nfsVersion'))
+            buildConfig.set('MINIO_NFS_IP_ADDRESS',
+                            buildConfig.get('minioSettings.ipAddress'))
+            buildConfig.set('MINIO_USER_GROUP',
+                            buildConfig.get('minioSettings.userGroupPermissions'))
 
     # --------------------------------------------------------------
     # NGINX SETTINGS -----------------------------------------------
@@ -440,7 +449,7 @@ if __name__ == "__main__":
             base_url = buildConfig.get('generalSettings.baseUrl')
 
             # Generate docker-compose file based on if we are using local loon or not
-            createComposeFile(local=buildConfig.local)
+            createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
                 services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
@@ -488,4 +497,4 @@ if __name__ == "__main__":
             config_file_name = overwrite_config(config_file_name)
 
         buildConfig = createEnvFile(config_file_name, args.env_file)
-        createComposeFile(local=buildConfig.local)
+        createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)

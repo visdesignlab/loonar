@@ -180,7 +180,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                     const compareKey = keysList[j];
                     const compareValues =
                         conditionSelectorStore.currentExperimentTags[
-                            compareKey
+                        compareKey
                         ];
 
                     currValues.forEach((currValue: string) => {
@@ -198,14 +198,14 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
                             // Update this for new track level attributes
                             newSelection.update(clause);
                             const conditionChartSelection: ConditionChartSelection =
-                                {
-                                    baseSelection: newSelection,
-                                    filteredSelection: newSelection.clone(),
-                                    compChartFilteredSelection:
-                                        newSelection.clone(),
-                                    compChartBaseSelection:
-                                        newSelection.clone(),
-                                };
+                            {
+                                baseSelection: newSelection,
+                                filteredSelection: newSelection.clone(),
+                                compChartFilteredSelection:
+                                    newSelection.clone(),
+                                compChartBaseSelection:
+                                    newSelection.clone(),
+                            };
 
                             tempConditionChartSelections[newSource] =
                                 conditionChartSelection;
@@ -430,6 +430,16 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         { deep: true }
     );
 
+    // When changing location, we re-update the selected and filtered tracking ids.
+    // In other words, we are re-fetching.
+    // In a perfect world, we possibly add the "visited locations" to a list and keep that list
+    // Continually filtering the entire list whenever we add so that when we switch to prev locations
+    // the answers are already stored.
+    watch([currentLocationMetadata], () => {
+        _updateStandardHighlightOrFilter()
+        _updateStandardHighlightOrFilter(true)
+    }, { deep: true })
+
     // We need to watch this sub list since these don't directly interact with the
     // Individual charts. It is only to maintain the correct predicates for each
     // condition chart selection.
@@ -448,16 +458,16 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
 
             const newAggPredicate = aggNotNull
                 ? `((${newCondAggClauseList
-                      .filter((entry) => entry.predicate)
-                      .map((entry) => entry.predicate)
-                      .join(') OR (')}))`
+                    .filter((entry) => entry.predicate)
+                    .map((entry) => entry.predicate)
+                    .join(') OR (')}))`
                 : `(1 = 0)`;
             // Creates large predicate string for comp table
             const newCompPredicate = compNotNull
                 ? `((${newCondCompClauseList
-                      .filter((entry) => entry.predicate)
-                      .map((entry) => entry.predicate)
-                      .join(') OR (')}))`
+                    .filter((entry) => entry.predicate)
+                    .map((entry) => entry.predicate)
+                    .join(') OR (')}))`
                 : `(1 = 0) `;
 
             const compClause: LoonarClause = {
@@ -562,6 +572,7 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     }
 
     async function _updateStandardHighlightOrFilter(filter?: boolean) {
+        console.log('am I called??')
         const selPredicateString = filter
             ? aggSelPredString.value
             : compSelPredString.value;
