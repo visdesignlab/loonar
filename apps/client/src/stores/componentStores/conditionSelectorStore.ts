@@ -369,6 +369,20 @@ export const useConditionSelectorStore = defineStore(
             throw new Error('Invalid type');
         }
 
+        // Add conditionColorMap
+        const conditionColorMap = computed<Record<string, string>>(() => {
+            console.log('conditionColorMap computed');
+            const map: Record<string, string> = {};
+            yLabels.value.forEach((label, index) => {
+                map[label] = chartColorScheme[index % chartColorScheme.length];
+                console.log(
+                    `Mapping Y Label: ${label} to Color: ${map[label]}`
+                ); // Debug log
+            });
+            console.log('conditionColorMap:', map); // Debug log
+            return map;
+        });
+
         return {
             selectedXTag,
             selectedYTag,
@@ -388,6 +402,7 @@ export const useConditionSelectorStore = defineStore(
             axesOptions,
             selectedIndividualYAxis,
             resetState,
+            conditionColorMap,
         };
     }
 );

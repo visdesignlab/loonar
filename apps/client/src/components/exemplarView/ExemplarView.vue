@@ -35,6 +35,8 @@ const { width: deckGlWidth, height: deckGlHeight } =
     useElementSize(deckGlContainer);
 
 const exemplarViewStore = useExemplarViewStore();
+const conditionSelectorStore = useConditionSelectorStore();
+
 const cellMetaData = useCellMetaData();
 
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -242,6 +244,41 @@ const horizonChartScheme = [
     '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
+const hexToRgb = (hex: string): [number, number, number] => {
+    // Remove '#' if present
+    hex = hex.replace(/^#/, '');
+
+    // Parse the RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    return [r, g, b];
+};
+
+// wait for conditionSelectorStore to be initialized
+const fillColor = (exemplar: ExemplarTrack | undefined) => {
+    if (!exemplar || !exemplar.tags || !exemplar.tags.conc) {
+        console.log(`Invalid exemplar or missing property:`, exemplar);
+        return [0, 0, 0]; // Default black color
+    }
+
+    const conditionKey = exemplar.tags.conc;
+    console.log('Condition key: ', conditionKey);
+
+    const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
+
+    if (!hexColor) {
+        console.error(`No color found for key: ${conditionKey}`);
+        return [0, 0, 0]; // Default color in case of error
+    }
+
+    // Convert hex to RGB
+    const rgbList = hexToRgb(hexColor);
+    console.log(rgbList);
+    return rgbList;
+};
+
 function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1) {
         // pointer is over the layer
@@ -437,9 +474,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 ];
             },
 
-            getFillColor: (exemplar: ExemplarTrack) =>
-                drugColorMap.value[exemplar.tags.drug],
-
+            getFillColor: fillColor,
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
@@ -497,7 +532,6 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupHeight = groupBottom - groupTop;
         const binWidth = groupHeight / histogramDataForGroup.length;
 
-        const fillColor = drugColorMap.value[drug] || [128, 128, 128];
         const isHovered =
             hoveredExemplarKey.value === uniqueExemplarKey(firstExemplar);
 

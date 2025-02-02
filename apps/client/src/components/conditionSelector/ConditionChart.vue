@@ -60,11 +60,16 @@ watch(
     { deep: true }
 );
 
+const yValue = computed(() => props.tags[1][1]);
+
 // Styles
-const lineColor =
-    conditionSelectorStore.chartColorScheme[
-        props.yIndex % conditionSelectorStore.chartColorScheme.length
-    ];
+const lineColor = computed(() => {
+    const color =
+        conditionSelectorStore.conditionColorMap[yValue.value] ||
+        'no value detected';
+    return color;
+});
+
 const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
 
@@ -100,7 +105,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             {
                 x: xAxisName,
                 y: vg.avg(yAxisName),
-                stroke: lineColor,
+                stroke: lineColor.value,
                 strokeWidth: strokeWidth,
                 curve: 'linear',
                 opacity: 0.6,
@@ -115,7 +120,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             {
                 x: xAxisName,
                 y: vg.avg(yAxisName),
-                stroke: lineColor,
+                stroke: lineColor.value,
                 strokeWidth: strokeWidthSelected,
                 curve: 'linear',
                 opacity: 1,
