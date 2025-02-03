@@ -29,12 +29,40 @@ aws_secret_access_key = theMinioSecretAccessKey
 If the deployment of Loon is using it's default credentials, the `aws_access_key_id` and `aws_secret_access_key` will be "admin" and "minioadmin". Reach out to your system administrator to see what these keys are. If you're deploying Loon yourself, check out the MinIO settings configuration [here](../loon-for-developers/building-loon.md#minio-settings).
 :::
 
+
+Now that we have the credentials properly configured, we need to determine the endpoint url. If you're running this instance on your localhost, the endpoint is simply "http://localhost". If this is deployed on a remote server, you can directly use the base domain name for the server (i.e. for our remote server, we use "https://loonsw.sci.utah.edu" since this is our base url where we access the deployed application).
+
+Once you've determined the endpoint url, we can run the following to list the items currently in the bucket:
+
+```bash
+aws s3 ls s3://data --endpoint-url {endpoint-url} --profile loon-user
+```
+
+Note that this will not list all files in nested directories -- it will list immediate files in the root of the bucket and the directory names.
+
+To copy a single file in the root of the bucket, we can do the following:
+
+```bash
+aws s3 cp /path/to/my_file.txt s3://data/ --endpoint-url {endpoint-url} --profile loon-user
+```
+
+By default, if a file named "my_file.txt" already exists in `s3://data/`, the file will be overwritten.
+
+If we want to copy an entire directory while maintaining it structure (a common use case), we can do the following
+
+```bash
+aws s3 cp /path/to/{name_of_directory} s3://data/{name_of_directory}/ --recursive  --endpoint-url {endpoint-url} --profile loon-user
+```
+Note that the "name_of_directory" is present in both the source and the destination. Under the hood, this is essentially saying "copy all files that are inside my source directory into a new directory". So, when we use the same name for both the source and destination, it will essentially copy that entire directory including the original name.
+
+
+
+## MinIO Console
+
+MinIO comes with a sleek web UI to manage stored data. To access the MinIO WebUI, you can head to "{your_base_url}/minio/" (i.e. http://localhost/minio/). From here, you'll be prompted to log in. As stated previously, the username is the MinIO access key and the password is the MinIO secret key (i.e. if you're using the default setup, the values are "admin" and "minioadmin", respectively).
+
+After logging in, you will see an initial bucket created for you: the "data" bucket. Once inside this bucket, you'll be able to view all files uploaded. You can download files, delete files, or upload files using this console.
+
 :::warning
-If you are 
+We _strongly_ suggest using the AWS CLI for uploading large datasets. The only time that the web UI may be useful for uploading is when updating single files, like the `aa_index.json` file or a single experiment JSON file. This is because using the WebUI does not come with the same verboseness and robustness that the AWS CLI S3 copy commands to -- which can lead to issues when trying to transfer large datasets.
 :::
-
-
-
-If you wanted to share this local version, however, there is no simple way to do this. The 
-
-Since your working with local Loon, however, there is no direct way to share your datasets with others. Suppose
