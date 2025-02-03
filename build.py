@@ -81,7 +81,7 @@ def createComposeFile(local=False, nfs=False):
     shutil.copy(docker_compose_template, '.build-files/docker-compose.yml')
 
 
-def createEnvFile(configFileName, envFileName):
+def createEnvFile(configFileName, envFileName, useDid=False):
     buildConfig = BuildConfig.BuildConfig(configFileName, envFileName)
     buildConfig.reportErrors()
 
@@ -189,6 +189,11 @@ def createEnvFile(configFileName, envFileName):
                     )
     localVolumeLocation = buildConfig.get('localDataSettings.sourceVolumeLocation')
     buildConfig.set('LOCAL_DATA_VOLUME_LOCATION', localVolumeLocation)
+
+    if useDid is True:
+        buildConfig.set('MIGRATIONS_SOURCE', 'migrations_volume')
+    else:
+        buildConfig.set('MIGRATIONS_SOURCE', '../apps/server/api/migrations')
 
     buildConfig.writeToEnv()
     return buildConfig
@@ -419,6 +424,8 @@ if __name__ == "__main__":
                         help="Disables spinner")
     parser.add_argument("--prepare-dev", action="store_true", required=False,
                         help="Generates .env file for client environment.")
+    parser.add_argument("-i", "--use-did", action="store_true", required=False,
+                        help="Flag to specify that this build script is running in a DiD setup.")
 
     args = parser.parse_args()
 
@@ -438,7 +445,7 @@ if __name__ == "__main__":
                 print('No client .env file found.')
                 pass
 
-            buildConfig = createEnvFile(config_file_name, args.env_file)
+            buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
 
             use_http = buildConfig.get('generalSettings.useHttp')
             if use_http:
@@ -496,5 +503,5 @@ if __name__ == "__main__":
         if args.overwrite:
             config_file_name = overwrite_config(config_file_name)
 
-        buildConfig = createEnvFile(config_file_name, args.env_file)
+        buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
         createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
