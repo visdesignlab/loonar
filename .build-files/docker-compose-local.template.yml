@@ -32,7 +32,7 @@ services:
     environment:
       DJANGO_ENV_FILE: "/app/.env"
     volumes:
-      - ../apps/server/api/migrations:/app/api/migrations
+      - ${MIGRATIONS_SOURCE}:/app/api/migrations
     depends_on:
       db:
         condition: service_healthy
@@ -127,3 +127,4 @@ services:
 volumes:
   mysql-data:
   duckdb-data:
+  migrations_volume:

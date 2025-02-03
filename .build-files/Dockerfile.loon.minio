@@ -12,4 +12,4 @@ COPY . .
 
 # Run a command to keep the container running
 # Specifying config and overwriting.
-CMD ["python3", "-u", "build.py", "-os", "--config-file", ".build-files/config-standard.json"]
+CMD ["python3", "-u", "build.py", "-osi", "--config-file", ".build-files/config-standard.json"]

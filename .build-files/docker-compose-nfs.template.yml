@@ -35,8 +35,7 @@ services:
     environment:
       DJANGO_ENV_FILE: "/app/.env"
     volumes:
-      # - ../apps/server/api/migrations:/app/api/migrations
-      - ${MIGRATIONS_SOURCE}:/app/api/migrations
+      - ../apps/server/api/migrations:/app/api/migrations
     depends_on:
       db:
         condition: service_healthy
@@ -123,6 +122,7 @@ services:
         DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
     # When run with a TTY, minio prints credentials on startup
     tty: true
+    user: ${MINIO_NFS_USER_GROUP}
     environment:
       MINIO_ROOT_USER: ${MINIO_STORAGE_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_STORAGE_SECRET_KEY}
@@ -136,7 +136,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ${MINIO_VOLUME_LOCATION}:/data
+      - minio_data:/data
   duckdb:
     build:
       context: ../ # relative to docker compose
@@ -149,4 +149,9 @@ services:
 volumes:
   mysql-data:
   duckdb-data:
-  migrations_volume:
+  minio_data:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=${MINIO_NFS_IP_ADDRESS},vers=${MINIO_NFS_VERSION},soft"
+      device: ":${MINIO_VOLUME_LOCATION}"
