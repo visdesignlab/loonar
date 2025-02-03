@@ -373,12 +373,20 @@ export const useConditionSelectorStore = defineStore(
         const conditionColorMap = computed<Record<string, string>>(() => {
             console.log('conditionColorMap computed');
             const map: Record<string, string> = {};
-            yLabels.value.forEach((label, index) => {
-                map[label] = chartColorScheme[index % chartColorScheme.length];
-                console.log(
-                    `Mapping Y Label: ${label} to Color: ${map[label]}`
-                ); // Debug log
-            });
+
+            // Guard clause to ensure yLabels.value is defined
+            if (yLabels.value && Array.isArray(yLabels.value)) {
+                yLabels.value.forEach((label, index) => {
+                    map[label] =
+                        chartColorScheme[index % chartColorScheme.length];
+                    console.log(
+                        `Mapping Y Label: ${label} to Color: ${map[label]}`
+                    ); // Debug log
+                });
+            } else {
+                console.warn('yLabels.value is undefined or not an array.');
+            }
+
             console.log('conditionColorMap:', map); // Debug log
             return map;
         });

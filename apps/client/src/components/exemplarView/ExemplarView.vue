@@ -258,14 +258,22 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 // wait for conditionSelectorStore to be initialized
 const fillColor = (exemplar: ExemplarTrack | undefined) => {
-    if (!exemplar || !exemplar.tags || !exemplar.tags.conc) {
+    if (
+        !exemplar ||
+        !exemplar.tags ||
+        !exemplar.tags.conc ||
+        !exemplar.tags.drug
+    ) {
         console.log(`Invalid exemplar or missing property:`, exemplar);
         return [0, 0, 0]; // Default black color
     }
+    let conditionKey = '';
 
-    const conditionKey = exemplar.tags.conc;
-    console.log('Condition key: ', conditionKey);
-
+    if (selectedYTag.value === 'Drug') {
+        conditionKey = exemplar.tags.drug;
+    } else {
+        conditionKey = exemplar.tags.conc;
+    }
     const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
 
     if (!hexColor) {
@@ -275,9 +283,18 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
 
     // Convert hex to RGB
     const rgbList = hexToRgb(hexColor);
-    console.log(rgbList);
     return rgbList;
 };
+watch(
+    () => conditionSelectorStore.conditionColorMap,
+    (newConditionColorMap) => {
+        console.log('conditionColorMap changed:', newConditionColorMap);
+        if (exemplarDataInitialized.value && newConditionColorMap) {
+            renderDeckGL();
+        }
+    },
+    { deep: true }
+);
 
 function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1) {
@@ -475,6 +492,12 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
             },
 
             getFillColor: fillColor,
+            updateTriggers: {
+                getFillColor: {
+                    selectedYTag: selectedYTag.value,
+                    conditionColorMap: conditionSelectorStore.conditionColorMap,
+                },
+            },
             getLineWidth: 0,
             lineWidthUnits: 'pixels',
         })
@@ -548,7 +571,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 data: [group],
                 getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
                 getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
-                getColor: fillColor,
+                getColor: fillColor(firstExemplar),
                 // Start of Selection
                 lineWidthUnits: 'common',
                 lineWidth: 7, // Adjust thickness as needed
@@ -663,7 +686,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 pickable: false,
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
-                getColor: fillColor, // Black lines
+                getColor: fillColor(firstExemplar), // Black lines
                 getWidth: (d: {
                     source: [number, number];
                     target: [number, number];
@@ -672,7 +695,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                     hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
                         ? 4
                         : 1, // Thinner stroke width
-                opacity: 0.03,
+                opacity: 0.2,
             })
         );
 
@@ -693,7 +716,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                     hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
                         ? 6
                         : 3,
-                getFillColor: fillColor,
+                getFillColor: fillColor(firstExemplar),
                 // Removed fixed radius constraints to allow dynamic sizing
                 // radiusMinPixels: 2,
                 // radiusMaxPixels: 4,
@@ -724,7 +747,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeUnits: 'common',
                 sizeMaxPixels: 25,
                 getAngle: 90,
-                getColor: fillColor,
+                getColor: fillColor(firstExemplar),
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',

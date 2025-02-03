@@ -149,12 +149,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 result[0].max_time != null &&
                 result[0].min_time != null
             ) {
-                console.log(
-                    'getTotalExperimentTime - min_time:',
-                    result[0].min_time,
-                    'max_time:',
-                    result[0].max_time
-                );
                 return result[0].max_time - result[0].min_time;
             } else {
                 return 0;
@@ -177,7 +171,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
 
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
-        console.log(`Fetching histogram data from table: ${tableName}`);
 
         try {
             //
@@ -195,12 +188,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 GROUP BY "track_id"
             ) AS subquery
           `;
-            console.log('Executing domainQuery:', domainQuery);
 
             const domainResult = await vg.coordinator().query(domainQuery, {
                 type: 'json',
             });
-            console.log('domainQuery result:', domainResult);
 
             if (!domainResult || domainResult.length === 0) {
                 console.warn('No results returned from domainQuery.');
@@ -208,9 +199,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
 
             const { min_attr, max_attr } = domainResult[0];
-            console.log(
-                `Min ${selectedAttribute.value}: ${min_attr}, Max ${selectedAttribute.value}: ${max_attr}`
-            );
 
             if (min_attr >= max_attr) {
                 console.error(
@@ -235,11 +223,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     min: min_attr + binSize * i,
                     max: min_attr + binSize * (i + 1),
                 })
-            );
-
-            console.log(
-                'Computed bin ranges:',
-                histogramDomains.value.histogramBinRanges
             );
 
             //
@@ -288,15 +271,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 ORDER BY drug, conc, bins.bin_index
                 `;
 
-            console.log(
-                'Executing histogramConditionQuery:',
-                histogramConditionQuery
-            );
-
             const histogramCounts = await vg
                 .coordinator()
                 .query(histogramConditionQuery, { type: 'json' });
-            console.log('histogramConditionQuery result:', histogramCounts);
 
             if (!histogramCounts || histogramCounts.length === 0) {
                 console.warn('No histogram counts found.');
@@ -340,12 +317,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 ...conditionHistograms.value.flatMap((c) => c.histogramData)
             );
 
-            // Final logs
-            console.log(
-                'Final Condition Histograms:',
-                conditionHistograms.value
-            );
-            console.log('Final Histogram Domains:', histogramDomains.value);
             console.log('Histogram data fetched and processed successfully.');
         } catch (error) {
             console.error('Error fetching histogram data:', error);
