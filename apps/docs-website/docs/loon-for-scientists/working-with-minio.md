@@ -59,7 +59,7 @@ Note that the "name_of_directory" is present in both the source and the destinat
 
 ## MinIO Console
 
-MinIO comes with a sleek web UI to manage stored data. To access the MinIO WebUI, you can head to "{your_base_url}/minio/" (i.e. http://localhost/minio/). From here, you'll be prompted to log in. As stated previously, the username is the MinIO access key and the password is the MinIO secret key (i.e. if you're using the default setup, the values are "admin" and "minioadmin", respectively).
+MinIO comes with a sleek web UI to manage stored data. To access the MinIO WebUI, you can head to `{your_base_url}/minio/` (i.e. http://localhost/minio/). From here, you'll be prompted to log in. As stated previously, the username is the MinIO access key and the password is the MinIO secret key (i.e. if you're using the default setup, the values are "admin" and "minioadmin", respectively).
 
 After logging in, you will see an initial bucket created for you: the "data" bucket. Once inside this bucket, you'll be able to view all files uploaded. You can download files, delete files, or upload files using this console.
 

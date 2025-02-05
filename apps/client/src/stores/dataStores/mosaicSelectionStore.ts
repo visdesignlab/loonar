@@ -572,7 +572,6 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
     }
 
     async function _updateStandardHighlightOrFilter(filter?: boolean) {
-        console.log('am I called??')
         const selPredicateString = filter
             ? aggSelPredString.value
             : compSelPredString.value;

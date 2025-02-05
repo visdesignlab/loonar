@@ -154,11 +154,11 @@ def createEnvFile(configFileName, envFileName, useDid=False):
         buildConfig.set('MINIO_STORAGE_MEDIA_URL', f'{base_url}/data')
         buildConfig.set('MINIO_STORAGE_STATIC_URL', f'{base_url}/data')
         if buildConfig.nfs is True:
-            buildConfig.set('MINIO_NFS_VOLUME_VERSION',
+            buildConfig.set('MINIO_NFS_VERSION',
                             buildConfig.get('minioSettings.nfsVersion'))
             buildConfig.set('MINIO_NFS_IP_ADDRESS',
                             buildConfig.get('minioSettings.ipAddress'))
-            buildConfig.set('MINIO_USER_GROUP',
+            buildConfig.set('MINIO_NFS_USER_GROUP',
                             buildConfig.get('minioSettings.userGroupPermissions'))
 
     # --------------------------------------------------------------
