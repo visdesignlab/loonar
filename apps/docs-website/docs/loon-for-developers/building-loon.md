@@ -158,6 +158,8 @@ If you're deploying this application on a remote server where you'd like your da
 | "userGroupPermissions" | The user and group permissions necessary for the MinIO storage engine to have full access to the directory. The syntax must be "\{UID\}:\{GID\}". If `"volumeType"` is not `"nfs"`, then this can be removed. | string |
 
 
+Once MinIO is deployed, you will be able to log into the web console using your provided access key and secret access key as the username and password. After you have logged in, you will be able to add additional users with restricted access if necessary using the "Identity" > "Users" tab. See [here](https://min.io/docs/minio/linux/administration/console/security-and-access.html#minio-console-security-access) for more information on identity management.
+
 ### NGINX Settings
 
 NGINX settings can be added by adding `"nginxSettings"` as a top level key. This is only required when `generalSettings.useHtp` is set to `false`.
