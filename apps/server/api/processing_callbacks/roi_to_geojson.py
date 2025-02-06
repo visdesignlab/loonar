@@ -26,10 +26,12 @@ def roi_to_geojson(file_contents: bytes, file_name: str) -> Tuple[bytes, str]:
     )
 
     data = feature_to_json(feature)
-    new_file_name = file_name.rstrip('.roi') + '.json'
+    if file_name.endswith('.roi'):
+        file_name = file_name[:-4] + ".json"
+
     data_bytes = data.encode('utf-8')
 
-    return data_bytes, new_file_name
+    return data_bytes, file_name
 
 
 def parse_frame(filename: str) -> int:

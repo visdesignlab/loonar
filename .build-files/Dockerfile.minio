@@ -1,0 +1,11 @@
+# Use the official MinIO image as the base
+FROM minio/minio:latest
+
+# Copy the healthcheck script into the container
+COPY .build-files/minio-healthcheck.sh /minio-healthcheck.sh
+
+RUN chmod +x /minio-healthcheck.sh
+
+# Continue with the CMD or ENTRYPOINT as in the original image
+# This is optional and typically not needed as the base image should have this set
+CMD ["minio", "server", "--address", ":9000", "--console-address", ":9001", "/data"]

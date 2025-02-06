@@ -1,0 +1,44 @@
+DuckDB Findings
+
+
+1. Can't use type:json if we have a big int, JSON can't serialize it (this is using coordinator.query())
+2. Can't do generic select by statement and pass data into VG plot
+3. Even if we do use a different plotting structure, cant seem to figure out how to grab results from query functionality
+    -> its using apache arrow -- we can probably install something to parse this if necessary
+
+
+    Queries for quantile -- finds average mass of every tracking id. takes the quantile of the average mass:
+
+    
+        const res = await vg.coordinator().query(`
+        WITH cte AS (
+            SELECT approx_quantile(avg_mass, 0.5) as quantile_5
+            FROM (
+                SELECT avg("Dry Mass (pg)") as avg_mass
+                FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
+                GROUP BY tracking_id, "Location"
+            )
+        )
+        SELECT 
+            CAST("Tracking ID" AS VARCHAR),
+            cte.quantile_5
+            FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata
+            CROSS JOIN cte
+            ORDER BY ABS("Dry Mass (pg)" - cte.quantile_5)
+            LIMIT 1;`,
+        {'type':'json'})
+        console.log(res);
+
+
+
+
+
+    SELECT tracking_id, location, avg("Dry Mass (pg)") from table group by tracking_id, location;
+
+
+
+const $test_selection = vg.Selection.intersect();
+$test_selection.update({
+    source:'test_source',
+    predicate:`"Tracking ID" IN (SELECT tracking_id FROM ${currentExperimentMetadata?.value?.name}_composite_experiment_cell_metadata_aggregate WHERE track_length between 0 and 100 )`
+})

@@ -53,6 +53,7 @@ class ExperimentCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
     headers = serializers.CharField()
     number_of_locations = serializers.IntegerField()
+    composite_tabular_data_file_name = serializers.CharField()
 
 
 class LocationCreateSerializer(serializers.Serializer):
@@ -67,3 +68,4 @@ class LocationCreateSerializer(serializers.Serializer):
     tabular_data_filename = serializers.CharField()
     images_data_filename = serializers.CharField()
     segmentations_folder = serializers.CharField()
+    tags = serializers.JSONField()

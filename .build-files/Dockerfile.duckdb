@@ -1,0 +1,14 @@
+FROM node:20.11.1
+
+WORKDIR /app
+
+COPY ./apps/duckdb/yarn.lock .
+COPY ./apps/duckdb/package.json .
+
+RUN yarn install
+
+COPY ./apps/duckdb/server.js .
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

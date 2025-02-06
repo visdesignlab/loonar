@@ -1,0 +1,24 @@
+language: typescript
+
+tasks:
+  run:
+    command: 'node server.js'
+    inputs:
+      - 'src/**/*'
+  install:
+    command: 'yarn'
+  install-windows:
+    command: 'yarn'
+  run-windows:
+    command: 'node server.js'
+    inputs:
+      - 'src/**/*'
+
+project:
+  name: 'Loon'
+  owner: 'University of Utah'
+  maintainers: ['Dev-Lan','bbollen23']
+  description: 'Front end data visualization platform for cell microscopy data.'
+
+tags:
+  - 'frontend'

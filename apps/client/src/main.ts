@@ -6,6 +6,7 @@ import DatasetSelector from './components/globalSettings/DatasetSelector.vue';
 import LayoutSelector from './components/globalSettings/LayoutSelector.vue';
 import GeneralSettings from './components/globalSettings/GeneralSettings.vue';
 import StubView from './components/globalSettings/StubView.vue';
+import FilterSelector from './components/plotSelector/FilterSelector.vue';
 // import LooneageView from './components/LooneageView.vue';
 import CellTrackView from './components/CellTrackView.vue';
 import LooneageViewGL from './components/LooneageViewGL.vue';
@@ -21,9 +22,11 @@ import AggregateLineChartSettingsSidebar from './components/AggregateLineChartSe
 import AggregateLineChartSettingsToolbar from './components/AggregateLineChartSettingsToolbar.vue';
 import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
+import ConditionSelector from './components/conditionSelector/ConditionSelector.vue';
+import ExemplarView from './components/exemplarView/ExemplarView.vue';
 import { router } from './router';
 
-import { Quasar, Loading } from 'quasar';
+import { Quasar, Loading, Notify } from 'quasar';
 // Import icon libraries
 import '@quasar/extras/material-icons/material-icons.css';
 
@@ -32,17 +35,6 @@ import 'quasar/src/css/index.sass';
 
 // Vuetify
 import 'vuetify/styles';
-import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
-
-import '@mdi/font/css/materialdesignicons.css';
-import 'vuetify/styles';
-const vuetify = createVuetify({
-    components,
-    directives,
-    ssr: true,
-});
 
 import './App.scss';
 
@@ -63,9 +55,8 @@ library.add(fas);
 createApp(App)
     .use(router)
     .use(createPinia())
-    .use(vuetify)
     .use(Quasar, {
-        plugins: { Loading }, // import Quasar plugins and add here,
+        plugins: { Loading, Notify }, // import Quasar plugins and add here,
         config: {
             loading: {
                 delay: 0,
@@ -101,4 +92,7 @@ createApp(App)
     .component('SimpleTable', SimpleTable)
     .component('NoDataSplash', NoDataSplash)
     .component('StubView', StubView)
+    .component('FilterSelector', FilterSelector)
+    .component('ConditionSelector', ConditionSelector)
+    .component('ExemplarView', ExemplarView)
     .mount('#app');

@@ -7,16 +7,16 @@ import {
     type Lineage,
     type Track,
     type Cell,
-} from '@/stores/cellMetaData';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
-import { useSegmentationStore } from '@/stores/segmentationStore';
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer.js';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
-import { useEventBusStore } from '@/stores/eventBusStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
 import { clamp } from 'lodash-es';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import type { Feature } from 'geojson';
 import {
     expandHeight,
@@ -45,6 +45,7 @@ import {
 // @ts-ignore
 import { TripsLayer } from '@deck.gl/geo-layers';
 import { render } from 'vue';
+import { useConfigStore } from '@/stores/misc/configStore';
 
 const cellMetaData = useCellMetaData();
 
@@ -55,6 +56,7 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 const { selectedTrack } = storeToRefs(cellMetaData);
+const configStore = useConfigStore();
 const eventBusStore = useEventBusStore();
 const segmentationStore = useSegmentationStore();
 
@@ -76,7 +78,7 @@ watch(currentLocationMetadata, async () => {
 
     pixelSource.value = null;
 
-    const fullImageUrl = datasetSelectionStore.getServerUrl(
+    const fullImageUrl = configStore.getFileUrl(
         currentLocationMetadata.value.imageDataFilename
     );
     loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });

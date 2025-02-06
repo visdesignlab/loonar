@@ -1,0 +1,157 @@
+version: "3.8"
+
+services:
+  # Depends on server. NGINX will throw errors if api endpoints are not setup.
+  client:
+    build:
+      context: ../ # relative to docker compose
+      dockerfile: ./.build-files/Dockerfile.client # relative to build context
+      args:
+        VITE_USE_HTTP: ${USE_HTTP}
+        VITE_ENVIRONMENT: ${VITE_ENVIRONMENT}
+        VITE_SERVER_URL: ${VITE_SERVER_URL}
+        NGINX_FILE: ${NGINX_FILE}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${SSL_MAPPING:-/dev/null:/dev/null}
+    depends_on:
+      - server
+      - celery
+    env_file:
+      - path: ${DOCKER_ENV_FILE} # relative to docker compose (has to be in same directory)
+        required: true
+
+  # Depends on database. Database must be healthy before starting server
+  server:
+    build:
+      context: ../ # relative to docker compose
+      dockerfile: ./.build-files/Dockerfile.server # relatvie to build context
+      args:
+        DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_ENV_FILE: "/app/.env"
+    volumes:
+      - ../apps/server/api/migrations:/app/api/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  celery:
+    build:
+      context: ../ # relative to docker compose
+      dockerfile: ./.build-files/Dockerfile.celery # relatvie to build context
+      args:
+        DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
+    command:
+      [
+        "celery",
+        "--app",
+        "celery_app",
+        "worker",
+        "--loglevel",
+        "info",
+        "--without-heartbeat",
+        "-c",
+        "4",
+      ]
+    # Docker Compose does not set the TTY width, which causes Celery errors
+    tty: false
+    environment:
+      DJANGO_ENV_FILE: "/app/.env"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # MySQL service. Has healthcheck which uses mysqladmin to ping before reporting healthy.
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DATABASE_ROOT_PASSWORD}",
+        ]
+      timeout: 20s
+      retries: 10
+    env_file:
+      - path: ${DOCKER_ENV_FILE} # relative to docker compose (has to be in same directory)
+        required: true
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    build:
+      context: ../ # relative to docker compose
+      dockerfile: ./.build-files/Dockerfile.minio # relatvie to build context
+      args:
+        DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
+    # When run with a TTY, minio prints credentials on startup
+    tty: true
+    user: ${MINIO_NFS_USER_GROUP}
+    environment:
+      MINIO_ROOT_USER: ${MINIO_STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_STORAGE_SECRET_KEY}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL}
+    ports:
+      - 9000:9000
+      - 9090:9090
+    healthcheck:
+      test: ["CMD-SHELL", "/minio-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - minio_data:/data
+  duckdb:
+    build:
+      context: ../ # relative to docker compose
+      dockerfile: ./.build-files/Dockerfile.duckdb # relative to build context
+    ports:
+      - "3000:3000"
+    volumes:
+      - duckdb-data:/app/duckdb-data
+
+volumes:
+  mysql-data:
+  duckdb-data:
+  minio_data:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=${MINIO_NFS_IP_ADDRESS},vers=${MINIO_NFS_VERSION},soft"
+      device: ":${MINIO_VOLUME_LOCATION}"

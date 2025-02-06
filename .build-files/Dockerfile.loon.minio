@@ -1,0 +1,15 @@
+FROM ubuntu:24.04
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y python3 pip curl docker.io
+RUN curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+RUN chmod +x /usr/local/bin/docker-compose
+
+
+WORKDIR /app
+
+COPY . .
+
+# Run a command to keep the container running
+# Specifying config and overwriting.
+CMD ["python3", "-u", "build.py", "-osi", "--config-file", ".build-files/config-standard.json"]

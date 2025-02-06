@@ -1,0 +1,18 @@
+{
+    "generalSettings":{
+        "useHttp":true,
+        "environment":"production",
+        "baseUrl":"localhost"
+    },
+    "mySqlSettings":{
+        "databaseName":"loon",
+        "databaseUser":"user",
+        "databasePassword":"user_pass",
+        "databaseRootPassword":"root_pass"
+    },
+    "minioSettings":{
+        "minioStorageAccessKey":"admin",
+        "minioStorageSecretKey":"minioadmin",
+        "sourceVolumeLocation":""
+    }
+}

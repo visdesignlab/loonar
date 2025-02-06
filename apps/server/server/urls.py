@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.contrib import admin  # type: ignore
 from django.urls import path, include  # type: ignore
-from api.views import FinishExperimentView, ProcessDataView
+from api.views import FinishExperimentView, ProcessDataView, VerifyExperimentNameView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,4 +25,8 @@ urlpatterns = [
     path("api/process/<str:task_id>", ProcessDataView.as_view(), name="process-status"),
     path("api/createExperiment/", FinishExperimentView.as_view(), name="finish-experiment"),
     path('api/s3-upload/', include('s3_file_field.urls')),
+    path('api/verifyExperimentName/<str:experiment_name>',
+         VerifyExperimentNameView.as_view(),
+         name="verify-experiment-name"
+         )
 ]

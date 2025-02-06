@@ -7,26 +7,26 @@ import {
     type Lineage,
     type Track,
     type Cell,
-} from '@/stores/cellMetaData';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
-import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntrracked';
-import { useSegmentationStore } from '@/stores/segmentationStore';
+} from '@/stores/dataStores/cellMetaDataStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
 import type { Selection } from './layers/CellSnippetsLayer';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
-import { useDatasetSelectionTrrackedStore } from '@/stores/datasetSelectionTrrackedStore';
-import { useEventBusStore } from '@/stores/eventBusStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
+import { useEventBusStore } from '@/stores/misc/eventBusStore';
 import {
     useLooneageViewStore,
     type SelectedSnippet,
     type InnerHorizonChartSettings,
-} from '@/stores/looneageViewStore';
+} from '@/stores/componentStores/looneageViewStore';
 import { isEqual } from 'lodash-es';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import type { Feature } from 'geojson';
 import { flextree, type LayoutNode } from 'd3-flextree';
 import { hierarchy } from 'd3-hierarchy';
@@ -72,10 +72,11 @@ import SnippetSegmentationLayer from './layers/SnippetSegmentationLayer/SnippetS
 import SnippetSegmentationOutlineLayer from './layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
 
 import HorizonChartLayer from './layers/HorizonChartLayer/HorizonChartLayer';
+import { useConfigStore } from '@/stores/misc/configStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
-
+const configStore = useConfigStore();
 const dataPointSelection = useDataPointSelection();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const { hoveredCellIndex } = storeToRefs(dataPointSelectionUntrracked);
@@ -247,7 +248,7 @@ watch(currentLocationMetadata, async () => {
 
     pixelSource.value = null;
 
-    const fullImageUrl = datasetSelectionStore.getServerUrl(
+    const fullImageUrl = configStore.getFileUrl(
         currentLocationMetadata.value.imageDataFilename
     );
     loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });

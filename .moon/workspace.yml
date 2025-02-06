@@ -15,6 +15,7 @@ projects:
   client: 'apps/client'
   server: 'apps/server'
   docs: 'apps/docs-website'
+  duckdb: 'apps/duckdb'
 
 # Configures the version control system to utilize within the workspace. A VCS
 # is required for determining touched (added, modified, etc) files, calculating file hashes,

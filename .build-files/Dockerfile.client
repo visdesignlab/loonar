@@ -1,0 +1,51 @@
+# Use the official Node.js image.
+FROM node:22.8.0-alpine AS build-step
+
+# Define build arguments for environment variables
+ARG VITE_USE_HTTP
+ARG VITE_ENVIRONMENT
+ARG VITE_SERVER_URL
+
+# Set environment variables during the build process
+ENV VITE_USE_HTTP=$VITE_USE_HTTP
+ENV VITE_ENVIRONMENT=$VITE_ENVIRONMENT
+ENV VITE_SERVER_URL=$VITE_SERVER_URL
+
+
+
+# Set the working directory.
+WORKDIR /app
+
+# Copy package.json and package-lock.json.
+COPY ./apps/client/yarn.lock .
+COPY ./apps/client/package.json .
+
+# Install packages (pulling from moon.yml)
+RUN yarn
+
+# Copy source code
+COPY ./apps/client .
+
+# Build application (pulling from moon.yml)
+RUN yarn run build 
+
+# Create new image
+FROM nginx:alpine
+
+# From build step, copy dist directory
+COPY --from=build-step /app/dist /usr/share/nginx/html
+ARG NGINX_FILE
+ARG SSL_TARGET_MOUNTED_DIRECTORY
+ARG SSL_SOURCE_MOUNTED_DIRECTORY
+
+COPY ./.build-files/$NGINX_FILE /etc/nginx/nginx.conf.template
+
+COPY ./.build-files/client-entrypoint.sh /app/client-entrypoint.sh
+RUN chmod +x /app/client-entrypoint.sh
+
+# Expose port 80 to be able to access the app
+EXPOSE 80
+
+ENTRYPOINT ["/app/client-entrypoint.sh"]
+# CMD ["tail", "-f", "/dev/null"]
+

@@ -38,6 +38,12 @@ const colors: {
     //     rgba: [182, 164, 2, 255],
     // },
     unselectedBoundary: {
+        hex: '#768794',
+        rgb: [118, 135, 148],
+        rgba: [118, 135, 148, 255],
+    },
+
+    highlightedBoundary: {
         hex: '#377eb8',
         rgb: [55, 126, 184],
         rgba: [55, 126, 184, 255],

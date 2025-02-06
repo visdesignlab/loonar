@@ -1,0 +1,16 @@
+{
+    "generalSettings": {
+        "useHttp": true,
+        "environment": "local",
+        "baseUrl": "localhost"
+    },
+    "mySqlSettings": {
+        "databaseName": "loon",
+        "databaseUser": "user",
+        "databasePassword": "user_pass",
+        "databaseRootPassword": "root_pass"
+    },
+    "localDataSettings": {
+        "sourceVolumeLocation": ""
+    }
+}

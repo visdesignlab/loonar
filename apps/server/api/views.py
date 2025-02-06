@@ -17,6 +17,9 @@ from .serializers import (
 )
 from .models import LoonUpload, Location, Experiment
 from django.core.files.base import ContentFile  # type: ignore
+import tempfile
+import os
+import pandas as pd
 
 
 def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
@@ -30,12 +33,67 @@ def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
     return object_key
 
 
+def create_composite_tabular_data_file(
+        experiment_name: str,
+        experiment_settings: list,
+        location_tags: dict
+        ) -> str:
+
+    composite_tabular_data_file_name = f"{experiment_name}/composite_tabular_data.parquet"
+
+    # Get all new columns to append
+    tag_key_list = []
+    for entry in location_tags.values():
+        for key in entry.keys():
+            tag_key_list.append(key)
+
+    tag_key_list = list(set(tag_key_list))
+
+    with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as temp_file:
+        temp_file_name = temp_file.name
+        for idx, entry in enumerate(experiment_settings):
+
+            curr_tabular_data_file = entry['tabularDataFilename']
+
+            with default_storage.open(curr_tabular_data_file, 'rb') as curr_source_file:
+
+                # Read CSV
+                df = pd.read_csv(curr_source_file)
+
+                # First column is location
+                df.insert(0, "location", entry['id'])
+
+                # Insert all tags
+                for tag_column in tag_key_list:
+                    # Using get -- much easier to get defaults with dictionaries
+                    df[tag_column] = location_tags.get(f'location_{idx}',{}).get(tag_column, '')
+
+                # Add current data_frame to data_frames list
+
+            if idx == 0:
+                # Write the first DataFrame
+                df.to_parquet(temp_file_name, index=False, engine='fastparquet')
+            else:
+                # Append subsequent DataFrames
+                df.to_parquet(temp_file_name, index=False, engine='fastparquet', append=True)
+                
+    # Store
+    with open(temp_file_name, 'rb') as composite_temp_file:
+        default_storage.save(composite_tabular_data_file_name, composite_temp_file)
+
+    # Clean up the temp file from local disk
+    os.remove(temp_file_name)
+
+    return composite_tabular_data_file_name
+
+
 InvalidFieldValueResponse = Response(
     {'field_value': ['field_value is not a valid signed string.']},
     status=status.HTTP_400_BAD_REQUEST,
 )
 
 
+# Called on each individual upload
 class ProcessDataView(APIView):
     def post(self, request):
         serializer = LoonUploadCreateSerializer(data=request.data)
@@ -72,10 +130,16 @@ class ProcessDataView(APIView):
 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
+
+        '''
+        Celery response:
+
+        May return 'current' and 'total'
+        Returns processed data when finished
+        '''
         response_data = {
-            "task_id": task_id
+            "task_id": task_id,
         }
-        print(result.state, flush=True)
         if result.state == 'PENDING':
             response_data['status'] = 'QUEUED'
         elif result.state == 'STARTED':
@@ -88,27 +152,34 @@ class ProcessDataView(APIView):
             response_data['status'] = 'ERROR'
             response_data['message'] = 'Unable to retrieve status'
 
-        if result.ready():
-            return_value = result.get()
-            response_data['data'] = return_value
+        response_data['data'] = result.info
 
         return Response(response_data)
 
 
+# Called once all processing steps have finished and all data has been uploaded.
 class FinishExperimentView(APIView):
     def post(self, request):
         data = request.data
         experiment_settings = json.loads(data.get('experimentSettings'))
         experiment_headers = json.loads(data.get('experimentHeaders'))
         experiment_header_transforms = json.loads(data.get('experimentHeaderTransforms'))
+        location_tags = json.loads(data.get('locationTags'))
 
         experiment_name = data.get('experimentName')
+
+        composite_tabular_data_file_name = create_composite_tabular_data_file(
+            experiment_name, experiment_settings, location_tags
+            )
+
         experiment_data = {
             "name": experiment_name,
             "headers": "|".join(experiment_headers),
             "number_of_locations": len(experiment_settings),
+            "composite_tabular_data_file_name": composite_tabular_data_file_name,
             "header_transforms": experiment_header_transforms
         }
+
         experiment_serializer = ExperimentCreateSerializer(data=experiment_data)
         if not experiment_serializer.is_valid():
             print(experiment_serializer.errors, flush=True)
@@ -116,12 +187,14 @@ class FinishExperimentView(APIView):
 
         experiment_instance = experiment_serializer.save()
 
+        # Create individual Location table entries
         for i in range(len(experiment_settings)):
             location_data = {
                 "name": experiment_settings[i]['id'],
                 "tabular_data_filename": experiment_settings[i]['tabularDataFilename'],
                 "images_data_filename": experiment_settings[i]['imageDataFilename'],
                 "segmentations_folder": experiment_settings[i]['segmentationsFolder'],
+                "tags": location_tags[f'location_{i}']
             }
             location_serializer = LocationCreateSerializer(data=location_data)
             if not location_serializer.is_valid():
@@ -153,5 +226,46 @@ class FinishExperimentView(APIView):
             default_storage.delete(index_file_name)
 
         default_storage.save(index_file_name, ContentFile(json_index_file_bytes))
+
+        return Response({'status': 'SUCCESS'})
+
+
+class VerifyExperimentNameView(APIView):
+    def get(self, request, experiment_name):
+
+        '''
+        Leaving both checks in here. I do not think checking 'aa_index.json' is necessary
+        when Loon is fully developed, but for now, I would like to discourage the re-use
+        of any experiment even if the original data is deleted.
+        '''
+
+        def strip_json(s):
+            if s.endswith('.json'):
+                return s[:-5]
+            return s
+
+        experiment_name = strip_json(experiment_name)
+
+        # Checks aa_index.json file
+        with default_storage.open('aa_index.json', 'r') as file:
+            content = file.read()
+
+        experiment_list = json.loads(content)['experiments']
+
+        experiment_list_stripped = [strip_json(element) for element in experiment_list]
+
+        if experiment_name in experiment_list_stripped:
+            return Response({'status': 'FAILED'})
+
+        # Checks directories
+        subdirs, files = default_storage.listdir('')
+
+        if experiment_name in subdirs:
+            return Response({'status': 'FAILED'})
+
+        # Checks experiment table
+        exists = Experiment.objects.filter(name=experiment_name).exists()
+        if exists:
+            return Response({'status': 'FAILED'})
 
         return Response({'status': 'SUCCESS'})

@@ -1,0 +1,20 @@
+FROM python:3.12
+
+WORKDIR /app
+
+ARG DOCKER_ENV_FILE
+
+COPY ./apps/server/requirements.txt .
+COPY ./.build-files/$DOCKER_ENV_FILE /app/.env
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./apps/server/ .
+
+COPY ./.build-files/server-entrypoint.sh /app/server-entrypoint.sh
+RUN chmod +x /app/server-entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/server-entrypoint.sh"]
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { useCellMetaData } from '@/stores/cellMetaData';
-import { useGlobalSettings } from '@/stores/globalSettings';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     useAggregateLineChartStore,
     type AggDataPoint,
     type AggLineData,
-} from '@/stores/aggregateLineChartStore';
+} from '@/stores/componentStores/aggregateLineChartStore';
 import { scaleLinear } from 'd3-scale';
 import { extent, max, min } from 'd3-array';
 import { area, line } from 'd3-shape';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { select } from 'd3-selection';
 import { format } from 'd3-format';
-import { useDataPointSelectionUntrracked } from '@/stores/dataPointSelectionUntrracked';
-import { useDataPointSelection } from '@/stores/dataPointSelection';
-import { useImageViewerStore } from '@/stores/imageViewerStore';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
 import type { Selection } from './layers/CellSnippetsLayer';
-import { useImageViewerStoreUntrracked } from '@/stores/imageViewerStoreUntrracked';
-import { useDatasetSelectionStore } from '@/stores/datasetSelectionStore';
-import { useLooneageViewStore } from '@/stores/looneageViewStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
     GeoJsonLayer,
@@ -32,7 +32,7 @@ import {
     TextLayer,
 } from '@deck.gl/layers/typed';
 import type { PixelData, PixelSource } from '@vivjs/types';
-import { Pool } from 'geotiff';
+import Pool from '../util/Pool';
 import {
     loadOmeTiff,
     getChannelStats,
@@ -42,9 +42,11 @@ import { storeToRefs } from 'pinia';
 import { LRUCache } from 'lru-cache';
 import { getBBoxAroundPoint } from '@/util/imageSnippets';
 import colors from '@/util/colors';
+import { useConfigStore } from '@/stores/misc/configStore';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
+const configStore = useConfigStore();
 const aggregateLineChartStore = useAggregateLineChartStore();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const dataPointSelection = useDataPointSelection();
@@ -125,6 +127,18 @@ const areaGen = computed(() => {
         .y1((aggPoint) =>
             scaleY.value(aggPoint.value - temp.value * aggPoint.count)
         );
+});
+
+const areaGenHighlighted = computed(() => {
+    return area<AggDataPoint>()
+        .x((aggPoint) => scaleX.value(aggPoint.time))
+        .y0((aggPoint) =>
+            scaleY.value(aggPoint.value + temp.value * aggPoint.count)
+        )
+        .y1((aggPoint) =>
+            scaleY.value(aggPoint.value - temp.value * aggPoint.count)
+        )
+        .defined((aggPoint) => aggPoint.highlighted ?? false);
 });
 
 const lineGen = computed(() => {
@@ -262,7 +276,7 @@ watch(currentLocationMetadata, async () => {
 
     pixelSource.value = null;
 
-    const fullImageUrl = datasetSelectionStore.getServerUrl(
+    const fullImageUrl = configStore.getFileUrl(
         currentLocationMetadata.value.imageDataFilename
     );
     loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
@@ -520,7 +534,9 @@ const otherUnmuted = computed(() => {
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
                     <path
-                        :class="`muted agg-line ${globalSettings.normalizedDark}`"
+                        :class="`muted agg-line ${
+                            globalSettings.normalizedDark
+                        } ${aggLine.filtered ? 'filtered' : ''}`"
                         v-for="(
                             aggLine, index
                         ) in aggregateLineChartStore.aggLineDataList.filter(
@@ -528,6 +544,18 @@ const otherUnmuted = computed(() => {
                         )"
                         :key="index"
                         :d="areaGen(aggLine.data) ?? ''"
+                    ></path>
+                    <!-- Path below is for individual cell tracks with highlighted cells. -->
+                    <path
+                        style="stroke-width: 2px"
+                        :class="`highlighted-line ${globalSettings.normalizedDark}`"
+                        v-for="(
+                            aggLine, index
+                        ) in aggregateLineChartStore.aggLineDataList.filter(
+                            (d) => d.muted
+                        )"
+                        :key="'highlighted-' + index"
+                        :d="areaGenHighlighted(aggLine.data) ?? ''"
                     ></path>
                 </g>
                 <g :transform="`translate(${margin.left},${margin.top})`">
@@ -643,6 +671,15 @@ const otherUnmuted = computed(() => {
 .muted.agg-line {
     stroke-width: 1px;
     opacity: 0.6;
+}
+
+.highlighted.agg-line {
+    stroke-width: 3px;
+    opacity: 1;
+}
+
+.filtered.agg-line {
+    opacity: 0 !important;
 }
 .selected.agg-line {
     stroke-width: 4px;

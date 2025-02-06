@@ -1,0 +1,168 @@
+{
+    "type":"object",
+    "required":true,
+    "properties":{
+        "generalSettings":{
+            "type":"object",
+            "required":true,
+            "properties":{
+                "useHttp":{"type":"boolean", "required":true},
+                "environment":{"type":"string", "required":true},
+                "baseUrl":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[{
+                        "regexPattern":"(^/)|(/$)|(https://)|(http://)",
+                        "errorOnMatch":true,
+                        "message":"Invalid baseUrl formatting. The baseUrl must have no trailing forward slash, leading forward slash, and must not begin with 'https://' or 'http://'"
+                    }]
+                }
+            }
+        },
+        "mySqlSettings":{
+            "type":"object",
+            "required":true,
+            "properties":{
+                "databaseName":{"type":"string", "required":true},
+                "databaseUser":{"type":"string", "required":true},
+                "databasePassword":{"type":"string", "required":true},
+                "databaseRootPassword":{"type":"string", "required":true}
+            }
+        },
+        "minioSettings":{
+            "type":"object",
+            "required":true,
+            "dependentOn":{
+                "key":"generalSettings.environment",
+                "value":"local",
+                "errorOnMatch": false
+            },
+            "properties":{
+                "minioStorageAccessKey":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[{
+                        "regexPattern":"^.{4,}$",
+                        "errorOnMatch":false,
+                        "message":"Secret key must be at least 4 characters."
+                    }]
+                },
+                "minioStorageSecretKey":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[{
+                        "regexPattern":"^.{8,}$",
+                        "errorOnMatch":false,
+                        "message":"Secret key must be at least 8 characters."
+                    }]
+                },
+                "sourceVolumeLocation":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[
+                        {
+                            "regexPattern":"(/$)",
+                            "errorOnMatch":true,
+                            "message":"Invalid source volume location formatting. The sourceVolumeLocation must not end with a trailing slash."
+                        },
+                        {
+                            "regexPattern":"^\\s*$",
+                            "errorOnMatch":true,
+                            "message":"Invalid source volume location formatting. Must not be empty."    
+                        }
+                    ]
+                },
+                "volumeType":{
+                    "type": "string",
+                    "required": false
+                },
+                "userGroupPermissions":{
+                    "type":"string",
+                    "required":true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
+                },
+                "nfsVersion":{
+                    "type": "integer",
+                    "required": true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
+                },
+                "ipAddress":{
+                    "type": "string",
+                    "required": true,
+                    "dependentOn":{
+                        "key":"minioSettings.volumeType",
+                        "value":"nfs",
+                        "errorOnMatch": true
+                    }
+                }
+            }
+        },
+        "nginxSettings":{
+            "type":"object",
+            "required":true,
+            "dependentOn":{
+                "key":"generalSettings.useHttp",
+                "value":false,
+                "errorOnMatch": true
+            },
+            "properties":{
+                "sourceVolumeLocation":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[{
+                        "regexPattern":"(/$)",
+                        "errorOnMatch":true,
+                        "message":"Invalid source volume location formatting. The sourceVolumeLocation must not end with a trailing slash."
+                    }]
+                },
+                "targetVolumeLocation":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[{
+                        "regexPattern":"(/$)",
+                        "errorOnMatch":true,
+                        "message":"Invalid target volume location formatting. The targetVolumeLocation must not end with a trailing slash."
+                    }]
+                },
+                "certFileLocation":{"type":"string", "required":true},
+                "keyFileLocation":{"type":"string", "required":true}
+            }
+        },
+        "localDataSettings":{
+            "type":"object",
+            "required":true,
+            "dependentOn":{
+                "key":"generalSettings.environment",
+                "value":"local",
+                "errorOnMatch": true
+            },
+            "properties":{
+                "sourceVolumeLocation":{
+                    "type":"string",
+                    "required":true,
+                    "custom":[
+                        {
+                            "regexPattern":"(/$)",
+                            "errorOnMatch":true,
+                            "message":"Invalid source volume location formatting. The sourceVolumeLocation must not end with a trailing slash."
+                        },
+                        {
+                            "regexPattern":"^\\s*$",
+                            "errorOnMatch":true,
+                            "message":"Invalid source volume location formatting. Must not be empty."    
+                        }
+
+                    ]
+                }
+            }
+        }
+    }
+}

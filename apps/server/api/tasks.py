@@ -86,14 +86,17 @@ class Task(ABC):
         logger.info('Fake Cleaning')
 
     # Generic unpacking of a zip file with callback for additional processing.
-    def process_zip_file(self, label="", callback=None):
+    def process_zip_file(self,
+                         base_file_location="",
+                         callback=None,
+                         base_file_location_suffix="",
+                         task_instance=None
+                         ):
         try:
-            base_file_location = f"{self.experiment_name}/" \
-                f"location_{self.location}/" \
-                f"{label}/"
             companion_ome = ""
             with zipfile.ZipFile(self.blob, 'r') as zip_ref:
                 zip_contents = zip_ref.namelist()
+                total = len(zip_contents)
                 for i, curr_file_name in enumerate(zip_contents):
                     if not _badFileChecker(
                         curr_file_name
@@ -118,7 +121,7 @@ class Task(ABC):
                                         "message": f"Failed at callback: {e.message}",
                                     }
 
-                            file_location = f"{base_file_location}/" \
+                            file_location = f"{base_file_location}/{base_file_location_suffix}/" \
                                             f"{corrected_curr_file_name}"
                             # Create a ContentFile object with the file contents
                             content_file = ContentFile(file_contents)
@@ -131,19 +134,30 @@ class Task(ABC):
                                 pass  # If setting size manually is not possible
 
                             default_storage.save(file_location, content_file)
+                            if task_instance:
+                                task_instance.update_state(
+                                    state='STARTED',
+                                    meta={
+                                        'metadata': {
+                                            'current': i, 'total': total
+                                        }
+                                    }
+                                )
 
-            # return {"process_zip_file_status": "SUCCEEDED"}
-            return {"processed_zip_file_status": "SUCCESS",
+            return {
+                    "processed_zip_file_status": "SUCCESS",
                     "base_file_location": base_file_location,
-                    "companion_ome": companion_ome}
+                    "companion_ome": companion_ome,
+                    "metadata": {
+                        "total": total,
+                        "current": total
+                        }
+                    }
 
         except FileNotFoundError:
             return {"process_zip_file_status": "FAILED", "message": "Could not find file"}
 
-    def process_csv_file(self, label="", skip_rows=0, delimiter=',', callback=None):
-
-        base_file_location = f"{self.experiment_name}/" \
-            f"location_{self.location}/"
+    def process_csv_file(self, base_file_location="", skip_rows=0, delimiter=',', callback=None):
 
         with self.blob.open('rb') as file:
             text_stream = io.TextIOWrapper(file, encoding='utf-8')
@@ -191,7 +205,7 @@ class Task(ABC):
 
     # Declare abstract execute method
     @abstractmethod
-    def execute(self):
+    def execute(self, task_instance=None):
         pass
 
     # Declare abstract cleanup method
@@ -219,9 +233,17 @@ class Task(ABC):
 
 
 class LiveCyteSegmentationsTask(Task):
-    def execute(self):
+    def execute(self, task_instance=None):
         logger.info(f"Executing task: {self.record_id}")
-        data = self.process_zip_file(label="segmentations", callback=roi_to_geojson)
+        base_file_location = f"{self.experiment_name}/" \
+                             f"location_{self.location}/" \
+                             "segmentations"
+        data = self.process_zip_file(
+            base_file_location=base_file_location,
+            callback=roi_to_geojson,
+            base_file_location_suffix="cells",
+            task_instance=task_instance
+            )
         return data
 
     def cleanup(self):
@@ -230,9 +252,16 @@ class LiveCyteSegmentationsTask(Task):
 
 
 class LiveCyteCellImagesTask(Task):
-    def execute(self):
+    def execute(self, task_instance=None):
         logger.info(f"Executing task: {self.record_id}")
-        data = self.process_zip_file(label="images", callback=None)
+        base_file_location = f"{self.experiment_name}/" \
+                             f"location_{self.location}/" \
+                             "images"
+        data = self.process_zip_file(
+            base_file_location=base_file_location,
+            callback=None,
+            task_instance=task_instance
+            )
         return data
 
     def cleanup(self):
@@ -241,9 +270,13 @@ class LiveCyteCellImagesTask(Task):
 
 
 class LiveCyteMetadataTask(Task):
-    def execute(self):
+    def execute(self, task_instance=None):
         logger.info(f"Executing task: {self.record_id}")
-        data = self.process_csv_file(label="metadata", skip_rows=1, callback=None)
+
+        base_file_location = f"{self.experiment_name}/" \
+            f"location_{self.location}"
+        data = self.process_csv_file(base_file_location=base_file_location, skip_rows=1,
+                                     callback=None)
         return data
 
     def cleanup(self):
@@ -251,8 +284,8 @@ class LiveCyteMetadataTask(Task):
         self.cleanup_temp_files()
 
 
-@shared_task
-def execute_task(record_id):
+@shared_task(bind=True)
+def execute_task(self, record_id):
     # Get entry from our SQL Table
     loonUpload: LoonUpload = LoonUpload.objects.get(id=record_id)
     # Create a task for this entry
@@ -266,7 +299,7 @@ def execute_task(record_id):
         record_id=record_id
     )
     # Execute the task
-    response_data = curr_task.execute()
+    response_data = curr_task.execute(task_instance=self)
     # Perform cleanup
     curr_task.cleanup()
 
