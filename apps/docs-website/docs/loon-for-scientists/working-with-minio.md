@@ -60,6 +60,10 @@ aws s3 cp /path/to/{name_of_directory} s3://data/{name_of_directory}/ --recursiv
 
 Again, here we use the `--dryrun` flag to first ensure that the data is copied to the correct directory. You may remove this once you've verified that the data is copying to the desired location.
 
+:::info
+You do not always have to let the entire `--dryrun` operation complete when copying large data. Often, you will understand if your data is being copied to the correct location long before it has completed. You can exit the command simply by using `Ctrl+C/Cmd+C` in your terminal.
+:::
+
 Note that the "name_of_directory" is present in both the source and the destination. Under the hood, this is essentially saying "copy all files that are inside my source directory into a new directory". So, when we use the same name for both the source and destination, it will essentially copy that entire directory including the original name.
 
 
