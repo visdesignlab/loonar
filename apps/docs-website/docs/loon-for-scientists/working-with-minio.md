@@ -40,21 +40,27 @@ aws s3 ls s3://data --endpoint-url {endpoint-url} --profile loon-user
 
 Note that this will not list all files in nested directories -- it will list immediate files in the root of the bucket and the directory names.
 
-To copy a single file in the root of the bucket, we can do the following:
+:::warning
+The AWS CLI `--dryrun` flag is extremely helpful when copying large datasets. Instead of copying the data, it will only show the final location of all data you are attempting to copy. We _highly_ suggest using this flag to ensure that your data is being copied to the correct place and then removing the flag when you've verified this.
+:::
+
+To test copying a single file in the root of the bucket, we can do the following:
 
 ```bash
-aws s3 cp /path/to/my_file.txt s3://data/ --endpoint-url {endpoint-url} --profile loon-user
+aws s3 cp /path/to/my_file.txt s3://data/ --endpoint-url {endpoint-url} --profile loon-user --dryrun
 ```
 
-By default, if a file named "my_file.txt" already exists in `s3://data/`, the file will be overwritten.
+When you're ready to copy the file over, remove the `--dryrun` flag. By default, if a file named "my_file.txt" already exists in `s3://data/`, the file will be overwritten.
 
 If we want to copy an entire directory while maintaining it structure (a common use case), we can do the following
 
 ```bash
-aws s3 cp /path/to/{name_of_directory} s3://data/{name_of_directory}/ --recursive  --endpoint-url {endpoint-url} --profile loon-user
+aws s3 cp /path/to/{name_of_directory} s3://data/{name_of_directory}/ --recursive  --endpoint-url {endpoint-url} --profile loon-user --dryrun
 ```
-Note that the "name_of_directory" is present in both the source and the destination. Under the hood, this is essentially saying "copy all files that are inside my source directory into a new directory". So, when we use the same name for both the source and destination, it will essentially copy that entire directory including the original name.
 
+Again, here we use the `--dryrun` flag to first ensure that the data is copied to the correct directory. You may remove this once you've verified that the data is copying to the desired location.
+
+Note that the "name_of_directory" is present in both the source and the destination. Under the hood, this is essentially saying "copy all files that are inside my source directory into a new directory". So, when we use the same name for both the source and destination, it will essentially copy that entire directory including the original name.
 
 
 ## MinIO Console
