@@ -79,3 +79,10 @@ All Versions: https://hub.docker.com/r/bbollen23/loon/tags
 | Environment Variable | Key                                | Value                      | Details                                                 |
 | -------------------- | ---------------------------------- | -------------------------- | ------------------------------------------------------- |
 | MinIO Data Volume    | MINIOSETTINGS_SOURCEVOLUMELOCATION | Absolute path to your data | This will be identical to your Data Volume source path. |
+| MinIO Access Key   | MINIOSETTINGS_MINIOSTORAGEACCESSKEY | Username for MinIO storage | This will be used as the access key when accessing the MinIO bucket via AWS CLI and will be used as the username when using the web UI. Must be longer than 3 characters in length. |
+| MinIO Secret Key   | MINIOSETTINGS_MINIOSTORAGESECRETKEY | Password for MinIO storage | This will be used as the secret access key when accessing the MinIO bucket via AWS CLI and will be used as the password when using the web UI. Must be longer than 7 characters in length.|
+
+
+:::warning
+By default, the access and secret access keys will be set to "admin" and "minioadmin", respectively. We _highly_ suggest adding these environment variables in order to override these defaults when deploying on a server. If you're just using MinIO in a local deployment, changing these defaults may not be necessary and can be left out when running the image.
+:::

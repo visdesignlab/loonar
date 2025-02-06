@@ -21,7 +21,11 @@ def checkDependencies(keyString, valueToCompare, baseConfig, errorOnMatch):
     keyList = keyString.split(".")
     comparedCurrValue = baseConfig[keyList[0]]
     for i in range(1, len(keyList)):
-        comparedCurrValue = comparedCurrValue[keyList[i]]
+        if keyList[i] not in comparedCurrValue:
+            result = None
+            break
+        else:
+            comparedCurrValue = comparedCurrValue[keyList[i]]
 
     result = comparedCurrValue == valueToCompare
     if errorOnMatch:
@@ -51,6 +55,7 @@ class BuildConfig:
         # Env File name will be placed in env file for mounting
         self.set('DOCKER_ENV_FILE', envFile)
         self.local = self.get('generalSettings.environment') == 'local'
+        self.nfs = self.get('minioSettings.volumeType') == 'nfs'
 
     def validate(self):
         with open('.build-files/config.json.schema', 'r') as schemaFile:

@@ -71,15 +71,17 @@ def overwrite_config(config_file):
         return new_config_file_name
 
 
-def createComposeFile(local=False):
+def createComposeFile(local=False, nfs=False):
     docker_compose_template = '.build-files/docker-compose.template.yml'
     if local:
         docker_compose_template = '.build-files/docker-compose-local.template.yml'
+    elif nfs:
+        docker_compose_template = '.build-files/docker-compose-nfs.template.yml'
 
     shutil.copy(docker_compose_template, '.build-files/docker-compose.yml')
 
 
-def createEnvFile(configFileName, envFileName):
+def createEnvFile(configFileName, envFileName, useDid=False):
     buildConfig = BuildConfig.BuildConfig(configFileName, envFileName)
     buildConfig.reportErrors()
 
@@ -151,6 +153,13 @@ def createEnvFile(configFileName, envFileName):
         buildConfig.set('MINIO_STORAGE_STATIC_BUCKET_NAME', 'static')
         buildConfig.set('MINIO_STORAGE_MEDIA_URL', f'{base_url}/data')
         buildConfig.set('MINIO_STORAGE_STATIC_URL', f'{base_url}/data')
+        if buildConfig.nfs is True:
+            buildConfig.set('MINIO_NFS_VERSION',
+                            buildConfig.get('minioSettings.nfsVersion'))
+            buildConfig.set('MINIO_NFS_IP_ADDRESS',
+                            buildConfig.get('minioSettings.ipAddress'))
+            buildConfig.set('MINIO_NFS_USER_GROUP',
+                            buildConfig.get('minioSettings.userGroupPermissions'))
 
     # --------------------------------------------------------------
     # NGINX SETTINGS -----------------------------------------------
@@ -180,6 +189,11 @@ def createEnvFile(configFileName, envFileName):
                     )
     localVolumeLocation = buildConfig.get('localDataSettings.sourceVolumeLocation')
     buildConfig.set('LOCAL_DATA_VOLUME_LOCATION', localVolumeLocation)
+
+    if useDid is True:
+        buildConfig.set('MIGRATIONS_SOURCE', 'migrations_volume')
+    else:
+        buildConfig.set('MIGRATIONS_SOURCE', '../apps/server/api/migrations')
 
     buildConfig.writeToEnv()
     return buildConfig
@@ -410,6 +424,8 @@ if __name__ == "__main__":
                         help="Disables spinner")
     parser.add_argument("--prepare-dev", action="store_true", required=False,
                         help="Generates .env file for client environment.")
+    parser.add_argument("-i", "--use-did", action="store_true", required=False,
+                        help="Flag to specify that this build script is running in a DiD setup.")
 
     args = parser.parse_args()
 
@@ -429,7 +445,7 @@ if __name__ == "__main__":
                 print('No client .env file found.')
                 pass
 
-            buildConfig = createEnvFile(config_file_name, args.env_file)
+            buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
 
             use_http = buildConfig.get('generalSettings.useHttp')
             if use_http:
@@ -440,7 +456,7 @@ if __name__ == "__main__":
             base_url = buildConfig.get('generalSettings.baseUrl')
 
             # Generate docker-compose file based on if we are using local loon or not
-            createComposeFile(local=buildConfig.local)
+            createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
                 services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
@@ -487,5 +503,5 @@ if __name__ == "__main__":
         if args.overwrite:
             config_file_name = overwrite_config(config_file_name)
 
-        buildConfig = createEnvFile(config_file_name, args.env_file)
-        createComposeFile(local=buildConfig.local)
+        buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
+        createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)

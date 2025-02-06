@@ -50,6 +50,7 @@ const sidebars: SidebarsConfig = {
         "loon-for-scientists/quickstart",
         "loon-for-scientists/data",
         "loon-for-scientists/loon-wrappers",
+        "loon-for-scientists/working-with-minio"
       ],
     },
     {
