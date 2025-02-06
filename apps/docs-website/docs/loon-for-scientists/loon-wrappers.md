@@ -38,11 +38,11 @@ Loon comes with a robust logging system that will help you debug in the case of 
 
 To run this image, you will need to specify the location of your Docker socket to mount, the path where your data is currently located, and an additional environment variable.
 
-Image Name in Docker Hub: bbollen23/local-loon
+Image Name in Docker Hub: visdesignlab/local-loon
 
-Image source: https://hub.docker.com/r/bbollen23/local-loon
+Image source: https://hub.docker.com/r/visdesignlab/local-loon
 
-All Versions: https://hub.docker.com/r/bbollen23/local-loon/tags
+All Versions: https://hub.docker.com/r/visdesignlab/local-loon/tags
 
 #### Volumes
 
@@ -61,11 +61,11 @@ All Versions: https://hub.docker.com/r/bbollen23/local-loon/tags
 
 To run this image, you will need to specify the location of your Docker socket to mount, the path where you would like your data to be uploaded, and an additional environment variable.
 
-Image Name in Docker Hub: bbollen23/loon
+Image Name in Docker Hub: visdesignlab/loon
 
-Image source: https://hub.docker.com/r/bbollen23/loon
+Image source: https://hub.docker.com/r/visdesignlab/loon
 
-All Versions: https://hub.docker.com/r/bbollen23/loon/tags
+All Versions: https://hub.docker.com/r/visdesignlab/loon/tags
 
 #### Volumes
 
