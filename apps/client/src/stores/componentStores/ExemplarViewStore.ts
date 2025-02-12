@@ -344,89 +344,58 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
-        // Start of Selection
         const query = `
-                WITH aggregated_data AS (
-                    SELECT
-                        "${trackColumn}" AS track_id,
-                        AVG("${attributeColumn}") AS avg_attr
-                    FROM "${experimentName}_composite_experiment_cell_metadata"
-                    WHERE "${drugColumn}" = '${drug}'
-                    AND "${concColumn}" = '${conc}'
-                    GROUP BY "${trackColumn}"
-                    HAVING COUNT(*) >= 50
-                )
-                SELECT
-                    CAST("${trackColumn}" AS INTEGER) AS track_id,
-                    CAST("${locationColumn}" AS INTEGER) AS location,
-                    MIN("${timeColumn}") AS birthTime,
-                    MAX("${timeColumn}") AS deathTime,
-                    array_agg(
-                        ARRAY[
-                            "${timeColumn}",
-                            "Frame ID",
-                            "${attributeColumn}"
-                        ]
-                    ) AS data
-                FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${trackColumn}" = (
-                    SELECT track_id
-                    FROM aggregated_data
-                    WHERE avg_attr = (
-                        SELECT quantile_disc(avg_attr, ${pDecimal})
-                        FROM aggregated_data
-                    )
-                    LIMIT 1
-                )
-                GROUP BY
-                    "${trackColumn}",
-                    "${locationColumn}"
-                `;
-
-        // const query = `
-        //         WITH aggregated_data AS (
-        //           SELECT
-        //             "tracking_id"::INTEGER AS track_id,
-        //             "location"::INTEGER AS location,
-        //             "Minimum Time (h)" AS birthTime,
-        //             "Maximum Time (h)" AS deathTime,
-        //             "Average ${attributeColumn}" AS avg_attr
-        //           FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
-        //           WHERE "Drug" = '${drug}'
-        //             AND "Concentration (um)" = '${conc}'
-        //         ),
-        //         selected_track AS (
-        //           -- Choose the one track whose pre-aggregated average matches the pth percentile
-        //           SELECT track_id
-        //           FROM aggregated_data
-        //           WHERE avg_attr = (
-        //             SELECT quantile_disc(avg_attr, ${pDecimal})
-        //             FROM aggregated_data
-        //           )
-        //           LIMIT 1
-        //         )
-        //         SELECT
-        //           agg.track_id,
-        //           agg.location,
-        //           agg.birthTime,
-        //           agg.deathTime,
-        //           array_agg(
-        //             ARRAY[
-        //               n."${timeColumn}",
-        //               n."Frame ID",
-        //               n."${attributeColumn}"
-        //             ]
-        //           ) AS data
-        //         FROM "${experimentName}_composite_experiment_cell_metadata" n
-        //         JOIN aggregated_data agg
-        //           ON n."track_id" = agg.track_id
-        //         WHERE n."track_id" = (SELECT track_id FROM selected_track)
-        //         GROUP BY
-        //           agg.track_id,
-        //           agg.location,
-        //           agg.birthTime,
-        //           agg.deathTime;
-        //       `;
+          WITH valid_tracks AS (
+            SELECT "track_id"
+            FROM "${experimentName}_composite_experiment_cell_metadata"
+            WHERE "${drugColumn}" = '${drug}'
+              AND "${concColumn}" = '${conc}'
+            GROUP BY "track_id"
+            HAVING COUNT(*) >= 50
+          ),
+          aggregated_data AS (
+            SELECT
+              "tracking_id"::INTEGER AS track_id,
+              "location"::INTEGER AS location,
+              "Minimum Time (h)" AS birthTime,
+              "Maximum Time (h)" AS deathTime,
+              "Average ${attributeColumn}" AS avg_attr
+            FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
+            WHERE "Drug" = '${drug}'
+              AND "Concentration (um)" = '${conc}'
+              AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
+          ),
+          selected_track AS (
+            SELECT track_id
+            FROM aggregated_data
+            WHERE avg_attr = (
+              SELECT quantile_disc(avg_attr, ${pDecimal})
+              FROM aggregated_data
+            )
+            LIMIT 1
+          )
+          SELECT
+            agg.track_id,
+            agg.location,
+            agg.birthTime,
+            agg.deathTime,
+            array_agg(
+              ARRAY[
+                n."${timeColumn}",
+                n."Frame ID",
+                n."${attributeColumn}"
+              ]
+            ) AS data
+          FROM "${experimentName}_composite_experiment_cell_metadata" n
+          JOIN aggregated_data agg
+            ON n."track_id" = agg.track_id
+          WHERE n."track_id" = (SELECT track_id FROM selected_track)
+          GROUP BY
+            agg.track_id,
+            agg.location,
+            agg.birthTime,
+            agg.deathTime;
+        `;
 
         try {
             const result = await vg
