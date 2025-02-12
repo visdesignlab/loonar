@@ -144,6 +144,21 @@ export const useDatasetSelectionStore = defineStore(
                 return data;
             });
 
+        // Add a function to get all unique tag names
+        function generateAllTagNames(
+            locationMetadataList: LocationMetadata[]
+        ): string[] {
+            const tagSet = new Set<string>();
+            locationMetadataList.forEach((location) => {
+                if (location.tags) {
+                    Object.keys(location.tags).forEach((tagName) =>
+                        tagSet.add(tagName)
+                    );
+                }
+            });
+            return Array.from(tagSet);
+        }
+
         // Initialize experiment cell metadata store and create duckdb table.
         watch(currentExperimentMetadata, async () => {
             if (currentExperimentMetadata.value?.compositeTabularDataFilename) {
@@ -170,10 +185,17 @@ export const useDatasetSelectionStore = defineStore(
                             console.error(error);
                         }
                         try {
+                            // Generate allTagNames here
+                            const allTagNames = generateAllTagNames(
+                                currentExperimentMetadata.value
+                                    .locationMetadataList
+                            );
                             await createAggregateTable(
                                 `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`,
                                 currentExperimentMetadata.value.headers,
-                                currentExperimentMetadata.value.headerTransforms
+                                currentExperimentMetadata.value
+                                    .headerTransforms,
+                                allTagNames
                             );
                             notify({
                                 type: 'success',

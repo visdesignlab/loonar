@@ -211,7 +211,8 @@ export async function addAggregateColumn(
 export async function createAggregateTable(
     tableName: string,
     headers: string[],
-    headerTransforms: ExperimentMetadata['headerTransforms']
+    headerTransforms: ExperimentMetadata['headerTransforms'],
+    allTagNames: string[]
 ) {
     if (!headers || !headerTransforms) return;
 
@@ -234,6 +235,10 @@ export async function createAggregateTable(
         MAX("Time Norm") AS "Maximum Time Norm",
         MIN("Time Norm") AS "Minimum Time Norm",
     `;
+    // Join allTagNames into a comma-separated string
+    const tagsSelection = allTagNames.map((tag) => `"${tag}"`).join(', ');
+
+    console.log('Tags for aggregate table sql: ', tagsSelection);
 
     try {
         try {
@@ -251,9 +256,10 @@ export async function createAggregateTable(
                     SELECT 
                         ${selectString}
                         "${id}" as tracking_id,
-                        location
+                        location,
+                        ${tagsSelection}    
                     FROM ${tableName}
-                    GROUP BY "${id}", location
+                    GROUP BY "${id}", location, ${tagsSelection}
             `,
         ]);
     } catch (error) {

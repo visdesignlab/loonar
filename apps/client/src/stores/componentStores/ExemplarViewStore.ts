@@ -298,6 +298,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 conditionMap.get(conditionKey)![binIndex] = count;
             }
 
+            // This is storing the result of the query.
             conditionHistograms.value = Array.from(conditionMap.entries()).map(
                 ([key, counts]) => {
                     const [drug, concentration] = key.split('__');
@@ -381,6 +382,51 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     "${trackColumn}",
                     "${locationColumn}"
                 `;
+
+        // const query = `
+        //         WITH aggregated_data AS (
+        //           SELECT
+        //             "tracking_id"::INTEGER AS track_id,
+        //             "location"::INTEGER AS location,
+        //             "Minimum Time (h)" AS birthTime,
+        //             "Maximum Time (h)" AS deathTime,
+        //             "Average ${attributeColumn}" AS avg_attr
+        //           FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
+        //           WHERE "Drug" = '${drug}'
+        //             AND "Concentration (um)" = '${conc}'
+        //         ),
+        //         selected_track AS (
+        //           -- Choose the one track whose pre-aggregated average matches the pth percentile
+        //           SELECT track_id
+        //           FROM aggregated_data
+        //           WHERE avg_attr = (
+        //             SELECT quantile_disc(avg_attr, ${pDecimal})
+        //             FROM aggregated_data
+        //           )
+        //           LIMIT 1
+        //         )
+        //         SELECT
+        //           agg.track_id,
+        //           agg.location,
+        //           agg.birthTime,
+        //           agg.deathTime,
+        //           array_agg(
+        //             ARRAY[
+        //               n."${timeColumn}",
+        //               n."Frame ID",
+        //               n."${attributeColumn}"
+        //             ]
+        //           ) AS data
+        //         FROM "${experimentName}_composite_experiment_cell_metadata" n
+        //         JOIN aggregated_data agg
+        //           ON n."track_id" = agg.track_id
+        //         WHERE n."track_id" = (SELECT track_id FROM selected_track)
+        //         GROUP BY
+        //           agg.track_id,
+        //           agg.location,
+        //           agg.birthTime,
+        //           agg.deathTime;
+        //       `;
 
         try {
             const result = await vg

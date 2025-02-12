@@ -300,14 +300,9 @@ function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1) {
         // pointer is over the layer
         hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
-        console.log(
-            'Hovered horizon chart for exemplar:',
-            hoveredExemplarKey.value
-        );
     } else {
         // pointer left the layer
         hoveredExemplarKey.value = null;
-        console.log('No horizon chart hovered');
     }
 }
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
@@ -343,7 +338,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 dataXExtent: [exemplar.minTime, exemplar.maxTime],
 
                 baseline: 0,
-                binSize: 200,
+                binSize: 200, // TODO: make this dynamic. Max - min / 6.
 
                 getModOffset: (d: any) => d,
                 positiveColors: hexListToRgba(horizonChartScheme),
