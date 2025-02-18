@@ -937,11 +937,8 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
     const snippetHeight = viewConfig.snippetDisplayHeight;
     console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
 
-    // Default destination coordinates.
-    let destX = viewConfig.horizonChartWidth / 2 - snippetWidth / 2;
+    // Calculate destination Y based on first exemplar yOffset.
     let destY = viewConfig.horizonChartHeight; // fallback value
-
-    // Use the first exemplar track to compute the y-position.
     if (exemplarTracks.value && exemplarTracks.value.length > 0) {
         const firstExemplar = exemplarTracks.value[0];
         const key = uniqueExemplarKey(firstExemplar);
@@ -952,8 +949,7 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
                 key
             );
         } else {
-            // Compute destination y such that the snippet is just above the top horizon chart.
-            // (The top of the time window is at yOffset - timeBarHeightOuter, then add the gap.)
+            // Compute destination Y such that the snippet is just above the top horizon chart.
             destY =
                 yOffset -
                 viewConfig.timeBarHeightOuter -
@@ -965,48 +961,38 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
                 yOffset
             );
         }
-    } else {
-        console.error(
-            '[createOneTestImageLayer] Cannot compute destination because exemplarTracks is empty.'
-        );
     }
 
-    // Define the destination bounding box [left, bottom, right, top]:
-    const destination: [number, number, number, number] = [
-        destX,
-        destY,
-        destX + snippetWidth,
-        destY - snippetHeight,
+    // Instead of a single snippet, create four snippet destinations with different x positions.
+    const xFactors = [0.2, 0.4, 0.6, 0.8]; // relative positions along the horizonChartWidth
+    const snippetDestinations: [number, number, number, number][] =
+        xFactors.map((factor) => {
+            const dX = viewConfig.horizonChartWidth * factor - snippetWidth / 2;
+            return [dX, destY, dX + snippetWidth, destY - snippetHeight];
+        });
+
+    // Define source parameters for each snippet (currently same values for all, can be adjusted)
+    const snippetParams = [
+        { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 80 },
+        { cellCenterX: 230, cellCenterY: 80, snippetSourceSize: 80 },
+        { cellCenterX: 230, cellCenterY: 80, snippetSourceSize: 50 },
+        { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 30 },
     ];
-    console.log(
-        '[createOneTestImageLayer] Computed destination bbox for snippet:',
-        destination
-    );
 
-    const cellCenterX = 300; // example x-coordinate
-    const cellCenterY = 57; // example y-coordinate
-    const snippetSourceSize = 80; // as used in looneage view
-
-    const sourceBBox = getBBoxAroundPoint(
-        cellCenterX,
-        cellCenterY,
-        snippetSourceSize,
-        snippetSourceSize
-    );
-
-    // Define the selection used by CellSnippetsLayer:
+    // Create a selection with multiple snippets using individual source parameters.
     const selection = {
         c: 0, // using first channel
         t: 0, // first time
         z: 0, // first z-slice
-        snippets: [
-            {
-                // Using a fixed 80x80 region from the top-left of the image.
-                source: sourceBBox,
-                // Destination is set to be above the top horizon chart.
-                destination: destination,
-            },
-        ],
+        snippets: snippetDestinations.map((destination, idx) => ({
+            source: getBBoxAroundPoint(
+                snippetParams[idx].cellCenterX,
+                snippetParams[idx].cellCenterY,
+                snippetParams[idx].snippetSourceSize,
+                snippetParams[idx].snippetSourceSize
+            ),
+            destination: destination,
+        })),
     };
     console.log('[createOneTestImageLayer] Selection object:', selection);
 
@@ -1014,7 +1000,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
     const colormapExtension = new AdditiveColormapExtension();
     // Set up a basic LRUCache for snippet data.
     const lruCache = new LRUCache({ max: 10 });
-
     // Setup contrast limits and channel visibility.
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];
