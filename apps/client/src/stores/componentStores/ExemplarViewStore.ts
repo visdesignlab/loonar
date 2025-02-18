@@ -85,7 +85,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { currentExperimentTags } = storeToRefs(conditionSelector);
 
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
-    const selectedAggregation = ref<AggregationOption | string>({
+    const selectedAggregation = ref<AggregationOption>({
         label: 'Average',
         value: 'AVG',
     });
@@ -187,10 +187,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
 
         try {
-            const aggregationColumn =
-                typeof selectedAggregation.value === 'object'
-                    ? selectedAggregation.value.value
-                    : selectedAggregation.value;
+            const aggregationColumn = selectedAggregation.value.value;
+            console.log('Histogram - aggregationColumn: ', aggregationColumn);
             //
             // 1) Get global minX / maxX of selected attribute, ensuring they are double
             //
@@ -346,21 +344,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     watch(
         () => [selectedAttribute.value, selectedAggregation.value],
         async () => {
-            // Extract the aggregation value and label if newAggregation is an object.
-            const aggValue =
-                typeof selectedAggregation.value === 'object' &&
-                selectedAggregation.value !== null
-                    ? selectedAggregation.value.value
-                    : selectedAggregation.value;
-            const aggLabel =
-                typeof selectedAggregation.value === 'object' &&
-                selectedAggregation.value !== null
-                    ? selectedAggregation.value.label
-                    : selectedAggregation.value;
+            // Since selectedAggregation is always an object, we can directly access .value and .label
+            const aggValue = selectedAggregation.value.value;
+            const aggLabel = selectedAggregation.value.label;
 
             const aggFunc = aggregateFunctions[aggLabel];
             if (!aggFunc) {
-                console.error(`Aggregate function "${aggValue}" not defined.`);
+                console.error(`Aggregate function "${aggLabel}" not defined.`);
                 return;
             }
 
@@ -443,10 +433,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
         const attributeColumn = selectedAttribute.value; // Use selected attribute
-        const aggregationColumn =
-            typeof selectedAggregation.value === 'object'
-                ? selectedAggregation.value.label
-                : selectedAggregation.value;
+        const aggregationColumn = selectedAggregation.value.label;
         const trackColumn = 'track_id';
         const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;

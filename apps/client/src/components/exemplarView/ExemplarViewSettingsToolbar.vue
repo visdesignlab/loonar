@@ -38,7 +38,7 @@ const globalSettings = useGlobalSettings();
 // Removed plotDialogOpen as the dialog is no longer used
 // const plotDialogOpen = ref(false);
 const selectedAttribute = ref('Mass (pg)');
-const selectedAggregation = ref('AVG');
+const selectedAggregation = ref({ label: 'Average', value: 'AVG' });
 
 const aggregationOptions = [
     { label: 'Sum', value: 'SUM' },
