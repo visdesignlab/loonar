@@ -238,8 +238,6 @@ export async function createAggregateTable(
     // Join allTagNames into a comma-separated string
     const tagsSelection = allTagNames.map((tag) => `"${tag}"`).join(', ');
 
-    console.log('Tags for aggregate table sql: ', tagsSelection);
-
     try {
         try {
             await vg.coordinator().exec([

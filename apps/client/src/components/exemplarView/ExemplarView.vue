@@ -4,6 +4,8 @@ import { useElementSize } from '@vueuse/core';
 import type { PickingInfo, MjolnirEvent } from '@deck.gl/core';
 import { Deck, OrthographicView } from '@deck.gl/core';
 import { Layer } from '@deck.gl/core';
+import { getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
+import type { PixelData, PixelSource } from '@vivjs/types';
 import {
     ScatterplotLayer,
     PolygonLayer,
@@ -16,6 +18,18 @@ import {
     useExemplarViewStore,
     type HistogramDomains,
 } from '@/stores/componentStores/ExemplarViewStore';
+import {
+    expandHeight,
+    getMaxHeight,
+    type BBox,
+    type BetterBBox,
+    getWidth,
+    getHeight,
+    getBBoxAroundPoint,
+    overlaps,
+    overlapAmount,
+    outerBBox,
+} from '@/util/imageSnippets';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
@@ -29,6 +43,17 @@ import { schemeBlues } from 'd3-scale-chromatic';
 import { isEqual } from 'lodash';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
+import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
+import { useConfigStore } from '@/stores/misc/configStore';
+import Pool from '@/util/Pool';
+import { LRUCache } from 'lru-cache';
+import { AdditiveColormapExtension } from '@hms-dbmi/viv';
+
+const configStore = useConfigStore();
+const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
+const imageViewerStore = useImageViewerStore();
+const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 
 const deckGlContainer = ref<HTMLCanvasElement | null>(null);
 const { width: deckGlWidth, height: deckGlHeight } =
@@ -40,7 +65,9 @@ const conditionSelectorStore = useConditionSelectorStore();
 const cellMetaData = useCellMetaData();
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized } = storeToRefs(datasetSelectionStore);
+const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
+    datasetSelectionStore
+);
 
 const {
     viewConfiguration,
@@ -105,8 +132,6 @@ watch(
                 });
                 console.log('Deck.gl initialized.');
             }
-            // Generates the test exemplar tracks
-            // await exemplarViewStore.generateTestExemplarTracks();
 
             // 2. Set exemplarDataInitialized to true after data generation
             exemplarDataInitialized.value = true;
@@ -125,6 +150,92 @@ watch(
     },
     { immediate: false } // We don't need to run this immediately on mount
 );
+
+// Loading Image Data ---------------------------------------------------------------------------
+
+const pixelSource = ref<any | null>(null);
+const loader = ref<any | null>(null);
+const testRaster = ref<PixelData | null>(null);
+
+// Debug watch to see when currentLocationMetadata becomes available.
+watch(
+    currentLocationMetadata,
+    (newMeta) => {
+        console.log('[ExemplarView] currentLocationMetadata changed:', newMeta);
+    },
+    { immediate: true }
+);
+
+// Watch pixelSource so you can see when it gets set.
+watch(
+    pixelSource,
+    (newVal) => {
+        if (newVal) {
+            console.log('[ExemplarView] pixelSource loaded:', newVal);
+        } else {
+            console.warn('[ExemplarView] pixelSource is still null.');
+        }
+    },
+    { immediate: true }
+);
+
+// Watches for changes in currentLocationMetadata and loads the pixel source.
+watch(
+    currentLocationMetadata,
+    async (newMeta) => {
+        if (!newMeta?.imageDataFilename) {
+            console.warn(
+                '[ExemplarView] currentLocationMetadata.imageDataFilename is missing. Waiting for valid metadata...'
+            );
+            return;
+        }
+
+        try {
+            const fullImageUrl = configStore.getFileUrl(
+                newMeta.imageDataFilename
+            );
+            loader.value = await loadOmeTiff(fullImageUrl, {
+                pool: new Pool(),
+            });
+
+            // Update image dimensions from metadata
+            imageViewerStoreUntrracked.sizeX =
+                loader.value.metadata.Pixels.SizeX;
+            imageViewerStoreUntrracked.sizeY =
+                loader.value.metadata.Pixels.SizeY;
+            imageViewerStoreUntrracked.sizeT =
+                loader.value.metadata.Pixels.SizeT;
+
+            testRaster.value = await loader.value.data[0].getRaster({
+                selection: { c: 0, t: 0, z: 0 },
+            });
+
+            if (testRaster.value == null) {
+                console.warn('[ExemplarView] testRaster is null.');
+                return;
+            }
+
+            const copy = testRaster.value.data.slice();
+            const channelStats = getChannelStats(copy);
+            contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+            contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+            imageViewerStore.contrastLimitExtentSlider.min =
+                channelStats.domain[0];
+            imageViewerStore.contrastLimitExtentSlider.max =
+                channelStats.domain[1];
+
+            pixelSource.value = loader.value.data[0];
+
+            // Optionally, trigger render after pixelSource loads:
+            renderDeckGL();
+        } catch (error) {
+            console.error('[ExemplarView] Error loading pixel source:', error);
+        }
+    },
+    { immediate: true }
+);
+
+// --------------------------------------------------------------------------------------------
 
 watch(hoveredExemplarKey, () => {
     if (exemplarDataInitialized.value) {
@@ -168,6 +279,8 @@ function renderDeckGL(): void {
     layers.push(createSnippetBoundaryLayer());
     layers.push(createTimeWindowLayer());
     layers.push(createPinsAndLinesLayer());
+    layers.push(createOneTestImageLayer());
+    //layers.push(createDefaultImageLayerForExemplar());
 
     deckgl.value.setProps({
         layers,
@@ -288,7 +401,6 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
 watch(
     () => conditionSelectorStore.conditionColorMap,
     (newConditionColorMap) => {
-        console.log('conditionColorMap changed:', newConditionColorMap);
         if (exemplarDataInitialized.value && newConditionColorMap) {
             renderDeckGL();
         }
@@ -782,6 +894,158 @@ function groupExemplarsByCondition(
 function createPinsAndLinesLayer(): null {
     // TODO: implement
     return null;
+}
+
+// Updated createOneTestImageLayer() with enhanced debugging:
+function createOneTestImageLayer(): CellSnippetsLayer | null {
+    console.log(
+        '[createOneTestImageLayer] Starting creation of one test image snippet layer...'
+    );
+
+    // Check that the pixelSource is ready.
+    if (!pixelSource.value) {
+        console.error(
+            '[createOneTestImageLayer] pixelSource.value is not set!'
+        );
+        console.warn(
+            '[createOneTestImageLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
+        );
+        return null; // Do not create the layer until pixelSource.value is available.
+    } else {
+        console.log(
+            '[createOneTestImageLayer] pixelSource is available:',
+            pixelSource.value
+        );
+    }
+
+    // Check that exemplarTracks is available.
+    if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
+        console.error(
+            '[createOneTestImageLayer] No exemplar tracks available!'
+        );
+        return null;
+    } else {
+        console.log(
+            '[createOneTestImageLayer] Found exemplar tracks:',
+            exemplarTracks.value.length
+        );
+    }
+
+    // Get viewConfiguration details for snippet placement.
+    const viewConfig = viewConfiguration.value;
+    const snippetWidth = viewConfig.snippetDisplayWidth;
+    const snippetHeight = viewConfig.snippetDisplayHeight;
+    console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
+
+    // Default destination coordinates.
+    let destX = viewConfig.horizonChartWidth / 2 - snippetWidth / 2;
+    let destY = viewConfig.horizonChartHeight; // fallback value
+
+    // Use the first exemplar track to compute the y-position.
+    if (exemplarTracks.value && exemplarTracks.value.length > 0) {
+        const firstExemplar = exemplarTracks.value[0];
+        const key = uniqueExemplarKey(firstExemplar);
+        const yOffset = exemplarYOffsets.value.get(key);
+        if (yOffset === undefined || yOffset == null) {
+            console.error(
+                '[createOneTestImageLayer] No yOffset found for first exemplar with key:',
+                key
+            );
+        } else {
+            // Compute destination y such that the snippet is just above the top horizon chart.
+            // (The top of the time window is at yOffset - timeBarHeightOuter, then add the gap.)
+            destY =
+                yOffset -
+                viewConfig.timeBarHeightOuter -
+                viewConfig.snippetHorizonChartGap -
+                viewConfig.horizonChartHeight -
+                viewConfig.snippetHorizonChartGap;
+            console.log(
+                '[createOneTestImageLayer] Computed yOffset for first exemplar:',
+                yOffset
+            );
+        }
+    } else {
+        console.error(
+            '[createOneTestImageLayer] Cannot compute destination because exemplarTracks is empty.'
+        );
+    }
+
+    // Define the destination bounding box [left, bottom, right, top]:
+    const destination: [number, number, number, number] = [
+        destX,
+        destY,
+        destX + snippetWidth,
+        destY - snippetHeight,
+    ];
+    console.log(
+        '[createOneTestImageLayer] Computed destination bbox for snippet:',
+        destination
+    );
+
+    const cellCenterX = 300; // example x-coordinate
+    const cellCenterY = 57; // example y-coordinate
+    const snippetSourceSize = 80; // as used in looneage view
+
+    const sourceBBox = getBBoxAroundPoint(
+        cellCenterX,
+        cellCenterY,
+        snippetSourceSize,
+        snippetSourceSize
+    );
+
+    // Define the selection used by CellSnippetsLayer:
+    const selection = {
+        c: 0, // using first channel
+        t: 0, // first time
+        z: 0, // first z-slice
+        snippets: [
+            {
+                // Using a fixed 80x80 region from the top-left of the image.
+                source: sourceBBox,
+                // Destination is set to be above the top horizon chart.
+                destination: destination,
+            },
+        ],
+    };
+    console.log('[createOneTestImageLayer] Selection object:', selection);
+
+    // Create an instance of the colormap extension.
+    const colormapExtension = new AdditiveColormapExtension();
+    // Set up a basic LRUCache for snippet data.
+    const lruCache = new LRUCache({ max: 10 });
+
+    // Setup contrast limits and channel visibility.
+    const contrastLimits = [[0, 255]];
+    const channelsVisible = [true];
+
+    console.log(
+        '[createOneTestImageLayer] Creating CellSnippetsLayer with the following parameters:'
+    );
+    console.log('  loader:', pixelSource.value);
+    console.log('  contrastLimits:', contrastLimits);
+    console.log('  channelsVisible:', channelsVisible);
+    console.log('  selections:', [selection]);
+    console.log('  extensions:', [colormapExtension]);
+    console.log('  colormap:', 'viridis');
+    console.log('  cache:', lruCache);
+
+    const snippetLayer = new CellSnippetsLayer({
+        id: 'test-cell-snippets-layer',
+        loader: pixelSource.value, // the loaded image data
+        contrastLimits,
+        channelsVisible,
+        selections: [selection],
+        extensions: [colormapExtension],
+        colormap: 'viridis',
+        cache: lruCache,
+    });
+
+    console.log(
+        '[createOneTestImageLayer] Created CellSnippetsLayer:',
+        snippetLayer
+    );
+    return snippetLayer;
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl

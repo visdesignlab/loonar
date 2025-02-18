@@ -30,6 +30,7 @@ export interface DataPoint {
 export interface ViewConfiguration {
     afterStarredGap: number;
     snippetDisplayHeight: number;
+    snippetDisplayWidth: number;
     snippetHorizonChartGap: number;
     horizonChartHeight: number;
     horizonChartWidth: number;
@@ -80,6 +81,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
         snippetDisplayHeight: 80,
+        snippetDisplayWidth: 80,
         snippetHorizonChartGap: 5,
         horizonChartHeight: 40,
         horizonChartWidth: 1000,
