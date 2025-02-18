@@ -9,6 +9,10 @@ import * as vg from '@uwdata/vgplot';
 
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
+// Import the utility function and type for building the aggregate object
+import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
+import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
+
 export interface ExemplarTrack {
     trackId: string;
     locationId: string;
@@ -61,6 +65,11 @@ export interface HistogramDomains {
     maxY: number;
 }
 
+interface AggregationOption {
+    label: string;
+    value: string;
+}
+
 // Remove histogramData and replace with conditionHistograms
 const conditionHistograms = ref<conditionHistogram[]>([]);
 const histogramDomains = ref<HistogramDomains>({
@@ -76,7 +85,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { currentExperimentTags } = storeToRefs(conditionSelector);
 
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
-    const selectedAggregation = ref<string>('AVG'); // Default aggregation
+    const selectedAggregation = ref<AggregationOption | string>({
+        label: 'Average',
+        value: 'AVG',
+    });
 
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
@@ -175,6 +187,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
 
         try {
+            const aggregationColumn =
+                typeof selectedAggregation.value === 'object'
+                    ? selectedAggregation.value.value
+                    : selectedAggregation.value;
             //
             // 1) Get global minX / maxX of selected attribute, ensuring they are double
             //
@@ -185,7 +201,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             FROM (
                 SELECT
                     "track_id",
-                    CAST(${selectedAggregation.value}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS avg_attr
+                    CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS avg_attr
                 FROM "${tableName}"
                 GROUP BY "track_id"
             ) AS subquery
@@ -226,7 +242,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     max: min_attr + binSize * (i + 1),
                 })
             );
-
             //
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
             //
@@ -236,7 +251,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         "track_id",
                         "Drug",
                         "Concentration (um)",
-                        CAST(${selectedAggregation.value}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS agg_value,
+                        CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS agg_value,
                         COUNT(*) AS row_count
                     FROM "${tableName}"
                     GROUP BY "track_id", "Drug", "Concentration (um)"
@@ -326,6 +341,92 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    // Watch both selectedAttribute and selectedAggregation so that if either changes,
+    // an aggregate column is added to the aggregate table.
+    watch(
+        () => [selectedAttribute.value, selectedAggregation.value],
+        async () => {
+            // Extract the aggregation value and label if newAggregation is an object.
+            const aggValue =
+                typeof selectedAggregation.value === 'object' &&
+                selectedAggregation.value !== null
+                    ? selectedAggregation.value.value
+                    : selectedAggregation.value;
+            const aggLabel =
+                typeof selectedAggregation.value === 'object' &&
+                selectedAggregation.value !== null
+                    ? selectedAggregation.value.label
+                    : selectedAggregation.value;
+
+            const aggFunc = aggregateFunctions[aggLabel];
+            if (!aggFunc) {
+                console.error(`Aggregate function "${aggValue}" not defined.`);
+                return;
+            }
+
+            // Build the aggregate object using the SQL function and proper label.
+            const aggObject: AggregateObject = {
+                functionName: aggFunc.functionName,
+                label: `${aggLabel}`, // e.g., "Minimum Mass (pg)"
+                attr1: selectedAttribute.value,
+            };
+
+            // Ensure table names are available.
+            const experimentName = currentExperimentMetadata?.value?.name;
+            const aggTableNameFull = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
+            const compTableName = `${experimentName}_composite_experiment_cell_metadata`;
+
+            if (
+                !experimentDataInitialized.value ||
+                !currentExperimentMetadata.value ||
+                !compTableName ||
+                !aggTableNameFull
+            ) {
+                console.warn(
+                    'Experiment data, metadata, or table names are not set.'
+                );
+                return;
+            }
+
+            try {
+                const addedColumnName = await addAggregateColumn(
+                    aggTableNameFull,
+                    compTableName,
+                    aggObject,
+                    currentExperimentMetadata.value.headerTransforms
+                );
+                console.log(`Aggregate column added: ${addedColumnName}`);
+            } catch (error) {
+                console.error('Error adding aggregate column:', error);
+            }
+        },
+        { immediate: true }
+    );
+
+    // For backwards compatibility, you might still want to call getExemplarTrackData or update other data.
+    watch(
+        () => [selectedAttribute.value, selectedAggregation.value],
+        async ([newAttr, newAgg]) => {
+            await testAggregateTableColumns();
+        },
+        { immediate: false }
+    );
+
+    async function testAggregateTableColumns(): Promise<void> {
+        try {
+            const experimentName = currentExperimentMetadata?.value?.name;
+
+            const columnQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = '${experimentName}_composite_experiment_cell_metadata_aggregate';`;
+            const columnResult = await vg
+                .coordinator()
+                .query(columnQuery, { type: 'json' });
+            const columnNames = columnResult.map((row: any) => row.column_name);
+            console.log('Column names:', columnNames);
+        } catch (error) {
+            console.error('Error fetching column names:', error);
+        }
+    }
+
     async function getExemplarTrackData(
         drug: string,
         conc: string,
@@ -342,10 +443,15 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
         const attributeColumn = selectedAttribute.value; // Use selected attribute
+        const aggregationColumn =
+            typeof selectedAggregation.value === 'object'
+                ? selectedAggregation.value.label
+                : selectedAggregation.value;
         const trackColumn = 'track_id';
         const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
+        // Start of Selection
         const query = `
           WITH valid_tracks AS (
             SELECT "track_id"
@@ -361,7 +467,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
               "location"::INTEGER AS location,
               "Minimum Time (h)" AS birthTime,
               "Maximum Time (h)" AS deathTime,
-              "Average ${attributeColumn}" AS avg_attr
+              "${aggregationColumn} ${attributeColumn}" AS avg_attr
             FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
             WHERE "Drug" = '${drug}'
               AND "Concentration (um)" = '${conc}'
@@ -487,7 +593,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         try {
             const tracks = await Promise.all(trackPromises);
             exemplarTracks.value.push(...tracks);
-            console.log('Exemplar tracks successfully added:', tracks.length);
+            // console.log('Exemplar tracks successfully added:', tracks.length);
         } catch (error) {
             console.error('Error generating exemplar tracks:', error);
         }
@@ -548,9 +654,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     watch(
         () => [selectedAttribute.value, selectedAggregation.value],
         async ([newAttr, newAgg]) => {
-            console.log(
-                `Attribute or Aggregation changed: ${newAttr}, ${newAgg}. Fetching new histogram data...`
-            );
+            // console.log(
+            //     `Attribute or Aggregation changed: ${newAttr}, ${newAgg}. Fetching new histogram data...`
+            // );
             await getHistogramData();
             await getExemplarTracks();
             // Optionally, you can also update other dependent data here

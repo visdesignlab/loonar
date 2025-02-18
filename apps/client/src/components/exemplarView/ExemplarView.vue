@@ -171,7 +171,7 @@ watch(
     pixelSource,
     (newVal) => {
         if (newVal) {
-            console.log('[ExemplarView] pixelSource loaded:', newVal);
+            // console.log('[ExemplarView] pixelSource loaded:', newVal);
         } else {
             console.warn('[ExemplarView] pixelSource is still null.');
         }
@@ -377,7 +377,7 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
         !exemplar.tags.conc ||
         !exemplar.tags.drug
     ) {
-        console.log(`Invalid exemplar or missing property:`, exemplar);
+        // console.log(`Invalid exemplar or missing property:`, exemplar);
         return [0, 0, 0]; // Default black color
     }
     let conditionKey = '';
@@ -468,11 +468,11 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1) {
         // we hovered the horizon chart
         hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
-        console.log('Hovered HorizonChart Exemplar:', hoveredExemplarKey.value);
+        // console.log('Hovered HorizonChart Exemplar:', hoveredExemplarKey.value);
     } else {
         // pointer left the horizon chart
         hoveredExemplarKey.value = null;
-        console.log('No HorizonChart hovered');
+        // console.log('No HorizonChart hovered');
     }
 }
 
@@ -528,7 +528,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     const placeholderLayer: PolygonLayer[] = [];
 
     // Testing
-    console.log('Total Experiment Time:', totalExperimentTime.value);
+    // console.log('Total Experiment Time:', totalExperimentTime.value);
     // Total Experiment Time - 1/4 of the time bar height
     placeholderLayer.push(
         new PolygonLayer({
@@ -898,9 +898,9 @@ function createPinsAndLinesLayer(): null {
 
 // Updated createOneTestImageLayer() with enhanced debugging:
 function createOneTestImageLayer(): CellSnippetsLayer | null {
-    console.log(
-        '[createOneTestImageLayer] Starting creation of one test image snippet layer...'
-    );
+    // console.log(
+    //     '[createOneTestImageLayer] Starting creation of one test image snippet layer...'
+    // );
 
     // Check that the pixelSource is ready.
     if (!pixelSource.value) {
@@ -912,10 +912,10 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
         );
         return null; // Do not create the layer until pixelSource.value is available.
     } else {
-        console.log(
-            '[createOneTestImageLayer] pixelSource is available:',
-            pixelSource.value
-        );
+        // console.log(
+        //     '[createOneTestImageLayer] pixelSource is available:',
+        //     pixelSource.value
+        // );
     }
 
     // Check that exemplarTracks is available.
@@ -925,17 +925,17 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
         );
         return null;
     } else {
-        console.log(
-            '[createOneTestImageLayer] Found exemplar tracks:',
-            exemplarTracks.value.length
-        );
+        // console.log(
+        //     '[createOneTestImageLayer] Found exemplar tracks:',
+        //     exemplarTracks.value.length
+        // );
     }
 
     // Get viewConfiguration details for snippet placement.
     const viewConfig = viewConfiguration.value;
     const snippetWidth = viewConfig.snippetDisplayWidth;
     const snippetHeight = viewConfig.snippetDisplayHeight;
-    console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
+    //console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
 
     // Calculate destination Y based on first exemplar yOffset.
     let destY = viewConfig.horizonChartHeight; // fallback value
@@ -956,10 +956,10 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
                 viewConfig.snippetHorizonChartGap -
                 viewConfig.horizonChartHeight -
                 viewConfig.snippetHorizonChartGap;
-            console.log(
-                '[createOneTestImageLayer] Computed yOffset for first exemplar:',
-                yOffset
-            );
+            // console.log(
+            //     '[createOneTestImageLayer] Computed yOffset for first exemplar:',
+            //     yOffset
+            // );
         }
     }
 
@@ -994,7 +994,7 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
             destination: destination,
         })),
     };
-    console.log('[createOneTestImageLayer] Selection object:', selection);
+    // console.log('[createOneTestImageLayer] Selection object:', selection);
 
     // Create an instance of the colormap extension.
     const colormapExtension = new AdditiveColormapExtension();
@@ -1004,16 +1004,16 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];
 
-    console.log(
-        '[createOneTestImageLayer] Creating CellSnippetsLayer with the following parameters:'
-    );
-    console.log('  loader:', pixelSource.value);
-    console.log('  contrastLimits:', contrastLimits);
-    console.log('  channelsVisible:', channelsVisible);
-    console.log('  selections:', [selection]);
-    console.log('  extensions:', [colormapExtension]);
-    console.log('  colormap:', 'viridis');
-    console.log('  cache:', lruCache);
+    // console.log(
+    //     '[createOneTestImageLayer] Creating CellSnippetsLayer with the following parameters:'
+    // );
+    // console.log('  loader:', pixelSource.value);
+    // console.log('  contrastLimits:', contrastLimits);
+    // console.log('  channelsVisible:', channelsVisible);
+    // console.log('  selections:', [selection]);
+    // console.log('  extensions:', [colormapExtension]);
+    // console.log('  colormap:', 'viridis');
+    // console.log('  cache:', lruCache);
 
     const snippetLayer = new CellSnippetsLayer({
         id: 'test-cell-snippets-layer',
@@ -1026,10 +1026,10 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
         cache: lruCache,
     });
 
-    console.log(
-        '[createOneTestImageLayer] Created CellSnippetsLayer:',
-        snippetLayer
-    );
+    // console.log(
+    //     '[createOneTestImageLayer] Created CellSnippetsLayer:',
+    //     snippetLayer
+    // );
     return snippetLayer;
 }
 
