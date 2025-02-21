@@ -89,6 +89,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         label: 'Average',
         value: 'AVG',
     });
+    // New reactive property to track whether exemplar data is loading
+    const loadingExemplarData = ref<boolean>(false);
 
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
@@ -393,11 +395,18 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { immediate: true }
     );
 
-    // For backwards compatibility, you might still want to call getExemplarTrackData or update other data.
+    // Consolidate data loading into one watcher so that loading remains true until both
+    // the histogram data and exemplar tracks are fully loaded.
     watch(
         () => [selectedAttribute.value, selectedAggregation.value],
         async ([newAttr, newAgg]) => {
-            await testAggregateTableColumns();
+            loadingExemplarData.value = true;
+            try {
+                await getHistogramData();
+                await getExemplarTracks();
+            } finally {
+                loadingExemplarData.value = false;
+            }
         },
         { immediate: false }
     );
@@ -637,20 +646,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    // Update watchers to reactively fetch data based on selected attribute and aggregation
-    watch(
-        () => [selectedAttribute.value, selectedAggregation.value],
-        async ([newAttr, newAgg]) => {
-            // console.log(
-            //     `Attribute or Aggregation changed: ${newAttr}, ${newAgg}. Fetching new histogram data...`
-            // );
-            await getHistogramData();
-            await getExemplarTracks();
-            // Optionally, you can also update other dependent data here
-        },
-        { immediate: false }
-    );
-
     // Remove histogramData related computed properties
     // const getHistogramDataComputed = computed(() => histogramData.value);
     const conditionHistogramsComputed = computed(
@@ -671,5 +666,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getHistogramData,
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
+        loadingExemplarData, // export the loading state
     };
 });

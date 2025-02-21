@@ -76,6 +76,7 @@ const {
     conditionGroupHeight,
     conditionHistograms,
     histogramDomains,
+    loadingExemplarData,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -1077,10 +1078,13 @@ function handleHover(info: PickingInfo) {
         hoveredExemplarKey.value = null;
     }
 }
+
+watch(loadingExemplarData, (newVal) => {
+    console.log('loadingExemplarData changed:', newVal);
+});
 </script>
 
 <template>
-    <!-- Only render the canvas if the experiment data is initialized -->
     <canvas
         v-if="experimentDataInitialized"
         id="exemplar-deckgl-canvas"
