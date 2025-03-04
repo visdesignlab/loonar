@@ -354,7 +354,6 @@ const horizonChartScheme = [
     '#808080', // Grey 5
     '#666666', // Grey 6
     '#4d4d4d', // Grey 7
-    '#333333', // Grey 8
     '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
@@ -421,7 +420,14 @@ function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
-    for (const exemplar of exemplarViewStore.exemplarTracks) {
+    // Get the global min and max values for every exemplar, for color scaling.
+    const tracks = exemplarViewStore.exemplarTracks;
+    const exemplarTracksMin =
+        tracks.length > 0 ? Math.min(...tracks.map((t) => t.minValue)) : 0;
+    const exemplarTracksMax =
+        tracks.length > 0 ? Math.max(...tracks.map((t) => t.maxValue)) : 0;
+
+    for (const exemplar of tracks) {
         if (!exemplar.data || exemplar.data.length === 0) {
             continue; // Skip this exemplar if there's no data
         }
@@ -434,6 +440,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         // TODO: probably skip if not in viewport
 
         const geometryData = constructGeometry(exemplar);
+
         horizonChartLayers.push(
             new HorizonChartLayer({
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
@@ -451,7 +458,9 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 dataXExtent: [exemplar.minTime, exemplar.maxTime],
 
                 baseline: 0,
-                binSize: 200, // TODO: make this dynamic. Max - min / 6.
+                binSize:
+                    (exemplarTracksMax - exemplarTracksMin) /
+                    (horizonChartScheme.length - 1),
 
                 getModOffset: (d: any) => d,
                 positiveColors: hexListToRgba(horizonChartScheme),
