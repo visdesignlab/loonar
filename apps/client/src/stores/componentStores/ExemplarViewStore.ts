@@ -18,6 +18,8 @@ export interface ExemplarTrack {
     locationId: string;
     minTime: number;
     maxTime: number;
+    minValue: number;
+    maxValue: number;
     data: DataPoint[];
     tags: Record<string, string>;
     p: number; // the sample position, e.g. median has p=0.5
@@ -435,6 +437,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         locationId: string;
         birthTime: number;
         deathTime: number;
+        minValue: number;
+        maxValue: number;
         data: DataPoint[];
     }> {
         const pDecimal = p / 100;
@@ -443,8 +447,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const concColumn = 'Concentration (um)';
         const attributeColumn = selectedAttribute.value; // Use selected attribute
         const aggregationColumn = selectedAggregation.value.label;
-        const trackColumn = 'track_id';
-        const locationColumn = 'location';
         const experimentName = currentExperimentMetadata?.value?.name;
 
         // Start of Selection
@@ -463,6 +465,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
               "location"::INTEGER AS location,
               "Minimum Time (h)" AS birthTime,
               "Maximum Time (h)" AS deathTime,
+              "Minimum ${attributeColumn}" AS minValue,
+              "Maximum ${attributeColumn}" AS maxValue,
               "${aggregationColumn} ${attributeColumn}" AS avg_attr
             FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
             WHERE "Drug" = '${drug}'
@@ -483,6 +487,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             agg.location,
             agg.birthTime,
             agg.deathTime,
+            agg.minValue,
+            agg.maxValue,
             array_agg(
               ARRAY[
                 n."${timeColumn}",
@@ -498,7 +504,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             agg.track_id,
             agg.location,
             agg.birthTime,
-            agg.deathTime;
+            agg.deathTime,
+            agg.minValue,
+            agg.maxValue;
         `;
 
         try {
@@ -507,8 +515,15 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 .query(query, { type: 'json' });
 
             if (result && result.length > 0) {
-                const { track_id, location, birthTime, deathTime, data } =
-                    result[0];
+                const {
+                    track_id,
+                    location,
+                    birthTime,
+                    deathTime,
+                    minValue,
+                    maxValue,
+                    data,
+                } = result[0];
                 // console.log(
                 //     `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
                 // );
@@ -527,6 +542,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     locationId: location,
                     birthTime: birthTime || 0, // Ensure Number type
                     deathTime: deathTime || 100, // Ensure Number type
+                    minValue: minValue || 0,
+                    maxValue: maxValue || 0,
                     data: mappedData || [],
                 };
             } else {
@@ -535,6 +552,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     locationId: '',
                     birthTime: 0,
                     deathTime: 100,
+                    minValue: 0,
+                    maxValue: 0,
                     data: [],
                 };
             }
@@ -548,6 +567,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 locationId: '',
                 birthTime: 0,
                 deathTime: 100,
+                minValue: 0,
+                maxValue: 0,
                 data: [],
             };
         }
@@ -558,13 +579,22 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conc: string,
         p: number
     ): Promise<ExemplarTrack> {
-        const { trackId, locationId, birthTime, deathTime, data } =
-            await getExemplarTrackData(drug, conc, p);
+        const {
+            trackId,
+            locationId,
+            birthTime,
+            deathTime,
+            minValue,
+            maxValue,
+            data,
+        } = await getExemplarTrackData(drug, conc, p);
         return {
             trackId: trackId,
             locationId: locationId,
             minTime: birthTime,
             maxTime: deathTime,
+            minValue: minValue,
+            maxValue: maxValue,
             data,
             tags: {
                 drug: drug,
