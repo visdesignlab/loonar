@@ -10,6 +10,7 @@ import {
     LineLayer,
     TextLayer,
 } from '@deck.gl/layers';
+import { QSpinner } from 'quasar';
 import {
     type ExemplarTrack,
     useExemplarViewStore,
@@ -1032,14 +1033,43 @@ function handleHover(info: PickingInfo) {
 watch(loadingExemplarData, (newVal) => {
     console.log('loadingExemplarData changed:', newVal);
 });
+
+const isExemplarViewReady = computed(() => {
+    return !loadingExemplarData.value && exemplarDataInitialized;
+});
 </script>
 
 <template>
-    <canvas
-        v-if="experimentDataInitialized"
-        id="exemplar-deckgl-canvas"
-        ref="deckGlContainer"
-    ></canvas>
+    <div v-show="!isExemplarViewReady" class="spinner-container">
+        <!-- The loading message includes the current aggregation and attribute -->
+        <q-spinner color="primary" size="3em" :thickness="10" />
+        <div>
+            {{
+                `Loading ${exemplarViewStore.selectedAggregation.value} ${exemplarViewStore.selectedAttribute}`
+            }}
+        </div>
+    </div>
+    <div v-show="isExemplarViewReady">
+        <canvas
+            v-if="experimentDataInitialized"
+            id="exemplar-deckgl-canvas"
+            ref="deckGlContainer"
+        ></canvas>
+    </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.spinner-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1em;
+}
+</style>
