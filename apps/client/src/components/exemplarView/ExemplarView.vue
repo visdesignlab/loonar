@@ -58,6 +58,7 @@ const {
     conditionHistograms,
     histogramDomains,
     loadingExemplarData,
+    selectedAttribute,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -260,7 +261,6 @@ function renderDeckGL(): void {
     layers.push(createImageSnippetLayer());
     layers.push(createSnippetBoundaryLayer());
     layers.push(createTimeWindowLayer());
-    layers.push(createPinsAndLinesLayer());
     layers.push(createOneTestImageLayer());
     //layers.push(createDefaultImageLayerForExemplar());
 
@@ -441,7 +441,7 @@ function createImageSnippetLayer():
 
     placeholderLayer.push(
         new PolygonLayer({
-            id: `exemplar-snippet-placeholder`,
+            id: `exemplar-snippet-placeholder-${selectedAttribute.value}`,
             data: exemplarTracks.value,
             getPolygon: (exemplar: ExemplarTrack) => {
                 const yOffset =
@@ -483,8 +483,8 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     // Total Experiment Time - 1/4 of the time bar height
     placeholderLayer.push(
         new PolygonLayer({
-            id: `exemplar-snippet-background-placeholder`,
-            data: exemplarTracks.value,
+            id: `exemplar-snippet-background-placeholder-${selectedAttribute.value}`,
+            data: [...exemplarTracks.value],
             getPolygon: (exemplar: ExemplarTrack) => {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
@@ -509,19 +509,28 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
             getLineWidth: 0,
             opacity: 0.05,
             lineWidthUnits: 'pixels',
+            updateTriggers: {
+                getPolygon: {
+                    selectedAttribute: selectedAttribute.value,
+                },
+                getFillColor: {
+                    selectedAttribute: selectedAttribute.value,
+                },
+            },
         })
     );
 
     // Exemplar time window - Black bar on top of the total experiment time
     placeholderLayer.push(
         new PolygonLayer({
-            id: `exemplar-time-window`,
-            data: exemplarTracks.value,
+            id: `exemplar-time-window-${selectedAttribute.value}`,
+            data: [...exemplarTracks.value],
             getPolygon: (exemplar: ExemplarTrack) => {
                 const yOffset = exemplarYOffsets.value.get(
                     uniqueExemplarKey(exemplar)
                 )!;
                 const cellBirthTime = exemplar.minTime;
+                console.log('Time Window Layer');
                 const cellDeathTime = exemplar.maxTime;
                 const timeBarWidth = viewConfiguration.value.horizonChartWidth;
                 const cellBirthXValue =
@@ -551,9 +560,11 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
 
             getFillColor: fillColor,
             updateTriggers: {
+                getPolygon: {
+                    selectedAttribute: selectedAttribute.value,
+                },
                 getFillColor: {
-                    selectedYTag: selectedYTag.value,
-                    conditionColorMap: conditionSelectorStore.conditionColorMap,
+                    selectedAttribute: selectedAttribute.value,
                 },
             },
             getLineWidth: 0,
@@ -834,11 +845,6 @@ function groupExemplarsByCondition(
     }
 
     return groups;
-}
-
-function createPinsAndLinesLayer(): null {
-    // TODO: implement
-    return null;
 }
 
 // Updated createOneTestImageLayer() with enhanced debugging:

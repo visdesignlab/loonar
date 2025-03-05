@@ -171,6 +171,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    /**
+     * This function gets the histogram data for the selected attribute and aggregation.
+     * It first queries the domain of the attribute, then builds the bin ranges, and then
+     * queries the histogram counts for each condition.
+     */
     async function getHistogramData(): Promise<void> {
         if (
             !experimentDataInitialized.value ||
@@ -182,24 +187,25 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             return;
         }
 
+        // Get the table name from the current experiment metadata
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
 
         try {
             const aggregationColumn = selectedAggregation.value.value;
-            console.log('Histogram - aggregationColumn: ', aggregationColumn);
-            //
             // 1) Get global minX / maxX of selected attribute, ensuring they are double
-            //
+
+            // 2) Query to get the domain of the selected attribute
             const domainQuery = `
             SELECT
-              CAST(MIN(avg_attr) AS DOUBLE PRECISION) AS min_attr,
-              CAST(MAX(avg_attr) AS DOUBLE PRECISION) AS max_attr
+              CAST(MIN(attribute_value) AS DOUBLE PRECISION) AS min_attr,
+              CAST(MAX(attribute_value) AS DOUBLE PRECISION) AS max_attr
             FROM (
                 SELECT
                     "track_id",
-                    CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS avg_attr
+                    CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS attribute_value
                 FROM "${tableName}"
                 GROUP BY "track_id"
+                HAVING COUNT(*) > 50
             ) AS subquery
           `;
 
@@ -212,25 +218,26 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 return;
             }
 
+            // From the domain query, we get the min and max of the attribute.
             const { min_attr, max_attr } = domainResult[0];
-
             if (min_attr >= max_attr) {
                 console.error(
                     `Invalid attribute range: min_attr (${min_attr}) >= max_attr (${max_attr}). Skipping histogram.`
                 );
                 return;
             }
+            console.log(
+                `${selectedAttribute.value} - min: ${min_attr}, max: ${max_attr}`
+            );
 
             // Fill in histogramDomains
             histogramDomains.value.minX = min_attr;
-            histogramDomains.value.maxX = max_attr / 10;
+            histogramDomains.value.maxX = max_attr;
 
-            //
             // 2) Build bin ranges (we store these in histogramDomains).
             //    These will be purely in JavaScript as standard numbers.
-            //
             const binCount = 70;
-            const binSize = (max_attr / 10 - min_attr) / binCount;
+            const binSize = (max_attr - min_attr) / binCount;
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
                 (_, i) => ({
@@ -238,9 +245,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     max: min_attr + binSize * (i + 1),
                 })
             );
-            //
+
+            // // Console log the selected attribute, and the values of the bin ranges for each histogram.
+            // console.log(
+            //     `${selectedAttribute.value}: binRanges: ` +
+            //         histogramDomains.value.histogramBinRanges
+            //             .map((bin) => `[min: ${bin.min}, max: ${bin.max}]`)
+            //             .join(', ')
+            // );
+
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
-            //
             const histogramConditionQuery = `
                 WITH aggregated_data AS (
                     SELECT
@@ -257,12 +271,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         CAST(bin_index AS INTEGER) AS bin_index,
                         CAST(${min_attr} AS DOUBLE PRECISION)
                             + (
-                            (CAST((${max_attr} / 10) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
+                            (CAST((${max_attr}) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
                             / ${binCount}
                             ) * CAST(bin_index AS DOUBLE PRECISION) AS bin_min,
                         CAST(${min_attr} AS DOUBLE PRECISION)
                             + (
-                            (CAST((${max_attr} / 10) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
+                            (CAST((${max_attr}) AS DOUBLE PRECISION) - CAST(${min_attr} AS DOUBLE PRECISION)) 
                             / ${binCount}
                             ) * (CAST(bin_index AS DOUBLE PRECISION) + 1) AS bin_max
                     FROM (
@@ -294,6 +308,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 return;
             }
 
+            // For test logging, log the condition, and for each histogram bin, log the bin index, the min and max values, and the count.
+
+            for (const row of histogramCounts) {
+                console.log(
+                    `Condition: ${row.drug} ${row.conc}, Bin Index: ${row.bin_index}, Min: ${row.bin_min}, Max: ${row.bin_max}, Count: ${row.count}`
+                );
+            }
+
             // 4) Construct conditionHistograms from the query result
             const conditionMap = new Map<string, number[]>();
 
@@ -323,6 +345,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         histogramData: counts,
                     };
                 }
+            );
+
+            console.log(
+                `${selectedAttribute.value} - histogramData: `,
+                conditionHistograms.value
             );
 
             // 5) Optionally set histogramDomains for the Y range
