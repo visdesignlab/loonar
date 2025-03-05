@@ -457,7 +457,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 ], // [bottom, left, width, height]
                 dataXExtent: [exemplar.minTime, exemplar.maxTime],
 
-                baseline: 0,
+                baseline: exemplarTracksMin,
                 binSize:
                     (exemplarTracksMax - exemplarTracksMin) /
                     (horizonChartScheme.length - 1),
