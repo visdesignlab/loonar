@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import type { PickingInfo, MjolnirEvent } from '@deck.gl/core';
 import { Deck, OrthographicView } from '@deck.gl/core';
-import { Layer } from '@deck.gl/core';
 import { getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
-import type { PixelData, PixelSource } from '@vivjs/types';
+import type { PixelData } from '@vivjs/types';
 import {
     ScatterplotLayer,
     PolygonLayer,
@@ -13,23 +11,10 @@ import {
     TextLayer,
 } from '@deck.gl/layers';
 import {
-    type DataPoint,
     type ExemplarTrack,
     useExemplarViewStore,
-    type HistogramDomains,
 } from '@/stores/componentStores/ExemplarViewStore';
-import {
-    expandHeight,
-    getMaxHeight,
-    type BBox,
-    type BetterBBox,
-    getWidth,
-    getHeight,
-    getBBoxAroundPoint,
-    overlaps,
-    overlapAmount,
-    outerBBox,
-} from '@/util/imageSnippets';
+import { getBBoxAroundPoint } from '@/util/imageSnippets';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
@@ -39,7 +24,6 @@ import {
     hexListToRgba,
     HORIZON_CHART_MOD_OFFSETS,
 } from './deckglUtil';
-import { schemeBlues } from 'd3-scale-chromatic';
 import { isEqual } from 'lodash';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
@@ -56,8 +40,6 @@ const imageViewerStore = useImageViewerStore();
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 
 const deckGlContainer = ref<HTMLCanvasElement | null>(null);
-const { width: deckGlWidth, height: deckGlHeight } =
-    useElementSize(deckGlContainer);
 
 const exemplarViewStore = useExemplarViewStore();
 const conditionSelectorStore = useConditionSelectorStore();
@@ -73,7 +55,6 @@ const {
     viewConfiguration,
     exemplarTracks,
     exemplarHeight,
-    conditionGroupHeight,
     conditionHistograms,
     histogramDomains,
     loadingExemplarData,
@@ -91,7 +72,7 @@ const exemplarDataInitialized = ref(false);
 
 // Access the condition selector store
 const conditionSelector = useConditionSelectorStore();
-const { selectedYTag, currentExperimentTags } = storeToRefs(conditionSelector);
+const { selectedYTag } = storeToRefs(conditionSelector);
 
 // 1. Add a reactive reference for the hovered exemplar
 const hoveredExemplarKey = ref<string | null>(null);
@@ -289,37 +270,6 @@ function renderDeckGL(): void {
     });
 }
 
-// Define the static list of colors (you can customize these)
-// Start of Selection
-const DRUG_COLORS = [
-    hexListToRgba(['#C026D3']), // Fuchsia 600
-    hexListToRgba(['#0D9488']), // Teal 600
-    hexListToRgba(['#2563EB']), // Blue 600
-    hexListToRgba(['#65A30D']), // Lime 600
-    hexListToRgba(['#0EA5E9']), // Sky 500
-    hexListToRgba(['#E11D48']), // Rose 600
-];
-
-// Compute unique drugs and assign colors
-const uniqueDrugs = computed(() => {
-    const drugs = new Set<string>();
-    exemplarTracks.value.forEach((exemplar) => {
-        drugs.add(exemplar.tags.drug);
-    });
-    return Array.from(drugs);
-});
-
-// Create a computed mapping from drug names to colors
-const drugColorMap = computed<Record<string, number[]>>(() => {
-    const map: Record<string, number[]> = {};
-    uniqueDrugs.value.forEach((drug, index) => {
-        map[drug] = DRUG_COLORS[index % DRUG_COLORS.length].map(
-            (component) => component * 255
-        );
-    });
-    return map;
-});
-
 const exemplarYOffsets = ref(new Map<string, number>());
 
 function recalculateExemplarYOffsets(): void {
@@ -408,15 +358,6 @@ watch(
     { deep: true }
 );
 
-function handleHorizonHoverLogic(info: PickingInfo, exemplar: ExemplarTrack) {
-    if (info.index !== -1) {
-        // pointer is over the layer
-        hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
-    } else {
-        // pointer left the layer
-        hoveredExemplarKey.value = null;
-    }
-}
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
 
@@ -671,12 +612,6 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupBottom = lastOffset;
         const groupHeight = groupBottom - groupTop;
         const binWidth = groupHeight / histogramDataForGroup.length;
-
-        const isHovered =
-            hoveredExemplarKey.value === uniqueExemplarKey(firstExemplar);
-
-        // default circle is 3, so double is 6
-        const circleRadius = isHovered ? 6 : 3;
 
         // Start of Selection
         // Draw the base thick line

@@ -1,10 +1,7 @@
 import { ref, watch, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
-import {
-    useDatasetSelectionStore,
-    type LocationMetadata,
-} from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
 
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
@@ -83,9 +80,6 @@ const histogramDomains = ref<HistogramDomains>({
 });
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
-    const conditionSelector = useConditionSelectorStore();
-    const { currentExperimentTags } = storeToRefs(conditionSelector);
-
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAggregation = ref<AggregationOption>({
         label: 'Average',
@@ -349,7 +343,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         () => [selectedAttribute.value, selectedAggregation.value],
         async () => {
             // Since selectedAggregation is always an object, we can directly access .value and .label
-            const aggValue = selectedAggregation.value.value;
             const aggLabel = selectedAggregation.value.label;
 
             const aggFunc = aggregateFunctions[aggLabel];
@@ -412,21 +405,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         },
         { immediate: false }
     );
-
-    async function testAggregateTableColumns(): Promise<void> {
-        try {
-            const experimentName = currentExperimentMetadata?.value?.name;
-
-            const columnQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = '${experimentName}_composite_experiment_cell_metadata_aggregate';`;
-            const columnResult = await vg
-                .coordinator()
-                .query(columnQuery, { type: 'json' });
-            const columnNames = columnResult.map((row: any) => row.column_name);
-            console.log('Column names:', columnNames);
-        } catch (error) {
-            console.error('Error fetching column names:', error);
-        }
-    }
 
     async function getExemplarTrackData(
         drug: string,
