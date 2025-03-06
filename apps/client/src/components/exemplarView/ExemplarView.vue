@@ -34,6 +34,7 @@ import { useConfigStore } from '@/stores/misc/configStore';
 import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
+import { type PickingInfo } from '@deck.gl/core/typed';
 
 const configStore = useConfigStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
@@ -249,24 +250,25 @@ onBeforeUnmount(() => {
     exemplarDataInitialized.value = false;
 });
 
+let deckGLLayers = [];
 // Function to render Deck.gl layers
 function renderDeckGL(): void {
     if (!deckgl.value) return;
 
     recalculateExemplarYOffsets();
 
-    const layers = [];
+    deckGLLayers = [];
 
-    layers.push(createSidewaysHistogramLayer());
-    layers.push(createHorizonChartLayer());
-    layers.push(createImageSnippetLayer());
-    layers.push(createSnippetBoundaryLayer());
-    layers.push(createTimeWindowLayer());
-    layers.push(createOneTestImageLayer());
+    deckGLLayers.push(createSidewaysHistogramLayer());
+    deckGLLayers.push(createHorizonChartLayer());
+    deckGLLayers.push(createImageSnippetLayer());
+    deckGLLayers.push(createSnippetBoundaryLayer());
+    deckGLLayers.push(createTimeWindowLayer());
+    deckGLLayers.push(createOneTestImageLayer());
     //layers.push(createDefaultImageLayerForExemplar());
 
     deckgl.value.setProps({
-        layers,
+        layers: deckGLLayers,
         controller: true,
     });
 }
@@ -388,8 +390,8 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
-                onHover: (info: PickingInfo) =>
-                    handleHorizonHover(info, exemplar),
+                onHover: (info: PickingInfo, event: any) =>
+                    handleHorizonHover(info, exemplar, event),
                 instanceData: geometryData,
                 destination: [
                     yOffset,
@@ -416,7 +418,11 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     return horizonChartLayers;
 }
 
-function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
+function handleHorizonHover(
+    info: PickingInfo,
+    exemplar: ExemplarTrack,
+    event: any
+) {
     if (info.index !== -1) {
         // we hovered the horizon chart
         hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
@@ -625,56 +631,6 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupHeight = groupBottom - groupTop;
         const binWidth = groupHeight / histogramDataForGroup.length;
 
-        // Start of Selection
-        // Draw the base thick line
-        layers.push(
-            new LineLayer({
-                id: `exemplar-sideways-histogram-base-line-${uniqueExemplarKey(
-                    firstExemplar
-                )}`,
-                data: [group],
-                getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
-                getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
-                getColor: fillColor(firstExemplar),
-                // Start of Selection
-                lineWidthUnits: 'common',
-                lineWidth: 7, // Adjust thickness as needed
-            })
-        );
-
-        // Draw the "filled" sideways histogram bins
-        const histogramPolygons = histogramDataForGroup.map((count, index) => {
-            const y0 = groupTop + index * binWidth;
-            const y1 = y0 + binWidth;
-            const x0 = hGap + 0.25 * histWidth;
-            const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
-
-            return [
-                [-x0, y0],
-                [-x1, y0],
-                [-x1, y1],
-                [-x0, y1],
-                [-x0, y0],
-            ];
-        });
-
-        layers.push(
-            new PolygonLayer({
-                id: `sideways-histogram-layer-${uniqueExemplarKey(
-                    firstExemplar
-                )}`,
-                data: histogramPolygons,
-                pickable: false,
-                stroked: false,
-                filled: true,
-                extruded: false,
-                getPolygon: (d: any) => d,
-                getFillColor: [153, 153, 153],
-                getElevation: 0,
-            })
-        );
-
-        //
         // ADD HORIZONTAL "TICK" LINES AND VERTICAL CONNECTOR LINES FOR EACH EXEMPLAR
         //
         // 1. Compute average mass.
@@ -683,7 +639,12 @@ function createSidewaysHistogramLayer(): any[] | null {
         // 4. Store line data for LineLayer.
         // 5. Add a vertical line connecting to the horizon chart.
         //
-        const lineData: {
+        const pinData: {
+            source: [number, number];
+            target: [number, number];
+            exemplar: ExemplarTrack;
+        }[] = [];
+        const pinToHorizonChartData: {
             source: [number, number];
             target: [number, number];
             exemplar: ExemplarTrack;
@@ -720,14 +681,14 @@ function createSidewaysHistogramLayer(): any[] | null {
             const x1 = x0 + fixedLineLength;
 
             // Draw horizontal line from -x0 to -(x0 + fixedLineLength) at yMid
-            lineData.push({
+            pinData.push({
                 source: [-x0, yMid],
                 target: [-(x0 + fixedLineLength), yMid],
                 exemplar,
             });
 
             // Draw vertical connector line from end of horizontal line to horizon chart
-            lineData.push({
+            pinToHorizonChartData.push({
                 source: [-x0, yMid],
                 target: [hGap, yOffset],
                 exemplar,
@@ -740,13 +701,93 @@ function createSidewaysHistogramLayer(): any[] | null {
             });
         }
 
+        // Start of Selection
+        // Draw the base thick line
+        layers.push(
+            new LineLayer({
+                id: `exemplar-sideways-histogram-base-line-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: [group],
+                getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
+                getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
+                getColor: fillColor(firstExemplar),
+                // Start of Selection
+                lineWidthUnits: 'common',
+                lineWidth: 7, // Adjust thickness as needed
+            })
+        );
+
+        // Draw the "filled" sideways histogram bins
+        const histogramPolygons = histogramDataForGroup.map((count, index) => {
+            const y0 = groupTop + index * binWidth;
+            const y1 = y0 + binWidth;
+            const x0 = hGap + 0.25 * histWidth;
+            const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
+
+            return {
+                // The polygon geometry is supplied via the "polygon" field
+                polygon: [
+                    [-x0, y0],
+                    [-x1, y0],
+                    [-x1, y1],
+                    [-x0, y1],
+                    [-x0, y0],
+                ],
+                binIndex: index,
+                count: count,
+            };
+        });
+
+        layers.push(
+            new PolygonLayer({
+                id: `sideways-histogram-layer-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: histogramPolygons,
+                pickable: false,
+                stroked: false,
+                filled: true,
+                extruded: false,
+                getPolygon: (d: any) => d.polygon,
+                getFillColor: [153, 153, 153],
+                getElevation: 0,
+            })
+        );
+
+        // Push a polygon layer which is a transparent rectangle with the same width as the histogram
+        // and the same height as the histogram bins.
+        layers.push(
+            new PolygonLayer({
+                id: `sideways-histogram-layer-${uniqueExemplarKey(
+                    firstExemplar
+                )}`,
+                data: [group],
+                getPolygon: () => {
+                    return [
+                        [-hGap - histWidth, groupBottom],
+                        [-hGap - histWidth * 0.2, groupBottom],
+                        [-hGap - histWidth * 0.2, groupTop],
+                        [-hGap - histWidth, groupTop],
+                        [-hGap - histWidth, groupBottom],
+                    ];
+                },
+                getFillColor: [0, 0, 0, 0],
+                getLineWidth: 1,
+                onHover: (info: PickingInfo, event: any) =>
+                    handleHistogramHover(info, event, pinData, firstExemplar),
+            })
+        );
+
+        layers.push(...createSinglePinLayer(pinData, firstExemplar));
+
         // Push a new LineLayer to draw these lines with thinner stroke
         layers.push(
             new LineLayer({
                 id: `exemplar-sideways-histogram-lines-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
-                data: lineData,
+                data: pinToHorizonChartData,
                 pickable: false,
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
@@ -760,31 +801,6 @@ function createSidewaysHistogramLayer(): any[] | null {
                         ? 4
                         : 1, // Thinner stroke width
                 opacity: 0.2,
-            })
-        );
-
-        // Push a ScatterplotLayer to draw tiny circles at the left end of the horizontal lines
-        layers.push(
-            new ScatterplotLayer({
-                id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
-                    firstExemplar
-                )}`,
-                data: circlePositions,
-                pickable: true, // Important: enabling picking
-                getPosition: (d) => d.position,
-                // Updated to dynamically adjust radius based on hover state and added type annotation
-                getRadius: (d: {
-                    position: [number, number];
-                    exemplar: ExemplarTrack;
-                }) =>
-                    hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
-                        ? 6
-                        : 3,
-                getFillColor: fillColor(firstExemplar),
-                // Removed fixed radius constraints to allow dynamic sizing
-                // radiusMinPixels: 2,
-                // radiusMaxPixels: 4,
-                onHover: handleHover,
             })
         );
 
@@ -820,6 +836,117 @@ function createSidewaysHistogramLayer(): any[] | null {
     }
 
     return layers;
+}
+
+function createSinglePinLayer(pinData: any[], firstExemplar: ExemplarTrack) {
+    // Push a new LineLayer to draw these lines with thinner stroke
+    const pinLayer: any[] = [];
+
+    pinLayer.push(
+        new LineLayer({
+            id: `exemplar-sideways-histogram-lines-${uniqueExemplarKey(
+                firstExemplar
+            )}`,
+            data: pinData,
+            pickable: false,
+            getSourcePosition: (d: any) => d.source,
+            getTargetPosition: (d: any) => d.target,
+            getColor: fillColor(firstExemplar), // Black lines
+            getWidth: (d: {
+                source: [number, number];
+                target: [number, number];
+                exemplar: ExemplarTrack;
+            }) =>
+                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                    ? 4
+                    : 1, // Thinner stroke width
+            opacity: 0.2,
+        })
+    );
+
+    // Calculate circle positions (Always the left end of the horizontal lines)
+    const circlePositions: {
+        position: [number, number];
+        exemplar: ExemplarTrack;
+    }[] = [];
+    for (const d of pinData) {
+        circlePositions.push({ position: d.target, exemplar: d.exemplar });
+    }
+
+    // Push a ScatterplotLayer to draw tiny circles at the left end of the horizontal lines
+    pinLayer.push(
+        new ScatterplotLayer({
+            id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
+                firstExemplar
+            )}`,
+            data: circlePositions,
+            pickable: true, // Important: enabling picking
+            getPosition: (d) => d.position,
+            // Updated to dynamically adjust radius based on hover state and added type annotation
+            getRadius: (d: {
+                position: [number, number];
+                exemplar: ExemplarTrack;
+            }) =>
+                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                    ? 6
+                    : 3,
+            getFillColor: fillColor(firstExemplar),
+            // Removed fixed radius constraints to allow dynamic sizing
+            // radiusMinPixels: 2,
+            // radiusMaxPixels: 4,
+            onHover: handleHover,
+        })
+    );
+
+    return pinLayer;
+}
+
+function handleHistogramHover(
+    info: PickingInfo,
+    event: any,
+    pinData: any[],
+    firstExemplar: ExemplarTrack
+) {
+    // Only show the hover line if we get a valid coordinate (i.e. the mouse is hovering over the histogram)
+    if (!info.coordinate) return [];
+
+    // Get the y coordinate from the picked location
+    const hoveredX = info.coordinate[0];
+    const hoveredY = info.coordinate[1];
+
+    // Get histogram layout configuration from viewConfiguration
+    const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
+        viewConfiguration.value;
+
+    // Compute the left and right boundaries for the horizontal line.
+    // These values are based on the same numbers used when drawing the histogram bins.
+    const xLeft = hoveredX - histWidth * 0.25;
+    const xRight = hoveredX + histWidth * 0.25;
+
+    console.log(xLeft, xRight, hoveredY);
+
+    // Create a LineLayer that draws a horizontal line following the mouse’s y position
+    const hoverLineLayer = new LineLayer({
+        id: 'histogram-hover-line',
+        data: [
+            {
+                source: [xLeft, hoveredY],
+                target: [xRight, hoveredY],
+            },
+        ],
+        pickable: false,
+        getSourcePosition: (d: any) => d.source,
+        getTargetPosition: (d: any) => d.target,
+        getColor: () => [0, 0, 0, 255], // Solid black line
+        getWidth: () => 2, // Fixed stroke thickness (in pixels)
+        opacity: 1,
+        lineWidthUnits: 'pixels',
+    });
+
+    deckgl.value.setProps({
+        layers: [deckGLLayers, hoverLineLayer],
+        controller: true,
+    });
 }
 
 function groupExemplarsByCondition(
