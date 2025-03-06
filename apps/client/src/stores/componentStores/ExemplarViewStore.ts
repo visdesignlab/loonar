@@ -310,12 +310,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             // For test logging, log the condition, and for each histogram bin, log the bin index, the min and max values, and the count.
 
-            for (const row of histogramCounts) {
-                console.log(
-                    `Condition: ${row.drug} ${row.conc}, Bin Index: ${row.bin_index}, Min: ${row.bin_min}, Max: ${row.bin_max}, Count: ${row.count}`
-                );
-            }
-
             // 4) Construct conditionHistograms from the query result
             const conditionMap = new Map<string, number[]>();
 
@@ -433,10 +427,66 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { immediate: false }
     );
 
+    function groupExemplarsByCondition(
+        exemplars: ExemplarTrack[]
+    ): ExemplarTrack[][] {
+        // Sorted ExemplarTrack[][]
+        const sortedExemplarTracks: Record<string, ExemplarTrack[]> = {};
+        // Find all unique drugs and concentrations.
+        const uniqueDrugs = Array.from(
+            new Set(
+                currentExperimentMetadata.value?.locationMetadataList?.map(
+                    (locationMetadata) => locationMetadata.tags?.Drug
+                ) ?? []
+            )
+        ).filter(Boolean);
+        const uniqueConcentrations = Array.from(
+            new Set(
+                currentExperimentMetadata.value?.locationMetadataList?.map(
+                    (locationMetadata) =>
+                        locationMetadata.tags?.['Concentration (um)']
+                ) ?? []
+            )
+        ).filter(Boolean);
+
+        console.log('uniqueDrugs', uniqueDrugs);
+        console.log('uniqueConcentrations', uniqueConcentrations);
+        //
+        for (const uniqueDrug of uniqueDrugs) {
+            const drugExemplars: ExemplarTrack[] = [];
+            for (const exemplar of exemplars) {
+                console.log('exemplar.tags.Drug', exemplar.tags.drug);
+                console.log('uniqueDrug', uniqueDrug);
+                if (exemplar.tags.drug === uniqueDrug) {
+                    drugExemplars.push(exemplar);
+                }
+            }
+            console.log('drugExemplars', drugExemplars);
+            // For each concentration that exists, find exemplars from the drug array with that concentration, and add them to the final exemplartrack[][]
+            for (const uniqueConc of uniqueConcentrations) {
+                for (const exemplar of drugExemplars) {
+                    if (exemplar.tags.conc === uniqueConc) {
+                        // Initialize the group if it doesn't exist
+                        if (uniqueDrug && !sortedExemplarTracks[uniqueDrug]) {
+                            sortedExemplarTracks[uniqueDrug] = [];
+                        }
+                        if (uniqueDrug && uniqueConc) {
+                            sortedExemplarTracks[uniqueDrug].push(exemplar);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return the final exemplartrack[][]
+        return Object.values(sortedExemplarTracks);
+    }
+
     async function getExemplarTrackData(
         drug: string,
         conc: string,
-        p: number
+        p?: number,
+        additionalTrackValue?: number
     ): Promise<{
         trackId: string;
         locationId: string;
@@ -446,7 +496,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         maxValue: number;
         data: DataPoint[];
     }> {
-        const pDecimal = p / 100;
+        const pDecimal = p ? p / 100 : undefined;
         const timeColumn = 'Time (h)';
         const drugColumn = 'Drug';
         const concColumn = 'Concentration (um)';
@@ -454,65 +504,129 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggregationColumn = selectedAggregation.value.label;
         const experimentName = currentExperimentMetadata?.value?.name;
 
-        // Start of Selection
-        const query = `
-          WITH valid_tracks AS (
-            SELECT "track_id"
-            FROM "${experimentName}_composite_experiment_cell_metadata"
-            WHERE "${drugColumn}" = '${drug}'
-              AND "${concColumn}" = '${conc}'
-            GROUP BY "track_id"
-            HAVING COUNT(*) >= 50
-          ),
-          aggregated_data AS (
-            SELECT
-              "tracking_id"::INTEGER AS track_id,
-              "location"::INTEGER AS location,
-              "Minimum Time (h)" AS birthTime,
-              "Maximum Time (h)" AS deathTime,
-              "Minimum ${attributeColumn}" AS minValue,
-              "Maximum ${attributeColumn}" AS maxValue,
-              "${aggregationColumn} ${attributeColumn}" AS avg_attr
-            FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
-            WHERE "Drug" = '${drug}'
-              AND "Concentration (um)" = '${conc}'
-              AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
-          ),
-          selected_track AS (
-            SELECT track_id
-            FROM aggregated_data
-            WHERE avg_attr = (
-              SELECT quantile_disc(avg_attr, ${pDecimal})
-              FROM aggregated_data
+        let query;
+        if (
+            additionalTrackValue === undefined ||
+            additionalTrackValue === null
+        ) {
+            console.log('getExemplarTrackData - p query called');
+            // Start of Selection
+            query = `
+            WITH valid_tracks AS (
+                SELECT "track_id"
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${drugColumn}" = '${drug}'
+                AND "${concColumn}" = '${conc}'
+                GROUP BY "track_id"
+                HAVING COUNT(*) >= 50
+            ),
+            aggregated_data AS (
+                SELECT
+                "tracking_id"::INTEGER AS track_id,
+                "location"::INTEGER AS location,
+                "Minimum Time (h)" AS birthTime,
+                "Maximum Time (h)" AS deathTime,
+                "Minimum ${attributeColumn}" AS minValue,
+                "Maximum ${attributeColumn}" AS maxValue,
+                "${aggregationColumn} ${attributeColumn}" AS avg_attr
+                FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
+                WHERE "Drug" = '${drug}'
+                AND "Concentration (um)" = '${conc}'
+                AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
+            ),
+            selected_track AS (
+                SELECT track_id
+                FROM aggregated_data
+                WHERE avg_attr = (
+                SELECT quantile_disc(avg_attr, ${pDecimal})
+                FROM aggregated_data
+                )
+                LIMIT 1
             )
-            LIMIT 1
-          )
-          SELECT
-            agg.track_id,
-            agg.location,
-            agg.birthTime,
-            agg.deathTime,
-            agg.minValue,
-            agg.maxValue,
-            array_agg(
-              ARRAY[
-                n."${timeColumn}",
-                n."Frame ID",
-                n."${attributeColumn}"
-              ]
-            ) AS data
-          FROM "${experimentName}_composite_experiment_cell_metadata" n
-          JOIN aggregated_data agg
-            ON n."track_id" = agg.track_id
-          WHERE n."track_id" = (SELECT track_id FROM selected_track)
-          GROUP BY
-            agg.track_id,
-            agg.location,
-            agg.birthTime,
-            agg.deathTime,
-            agg.minValue,
-            agg.maxValue;
+            SELECT
+                agg.track_id,
+                agg.location,
+                agg.birthTime,
+                agg.deathTime,
+                agg.minValue,
+                agg.maxValue,
+                array_agg(
+                ARRAY[
+                    n."${timeColumn}",
+                    n."Frame ID",
+                    n."${attributeColumn}"
+                ]
+                ) AS data
+            FROM "${experimentName}_composite_experiment_cell_metadata" n
+            JOIN aggregated_data agg
+                ON n."track_id" = agg.track_id
+            WHERE n."track_id" = (SELECT track_id FROM selected_track)
+            GROUP BY
+                agg.track_id,
+                agg.location,
+                agg.birthTime,
+                agg.deathTime,
+                agg.minValue,
+                agg.maxValue;
+                `;
+        } else {
+            // Updated query: rather than using pDecimal, select the track whose avg_attr
+            // is nearest to the additionalTrackValue
+            query = `
+            WITH valid_tracks AS (
+                SELECT "track_id"
+                FROM "${experimentName}_composite_experiment_cell_metadata"
+                WHERE "${drugColumn}" = '${drug}'
+                AND "${concColumn}" = '${conc}'
+                GROUP BY "track_id"
+                HAVING COUNT(*) >= 50
+            ),
+            aggregated_data AS (
+                SELECT
+                    "tracking_id"::INTEGER AS track_id,
+                    "location"::INTEGER AS location,
+                    "Minimum Time (h)" AS birthTime,
+                    "Maximum Time (h)" AS deathTime,
+                    "Minimum ${attributeColumn}" AS minValue,
+                    "Maximum ${attributeColumn}" AS maxValue,
+                    "${aggregationColumn} ${attributeColumn}" AS avg_attr
+                FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
+                WHERE "Drug" = '${drug}'
+                AND "Concentration (um)" = '${conc}'
+                AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
+            ),
+            selected_track AS (
+                SELECT track_id
+                FROM aggregated_data
+                ORDER BY ABS(avg_attr - ${additionalTrackValue}) ASC
+                LIMIT 1
+            )
+            SELECT
+                agg.track_id,
+                agg.location,
+                agg.birthTime,
+                agg.deathTime,
+                agg.minValue,
+                agg.maxValue,
+                array_agg(
+                    ARRAY[
+                        n."${timeColumn}",
+                        n."Frame ID",
+                        n."${attributeColumn}"
+                    ]
+                ) AS data
+            FROM "${experimentName}_composite_experiment_cell_metadata" n
+            JOIN aggregated_data agg ON n."track_id" = agg.track_id
+            WHERE n."track_id" = (SELECT track_id FROM selected_track)
+            GROUP BY
+                agg.track_id,
+                agg.location,
+                agg.birthTime,
+                agg.deathTime,
+                agg.minValue,
+                agg.maxValue;
         `;
+        }
 
         try {
             const result = await vg
@@ -541,6 +655,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     frame: d[1], // Convert BigInt to Number
                     value: d[2], // Convert BigInt to Number
                 }));
+
+                console.log(
+                    'getExemplarTrackData result: ',
+                    track_id,
+                    location,
+                    birthTime,
+                    deathTime,
+                    minValue,
+                    maxValue,
+                    mappedData
+                );
 
                 return {
                     trackId: track_id,
@@ -582,7 +707,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     async function getExemplarTrack(
         drug: string,
         conc: string,
-        p: number
+        p?: number,
+        additionalTrackValue?: number
     ): Promise<ExemplarTrack> {
         const {
             trackId,
@@ -592,7 +718,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             minValue,
             maxValue,
             data,
-        } = await getExemplarTrackData(drug, conc, p);
+        } = await getExemplarTrackData(
+            drug,
+            conc,
+            p ?? undefined,
+            additionalTrackValue ?? undefined
+        );
         return {
             trackId: trackId,
             locationId: locationId,
@@ -605,33 +736,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 drug: drug,
                 conc: conc,
             },
-            p,
+            p: p ?? undefined,
             pinned: false,
             starred: false,
         };
     }
 
-    async function generateTestExemplarTracks(): Promise<void> {
-        exemplarTracks.value = [];
-        const trackPromises: Promise<ExemplarTrack>[] = [];
-        for (const drug of ['4HT', 'lap', 'dox']) {
-            for (const conc of ['0.0016 um', '0.016 um', '0.08 um']) {
-                for (const p of [5, 50, 95]) {
-                    trackPromises.push(getExemplarTrack(drug, conc, p));
-                }
-            }
-        }
-        try {
-            const tracks = await Promise.all(trackPromises);
-            exemplarTracks.value.push(...tracks);
-            // console.log('Exemplar tracks successfully added:', tracks.length);
-        } catch (error) {
-            console.error('Error generating exemplar tracks:', error);
-        }
-    }
-
-    async function getExemplarTracks(): Promise<void> {
-        exemplarTracks.value = [];
+    exemplarTracks.value = [];
+    async function getExemplarTracks(
+        exemplarPercentiles?: number[],
+        additionalTrackValue?: number
+    ): Promise<void> {
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
         // 1. Build a mapping of drug -> set of concentrations
@@ -666,8 +781,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             if (!concs) continue;
 
             for (const conc of concs) {
-                for (const p of [5, 50, 95]) {
-                    trackPromises.push(getExemplarTrack(drug, conc, p));
+                if (
+                    additionalTrackValue === undefined ||
+                    additionalTrackValue === null
+                ) {
+                    for (const p of exemplarPercentiles ?? [5, 50, 95]) {
+                        trackPromises.push(
+                            getExemplarTrack(drug, conc, p, undefined)
+                        );
+                    }
+                } else {
+                    console.log(
+                        'getExemplarTracks - additionalTrackValue:',
+                        additionalTrackValue
+                    );
+                    trackPromises.push(
+                        getExemplarTrack(
+                            drug,
+                            conc,
+                            undefined,
+                            additionalTrackValue
+                        )
+                    );
                 }
             }
         }
@@ -675,6 +810,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         try {
             const tracks = await Promise.all(trackPromises);
             exemplarTracks.value.push(...tracks);
+
+            // console.log(
+            //     'groupExemplarsByCondition',
+            //     groupExemplarsByCondition(exemplarTracks.value).flat()
+            // );
+            // Group exemplars by condition
+            exemplarTracks.value = groupExemplarsByCondition(
+                exemplarTracks.value
+            ).flat();
+
             console.log('Exemplar tracks successfully added:', tracks.length);
         } catch (error) {
             console.error('Error generating exemplar tracks:', error);
@@ -689,7 +834,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const histogramDomainsComputed = computed(() => histogramDomains.value);
 
     return {
-        generateTestExemplarTracks,
         getExemplarTracks,
         exemplarTracks,
         viewConfiguration,

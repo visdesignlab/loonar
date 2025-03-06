@@ -91,7 +91,11 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            await exemplarViewStore.getExemplarTracks();
+            const exemplarPercentiles = [5, 50, 95];
+            await exemplarViewStore.getExemplarTracks(
+                exemplarPercentiles,
+                undefined
+            );
             console.log('Exemplar tracks generated.');
 
             await getHistogramData();
@@ -251,6 +255,7 @@ onBeforeUnmount(() => {
 });
 
 let deckGLLayers = [];
+
 // Function to render Deck.gl layers
 function renderDeckGL(): void {
     if (!deckgl.value) return;
@@ -267,10 +272,13 @@ function renderDeckGL(): void {
     deckGLLayers.push(createOneTestImageLayer());
     //layers.push(createDefaultImageLayerForExemplar());
 
+    deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
+
     deckgl.value.setProps({
         layers: deckGLLayers,
         controller: true,
     });
+    deckgl.value.redraw();
 }
 
 const exemplarYOffsets = ref(new Map<string, number>());
@@ -372,6 +380,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         tracks.length > 0 ? Math.max(...tracks.map((t) => t.maxValue)) : 0;
 
     for (const exemplar of tracks) {
+        // console.log(exemplar.tags);
         if (!exemplar.data || exemplar.data.length === 0) {
             continue; // Skip this exemplar if there's no data
         }
@@ -719,14 +728,16 @@ function createSidewaysHistogramLayer(): any[] | null {
         );
 
         // Draw the "filled" sideways histogram bins
-        const histogramPolygons = histogramDataForGroup.map((count, index) => {
+        const histogramValues = histogramDataForGroup.map((count, index) => {
+            // Compute polygon coordinates for each bin
             const y0 = groupTop + index * binWidth;
             const y1 = y0 + binWidth;
             const x0 = hGap + 0.25 * histWidth;
             const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
+            // Get the corresponding bin range from the histogramDomains
+            const binRange = domains.histogramBinRanges[index];
 
             return {
-                // The polygon geometry is supplied via the "polygon" field
                 polygon: [
                     [-x0, y0],
                     [-x1, y0],
@@ -736,15 +747,21 @@ function createSidewaysHistogramLayer(): any[] | null {
                 ],
                 binIndex: index,
                 count: count,
+                y0: y0,
+                y1: y1,
+                // Include the min/max attribute for this bin range
+                minAttr: binRange?.min,
+                maxAttr: binRange?.max,
             };
         });
 
+        // Draw the histogram bins
         layers.push(
             new PolygonLayer({
                 id: `sideways-histogram-layer-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
-                data: histogramPolygons,
+                data: histogramValues,
                 pickable: false,
                 stroked: false,
                 filled: true,
@@ -755,13 +772,13 @@ function createSidewaysHistogramLayer(): any[] | null {
             })
         );
 
-        // Push a polygon layer which is a transparent rectangle with the same width as the histogram
-        // and the same height as the histogram bins.
+        // The histogram hover box, whose 'onHover' event triggers the histogram hover logic (moving pins)
         layers.push(
             new PolygonLayer({
-                id: `sideways-histogram-layer-${uniqueExemplarKey(
+                id: `sideways-histogram-hover-layer-${uniqueExemplarKey(
                     firstExemplar
                 )}`,
+                pickable: true,
                 data: [group],
                 getPolygon: () => {
                     return [
@@ -773,13 +790,25 @@ function createSidewaysHistogramLayer(): any[] | null {
                     ];
                 },
                 getFillColor: [0, 0, 0, 0],
-                getLineWidth: 1,
+                getLineWidth: 0,
                 onHover: (info: PickingInfo, event: any) =>
-                    handleHistogramHover(info, event, pinData, firstExemplar),
+                    handleHistogramHover(
+                        info,
+                        event,
+                        firstExemplar,
+                        histogramValues
+                    ),
+                onClick: (info: PickingInfo, event: any) =>
+                    handleHistogramClick(
+                        info,
+                        event,
+                        firstExemplar,
+                        histogramValues
+                    ),
             })
         );
 
-        layers.push(...createSinglePinLayer(pinData, firstExemplar));
+        layers.push(...createPinLayers(pinData, firstExemplar));
 
         // Push a new LineLayer to draw these lines with thinner stroke
         layers.push(
@@ -838,116 +867,281 @@ function createSidewaysHistogramLayer(): any[] | null {
     return layers;
 }
 
-function createSinglePinLayer(pinData: any[], firstExemplar: ExemplarTrack) {
-    // Push a new LineLayer to draw these lines with thinner stroke
-    const pinLayer: any[] = [];
-
-    pinLayer.push(
-        new LineLayer({
-            id: `exemplar-sideways-histogram-lines-${uniqueExemplarKey(
-                firstExemplar
-            )}`,
-            data: pinData,
-            pickable: false,
-            getSourcePosition: (d: any) => d.source,
-            getTargetPosition: (d: any) => d.target,
-            getColor: fillColor(firstExemplar), // Black lines
-            getWidth: (d: {
-                source: [number, number];
-                target: [number, number];
-                exemplar: ExemplarTrack;
-            }) =>
-                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
-                    ? 4
-                    : 1, // Thinner stroke width
-            opacity: 0.2,
-        })
-    );
-
-    // Calculate circle positions (Always the left end of the horizontal lines)
-    const circlePositions: {
-        position: [number, number];
-        exemplar: ExemplarTrack;
-    }[] = [];
-    for (const d of pinData) {
-        circlePositions.push({ position: d.target, exemplar: d.exemplar });
-    }
-
-    // Push a ScatterplotLayer to draw tiny circles at the left end of the horizontal lines
-    pinLayer.push(
-        new ScatterplotLayer({
-            id: `exemplar-sideways-histogram-circles-${uniqueExemplarKey(
-                firstExemplar
-            )}`,
-            data: circlePositions,
-            pickable: true, // Important: enabling picking
-            getPosition: (d) => d.position,
-            // Updated to dynamically adjust radius based on hover state and added type annotation
-            getRadius: (d: {
-                position: [number, number];
-                exemplar: ExemplarTrack;
-            }) =>
-                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
-                    ? 6
-                    : 3,
-            getFillColor: fillColor(firstExemplar),
-            // Removed fixed radius constraints to allow dynamic sizing
-            // radiusMinPixels: 2,
-            // radiusMaxPixels: 4,
-            onHover: handleHover,
-        })
-    );
-
-    return pinLayer;
+interface Pin {
+    source: number[];
+    target: number[];
+    exemplar: ExemplarTrack;
+    id: string;
+    color?: number[];
 }
 
+const tempPin = ref<Pin | null>(null);
+const tempLabel = ref<{ text: string; position: [number, number] } | null>(
+    null
+);
+const pinnedPins = ref<Pin[]>([]);
+const dragPin = ref<Pin | null>(null);
+
+// -----------------------------------------------------------------------------
+// UPDATED: Handle hovering on the histogram hover box.
+// This function now updates the temporary pin (or clears it if the pointer
+// has left the hovered area) and then calls updatePinsLayer() to re-render all pins.
 function handleHistogramHover(
     info: PickingInfo,
     event: any,
-    pinData: any[],
-    firstExemplar: ExemplarTrack
+    firstExemplar: ExemplarTrack,
+    histogramData: any[]
 ) {
-    // Only show the hover line if we get a valid coordinate (i.e. the mouse is hovering over the histogram)
-    if (!info.coordinate) return [];
-
-    // Get the y coordinate from the picked location
-    const hoveredX = info.coordinate[0];
+    // When the pointer leaves the polygon (info.index === -1) or no coordinate,
+    // clear the temporary pin.
+    if (!info.coordinate || info.index === -1) {
+        tempPin.value = null;
+        tempLabel.value = null;
+        updatePinsLayer(firstExemplar);
+        return;
+    }
+    // Otherwise, compute the pin position based on the mouse coordinate.
     const hoveredY = info.coordinate[1];
-
-    // Get histogram layout configuration from viewConfiguration
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
+    const fixedLineLength = histWidth * 0.75;
+    const x0 = hGap + 0.25 * histWidth;
 
-    // Compute the left and right boundaries for the horizontal line.
-    // These values are based on the same numbers used when drawing the histogram bins.
-    const xLeft = hoveredX - histWidth * 0.25;
-    const xRight = hoveredX + histWidth * 0.25;
+    // Set the temporary pin: positioned at the hoveredY
+    tempPin.value = {
+        source: [-x0, hoveredY],
+        target: [-(x0 + fixedLineLength), hoveredY],
+        exemplar: firstExemplar,
+        id: 'temp', // a temporary identifier
+    };
 
-    console.log(xLeft, xRight, hoveredY);
+    // Find the bin index & count of the hoveredY, using the histogramValues
+    const binIndex = histogramData.findIndex(
+        (d) => d.y0 <= hoveredY && d.y1 >= hoveredY
+    );
 
-    // Create a LineLayer that draws a horizontal line following the mouse’s y position
-    const hoverLineLayer = new LineLayer({
-        id: 'histogram-hover-line',
-        data: [
-            {
-                source: [xLeft, hoveredY],
-                target: [xRight, hoveredY],
-            },
-        ],
-        pickable: false,
-        getSourcePosition: (d: any) => d.source,
-        getTargetPosition: (d: any) => d.target,
-        getColor: () => [0, 0, 0, 255], // Solid black line
-        getWidth: () => 2, // Fixed stroke thickness (in pixels)
-        opacity: 1,
-        lineWidthUnits: 'pixels',
-    });
+    if (binIndex === -1) {
+        tempLabel.value = null;
+        updatePinsLayer(firstExemplar);
+        return;
+    }
+
+    // Get the bin's count and the min/max attribute values
+    const bin = histogramData[binIndex];
+    const count = bin.count;
+
+    const [minStr, maxStr] = [bin.minAttr, bin.maxAttr].map((x) =>
+        (Math.trunc(x * 1000) / 1000).toFixed(2)
+    );
+
+    console.log('Bin index:', binIndex, 'Count:', count);
+
+    // Set the temporary label: positioned 10 pixels left of the pin circle.
+    tempLabel.value = {
+        text: `Count: ${count}\n [${minStr}, ${maxStr}]`,
+        position: [-(x0 + fixedLineLength) - 10, hoveredY],
+    };
+
+    updatePinsLayer(firstExemplar);
+}
+
+// -----------------------------------------------------------------------------
+// NEW: When the histogram hover box is clicked, pin the current temporary pin.
+// The current temporary pin is added to the pinnedPins array, a dummy event is logged,
+// and the temporary pin is cleared so that future hovering creates a new one.
+async function handleHistogramClick(
+    info: PickingInfo,
+    event: any,
+    firstExemplar: ExemplarTrack,
+    histogramData: any[]
+) {
+    if (!info.coordinate) return;
+    if (tempPin.value) {
+        const newPin = {
+            ...tempPin.value,
+            id: `pinned-${Date.now()}`,
+            color: fillColor(tempPin.value.exemplar),
+        };
+        pinnedPins.value.push(newPin);
+        console.log('Dummy event: Pin placed at', newPin);
+        // Clear temporary pin so that hovering will create a new one.
+        tempPin.value = null;
+        updatePinsLayer(firstExemplar);
+
+        // Add the new pin to the exemplarTracks array
+
+        const hoveredY = info.coordinate[1];
+        // Find the bin index & count of the hoveredY, using the histogramValues
+        const binIndex = histogramData.findIndex(
+            (d) => d.y0 <= hoveredY && d.y1 >= hoveredY
+        );
+
+        if (binIndex === -1) {
+            tempLabel.value = null;
+            updatePinsLayer(firstExemplar);
+            return;
+        }
+
+        // Get the bin's count and the min/max attribute values
+        const bin = histogramData[binIndex];
+        await exemplarViewStore.getExemplarTracks(undefined, bin.minAttr);
+
+        // First ensure that the new exemplar tracks are loaded, then print them.
+        console.log('Exemplar tracks:', exemplarTracks.value);
+        renderDeckGL();
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Helper function to update the pins layer.
+// Combines any pinned pins with the temporary pin (if it exists) and updates
+// deck.gl's layers to include both the base layers and the pin layers.
+function updatePinsLayer(firstExemplar: ExemplarTrack) {
+    const allPins = [...pinnedPins.value];
+    if (tempPin.value) {
+        allPins.push(tempPin.value);
+    }
+
+    const pinLayers = createPinLayers(allPins, firstExemplar);
+
+    // If a tempLabel exists, add a TextLayer.
+    if (tempLabel.value) {
+        console.log('Adding temp label', tempLabel.value);
+        pinLayers.push(
+            new TextLayer({
+                id: `exemplar-temp-label-${uniqueExemplarKey(firstExemplar)}`,
+                data: [tempLabel.value],
+                getPosition: (d: {
+                    text: string;
+                    position: [number, number];
+                }) => d.position,
+                getText: (d: { text: string }) => d.text,
+                sizeScale: 1,
+                sizeUnits: 'common',
+                sizeMaxPixels: 20,
+                // Set color as desired (here black) using an accessor function:
+                getColor: (d: any) => [0, 0, 0],
+                // Use the proper TextLayer props:
+                getTextAnchor: (d: any) => 'end', // 'end' aligns text to the right
+                getAlignmentBaseline: (d: any) => 'center', // 'center' is the correct baseline value
+                billboard: true,
+            })
+        );
+    }
 
     deckgl.value.setProps({
-        layers: [deckGLLayers, hoverLineLayer],
+        layers: [...deckGLLayers, ...pinLayers],
         controller: true,
     });
 }
+
+// -----------------------------------------------------------------------------
+// NEW: Create deck.gl layers for pins from an array of pin data.
+// In this example we build a LineLayer (to draw horizontal connector lines)
+// and a ScatterplotLayer (to draw the circle endpoints that are pickable/interactive).
+function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
+    const pinLayers = [];
+    pinLayers.push(
+        new LineLayer({
+            id: `exemplar-pin-lines-${uniqueExemplarKey(firstExemplar)}`,
+            data: pins,
+            pickable: false,
+            getSourcePosition: (d: any) => d.source,
+            getTargetPosition: (d: any) => d.target,
+            getColor: (d: Pin) => (d.color ? d.color : fillColor(d.exemplar)),
+            getFillColor: (d: Pin) =>
+                d.color ? d.color : fillColor(d.exemplar),
+            // Adjust the line width based on hover state.
+            getWidth: (d: any) =>
+                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                    ? 4
+                    : 1,
+            opacity: 0.2,
+        })
+    );
+    const circleData = pins.map((d) => ({
+        position: d.target,
+        exemplar: d.exemplar,
+        id: d.id,
+    }));
+    pinLayers.push(
+        new ScatterplotLayer({
+            id: `exemplar-pin-circles-${uniqueExemplarKey(firstExemplar)}`,
+            data: circleData,
+            pickable: true, // enable interaction with the pin circles
+            getPosition: (d: any) => d.position,
+            getRadius: (d: any) =>
+                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                    ? 6
+                    : 3,
+            getColor: (d: Pin) => (d.color ? d.color : fillColor(d.exemplar)),
+            getFillColor: (d: Pin) =>
+                d.color ? d.color : fillColor(d.exemplar),
+            // When a pin is clicked, dragged or released, we log a dummy event.
+            onClick: (info: PickingInfo, event: any) =>
+                handlePinClick(info, event, firstExemplar),
+            onDragStart: (info: PickingInfo, event: any) =>
+                handlePinDragStart(info, event, firstExemplar),
+            onDrag: (info: PickingInfo, event: any) =>
+                handlePinDrag(info, event, firstExemplar),
+            onDragEnd: (info: PickingInfo, event: any) =>
+                handlePinDragEnd(info, event, firstExemplar),
+        })
+    );
+    return pinLayers;
+}
+
+// -----------------------------------------------------------------------------
+// NEW: Dummy event handlers for interacting with pins.
+// These log a message whenever a pin is clicked or dragged.
+function handlePinClick(
+    info: PickingInfo,
+    event: any,
+    firstExemplar: ExemplarTrack
+) {
+    console.log('Dummy event: Pin clicked', info.object);
+}
+function handlePinDragStart(
+    info: PickingInfo,
+    event: any,
+    firstExemplar: ExemplarTrack
+) {
+    console.log('Dummy event: Pin drag started', info.object);
+    dragPin.value = info.object;
+}
+function handlePinDrag(
+    info: PickingInfo,
+    event: any,
+    firstExemplar: ExemplarTrack
+) {
+    if (!info.coordinate) return;
+    const hoveredY = info.coordinate[1];
+    const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
+        viewConfiguration.value;
+    const fixedLineLength = histWidth * 0.75;
+    const x0 = hGap + 0.25 * histWidth;
+    const index = pinnedPins.value.findIndex((p) => p.id === info.object.id);
+    if (index >= 0) {
+        pinnedPins.value[index] = {
+            ...pinnedPins.value[index],
+            source: [-x0, hoveredY],
+            target: [-(x0 + fixedLineLength), hoveredY],
+        };
+        updatePinsLayer(firstExemplar);
+    }
+}
+function handlePinDragEnd(
+    info: PickingInfo,
+    event: any,
+    firstExemplar: ExemplarTrack
+) {
+    console.log('Dummy event: Pin drag ended', info.object);
+    dragPin.value = null;
+    updatePinsLayer(firstExemplar);
+}
+
+// End of Pin Layer Creation
+// ---------------------------------------------------------------
 
 function groupExemplarsByCondition(
     exemplars: ExemplarTrack[]
