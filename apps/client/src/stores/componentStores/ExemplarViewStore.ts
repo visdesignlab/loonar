@@ -419,7 +419,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             loadingExemplarData.value = true;
             try {
                 await getHistogramData();
-                await getExemplarTracks();
+                await getExemplarTracks(true);
             } finally {
                 loadingExemplarData.value = false;
             }
@@ -744,6 +744,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     exemplarTracks.value = [];
     async function getExemplarTracks(
+        replace?: boolean,
         exemplarPercentiles?: number[],
         additionalTrackValue?: number
     ): Promise<void> {
@@ -809,7 +810,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
         try {
             const tracks = await Promise.all(trackPromises);
-            exemplarTracks.value.push(...tracks);
+
+            if (replace) {
+                console.log('replacing');
+                exemplarTracks.value = tracks;
+            } else {
+                console.log('pushing');
+                exemplarTracks.value.push(...tracks);
+            }
 
             // console.log(
             //     'groupExemplarsByCondition',
