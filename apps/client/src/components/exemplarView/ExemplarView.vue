@@ -93,6 +93,7 @@ watch(
 
             const exemplarPercentiles = [5, 50, 95];
             await exemplarViewStore.getExemplarTracks(
+                true,
                 exemplarPercentiles,
                 undefined
             );
@@ -984,7 +985,11 @@ async function handleHistogramClick(
 
         // Get the bin's count and the min/max attribute values
         const bin = histogramData[binIndex];
-        await exemplarViewStore.getExemplarTracks(undefined, bin.minAttr);
+        await exemplarViewStore.getExemplarTracks(
+            false,
+            undefined,
+            bin.minAttr
+        );
 
         // First ensure that the new exemplar tracks are loaded, then print them.
         console.log('Exemplar tracks:', exemplarTracks.value);

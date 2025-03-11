@@ -745,7 +745,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     exemplarTracks.value = [];
     async function getExemplarTracks(
         replace?: boolean,
-        exemplarPercentiles?: number[],
+        exemplarPercentiles: number[] = [5, 50, 95],
         additionalTrackValue?: number
     ): Promise<void> {
         const trackPromises: Promise<ExemplarTrack>[] = [];
@@ -786,7 +786,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     additionalTrackValue === undefined ||
                     additionalTrackValue === null
                 ) {
-                    for (const p of exemplarPercentiles ?? [5, 50, 95]) {
+                    for (const p of exemplarPercentiles) {
                         trackPromises.push(
                             getExemplarTrack(drug, conc, p, undefined)
                         );
