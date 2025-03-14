@@ -35,6 +35,9 @@ import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
 import { type PickingInfo } from '@deck.gl/core/typed';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { format } from 'd3-format';
 
 const configStore = useConfigStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
@@ -47,6 +50,9 @@ const exemplarViewStore = useExemplarViewStore();
 const conditionSelectorStore = useConditionSelectorStore();
 
 const cellMetaData = useCellMetaData();
+const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+const { hoveredCellIndex } = storeToRefs(dataPointSelectionUntrracked);
+const looneageViewStore = useLooneageViewStore();
 
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
@@ -119,6 +125,22 @@ watch(
                     }),
                     controller: true,
                     layers: [],
+                    getTooltip: (info: {
+                        object: any;
+                        x: number;
+                        layer?: any;
+                    }) => {
+                        if (
+                            info.layer &&
+                            info.layer.id &&
+                            info.layer.id.startsWith('exemplar-horizon-chart-')
+                        ) {
+                            return {
+                                html: '<div style="width:100px; height:100px; background:#f0f0f0; text-align:center; ">test</div>',
+                            };
+                        }
+                        return null;
+                    },
                 });
                 console.log('Deck.gl initialized.');
             }
@@ -430,15 +452,30 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
 function handleHorizonHover(
     info: PickingInfo,
+    horizonChartXRange: [number, number],
     exemplar: ExemplarTrack,
     event: any
 ) {
-    if (info.index !== -1) {
-        // we hovered the horizon chart
-        hoveredExemplarKey.value = uniqueExemplarKey(exemplar);
-        // console.log('Hovered HorizonChart Exemplar:', hoveredExemplarKey.value);
+    if (info.index !== -1 && info.coordinate) {
+        // // Get the x coordinate of the hover
+        // const hoverX = info.coordinate[0];
+        // // Convert the hoverX to a percentage of the horizon chart width
+        // const hoverXPercentage =
+        //     (hoverX - horizonChartXRange[0]) /
+        //     (horizonChartXRange[1] - horizonChartXRange[0]);
+        // // Get the exemplar's range of times
+        // const exemplarTimeRange = [exemplar.minTime, exemplar.maxTime];
+        // // Convert the hoverX percentage to a time value
+        // const hoverTime =
+        //     exemplarTimeRange[0] +
+        //     hoverXPercentage * (exemplarTimeRange[1] - exemplarTimeRange[0]);
+        // // Get the exemplar's value at the closest hover time
+        // const hoverValue = exemplar.data.find(
+        //     (d) => d.time === hoverTime
+        // )?.value;
+        // console.log('Hover Time:', hoverTime);
     } else {
-        // pointer left the horizon chart
+        // pointer left the horizon chart or coordinate is undefined
         hoveredExemplarKey.value = null;
         // console.log('No HorizonChart hovered');
     }
@@ -804,7 +841,9 @@ function createSidewaysHistogramLayer(): any[] | null {
                         info,
                         event,
                         firstExemplar,
-                        histogramValues
+                        histogramValues,
+                        groupBottom,
+                        groupTop
                     ),
             })
         );
@@ -954,7 +993,9 @@ async function handleHistogramClick(
     info: PickingInfo,
     event: any,
     firstExemplar: ExemplarTrack,
-    histogramData: any[]
+    histogramData: any[],
+    histogramBottomY: number,
+    histogramTopY: number
 ) {
     if (!info.coordinate) return;
     if (tempPin.value) {
@@ -982,7 +1023,7 @@ async function handleHistogramClick(
             updatePinsLayer(firstExemplar);
             return;
         }
-
+        // Get p-value from histogram,
         // Get the bin's count and the min/max attribute values
         const bin = histogramData[binIndex];
         await exemplarViewStore.getExemplarTracks(
@@ -990,6 +1031,9 @@ async function handleHistogramClick(
             undefined,
             bin.minAttr
         );
+
+        console.log('histogramBottomY', histogramBottomY);
+        console.log('histogramTopY', histogramTopY);
 
         // First ensure that the new exemplar tracks are loaded, then print them.
         console.log('Exemplar tracks:', exemplarTracks.value);
