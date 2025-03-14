@@ -427,7 +427,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { immediate: false }
     );
 
-    function groupExemplarsByCondition(
+    function sortExemplarsByCondition(
         exemplars: ExemplarTrack[]
     ): ExemplarTrack[][] {
         // Sorted ExemplarTrack[][]
@@ -464,20 +464,19 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             console.log('drugExemplars', drugExemplars);
             // For each concentration that exists, find exemplars from the drug array with that concentration, and add them to the final exemplartrack[][]
             for (const uniqueConc of uniqueConcentrations) {
-                for (const exemplar of drugExemplars) {
-                    if (exemplar.tags.conc === uniqueConc) {
-                        // Initialize the group if it doesn't exist
-                        if (uniqueDrug && !sortedExemplarTracks[uniqueDrug]) {
-                            sortedExemplarTracks[uniqueDrug] = [];
-                        }
-                        if (uniqueDrug && uniqueConc) {
-                            sortedExemplarTracks[uniqueDrug].push(exemplar);
-                        }
+                const matchingExemplars = drugExemplars.filter(
+                    (exemplar) => exemplar.tags.conc === uniqueConc
+                );
+                matchingExemplars.sort((a, b) => a.p - b.p);
+                if (uniqueDrug && matchingExemplars.length > 0) {
+                    if (!sortedExemplarTracks[uniqueDrug]) {
+                        sortedExemplarTracks[uniqueDrug] = [];
                     }
+                    sortedExemplarTracks[uniqueDrug].push(...matchingExemplars);
                 }
             }
         }
-
+        console.log('sortedExemplarTracks', sortedExemplarTracks);
         // Return the final exemplartrack[][]
         return Object.values(sortedExemplarTracks);
     }
@@ -820,13 +819,15 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
 
             // console.log(
-            //     'groupExemplarsByCondition',
-            //     groupExemplarsByCondition(exemplarTracks.value).flat()
+            //     'sortExemplarsByCondition',
+            //     sortExemplarsByCondition(exemplarTracks.value).flat()
             // );
             // Group exemplars by condition
-            exemplarTracks.value = groupExemplarsByCondition(
+            exemplarTracks.value = sortExemplarsByCondition(
                 exemplarTracks.value
             ).flat();
+
+            console.log('exemplarTracks', exemplarTracks.value);
 
             console.log('Exemplar tracks successfully added:', tracks.length);
         } catch (error) {
