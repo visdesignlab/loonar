@@ -130,14 +130,28 @@ watch(
                         x: number;
                         layer?: any;
                     }) => {
+                        // If the layer is a horizon chart, show the cell index and time.
                         if (
                             info.layer &&
                             info.layer.id &&
                             info.layer.id.startsWith('exemplar-horizon-chart-')
                         ) {
-                            return {
-                                html: '<div style="width:100px; height:100px; background:#f0f0f0; text-align:center; ">test</div>',
-                            };
+                            // Currently hovered time from store.
+                            const time =
+                                dataPointSelectionUntrracked.hoveredTime;
+                            if (time == null) return null;
+                            // Format the time and value (truncate decimals).
+                            const timeFormatter = format('.2f');
+                            const valueFormatter = format('.3f');
+                            // Create the tooltip HTML, with the currently hovered exemplar and time.
+                            let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
+                            html += `<div>Time: ${timeFormatter(time)}</div>`;
+                            html += `<div>Value: ${
+                                hoveredValue.value !== null
+                                    ? valueFormatter(hoveredValue.value)
+                                    : ''
+                            }</div>`;
+                            return { html };
                         }
                         return null;
                     },
@@ -423,7 +437,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
                 onHover: (info: PickingInfo, event: any) =>
-                    handleHorizonHover(info, exemplar, event),
+                    handleHorizonHover(info, exemplar),
                 instanceData: geometryData,
                 destination: [
                     yOffset,
@@ -450,34 +464,71 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     return horizonChartLayers;
 }
 
-function handleHorizonHover(
-    info: PickingInfo,
-    horizonChartXRange: [number, number],
-    exemplar: ExemplarTrack,
-    event: any
-) {
+// The currently hovered exemplar and its currently hovered value.
+const hoveredExemplar = ref<ExemplarTrack | null>(null);
+const hoveredValue = ref<number | null>(null);
+
+function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1 && info.coordinate) {
-        // // Get the x coordinate of the hover
-        // const hoverX = info.coordinate[0];
-        // // Convert the hoverX to a percentage of the horizon chart width
-        // const hoverXPercentage =
-        //     (hoverX - horizonChartXRange[0]) /
-        //     (horizonChartXRange[1] - horizonChartXRange[0]);
-        // // Get the exemplar's range of times
-        // const exemplarTimeRange = [exemplar.minTime, exemplar.maxTime];
-        // // Convert the hoverX percentage to a time value
-        // const hoverTime =
-        //     exemplarTimeRange[0] +
-        //     hoverXPercentage * (exemplarTimeRange[1] - exemplarTimeRange[0]);
-        // // Get the exemplar's value at the closest hover time
-        // const hoverValue = exemplar.data.find(
-        //     (d) => d.time === hoverTime
-        // )?.value;
-        // console.log('Hover Time:', hoverTime);
+        // Cell ID ------------------------------------------------------
+        // Store the currently hovered exemplar for the tooltip.
+        hoveredExemplar.value = exemplar;
+
+        // Time ------------------------------------------------------
+        // Get the x coordinate of the hover event.
+        const hoverX = info.coordinate[0];
+        if (!hoverX) {
+            console.error('hoverX is undefined');
+            return;
+        }
+        // Estimate the time based on the x coordinate.
+        const { horizonChartWidth } = viewConfiguration.value;
+        const estimatedTime = Math.max(
+            0,
+            exemplar.minTime +
+                (exemplar.maxTime - exemplar.minTime) *
+                    (hoverX / horizonChartWidth)
+        );
+        console.log('estimatedTime', estimatedTime);
+
+        // Handle edge cases where the estimated time is outside the exemplar's time range.
+        let realTimePoint = null;
+        if (estimatedTime < exemplar.minTime) {
+            realTimePoint = exemplar.minTime;
+            console.log(exemplar.minTime);
+        } else if (estimatedTime > exemplar.maxTime) {
+            realTimePoint = exemplar.maxTime;
+        }
+        // Find the closest actual time in the exemplar data.
+        else {
+            realTimePoint = exemplar.data.reduce((prev, curr) => {
+                // Only update if the estimatedTime is greater than curr.time
+                // and if its distance to estimatedTime is smaller than that of the previous point.
+                if (
+                    estimatedTime > curr.time &&
+                    Math.abs(curr.time - estimatedTime) <
+                        Math.abs(prev.time - estimatedTime)
+                ) {
+                    return curr;
+                }
+                return prev;
+            }, exemplar.data[0]).time;
+        }
+        // Update the hovered time in the store.
+        dataPointSelectionUntrracked.hoveredTime = realTimePoint;
+
+        // Set current hovered exemplar value ------------------------------------------------------
+        const value = exemplar.data.find(
+            (d) => d.time === realTimePoint
+        )?.value;
+        if (!value) {
+            console.error('value is undefined');
+            return;
+        }
+        hoveredValue.value = value;
     } else {
-        // pointer left the horizon chart or coordinate is undefined
-        hoveredExemplarKey.value = null;
-        // console.log('No HorizonChart hovered');
+        hoveredExemplar.value = null;
+        dataPointSelectionUntrracked.hoveredTime = null;
     }
 }
 
