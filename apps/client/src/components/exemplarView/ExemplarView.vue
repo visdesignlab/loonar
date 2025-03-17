@@ -141,16 +141,21 @@ watch(
                                 dataPointSelectionUntrracked.hoveredTime;
                             if (time == null) return null;
                             // Format the time and value (truncate decimals).
-                            const timeFormatter = format('.2f');
-                            const valueFormatter = format('.3f');
+                            const formattedTime = customNumberFormatter(
+                                time,
+                                '.2f'
+                            );
+                            const formattedValue =
+                                hoveredValue.value !== null
+                                    ? customNumberFormatter(
+                                          hoveredValue.value,
+                                          '.3f'
+                                      )
+                                    : '';
                             // Create the tooltip HTML, with the currently hovered exemplar and time.
                             let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
-                            html += `<div>Time: ${timeFormatter(time)}</div>`;
-                            html += `<div>${selectedAttribute.value}: ${
-                                hoveredValue.value !== null
-                                    ? valueFormatter(hoveredValue.value)
-                                    : ''
-                            }</div>`;
+                            html += `<div>Time: ${formattedTime}</div>`;
+                            html += `<div>${selectedAttribute.value}: ${formattedValue}</div>`;
                             return { html };
                         }
                         return null;
@@ -337,6 +342,14 @@ function recalculateExemplarYOffsets(): void {
         lastExemplar = exemplar;
         const key = uniqueExemplarKey(exemplar);
         exemplarYOffsets.value.set(key, yOffset);
+    }
+}
+
+function customNumberFormatter(num: number, defaultFormat: string): string {
+    if (num % 1 === 0) {
+        return format('.0f')(num);
+    } else {
+        return format(defaultFormat)(num);
     }
 }
 
