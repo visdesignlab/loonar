@@ -146,7 +146,7 @@ watch(
                             // Create the tooltip HTML, with the currently hovered exemplar and time.
                             let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
                             html += `<div>Time: ${timeFormatter(time)}</div>`;
-                            html += `<div>Value: ${
+                            html += `<div>${selectedAttribute.value}: ${
                                 hoveredValue.value !== null
                                     ? valueFormatter(hoveredValue.value)
                                     : ''
