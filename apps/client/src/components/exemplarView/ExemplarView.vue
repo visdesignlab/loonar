@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount, render } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { Deck, OrthographicView } from '@deck.gl/core';
+import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
 import { getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
 import type { PixelData, PixelSource } from '@vivjs/types';
 import {
@@ -15,7 +15,11 @@ import {
     type ExemplarTrack,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
-import { getBBoxAroundPoint } from '@/util/imageSnippets';
+import {
+    type BBox,
+    getBBoxAroundPoint,
+    overlaps1D,
+} from '@/util/imageSnippets';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
@@ -34,7 +38,6 @@ import { useConfigStore } from '@/stores/misc/configStore';
 import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
-import { type PickingInfo } from '@deck.gl/core/typed';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
@@ -45,6 +48,8 @@ const imageViewerStore = useImageViewerStore();
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 
 const deckGlContainer = ref<HTMLCanvasElement | null>(null);
+const { width: deckGlWidth, height: deckGlHeight } =
+    useElementSize(deckGlContainer);
 
 const exemplarViewStore = useExemplarViewStore();
 const conditionSelectorStore = useConditionSelectorStore();
@@ -86,6 +91,34 @@ const { selectedYTag } = storeToRefs(conditionSelector);
 // 1. Add a reactive reference for the hovered exemplar
 const hoveredExemplarKey = ref<string | null>(null);
 
+const initialViewState = {
+    zoom: [0, 0],
+    target: [0, 0],
+    minZoom: -8,
+    maxZoom: 8,
+};
+
+const viewStateMirror = ref(initialViewState);
+
+function viewportBBox(includeBuffer = true): BBox {
+    const { target } = viewStateMirror.value;
+    // const buffer = includeBuffer ? viewportBuffer.value : 0;
+    const buffer = 400;
+    // const width = scaleForConstantVisualSize(deckGlWidth.value + buffer, 'x');
+    const width = deckGlWidth.value + buffer;
+    // const height = scaleForConstantVisualSize(deckGlHeight.value + buffer, 'y');
+    const height = deckGlHeight.value + buffer;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+
+    const left = target[0] - halfWidth;
+    const top = target[1] + halfHeight;
+    const right = target[0] + halfWidth;
+    const bottom = target[1] - halfHeight;
+
+    return [left, top, right, bottom];
+}
+
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
     () => experimentDataInitialized.value,
@@ -97,7 +130,7 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            const exemplarPercentiles = [5, 95];
+            const exemplarPercentiles = [5, 50, 95];
             await exemplarViewStore.getExemplarTracks(
                 true,
                 exemplarPercentiles,
@@ -111,12 +144,6 @@ watch(
             // Initialize Deck.gl if not already initialized
             if (!deckgl.value) {
                 deckgl.value = new Deck({
-                    initialViewState: {
-                        zoom: 0,
-                        target: [0, 0],
-                        minZoom: -8,
-                        maxZoom: 8,
-                    },
                     pickingRadius: 5,
                     canvas: deckGlContainer.value,
                     views: new OrthographicView({
@@ -125,11 +152,7 @@ watch(
                     }),
                     controller: true,
                     layers: [],
-                    getTooltip: (info: {
-                        object: any;
-                        x: number;
-                        layer?: any;
-                    }) => {
+                    getTooltip: (info: PickingInfo) => {
                         // If the layer is a horizon chart, show the cell index and time.
                         if (
                             info.layer &&
@@ -159,6 +182,19 @@ watch(
                             return { html };
                         }
                         return null;
+                    },
+                    initialViewState,
+                    onViewStateChange: ({ viewState, oldViewState }) => {
+                        // viewState.zoom[1] = 0;
+                        if (
+                            oldViewState &&
+                            !isEqual(viewState.zoom, oldViewState.zoom)
+                        ) {
+                            viewState.target[1] = oldViewState.target[1];
+                        }
+                        viewStateMirror.value = viewState as any;
+                        renderDeckGL();
+                        return viewState;
                     },
                 });
                 console.log('Deck.gl initialized.');
@@ -344,6 +380,8 @@ function renderDeckGL(): void {
     deckGLLayers.push(createImageLayers());
     //layers.push(createDefaultImageLayerForExemplar());
 
+    // deckGLLayers.push(createDebugViewportLayer());
+
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
     deckgl.value.setProps({
@@ -353,10 +391,24 @@ function renderDeckGL(): void {
     deckgl.value.redraw();
 }
 
-const exemplarYOffsets = ref(new Map<string, number>());
+const exemplarTracksOnScreen = computed<ExemplarTrack[]>(() => {
+    return exemplarTracks.value.filter((exemplar) => {
+        const renderInfo = exemplarRenderInfo.value.get(
+            uniqueExemplarKey(exemplar)
+        );
+        return renderInfo ? renderInfo.onScreen : false;
+    });
+});
+
+const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
+
+interface ExemplarRenderInfo {
+    yOffset: number;
+    onScreen: boolean;
+}
 
 function recalculateExemplarYOffsets(): void {
-    exemplarYOffsets.value.clear();
+    exemplarRenderInfo.value.clear();
     let yOffset = 0;
     let lastExemplar = exemplarTracks.value[0];
     for (let i = 0; i < exemplarTracks.value.length; i++) {
@@ -371,7 +423,10 @@ function recalculateExemplarYOffsets(): void {
         }
         lastExemplar = exemplar;
         const key = uniqueExemplarKey(exemplar);
-        exemplarYOffsets.value.set(key, yOffset);
+        // TODO: calc onscreen
+        const viewBBox = viewportBBox();
+        const onScreen = overlaps1D(yOffset, yOffset, viewBBox[3], viewBBox[1]);
+        exemplarRenderInfo.value.set(key, { yOffset, onScreen });
     }
 }
 
@@ -459,14 +514,22 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const exemplarTracksMax =
         tracks.length > 0 ? Math.max(...tracks.map((t) => t.maxValue)) : 0;
 
-    for (const exemplar of tracks) {
+    for (const exemplar of exemplarTracksOnScreen.value) {
         // console.log(exemplar.tags);
         if (!exemplar.data || exemplar.data.length === 0) {
             continue; // Skip this exemplar if there's no data
         }
 
+        const renderInfo = exemplarRenderInfo.value.get(
+            uniqueExemplarKey(exemplar)
+        );
+        if (!renderInfo) {
+            throw new Error('renderInfo is undefined');
+        }
+        // if (!renderInfo.onScreen) continue;
+
         const yOffset =
-            exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
+            renderInfo.yOffset -
             viewConfiguration.value.timeBarHeightOuter -
             viewConfiguration.value.horizonTimeBarGap;
 
@@ -587,11 +650,11 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-snippet-background-placeholder-${selectedAttribute.value}`,
-            data: [...exemplarTracks.value],
+            data: [...exemplarTracksOnScreen.value],
             getPolygon: (exemplar: ExemplarTrack) => {
-                const yOffset = exemplarYOffsets.value.get(
-                    uniqueExemplarKey(exemplar)
-                )!;
+                const yOffset =
+                    exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar))
+                        ?.yOffset ?? 0;
                 const quarterHeight =
                     viewConfiguration.value.timeBarHeightOuter / 4;
                 return [
@@ -627,11 +690,11 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     placeholderLayer.push(
         new PolygonLayer({
             id: `exemplar-time-window-${selectedAttribute.value}`,
-            data: [...exemplarTracks.value],
+            data: [...exemplarTracksOnScreen.value],
             getPolygon: (exemplar: ExemplarTrack) => {
-                const yOffset = exemplarYOffsets.value.get(
-                    uniqueExemplarKey(exemplar)
-                )!;
+                const yOffset =
+                    exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar))
+                        ?.yOffset ?? 0;
                 const cellBirthTime = exemplar.minTime;
                 const cellDeathTime = exemplar.maxTime;
                 const timeBarWidth = viewConfiguration.value.horizonChartWidth;
@@ -693,7 +756,9 @@ function createSidewaysHistogramLayer(): any[] | null {
     const layers: any[] = [];
 
     // Group exemplars by condition (drug + conc)
-    const groupedExemplars = groupExemplarsByCondition(exemplarTracks.value);
+    const groupedExemplars = groupExemplarsByCondition(
+        exemplarTracksOnScreen.value
+    );
 
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
@@ -715,12 +780,13 @@ function createSidewaysHistogramLayer(): any[] | null {
             )?.histogramData || [];
 
         // Basic geometry for the condition grouping
-        const firstOffset = exemplarYOffsets.value.get(
-            uniqueExemplarKey(firstExemplar)
-        )!;
-        const lastOffset = exemplarYOffsets.value.get(
-            uniqueExemplarKey(group[group.length - 1])
-        )!;
+        const firstOffset =
+            exemplarRenderInfo.value.get(uniqueExemplarKey(firstExemplar))
+                ?.yOffset ?? 0;
+        const lastOffset =
+            exemplarRenderInfo.value.get(
+                uniqueExemplarKey(group[group.length - 1])
+            )?.yOffset ?? 0;
         const groupTop = firstOffset - exemplarHeight.value;
         const groupBottom = lastOffset;
         const groupHeight = groupBottom - groupTop;
@@ -751,9 +817,11 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         for (const exemplar of group) {
             const yOffset =
-                exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
-                viewConfiguration.value.timeBarHeightOuter -
-                viewConfiguration.value.horizonTimeBarGap;
+                exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar))
+                    ?.yOffset ??
+                0 -
+                    viewConfiguration.value.timeBarHeightOuter -
+                    viewConfiguration.value.horizonTimeBarGap;
             const avgAttr = getAverageAttr(exemplar);
 
             // Find bin index by checking the histogramDomains bin ranges
@@ -1261,7 +1329,7 @@ function createImageLayers(): CellSnippetsLayer[] {
         return [];
     }
     const imageLayers: CellSnippetsLayer[] = [];
-    for (const exemplar of exemplarTracks.value) {
+    for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
         const snippetLayer = createExemplarImageLayer(
             pixelSources.value[locationId],
@@ -1308,7 +1376,7 @@ function createExemplarImageLayer(
     let destY = viewConfig.horizonChartHeight; // fallback value
     if (exemplarTracks.value && exemplarTracks.value.length > 0) {
         const key = uniqueExemplarKey(exemplar);
-        const yOffset = exemplarYOffsets.value.get(key);
+        const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
         if (yOffset === undefined || yOffset == null) {
             console.error(
                 '[createExemplarImageLayer] No yOffset found for first exemplar with key:',
@@ -1375,6 +1443,29 @@ function createExemplarImageLayer(
         cache: lruCache,
     });
     return snippetLayer;
+}
+
+function createDebugViewportLayer() {
+    const bbox = viewportBBox();
+    return new PolygonLayer({
+        id: 'debug-viewport-layer',
+        data: [
+            {
+                polygon: [
+                    [bbox[0], bbox[1]],
+                    [bbox[2], bbox[1]],
+                    [bbox[2], bbox[3]],
+                    [bbox[0], bbox[3]],
+                    [bbox[0], bbox[1]],
+                ],
+            },
+        ],
+        getPolygon: (d: any) => d.polygon,
+        getFillColor: [255, 0, 0, 50], // Semi-transparent red
+        getLineColor: [255, 0, 0, 255], // Solid red border
+        lineWidthMinPixels: 2,
+        pickable: false,
+    });
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl

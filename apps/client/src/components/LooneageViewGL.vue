@@ -44,6 +44,7 @@ import {
     overlaps,
     overlapAmount,
     outerBBox,
+    pointInBBox,
 } from '@/util/imageSnippets';
 
 import { LRUCache } from 'lru-cache';
@@ -1609,8 +1610,7 @@ const viewportBuffer = computed<number>(() => {
 
 function pointInViewport(x: number, y: number, includeBuffer = true): boolean {
     const viewport: BBox = viewportBBox(includeBuffer);
-    const singularBBox: BBox = [x, y, x, y];
-    return overlaps(singularBBox, viewport);
+    return pointInBBox(x, y, viewport);
 }
 
 function horizonInViewport(

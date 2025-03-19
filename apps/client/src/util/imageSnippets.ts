@@ -87,6 +87,11 @@ export function overlapAmount(a: BBox, b: BBox): number {
     return (right - left) * (top - bottom);
 }
 
+export function pointInBBox(x: number, y: number, bbox: BBox): boolean {
+    const singularBBox: BBox = [x, y, x, y];
+    return overlaps(bbox, singularBBox);
+}
+
 export function overlaps(
     a: BBox,
     b: BBox,
@@ -100,7 +105,7 @@ export function overlaps(
     );
 }
 
-function overlaps1D(
+export function overlaps1D(
     aMin: number,
     aMax: number,
     bMin: number,
