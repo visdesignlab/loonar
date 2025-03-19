@@ -103,7 +103,7 @@ const viewStateMirror = ref(initialViewState);
 function viewportBBox(includeBuffer = true): BBox {
     const { target } = viewStateMirror.value;
     // const buffer = includeBuffer ? viewportBuffer.value : 0;
-    const buffer = 400;
+    const buffer = 100;
     // const width = scaleForConstantVisualSize(deckGlWidth.value + buffer, 'x');
     const width = deckGlWidth.value + buffer;
     // const height = scaleForConstantVisualSize(deckGlHeight.value + buffer, 'y');
@@ -130,7 +130,7 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            const exemplarPercentiles = [5, 50, 95];
+            const exemplarPercentiles = [5, 25, 50, 75, 95];
             await exemplarViewStore.getExemplarTracks(
                 true,
                 exemplarPercentiles,
@@ -246,6 +246,7 @@ watch(
     { immediate: true }
 );
 
+const loadingPool = new Pool();
 // Load the pixel source from the current location metadata.
 async function loadPixelSource(locationId: string, url: string) {
     // If already loaded, return the existing source.
@@ -256,7 +257,7 @@ async function loadPixelSource(locationId: string, url: string) {
 
     console.log('Full Image URL:', fullImageUrl);
     loader.value = await loadOmeTiff(fullImageUrl, {
-        pool: new Pool(),
+        pool: loadingPool,
     });
 
     // Update image dimensions from metadata
@@ -297,7 +298,7 @@ async function loadPixelSource(locationId: string, url: string) {
 async function loadPixelSources() {
     const exemplarUrls = exemplarViewStore.getExemplarUrls();
     const locationIds = Array.from(exemplarUrls.keys());
-    const concurrencyLimit = 4; // adjust this number as needed
+    const concurrencyLimit = 100; // adjust this number as needed
     let index = 0;
 
     async function loadNextPixelSource() {
@@ -421,12 +422,20 @@ function recalculateExemplarYOffsets(): void {
                 yOffset += viewConfiguration.value.betweenConditionGap;
             }
         }
-        lastExemplar = exemplar;
         const key = uniqueExemplarKey(exemplar);
         // TODO: calc onscreen
         const viewBBox = viewportBBox();
-        const onScreen = overlaps1D(yOffset, yOffset, viewBBox[3], viewBBox[1]);
+        const lastYOffset =
+            exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))
+                ?.yOffset ?? yOffset;
+        const onScreen = overlaps1D(
+            lastYOffset,
+            yOffset,
+            viewBBox[3],
+            viewBBox[1]
+        );
         exemplarRenderInfo.value.set(key, { yOffset, onScreen });
+        lastExemplar = exemplar;
     }
 }
 
@@ -1331,6 +1340,9 @@ function createImageLayers(): CellSnippetsLayer[] {
     const imageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
+        if (!pixelSources.value[locationId]) {
+            loadPixelSource(locationId);
+        }
         const snippetLayer = createExemplarImageLayer(
             pixelSources.value[locationId],
             exemplar
@@ -1341,6 +1353,8 @@ function createImageLayers(): CellSnippetsLayer[] {
     }
     return imageLayers;
 }
+const lruCache = new LRUCache({ max: 500 });
+// TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 
 // Updated createExemplarImageLayer() with enhanced debugging:
 function createExemplarImageLayer(
@@ -1427,7 +1441,6 @@ function createExemplarImageLayer(
     // Create an instance of the colormap extension.
     const colormapExtension = new AdditiveColormapExtension();
     // Set up a basic LRUCache for snippet data.
-    const lruCache = new LRUCache({ max: 10 });
     // Setup contrast limits and channel visibility.
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];

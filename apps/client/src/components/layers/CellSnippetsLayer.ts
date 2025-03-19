@@ -107,7 +107,7 @@ class CellSnippetsLayer extends CompositeLayer {
     }
 
     getSnippetKey(c: number, t: number, z: number, source: number[]): string {
-        return [c, t, z, ...source].toString();
+        return [this.props.id, c, t, z, ...source].toString();
     }
 
     getSelectionKey(selection: Selection): string {
