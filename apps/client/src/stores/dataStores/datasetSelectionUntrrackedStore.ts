@@ -144,15 +144,17 @@ export const useDatasetSelectionStore = defineStore(
                 return data;
             });
 
-        function getLocationMetadata(locationId: string): LocationMetadata | null {
+        function getLocationMetadata(
+            locationId: string
+        ): LocationMetadata | null {
             if (!currentExperimentMetadata.value) return null;
-            for (const locationMetatadata of currentExperimentMetadata.value.locationMetadataList) {
-                if (locationMetatadata.id === locationId)
-                {
+            for (const locationMetatadata of currentExperimentMetadata.value
+                .locationMetadataList) {
+                if (locationMetatadata.id === locationId) {
                     return locationMetatadata;
                 }
             }
-            return null
+            return null;
         }
 
         // Add a function to get all unique tag names

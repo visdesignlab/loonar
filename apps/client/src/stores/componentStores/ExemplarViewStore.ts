@@ -130,7 +130,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     function getExemplarUrls(): Map<string, string> {
         const map = new Map();
         for (const track of exemplarTracks.value) {
-            const url = datasetSelectionStore.getLocationMetadata(track.locationId)?.imageDataFilename;
+            const url = datasetSelectionStore.getLocationMetadata(
+                track.locationId
+            )?.imageDataFilename;
             if (url) {
                 map.set(track.locationId, url);
             }
@@ -807,7 +809,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             exemplarTracks.value = sortExemplarsByCondition(
                 exemplarTracks.value
             ).flat();
-
         } catch (error) {
             console.error('Error generating exemplar tracks:', error);
         }
