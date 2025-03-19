@@ -3,7 +3,7 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView } from '@deck.gl/core';
 import { getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
-import type { PixelData } from '@vivjs/types';
+import type { PixelData, PixelSource } from '@vivjs/types';
 import {
     ScatterplotLayer,
     PolygonLayer,
@@ -97,7 +97,7 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            const exemplarPercentiles = [5, 50, 95];
+            const exemplarPercentiles = [5, 50];
             await exemplarViewStore.getExemplarTracks(
                 true,
                 exemplarPercentiles,
@@ -184,9 +184,9 @@ watch(
 
 // Loading Image Data ---------------------------------------------------------------------------
 
-const pixelSource = ref<any | null>(null);
+const pixelSource = ref<{ [key: string]: PixelSource<any> } | null>(null);    
 const loader = ref<any | null>(null);
-const testRaster = ref<PixelData | null>(null);
+const testRaster = ref<any | null>(null);
 
 // Debug watch to see when currentLocationMetadata becomes available.
 watch(
@@ -210,57 +210,71 @@ watch(
     { immediate: true }
 );
 
-// Watches for changes in currentLocationMetadata and loads the pixel source.
-watch(
-    currentLocationMetadata,
-    async (newMeta) => {
-        if (!newMeta?.imageDataFilename) {
-            console.warn(
-                '[ExemplarView] currentLocationMetadata.imageDataFilename is missing. Waiting for valid metadata...'
-            );
-            return;
-        }
 
-        try {
-            const fullImageUrl = configStore.getFileUrl(
-                newMeta.imageDataFilename
-            );
-            loader.value = await loadOmeTiff(fullImageUrl, {
-                pool: new Pool(),
-            });
+// Load the pixel source from the current location metadata.
+async function loadPixelSource(locationId: string, url: string) {
+    const fullImageUrl = configStore.getFileUrl(
+        url
+    );
+    loader.value = await loadOmeTiff(fullImageUrl, {
+        pool: new Pool(),
+    });
 
             // Update image dimensions from metadata
-            imageViewerStoreUntrracked.sizeX =
-                loader.value.metadata.Pixels.SizeX;
-            imageViewerStoreUntrracked.sizeY =
-                loader.value.metadata.Pixels.SizeY;
-            imageViewerStoreUntrracked.sizeT =
-                loader.value.metadata.Pixels.SizeT;
+            // imageViewerStoreUntrracked.sizeX =
+            //     loader.value.metadata.Pixels.SizeX;
+            // imageViewerStoreUntrracked.sizeY =
+            //     loader.value.metadata.Pixels.SizeY;
+            // imageViewerStoreUntrracked.sizeT =
+            //     loader.value.metadata.Pixels.SizeT;
 
-            testRaster.value = await loader.value.data[0].getRaster({
-                selection: { c: 0, t: 0, z: 0 },
-            });
+            // testRaster.value = await loader.value.data[0].getRaster({
+            //     selection: { c: 0, t: 0, z: 0 },
+            // });
 
-            if (testRaster.value == null) {
-                console.warn('[ExemplarView] testRaster is null.');
-                return;
+            // if (testRaster.value == null) {
+            //     console.warn('[ExemplarView] testRaster is null.');
+            //     return;
+            // }
+
+            // const copy = testRaster.value.data.slice();
+            // const channelStats = getChannelStats(copy);
+            // contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+            // contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+            // imageViewerStore.contrastLimitExtentSlider.min =
+            //     channelStats.domain[0];
+            // imageViewerStore.contrastLimitExtentSlider.max =
+            //     channelStats.domain[1];
+
+            // If pixelSource.value is null, first initialize it as an empty object.
+            if (!pixelSource.value) {
+            pixelSource.value = {};
             }
 
-            const copy = testRaster.value.data.slice();
-            const channelStats = getChannelStats(copy);
-            contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-            contrastLimitSlider.value.max = channelStats.contrastLimits[1];
-            imageViewerStore.contrastLimitExtentSlider.min =
-                channelStats.domain[0];
-            imageViewerStore.contrastLimitExtentSlider.max =
-                channelStats.domain[1];
+            // Reassign pixelSource.value with the new key as the first property.
+            pixelSource.value[locationId] = loader.value.data[0];
+            console.log(locationId, pixelSource.value[locationId]);
+}
 
-            pixelSource.value = loader.value.data[0];
-
+async function loadPixelSources() {
+    const exemplarUrls = exemplarViewStore.getExemplarUrls();
+    for (const [locationId, url] of exemplarUrls.entries()) {
+        await loadPixelSource(locationId, url);
+        console.log("Loading Pixel Source for Location ID:", locationId, "URL:", url);
+    }
+    console.log('[ExemplarView] Pixel sources loaded:', pixelSource.value);
+}
+// Watches for changes in currentLocationMetadata and loads the pixel source.
+watch(
+    exemplarDataInitialized,
+    async () => {
+        try {
+            console.log("Exemplar Data Initialized. Loading Pixel Sources.");
+            await loadPixelSources();
             // Optionally, trigger render after pixelSource loads:
             renderDeckGL();
         } catch (error) {
-            console.error('[ExemplarView] Error loading pixel source:', error);
+            console.error('[ExemplarView] Error loading pixel sources:', error);
         }
     },
     { immediate: true }
@@ -296,7 +310,7 @@ onBeforeUnmount(() => {
     exemplarDataInitialized.value = false;
 });
 
-let deckGLLayers = [];
+let deckGLLayers: any[] = [];
 
 // Function to render Deck.gl layers
 function renderDeckGL(): void {
@@ -308,10 +322,8 @@ function renderDeckGL(): void {
 
     deckGLLayers.push(createSidewaysHistogramLayer());
     deckGLLayers.push(createHorizonChartLayer());
-    deckGLLayers.push(createImageSnippetLayer());
-    deckGLLayers.push(createSnippetBoundaryLayer());
     deckGLLayers.push(createTimeWindowLayer());
-    deckGLLayers.push(createOneTestImageLayer());
+    deckGLLayers.push(createImageLayers());
     //layers.push(createDefaultImageLayerForExemplar());
 
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
@@ -502,13 +514,11 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
                 (exemplar.maxTime - exemplar.minTime) *
                     (hoverX / horizonChartWidth)
         );
-        console.log('estimatedTime', estimatedTime);
 
         // Handle edge cases where the estimated time is outside the exemplar's time range.
         let realTimePoint = null;
         if (estimatedTime < exemplar.minTime) {
             realTimePoint = exemplar.minTime;
-            console.log(exemplar.minTime);
         } else if (estimatedTime > exemplar.maxTime) {
             realTimePoint = exemplar.maxTime;
         }
@@ -547,49 +557,6 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
 function constructGeometry(track: ExemplarTrack): number[] {
     return constructGeometryBase(track.data, cellMetaData.timestep);
-}
-
-function createImageSnippetLayer():
-    | CellSnippetsLayer[]
-    | PolygonLayer[]
-    | null {
-    // TODO: implement
-
-    const placeholderLayer: PolygonLayer[] = [];
-
-    placeholderLayer.push(
-        new PolygonLayer({
-            id: `exemplar-snippet-placeholder-${selectedAttribute.value}`,
-            data: exemplarTracks.value,
-            getPolygon: (exemplar: ExemplarTrack) => {
-                const yOffset =
-                    exemplarYOffsets.value.get(uniqueExemplarKey(exemplar))! -
-                    viewConfiguration.value.timeBarHeightOuter -
-                    viewConfiguration.value.horizonTimeBarGap -
-                    viewConfiguration.value.horizonChartHeight -
-                    viewConfiguration.value.snippetHorizonChartGap;
-                return [
-                    [0, yOffset],
-                    [viewConfiguration.value.horizonChartWidth, yOffset],
-                    [
-                        viewConfiguration.value.horizonChartWidth,
-                        yOffset - viewConfiguration.value.snippetDisplayHeight,
-                    ],
-                    [0, yOffset - viewConfiguration.value.snippetDisplayHeight],
-                    [0, yOffset],
-                ];
-            },
-            getLineColor: [225, 30, 10, 0],
-            getFillColor: [225, 30, 10, 0],
-            getLineWidth: 0,
-        })
-    );
-    return placeholderLayer;
-}
-
-function createSnippetBoundaryLayer(): CellSnippetsLayer | null {
-    // TODO: implement
-    return null;
 }
 
 function createTimeWindowLayer(): PolygonLayer[] | null {
@@ -648,7 +615,6 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     uniqueExemplarKey(exemplar)
                 )!;
                 const cellBirthTime = exemplar.minTime;
-                console.log('Time Window Layer');
                 const cellDeathTime = exemplar.maxTime;
                 const timeBarWidth = viewConfiguration.value.horizonChartWidth;
                 const cellBirthXValue =
@@ -1038,8 +1004,6 @@ function handleHistogramHover(
         (Math.trunc(x * 1000) / 1000).toFixed(2)
     );
 
-    console.log('Bin index:', binIndex, 'Count:', count);
-
     // Set the temporary label: positioned 10 pixels left of the pin circle.
     tempLabel.value = {
         text: `Count: ${count}\n [${minStr}, ${maxStr}]`,
@@ -1069,7 +1033,6 @@ async function handleHistogramClick(
             color: fillColor(tempPin.value.exemplar),
         };
         pinnedPins.value.push(newPin);
-        console.log('Dummy event: Pin placed at', newPin);
         // Clear temporary pin so that hovering will create a new one.
         tempPin.value = null;
         updatePinsLayer(firstExemplar);
@@ -1096,11 +1059,7 @@ async function handleHistogramClick(
             bin.minAttr
         );
 
-        console.log('histogramBottomY', histogramBottomY);
-        console.log('histogramTopY', histogramTopY);
-
-        // First ensure that the new exemplar tracks are loaded, then print them.
-        console.log('Exemplar tracks:', exemplarTracks.value);
+        // First ensure that the new exemplar tracks are loaded, then render.
         renderDeckGL();
     }
 }
@@ -1119,7 +1078,6 @@ function updatePinsLayer(firstExemplar: ExemplarTrack) {
 
     // If a tempLabel exists, add a TextLayer.
     if (tempLabel.value) {
-        console.log('Adding temp label', tempLabel.value);
         pinLayers.push(
             new TextLayer({
                 id: `exemplar-temp-label-${uniqueExemplarKey(firstExemplar)}`,
@@ -1219,7 +1177,6 @@ function handlePinDragStart(
     event: any,
     firstExemplar: ExemplarTrack
 ) {
-    console.log('Dummy event: Pin drag started', info.object);
     dragPin.value = info.object;
 }
 function handlePinDrag(
@@ -1248,7 +1205,6 @@ function handlePinDragEnd(
     event: any,
     firstExemplar: ExemplarTrack
 ) {
-    console.log('Dummy event: Pin drag ended', info.object);
     dragPin.value = null;
     updatePinsLayer(firstExemplar);
 }
@@ -1282,14 +1238,31 @@ function groupExemplarsByCondition(
     return groups;
 }
 
+function createImageLayers(): CellSnippetsLayer[] {
+    if (!pixelSource.value) {
+        return [];
+    }
+    const imageLayers: CellSnippetsLayer[] = [];
+    let temp = 0;
+    for (const exemplar of exemplarTracks.value) {
+        const locationId = exemplar.locationId;
+        temp += 1;
+        if (temp > 3) {
+            break;
+        }
+        const snippetLayer = createOneTestImageLayer(pixelSource.value[locationId], exemplar);
+        if (snippetLayer) {
+            imageLayers.push(snippetLayer);
+        }
+    }
+    return imageLayers;
+}
+
 // Updated createOneTestImageLayer() with enhanced debugging:
-function createOneTestImageLayer(): CellSnippetsLayer | null {
-    // console.log(
-    //     '[createOneTestImageLayer] Starting creation of one test image snippet layer...'
-    // );
+function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: ExemplarTrack): CellSnippetsLayer | null {
 
     // Check that the pixelSource is ready.
-    if (!pixelSource.value) {
+    if (!pixelSource) {
         console.error(
             '[createOneTestImageLayer] pixelSource.value is not set!'
         );
@@ -1297,11 +1270,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
             '[createOneTestImageLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
         );
         return null; // Do not create the layer until pixelSource.value is available.
-    } else {
-        // console.log(
-        //     '[createOneTestImageLayer] pixelSource is available:',
-        //     pixelSource.value
-        // );
     }
 
     // Check that exemplarTracks is available.
@@ -1310,11 +1278,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
             '[createOneTestImageLayer] No exemplar tracks available!'
         );
         return null;
-    } else {
-        // console.log(
-        //     '[createOneTestImageLayer] Found exemplar tracks:',
-        //     exemplarTracks.value.length
-        // );
     }
 
     // Get viewConfiguration details for snippet placement.
@@ -1323,11 +1286,11 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
     const snippetHeight = viewConfig.snippetDisplayHeight;
     //console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
 
-    // Calculate destination Y based on first exemplar yOffset.
+    // Calculate destination Y for the snippet.
+
     let destY = viewConfig.horizonChartHeight; // fallback value
     if (exemplarTracks.value && exemplarTracks.value.length > 0) {
-        const firstExemplar = exemplarTracks.value[0];
-        const key = uniqueExemplarKey(firstExemplar);
+        const key = uniqueExemplarKey(exemplar);
         const yOffset = exemplarYOffsets.value.get(key);
         if (yOffset === undefined || yOffset == null) {
             console.error(
@@ -1342,10 +1305,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
                 viewConfig.snippetHorizonChartGap -
                 viewConfig.horizonChartHeight -
                 viewConfig.snippetHorizonChartGap;
-            // console.log(
-            //     '[createOneTestImageLayer] Computed yOffset for first exemplar:',
-            //     yOffset
-            // );
         }
     }
 
@@ -1380,8 +1339,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
             destination: destination,
         })),
     };
-    // console.log('[createOneTestImageLayer] Selection object:', selection);
-
     // Create an instance of the colormap extension.
     const colormapExtension = new AdditiveColormapExtension();
     // Set up a basic LRUCache for snippet data.
@@ -1390,20 +1347,11 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];
 
-    // console.log(
-    //     '[createOneTestImageLayer] Creating CellSnippetsLayer with the following parameters:'
-    // );
-    // console.log('  loader:', pixelSource.value);
-    // console.log('  contrastLimits:', contrastLimits);
-    // console.log('  channelsVisible:', channelsVisible);
-    // console.log('  selections:', [selection]);
-    // console.log('  extensions:', [colormapExtension]);
-    // console.log('  colormap:', 'viridis');
-    // console.log('  cache:', lruCache);
-
+    console.log("Cell Snippets Layer Pixel Source:", pixelSource);
+    // Return an array of CellSnippetsLayer instances, one for each pixel source.
     const snippetLayer = new CellSnippetsLayer({
-        id: 'test-cell-snippets-layer',
-        loader: pixelSource.value, // the loaded image data
+        id: `test-cell-snippets-layer ${key}`,
+        loader: pixelSource, // the loaded image data
         contrastLimits,
         channelsVisible,
         selections: [selection],
@@ -1411,11 +1359,6 @@ function createOneTestImageLayer(): CellSnippetsLayer | null {
         colormap: 'viridis',
         cache: lruCache,
     });
-
-    // console.log(
-    //     '[createOneTestImageLayer] Created CellSnippetsLayer:',
-    //     snippetLayer
-    // );
     return snippetLayer;
 }
 

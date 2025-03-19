@@ -127,6 +127,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { experimentDataInitialized, currentExperimentMetadata } =
         storeToRefs(datasetSelectionStore);
 
+    function getExemplarUrls(): Map<string, string> {
+        const map = new Map();
+        for (const track of exemplarTracks.value) {
+            const url = datasetSelectionStore.getLocationMetadata(track.locationId)?.imageDataFilename;
+            if (url) {
+                map.set(track.locationId, url);
+            }
+        }
+        return map;
+    }
+
     async function getTotalExperimentTime(): Promise<number> {
         if (
             !experimentDataInitialized.value ||
@@ -226,9 +237,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 );
                 return;
             }
-            console.log(
-                `${selectedAttribute.value} - min: ${min_attr}, max: ${max_attr}`
-            );
 
             // Fill in histogramDomains
             histogramDomains.value.minX = min_attr;
@@ -340,12 +348,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     };
                 }
             );
-
-            console.log(
-                `${selectedAttribute.value} - histogramData: `,
-                conditionHistograms.value
-            );
-
             // 5) Optionally set histogramDomains for the Y range
             histogramDomains.value.minY = 0;
             histogramDomains.value.maxY = Math.max(
@@ -449,19 +451,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             )
         ).filter(Boolean);
 
-        console.log('uniqueDrugs', uniqueDrugs);
-        console.log('uniqueConcentrations', uniqueConcentrations);
         //
         for (const uniqueDrug of uniqueDrugs) {
             const drugExemplars: ExemplarTrack[] = [];
             for (const exemplar of exemplars) {
-                console.log('exemplar.tags.Drug', exemplar.tags.drug);
-                console.log('uniqueDrug', uniqueDrug);
                 if (exemplar.tags.drug === uniqueDrug) {
                     drugExemplars.push(exemplar);
                 }
             }
-            console.log('drugExemplars', drugExemplars);
             // For each concentration that exists, find exemplars from the drug array with that concentration, and add them to the final exemplartrack[][]
             for (const uniqueConc of uniqueConcentrations) {
                 const matchingExemplars = drugExemplars.filter(
@@ -476,7 +473,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 }
             }
         }
-        console.log('sortedExemplarTracks', sortedExemplarTracks);
         // Return the final exemplartrack[][]
         return Object.values(sortedExemplarTracks);
     }
@@ -655,20 +651,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     value: d[2], // Convert BigInt to Number
                 }));
 
-                console.log(
-                    'getExemplarTrackData result: ',
-                    track_id,
-                    location,
-                    birthTime,
-                    deathTime,
-                    minValue,
-                    maxValue,
-                    mappedData
-                );
-
                 return {
                     trackId: track_id,
-                    locationId: location,
+                    locationId: location.toString(),
                     birthTime: birthTime || 0, // Ensure Number type
                     deathTime: deathTime || 100, // Ensure Number type
                     minValue: minValue || 0,
@@ -791,10 +776,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         );
                     }
                 } else {
-                    console.log(
-                        'getExemplarTracks - additionalTrackValue:',
-                        additionalTrackValue
-                    );
                     trackPromises.push(
                         getExemplarTrack(
                             drug,
@@ -827,9 +808,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 exemplarTracks.value
             ).flat();
 
-            console.log('exemplarTracks', exemplarTracks.value);
-
-            console.log('Exemplar tracks successfully added:', tracks.length);
         } catch (error) {
             console.error('Error generating exemplar tracks:', error);
         }
@@ -844,6 +822,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     return {
         getExemplarTracks,
+        getExemplarUrls,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,

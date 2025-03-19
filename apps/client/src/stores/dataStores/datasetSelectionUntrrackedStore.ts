@@ -144,6 +144,17 @@ export const useDatasetSelectionStore = defineStore(
                 return data;
             });
 
+        function getLocationMetadata(locationId: string): LocationMetadata | null {
+            if (!currentExperimentMetadata.value) return null;
+            for (const locationMetatadata of currentExperimentMetadata.value.locationMetadataList) {
+                if (locationMetatadata.id === locationId)
+                {
+                    return locationMetatadata;
+                }
+            }
+            return null
+        }
+
         // Add a function to get all unique tag names
         function generateAllTagNames(
             locationMetadataList: LocationMetadata[]
@@ -380,6 +391,7 @@ export const useDatasetSelectionStore = defineStore(
 
         return {
             serverUrlValid,
+            getLocationMetadata,
             errorMessage,
             fetchingEntryFile,
             experimentFilenameList,
