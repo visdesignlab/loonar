@@ -186,7 +186,7 @@ watch(
 
 const pixelSources = ref<{ [key: string]: PixelSource<any> } | null>(null);    
 const loader = ref<any | null>(null);
-const testRaster = ref<any | null>(null);
+// const testRaster = ref<any | null>(null);
 
 // Debug watch to see when currentLocationMetadata becomes available.
 watch(
@@ -220,6 +220,8 @@ async function loadPixelSource(locationId: string, url: string) {
     const fullImageUrl = configStore.getFileUrl(
         url
     );
+
+    console.log("Full Image URL:", fullImageUrl);
     loader.value = await loadOmeTiff(fullImageUrl, {
         pool: new Pool(),
     });
@@ -1264,7 +1266,7 @@ function createImageLayers(): CellSnippetsLayer[] {
     const imageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracks.value) {
         const locationId = exemplar.locationId;
-        const snippetLayer = createOneTestImageLayer(pixelSources.value[locationId], exemplar);
+        const snippetLayer = createExemplarImageLayer(pixelSources.value[locationId], exemplar);
         if (snippetLayer) {
             imageLayers.push(snippetLayer);
         }
@@ -1272,16 +1274,16 @@ function createImageLayers(): CellSnippetsLayer[] {
     return imageLayers;
 }
 
-// Updated createOneTestImageLayer() with enhanced debugging:
-function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: ExemplarTrack): CellSnippetsLayer | null {
+// Updated createExemplarImageLayer() with enhanced debugging:
+function createExemplarImageLayer(pixelSource: PixelSource<any>, exemplar: ExemplarTrack): CellSnippetsLayer | null {
 
     // Check that the pixelSource is ready.
     if (!pixelSource) {
         console.error(
-            '[createOneTestImageLayer] pixelSource.value is not set!'
+            '[createExemplarImageLayer] pixelSource.value is not set!'
         );
         console.warn(
-            '[createOneTestImageLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
+            '[createExemplarImageLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
         );
         return null; // Do not create the layer until pixelSource.value is available.
     }
@@ -1289,7 +1291,7 @@ function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: Exempl
     // Check that exemplarTracks is available.
     if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
         console.error(
-            '[createOneTestImageLayer] No exemplar tracks available!'
+            '[createExemplarImageLayer] No exemplar tracks available!'
         );
         return null;
     }
@@ -1298,7 +1300,6 @@ function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: Exempl
     const viewConfig = viewConfiguration.value;
     const snippetWidth = viewConfig.snippetDisplayWidth;
     const snippetHeight = viewConfig.snippetDisplayHeight;
-    //console.log('[createOneTestImageLayer] viewConfiguration:', viewConfig);
 
     // Calculate destination Y for the snippet.
 
@@ -1308,7 +1309,7 @@ function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: Exempl
         const yOffset = exemplarYOffsets.value.get(key);
         if (yOffset === undefined || yOffset == null) {
             console.error(
-                '[createOneTestImageLayer] No yOffset found for first exemplar with key:',
+                '[createExemplarImageLayer] No yOffset found for first exemplar with key:',
                 key
             );
         } else {
