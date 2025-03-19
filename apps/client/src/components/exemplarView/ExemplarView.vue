@@ -184,7 +184,7 @@ watch(
 
 // Loading Image Data ---------------------------------------------------------------------------
 
-const pixelSource = ref<{ [key: string]: PixelSource<any> } | null>(null);    
+const pixelSources = ref<{ [key: string]: PixelSource<any> } | null>(null);    
 const loader = ref<any | null>(null);
 const testRaster = ref<any | null>(null);
 
@@ -197,14 +197,14 @@ watch(
     { immediate: true }
 );
 
-// Watch pixelSource so you can see when it gets set.
+// Watch pixelSources so you can see when it gets set.
 watch(
-    pixelSource,
+    pixelSources,
     (newVal) => {
         if (newVal) {
-            // console.log('[ExemplarView] pixelSource loaded:', newVal);
+            // console.log('[ExemplarView] pixelSources loaded:', newVal);
         } else {
-            console.warn('[ExemplarView] pixelSource is still null.');
+            console.warn('[ExemplarView] pixelSources is still null.');
         }
     },
     { immediate: true }
@@ -214,7 +214,7 @@ watch(
 // Load the pixel source from the current location metadata.
 async function loadPixelSource(locationId: string, url: string) {
     // If already loaded, return the existing source.
-    if (pixelSource.value && pixelSource.value[locationId]) {
+    if (pixelSources.value && pixelSources.value[locationId]) {
         return;
     }
     const fullImageUrl = configStore.getFileUrl(
@@ -250,13 +250,13 @@ async function loadPixelSource(locationId: string, url: string) {
             // imageViewerStore.contrastLimitExtentSlider.max =
             //     channelStats.domain[1];
 
-            // If pixelSource.value is null, first initialize it as an empty object.
-            if (!pixelSource.value) {
-            pixelSource.value = {};
+            // If pixelSources.value is null, first initialize it as an empty object.
+            if (!pixelSources.value) {
+            pixelSources.value = {};
             }
 
-            // Reassign pixelSource.value with the new key as the first property.
-            pixelSource.value[locationId] = loader.value.data[0];
+            // Reassign pixelSources.value with the new key as the first property.
+            pixelSources.value[locationId] = loader.value.data[0];
 }
 
 async function loadPixelSources() {
@@ -290,7 +290,7 @@ watch(
         try {
             console.log("Exemplar Data Initialized. Loading Pixel Sources.");
             await loadPixelSources();
-            // Optionally, trigger render after pixelSource loads:
+            // Optionally, trigger render after pixelSources loads:
             renderDeckGL();
         } catch (error) {
             console.error('[ExemplarView] Error loading pixel sources:', error);
@@ -1258,13 +1258,13 @@ function groupExemplarsByCondition(
 }
 
 function createImageLayers(): CellSnippetsLayer[] {
-    if (!pixelSource.value) {
+    if (!pixelSources.value) {
         return [];
     }
     const imageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracks.value) {
         const locationId = exemplar.locationId;
-        const snippetLayer = createOneTestImageLayer(pixelSource.value[locationId], exemplar);
+        const snippetLayer = createOneTestImageLayer(pixelSources.value[locationId], exemplar);
         if (snippetLayer) {
             imageLayers.push(snippetLayer);
         }
