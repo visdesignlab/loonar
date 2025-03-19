@@ -213,6 +213,10 @@ watch(
 
 // Load the pixel source from the current location metadata.
 async function loadPixelSource(locationId: string, url: string) {
+    // If already loaded, return the existing source.
+    if (pixelSource.value && pixelSource.value[locationId]) {
+        return;
+    }
     const fullImageUrl = configStore.getFileUrl(
         url
     );
@@ -253,16 +257,31 @@ async function loadPixelSource(locationId: string, url: string) {
 
             // Reassign pixelSource.value with the new key as the first property.
             pixelSource.value[locationId] = loader.value.data[0];
-            console.log(locationId, pixelSource.value[locationId]);
 }
 
 async function loadPixelSources() {
     const exemplarUrls = exemplarViewStore.getExemplarUrls();
-    for (const [locationId, url] of exemplarUrls.entries()) {
-        await loadPixelSource(locationId, url);
-        console.log("Loading Pixel Source for Location ID:", locationId, "URL:", url);
+    const locationIds = Array.from(exemplarUrls.keys());
+    const concurrencyLimit = 4; // adjust this number as needed
+    let index = 0;
+
+    async function loadNextPixelSource() {
+        if (index >= locationIds.length) return;
+        const locationId = locationIds[index++];
+        const url = exemplarUrls.get(locationId);
+        if (url) {
+            await loadPixelSource(locationId, url);
+        } else {
+            console.error(`URL not found for locationId: ${locationId}`);
+        }
+        await loadNextPixelSource();
     }
-    console.log('[ExemplarView] Pixel sources loaded:', pixelSource.value);
+
+    const pool: Promise<void>[] = [];
+    for (let i = 0; i < concurrencyLimit; i++) {
+        pool.push(loadNextPixelSource());
+    }
+    await Promise.all(pool);
 }
 // Watches for changes in currentLocationMetadata and loads the pixel source.
 watch(
