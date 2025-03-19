@@ -24,6 +24,7 @@ import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
 import CellSnippetsLayer from '../layers/CellSnippetsLayer';
+import {type Selection} from '../layers/CellSnippetsLayer';
 import {
     constructGeometryBase,
     hexListToRgba,
@@ -1444,53 +1445,67 @@ function createExemplarImageLayer(
         return realTimePoint;
     });
 
+    // Create Snippet Destinations based on the key frame info
+    const snippetDestinations: BBox[] = staticSnippetTimes.map((time) => {
+        // Find the percentage of that time to the total experiment time.
+        const percentage = (time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
 
-    console.log("staticSnippetTimes:", staticSnippetTimes);
+        // Find the x coordinate based on the percentage.
+        const x1 = viewConfig.horizonChartWidth * percentage - (snippetWidth / 2);
+        const y1 = destY;
+        const x2 = x1 + snippetWidth;
+        const y2 = y1 - snippetHeight;
+        return [x1, y1, x2, y2];
+    });
 
-    const snippetDestinations: [number, number, number, number][] =
-        xPercentages.map((factor) => {
-            const dX = viewConfig.horizonChartWidth * factor - snippetWidth / 2;
-            return [dX, destY, dX + snippetWidth, destY - snippetHeight];
+    console.log("staticSnippetTimes and Destinations:", staticSnippetTimes, snippetDestinations);
+
+
+
+    let selection: Selection[] =[];
+
+    interface KeyframeInfo {
+    index: number;
+    nearestDistance: number;
+    }
+    const keyframeInfo: KeyframeInfo[] = [];
+
+    // Gets Key Frame Info...
+    // TODO: Make this a separate function.
+    for (let p of [0.25, .5, .75, 0.95]) {
+        const i = Math.round(p * exemplar.data.length);
+        keyframeInfo.push({
+            index: i,
+            nearestDistance: 0,
         });
+    }
 
-    // Cropping images - define source parameters for each snippet (what within each image is shown)
-    const snippetParams = [
-        { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 80 },
-        { cellCenterX: 230, cellCenterY: 80, snippetSourceSize: 80 },
-        { cellCenterX: 230, cellCenterY: 80, snippetSourceSize: 50 },
-        { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 30 },
-    ];
-
-
-    let selection = [];
+    let index = 0;
     // For 4 timesteps in the exemplarTrack, create 4 snippets with different source and destination parameters.
-    for(const time of staticSnippetTimes) {
+    for(const keyFrame of keyframeInfo) {
 
-        // Get the appropritate cell for this time.
+        const keyFrameIndex = keyFrame.index;
+
+        console.log("Key Frame Index:", keyFrameIndex);
         // Find the cell in exemplar.data whose time is closest to 'time'
-        const cell = exemplar.data.reduce((prev, curr) =>
-            Math.abs(curr.time - time) < Math.abs(prev.time - time) ? curr : prev
-        );
+        const cell = exemplar.data[keyFrameIndex];
+
         console.log("Cell found:", cell);
 
         const source = getBBoxAroundPoint(
-                cell.x,
-                cell.y,
-                looneageViewStore.snippetSourceSize,
-                looneageViewStore.snippetSourceSize
-            );
-        console.log("Source:", source);
-
+            cell.x,
+            cell.y,
+            looneageViewStore.snippetSourceSize,
+            looneageViewStore.snippetSourceSize
+        );
         selection.push({
             c: 0,
             t: cell.frame - 1,
             z: 0,
-            snippets: snippetDestinations.map((destination) => ({
-                    source: source,
-                    destination: destination,
-                })),
+            snippets: [{source, destination: snippetDestinations[index]}],
         });
 
+        index++;
         console.log("Selection:", selection);
         }
 
