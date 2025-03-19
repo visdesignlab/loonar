@@ -97,7 +97,7 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            const exemplarPercentiles = [5, 50];
+            const exemplarPercentiles = [5, 95];
             await exemplarViewStore.getExemplarTracks(
                 true,
                 exemplarPercentiles,
@@ -1243,13 +1243,8 @@ function createImageLayers(): CellSnippetsLayer[] {
         return [];
     }
     const imageLayers: CellSnippetsLayer[] = [];
-    let temp = 0;
     for (const exemplar of exemplarTracks.value) {
         const locationId = exemplar.locationId;
-        temp += 1;
-        if (temp > 3) {
-            break;
-        }
         const snippetLayer = createOneTestImageLayer(pixelSource.value[locationId], exemplar);
         if (snippetLayer) {
             imageLayers.push(snippetLayer);
@@ -1346,11 +1341,9 @@ function createOneTestImageLayer(pixelSource: PixelSource<any>, exemplar: Exempl
     // Setup contrast limits and channel visibility.
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];
-
-    console.log("Cell Snippets Layer Pixel Source:", pixelSource);
     // Return an array of CellSnippetsLayer instances, one for each pixel source.
     const snippetLayer = new CellSnippetsLayer({
-        id: `test-cell-snippets-layer ${key}`,
+        id: `test-cell-snippets-layer ${exemplar.trackId}`,
         loader: pixelSource, // the loaded image data
         contrastLimits,
         channelsVisible,
