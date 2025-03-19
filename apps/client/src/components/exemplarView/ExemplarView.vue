@@ -1385,8 +1385,7 @@ function createExemplarImageLayer(
     const snippetWidth = viewConfig.snippetDisplayWidth;
     const snippetHeight = viewConfig.snippetDisplayHeight;
 
-    // Calculate destination Y for the snippet.
-
+    // Calculate destination Y for the snippets.
     let destY = viewConfig.horizonChartHeight; // fallback value
     if (exemplarTracks.value && exemplarTracks.value.length > 0) {
         const key = uniqueExemplarKey(exemplar);
@@ -1407,15 +1406,54 @@ function createExemplarImageLayer(
         }
     }
 
-    // Instead of a single snippet, create four snippet destinations with different x positions.
-    const xFactors = [0.2, 0.4, 0.6, 0.8]; // relative positions along the horizonChartWidth
+    // Instead of a single snippet, create four snippet destinations with different x positions based on time -----------
+    const xPercentages = [0.2, 0.4, 0.6, 0.8]; // relative positions along the horizonChartWidth
+
+    // Calculate the real times cloest to the xPercentages.
+    const staticSnippetTimes = xPercentages.map((percentage) => {
+        // Estimate the time based on the x coordinate.
+        const estimatedTime = Math.max(
+            0,
+            exemplar.minTime +
+                (exemplar.maxTime - exemplar.minTime) *
+                    percentage
+        );
+
+        // Handle edge cases where the estimated time is outside the exemplar's time range.
+        let realTimePoint = null;
+        if (estimatedTime < exemplar.minTime) {
+            realTimePoint = exemplar.minTime;
+        } else if (estimatedTime > exemplar.maxTime) {
+            realTimePoint = exemplar.maxTime;
+        }
+        // Find the closest actual time in the exemplar data.
+        else {
+            realTimePoint = exemplar.data.reduce((prev, curr) => {
+                // Only update if the estimatedTime is greater than curr.time
+                // and if its distance to estimatedTime is smaller than that of the previous point.
+                if (
+                    estimatedTime > curr.time &&
+                    Math.abs(curr.time - estimatedTime) <
+                        Math.abs(prev.time - estimatedTime)
+                ) {
+                    return curr;
+                }
+                return prev;
+            }, exemplar.data[0]).time;
+        }
+        return realTimePoint;
+    });
+
+
+    console.log("staticSnippetTimes:", staticSnippetTimes);
+
     const snippetDestinations: [number, number, number, number][] =
-        xFactors.map((factor) => {
+        xPercentages.map((factor) => {
             const dX = viewConfig.horizonChartWidth * factor - snippetWidth / 2;
             return [dX, destY, dX + snippetWidth, destY - snippetHeight];
         });
 
-    // Define source parameters for each snippet (currently same values for all, can be adjusted)
+    // Cropping images - define source parameters for each snippet (what within each image is shown)
     const snippetParams = [
         { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 80 },
         { cellCenterX: 230, cellCenterY: 80, snippetSourceSize: 80 },
@@ -1423,40 +1461,58 @@ function createExemplarImageLayer(
         { cellCenterX: 300, cellCenterY: 57, snippetSourceSize: 30 },
     ];
 
-    // Create a selection with multiple snippets using individual source parameters.
-    const selection = {
-        c: 0, // using first channel
-        t: 0, // first time
-        z: 0, // first z-slice
-        snippets: snippetDestinations.map((destination, idx) => ({
-            source: getBBoxAroundPoint(
-                snippetParams[idx].cellCenterX,
-                snippetParams[idx].cellCenterY,
-                snippetParams[idx].snippetSourceSize,
-                snippetParams[idx].snippetSourceSize
-            ),
-            destination: destination,
-        })),
-    };
-    // Create an instance of the colormap extension.
-    const colormapExtension = new AdditiveColormapExtension();
-    // Set up a basic LRUCache for snippet data.
-    // Setup contrast limits and channel visibility.
-    const contrastLimits = [[0, 255]];
-    const channelsVisible = [true];
-    // Return an array of CellSnippetsLayer instances, one for each pixel source.
-    const snippetLayer = new CellSnippetsLayer({
-        id: `test-cell-snippets-layer ${exemplar.trackId}`,
-        loader: pixelSource, // the loaded image data
-        contrastLimits,
-        channelsVisible,
-        selections: [selection],
-        extensions: [colormapExtension],
-        colormap: 'viridis',
-        cache: lruCache,
-    });
-    return snippetLayer;
-}
+
+    let selection = [];
+    // For 4 timesteps in the exemplarTrack, create 4 snippets with different source and destination parameters.
+    for(const time of staticSnippetTimes) {
+
+        // Get the appropritate cell for this time.
+        // Find the cell in exemplar.data whose time is closest to 'time'
+        const cell = exemplar.data.reduce((prev, curr) =>
+            Math.abs(curr.time - time) < Math.abs(prev.time - time) ? curr : prev
+        );
+        console.log("Cell found:", cell);
+
+        const source = getBBoxAroundPoint(
+                cell.x,
+                cell.y,
+                looneageViewStore.snippetSourceSize,
+                looneageViewStore.snippetSourceSize
+            );
+        console.log("Source:", source);
+
+        selection.push({
+            c: 0,
+            t: cell.frame - 1,
+            z: 0,
+            snippets: snippetDestinations.map((destination) => ({
+                    source: source,
+                    destination: destination,
+                })),
+        });
+
+        console.log("Selection:", selection);
+        }
+
+        // Create an instance of the colormap extension.
+        const colormapExtension = new AdditiveColormapExtension();
+        // Set up a basic LRUCache for snippet data.
+            // Setup contrast limits and channel visibility.
+        const contrastLimits = [[0, 255]];
+        const channelsVisible = [true];
+        // Return an array of CellSnippetsLayer instances, one for each pixel source.
+        const snippetLayer = new CellSnippetsLayer({
+            id: `test-cell-snippets-layer ${exemplar.trackId}`,
+            loader: pixelSource, // the loaded image data
+            contrastLimits,
+            channelsVisible,
+            selections: selection,
+            extensions: [colormapExtension],
+            colormap: 'viridis',
+            cache: lruCache,
+        });
+        return snippetLayer;
+    }
 
 function createDebugViewportLayer() {
     const bbox = viewportBBox();

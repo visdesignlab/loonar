@@ -17,17 +17,19 @@ export interface ExemplarTrack {
     maxTime: number;
     minValue: number;
     maxValue: number;
-    data: DataPoint[];
+    data: Cell[];
     tags: Record<string, string>;
     p: number; // the sample position, e.g. median has p=0.5
     pinned: boolean; // true if this is a user pinned exemplar
     starred: boolean; // true if this is a user starred exemplar
 }
 
-export interface DataPoint {
+export interface Cell {
     time: number;
     frame: number;
     value: number;
+    x: number;
+    y: number;
 }
 
 export interface ViewConfiguration {
@@ -491,7 +493,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         deathTime: number;
         minValue: number;
         maxValue: number;
-        data: DataPoint[];
+        data: Cell[];
     }> {
         const pDecimal = p ? p / 100 : undefined;
         const timeColumn = 'Time (h)';
@@ -551,7 +553,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 ARRAY[
                     n."${timeColumn}",
                     n."Frame ID",
-                    n."${attributeColumn}"
+                    n."${attributeColumn}",
+                    n."x",
+                    n."y"
                 ]
                 ) AS data
             FROM "${experimentName}_composite_experiment_cell_metadata" n
@@ -610,6 +614,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         n."${timeColumn}",
                         n."Frame ID",
                         n."${attributeColumn}"
+                        n."x",
+                        n."y"
                     ]
                 ) AS data
             FROM "${experimentName}_composite_experiment_cell_metadata" n
@@ -646,11 +652,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 // console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
                 // console.log('Data Array:', data);
 
-                // Map the returned array to DataPoint[] with BigInt conversion
-                const mappedData: DataPoint[] = data.map((d: any[]) => ({
+                // Map the returned array to Cell[] with BigInt conversion
+                const mappedData: Cell[] = data.map((d: any[]) => ({
                     time: d[0], // Convert BigInt to Number
                     frame: d[1], // Convert BigInt to Number
                     value: d[2], // Convert BigInt to Number
+                    x: d[3],
+                    y: d[4],
                 }));
 
                 return {
