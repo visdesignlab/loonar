@@ -1341,8 +1341,14 @@ function createImageLayers(): CellSnippetsLayer[] {
     const imageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
+        const exemplarUrls = exemplarViewStore.getExemplarUrls();
         if (!pixelSources.value[locationId]) {
-            loadPixelSource(locationId);
+            const url = exemplarUrls.get(locationId);
+            if (url) {
+                loadPixelSource(locationId, url);
+            } else {
+                console.error(`URL not found for locationId: ${locationId}`);
+            }
         }
         const snippetLayer = createExemplarImageLayer(
             pixelSources.value[locationId],
