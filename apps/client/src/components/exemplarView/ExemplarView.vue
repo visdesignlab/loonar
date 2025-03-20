@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, render } from 'vue';
+import { ref, computed, watch, onBeforeUnmount, render, nextTick } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
 import { DetailView, getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
@@ -108,27 +108,56 @@ watch([deckGlHeight, deckGlWidth], () => {
     );
     if (isEqual(viewStateMirror.value, defaultViewState)) {
         targetY =
-            (deckGlHeight.value ?? 0) / 2 -
-            exemplarViewStore.viewConfiguration.margin;
+            (deckGlHeight.value ?? 0) / 2 - viewConfiguration.value.margin;
 
         // Why random? See https://github.com/visgl/deck.gl/issues/8198
         targetY += +Math.random() * 0.00001;
     }
+    // zoomX depends on zoomX so this is a simple iterative solver
+    let zoomX = viewStateMirror.value.zoom[0];
+    const solverIterations = 10;
+    for (let i = 0; i < solverIterations; i++) {
+        zoomX = Math.log2(deckGlWidth.value / visualizationWidth(zoomX));
+    }
 
-    let targetX = exemplarViewStore.visualizationCenterX;
-    let zoomX = Math.log2(
-        deckGlWidth.value / exemplarViewStore.visualizationWidth
-    );
     const newViewState = {
         zoom: [zoomX, 0],
-        target: [targetX, targetY],
+        target: [visualizationCenterX(zoomX), targetY],
     };
+    viewStateMirror.value = cloneDeep(newViewState);
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-    viewStateMirror.value = cloneDeep(newViewState);
     renderDeckGL();
 });
+
+function visualizationWidth(scale?: number): number {
+    if (scale === undefined) {
+        scale = viewStateMirror.value.zoom[0];
+    }
+    const { histogramWidth, horizonHistogramGap, horizonChartWidth, margin } =
+        viewConfiguration.value;
+    return (
+        scaleLengthForConstantVisualSize(histogramWidth, scale) +
+        scaleLengthForConstantVisualSize(horizonHistogramGap, scale) +
+        horizonChartWidth +
+        2 * scaleLengthForConstantVisualSize(margin, scale)
+    );
+}
+
+function visualizationCenterX(scale?: number): number {
+    if (scale === undefined) {
+        scale = viewStateMirror.value.zoom[0];
+    }
+    const { histogramWidth, horizonHistogramGap, horizonChartWidth } =
+        viewConfiguration.value;
+    return (
+        (horizonChartWidth -
+            scaleLengthForConstantVisualSize(histogramWidth, scale) -
+            scaleLengthForConstantVisualSize(horizonHistogramGap, scale)) /
+        2
+    );
+}
 
 const defaultViewState = {
     zoom: [0, 0],
@@ -149,7 +178,7 @@ function scaleForConstantVisualSize(
 function viewportBBox(includeBuffer = true): BBox {
     const { target } = viewStateMirror.value;
     // const buffer = includeBuffer ? viewportBuffer.value : 0;
-    const buffer = -10;
+    const buffer = 200;
     const width = scaleForConstantVisualSize(deckGlWidth.value + buffer);
     // const width = deckGlWidth.value + buffer;
     // const height = scaleForConstantVisualSize(deckGlHeight.value + buffer, 'y');
@@ -180,7 +209,7 @@ function handleScroll(delta: number) {
     if (!deckgl.value) return;
 
     // Why random? See https://github.com/visgl/deck.gl/issues/8198
-    viewStateMirror.value.target[1] -= delta;
+    viewStateMirror.value.target[1] -= delta * 0.5;
     viewStateMirror.value.target[1] = clamp(
         viewStateMirror.value.target[1],
         scrollExtent.value.min,
@@ -191,7 +220,6 @@ function handleScroll(delta: number) {
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-
     renderDeckGL();
 }
 
@@ -268,10 +296,17 @@ watch(
                             // disable pan/zoom from controller, but allow scroll
                             // the controller does have params to disable zoom/scroll
                             // but they weren't working and this does
-                            viewState = { ...oldViewState };
+                            if (!isEqual(viewState.zoom, oldViewState.zoom)) {
+                                viewState = { ...oldViewState };
+                            } else {
+                                viewState.target[0] = oldViewState.target[0];
+                            }
+                            // TODO: I left this in here for now to demonstrate
+                            // difference between scroll/pan performance.
+                            // I would like to remove panning though ideally.
                         }
 
-                        viewStateMirror.value = cloneDeep(viewState as any);
+                        viewStateMirror.value = viewState as any;
                         renderDeckGL();
                         return viewState;
                     },
@@ -857,8 +892,10 @@ function createSidewaysHistogramLayer(): any[] | null {
         exemplarTracksOnScreen.value
     );
 
-    const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
+    let { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
+    hGap = scaleForConstantVisualSize(hGap);
+    histWidth = scaleForConstantVisualSize(histWidth);
     const domains = histogramDomains.value; // { histogramBinRanges, minX, maxX, minY, maxY }
 
     for (const group of groupedExemplars) {
@@ -1106,7 +1143,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getPosition: (d: TextDatum) => d.coordinates,
                 getText: (d: TextDatum) => `${d.drug} ${d.conc}`,
                 sizeScale: 1,
-                sizeUnits: 'common',
+                sizeUnits: 'pixels',
                 sizeMaxPixels: 25,
                 getAngle: 90,
                 getColor: fillColor(firstExemplar),
@@ -1155,8 +1192,10 @@ function handleHistogramHover(
     }
     // Otherwise, compute the pin position based on the mouse coordinate.
     const hoveredY = info.coordinate[1];
-    const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
+    let { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
+    hGap = scaleForConstantVisualSize(hGap);
+    histWidth = scaleForConstantVisualSize(histWidth);
     const fixedLineLength = histWidth * 0.75;
     const x0 = hGap + 0.25 * histWidth;
 
@@ -1324,6 +1363,7 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             data: circleData,
             pickable: true, // enable interaction with the pin circles
             getPosition: (d: any) => d.position,
+            radiusUnits: 'pixels',
             getRadius: (d: any) =>
                 hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
                     ? 6
@@ -1447,9 +1487,125 @@ function createImageLayers(): CellSnippetsLayer[] {
     }
     return imageLayers;
 }
+
+function valueExtent(track: ExemplarTrack): number {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let cell of track.data) {
+        min = Math.min(min, cell.value);
+        max = Math.max(max, cell.value);
+    }
+    return max - min;
+}
+
+function getTimeDuration(track: ExemplarTrack): number {
+    let [minTime, maxTime] = getTimeExtent(track);
+    return maxTime - minTime;
+}
+
+function getTimeExtent(track: ExemplarTrack): [number, number] {
+    let minTime = track.minTime;
+    let maxTime = track.maxTime;
+    return [minTime, maxTime];
+}
+
+interface KeyframeInfo {
+    index: number;
+    nearestDistance: number;
+}
+
+const keyframeOrderLookup = ref<Map<string, KeyframeInfo[]>>();
+function getKeyFrameOrder(exemplarTrack: ExemplarTrack): KeyframeInfo[] {
+    // duplicated and modified from similar function in looneageview
+    const uniqueKey = uniqueExemplarKey(exemplarTrack);
+    if (keyframeOrderLookup.value == null) {
+        keyframeOrderLookup.value = new Map();
+    }
+    if (keyframeOrderLookup.value.has(uniqueKey)) {
+        return keyframeOrderLookup.value.get(uniqueKey) as KeyframeInfo[];
+    }
+
+    const L = exemplarTrack.data.length;
+    // initialize scores based on the change in the attribute value
+    // the first and last frames should always be
+    // selected as key frames, so they get a score of zero.
+    const frameScores: number[] = Array(L).fill(0);
+    frameScores[0] = Infinity;
+    frameScores[L - 1] = Infinity;
+    const spaceKeyframesEvenly = true; // TODO: bind this to something in UI
+    if (!spaceKeyframesEvenly) {
+        const valExtent = valueExtent(exemplarTrack);
+        if (valExtent !== 0) {
+            // avoid divide by zero, if vall extent is zero, then all
+            // values are the same, so the scores should be equal.
+            for (let i = 1; i < L - 1; i++) {
+                const prev = exemplarTrack.data[i - 1];
+                const next = exemplarTrack.data[i + 1];
+                const val = Math.abs(next.value - prev.value) / valExtent;
+                frameScores[i] += val;
+            }
+        }
+    }
+
+    const frameDistances: number[] = Array(L).fill(Infinity);
+
+    const center = 1;
+    const dropOff = 3;
+    const keyframeOrder: KeyframeInfo[] = [];
+    const timeExtent = getTimeDuration(exemplarTrack);
+    for (let i = 0; i < L; i++) {
+        let maxIndex = -1;
+        let maxScore = -Infinity;
+        for (let i = 0; i < frameScores.length; i++) {
+            if (frameDistances[i] === 0) continue;
+            let coverageCost;
+            if (frameDistances[i] === Infinity || timeExtent === 0) {
+                coverageCost = 0;
+            } else {
+                const distNorm = (200 * frameDistances[i]) / timeExtent;
+                coverageCost =
+                    (-center * (distNorm - dropOff)) /
+                        (center + Math.abs(distNorm - dropOff)) +
+                    center;
+            }
+            const score = frameScores[i] - coverageCost;
+            if (score > maxScore) {
+                maxScore = score;
+                maxIndex = i;
+            }
+        }
+        keyframeOrder.push({
+            index: maxIndex,
+            nearestDistance: frameDistances[maxIndex],
+        });
+
+        // update the nearest distance values
+        if (maxIndex === -1) {
+            console.log('MAX INDEX', maxIndex);
+        }
+        const t1 = exemplarTrack.data[maxIndex].time;
+
+        // TODO: make d relative to tExtent, likely will have to update coverage function
+        for (let i = maxIndex; i < frameDistances.length; i++) {
+            const t2 = exemplarTrack.data[i].time;
+            const d = Math.abs(t1 - t2);
+            if (frameDistances[i] < d) break;
+            frameDistances[i] = d;
+        }
+        for (let i = maxIndex; i >= 0; i--) {
+            const t2 = exemplarTrack.data[i].time;
+            exemplarTrack.data[i].time;
+            const d = Math.abs(t1 - t2);
+            if (frameDistances[i] < d) break;
+            frameDistances[i] = d;
+        }
+    }
+    keyframeOrderLookup.value.set(uniqueKey, keyframeOrder);
+    return keyframeOrder;
+}
+
 const lruCache = new LRUCache({ max: 500 });
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
-
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
 function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
@@ -1504,81 +1660,22 @@ function createExemplarImageKeyFramesLayer(
         }
     }
 
-    // Instead of a single snippet, create four snippet destinations with different x positions based on time -----------
-    const xPercentages = [0.2, 0.4, 0.6, 0.8]; // relative positions along the horizonChartWidth
-
-    // Calculate the real times cloest to the xPercentages.
-    const staticSnippetTimes = xPercentages.map((percentage) => {
-        // Estimate the time based on the x coordinate.
-        const estimatedTime = Math.max(
-            0,
-            exemplar.minTime +
-                (exemplar.maxTime - exemplar.minTime) * percentage
+    const convertDurationToWidth = (duration: number) => {
+        return (
+            (viewConfiguration.value.horizonChartWidth * duration) /
+            (exemplar.maxTime - exemplar.minTime)
         );
-
-        // Handle edge cases where the estimated time is outside the exemplar's time range.
-        let realTimePoint = null;
-        if (estimatedTime < exemplar.minTime) {
-            realTimePoint = exemplar.minTime;
-        } else if (estimatedTime > exemplar.maxTime) {
-            realTimePoint = exemplar.maxTime;
+    };
+    const keyFrames = getKeyFrameOrder(exemplar);
+    for (const { index, nearestDistance } of keyFrames) {
+        console.log({ nearestDistance, snippetDestWidth });
+        const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
+        if (nearestDistanceWidth <= snippetDestWidth) {
+            break;
         }
-        // Find the closest actual time in the exemplar data.
-        else {
-            realTimePoint = exemplar.data.reduce((prev, curr) => {
-                // Only update if the estimatedTime is greater than curr.time
-                // and if its distance to estimatedTime is smaller than that of the previous point.
-                if (
-                    estimatedTime > curr.time &&
-                    Math.abs(curr.time - estimatedTime) <
-                        Math.abs(prev.time - estimatedTime)
-                ) {
-                    return curr;
-                }
-                return prev;
-            }, exemplar.data[0]).time;
-        }
-        return realTimePoint;
-    });
-
-    // Create Snippet Destinations based on the key frame info
-    const snippetDestinations: BBox[] = staticSnippetTimes.map((time) => {
-        // Find the percentage of that time to the total experiment time.
-        const percentage =
-            (time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
-
-        // Find the x coordinate based on the percentage.
-        const centerX = viewConfig.horizonChartWidth * percentage;
-        const x1 = centerX - snippetDestWidth / 2;
-        const x2 = x1 + snippetDestWidth;
-        const y1 = destY;
-        const y2 = y1 - snippetDestHeight;
-        return [x1, y1, x2, y2];
-    });
-
-    interface KeyframeInfo {
-        index: number;
-        nearestDistance: number;
-    }
-    const keyframeInfo: KeyframeInfo[] = [];
-
-    // Gets Key Frame Info...
-    // TODO: Make this a separate function.
-    for (let p of [0.25, 0.5, 0.75, 0.95]) {
-        const i = Math.round(p * exemplar.data.length);
-        keyframeInfo.push({
-            index: i,
-            nearestDistance: 0,
-        });
-    }
-
-    let index = 0;
-    // For 4 timesteps in the exemplarTrack, create 4 snippets with different source and destination parameters.
-    for (const keyFrame of keyframeInfo) {
-        const keyFrameIndex = keyFrame.index;
 
         // Find the cell in exemplar.data whose time is closest to 'time'
-        const cell = exemplar.data[keyFrameIndex];
+        const cell = exemplar.data[index];
 
         const source = getBBoxAroundPoint(
             cell.x,
@@ -1586,14 +1683,26 @@ function createExemplarImageKeyFramesLayer(
             looneageViewStore.snippetSourceSize,
             looneageViewStore.snippetSourceSize
         );
+
+        // Find the percentage of that time to the total experiment time.
+        const percentage =
+            (cell.time - exemplar.minTime) /
+            (exemplar.maxTime - exemplar.minTime);
+
+        // Find the x coordinate based on the percentage.
+        const centerX = viewConfig.horizonChartWidth * percentage;
+        const x1 = centerX - snippetDestWidth / 2;
+        const x2 = x1 + snippetDestWidth;
+        const y1 = destY;
+        const y2 = y1 - snippetDestHeight;
+        const destination: BBox = [x1, y1, x2, y2];
+
         selections.push({
             c: 0,
             t: cell.frame - 1,
             z: 0,
-            snippets: [{ source, destination: snippetDestinations[index] }],
+            snippets: [{ source, destination }],
         });
-
-        index++;
     }
 
     // Create an instance of the colormap extension.

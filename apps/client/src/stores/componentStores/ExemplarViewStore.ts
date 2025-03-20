@@ -103,30 +103,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         timeBarHeightInner: 2,
         betweenExemplarGap: 20,
         betweenConditionGap: 20,
-        horizonHistogramGap: 0,
+        horizonHistogramGap: 50,
         histogramWidth: 250,
-        margin: 20,
-    });
-
-    const visualizationWidth = computed(() => {
-        const {
-            histogramWidth,
-            horizonHistogramGap,
-            horizonChartWidth,
-            margin,
-        } = viewConfiguration.value;
-        return (
-            histogramWidth +
-            horizonHistogramGap +
-            horizonChartWidth +
-            2 * margin
-        );
-    });
-
-    const visualizationCenterX = computed(() => {
-        const { histogramWidth, horizonHistogramGap, horizonChartWidth } =
-            viewConfiguration.value;
-        return (horizonChartWidth - histogramWidth - horizonHistogramGap) / 2;
+        margin: 50,
     });
 
     const exemplarHeight = computed(() => {
@@ -866,7 +845,5 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         loadingExemplarData, // export the loading state
-        visualizationWidth,
-        visualizationCenterX,
     };
 });
