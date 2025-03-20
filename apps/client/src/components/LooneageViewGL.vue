@@ -1063,8 +1063,9 @@ function createKeyFrameSnippets(): KeyFrameSnippetsResult | null {
 
         for (const { index, nearestDistance } of keyframeOrder) {
             // exit loop if this point would overlap existing points
-            if (nearestDistance <= destWidth + getBetweenSnippetPaddingX())
+            if (nearestDistance <= destWidth + getBetweenSnippetPaddingX()) {
                 break;
+            }
             const destination: BBox = getSnippetBBox(
                 index,
                 nodeWithData,
