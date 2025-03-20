@@ -615,7 +615,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     ARRAY[
                         n."${timeColumn}",
                         n."Frame ID",
-                        n."${attributeColumn}"
+                        n."${attributeColumn}",
                         n."x",
                         n."y"
                     ]

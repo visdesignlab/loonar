@@ -435,7 +435,7 @@ async function loadPixelSources() {
 }
 // Watches for changes in currentLocationMetadata and loads the pixel source.
 watch(
-    exemplarDataInitialized,
+    exemplarDataInitialized, 
     async () => {
         try {
             console.log('Exemplar Data Initialized. Loading Pixel Sources.');
@@ -1280,6 +1280,8 @@ async function handleHistogramClick(
             undefined,
             bin.minAttr
         );
+
+        await loadPixelSources();
 
         // First ensure that the new exemplar tracks are loaded, then render.
         renderDeckGL();
