@@ -12,6 +12,7 @@ import {
 } from '@deck.gl/layers';
 import { QSpinner } from 'quasar';
 import {
+type Cell,
     type ExemplarTrack,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
@@ -40,7 +41,7 @@ import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
-import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { type SelectedSnippet, useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
 
 const configStore = useConfigStore();
@@ -170,9 +171,9 @@ watch(
                                 '.2f'
                             );
                             const formattedValue =
-                                hoveredValue.value !== null
+                                hoveredCell.value !== null
                                     ? customNumberFormatter(
-                                          hoveredValue.value,
+                                          hoveredCell.value.value,
                                           '.3f'
                                       )
                                     : '';
@@ -582,7 +583,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
 // The currently hovered exemplar and its currently hovered value.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
-const hoveredValue = ref<number | null>(null);
+const hoveredCell = ref<Cell | null>(null);
 
 function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index !== -1 && info.coordinate) {
@@ -632,14 +633,18 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
         dataPointSelectionUntrracked.hoveredTime = realTimePoint;
 
         // Set current hovered exemplar value ------------------------------------------------------
-        const value = exemplar.data.find(
+        const cell = exemplar.data.find(
             (d) => d.time === realTimePoint
-        )?.value;
-        if (!value) {
+        );
+        if (!cell || !cell.value) {
             console.error('value is undefined');
             return;
         }
-        hoveredValue.value = value;
+        if (cell) {
+            hoveredCell.value = cell;
+        } else {
+            hoveredCell.value = null;
+        }
     } else {
         hoveredExemplar.value = null;
         dataPointSelectionUntrracked.hoveredTime = null;
@@ -1342,7 +1347,7 @@ function createImageLayers(): CellSnippetsLayer[] {
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
         const exemplarUrls = exemplarViewStore.getExemplarUrls();
-        if (!pixelSources.value[locationId]) {
+        if (pixelSources.value && !pixelSources.value[locationId]) {
             const url = exemplarUrls.get(locationId);
             if (url) {
                 loadPixelSource(locationId, url);
@@ -1350,12 +1355,12 @@ function createImageLayers(): CellSnippetsLayer[] {
                 console.error(`URL not found for locationId: ${locationId}`);
             }
         }
-        const snippetLayer = createExemplarImageLayer(
+        const exemplarImageKeyFramesLayer = createExemplarImageKeyFramesLayer(
             pixelSources.value[locationId],
             exemplar
         );
-        if (snippetLayer) {
-            imageLayers.push(snippetLayer);
+        if (exemplarImageKeyFramesLayer) {
+            imageLayers.push(exemplarImageKeyFramesLayer);
         }
     }
     return imageLayers;
@@ -1363,18 +1368,20 @@ function createImageLayers(): CellSnippetsLayer[] {
 const lruCache = new LRUCache({ max: 500 });
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 
-// Updated createExemplarImageLayer() with enhanced debugging:
-function createExemplarImageLayer(
+// Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
+function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
     exemplar: ExemplarTrack
 ): CellSnippetsLayer | null {
+
+    let selections: Selection[] =[];
     // Check that the pixelSource is ready.
     if (!pixelSource) {
         console.error(
-            '[createExemplarImageLayer] pixelSource.value is not set!'
+            '[createExemplarImageKeyFramesLayer] pixelSource.value is not set!'
         );
         console.warn(
-            '[createExemplarImageLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
+            '[createExemplarImageKeyFramesLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
         );
         return null; // Do not create the layer until pixelSource.value is available.
     }
@@ -1382,7 +1389,7 @@ function createExemplarImageLayer(
     // Check that exemplarTracks is available.
     if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
         console.error(
-            '[createExemplarImageLayer] No exemplar tracks available!'
+            '[createExemplarImageKeyFramesLayer] No exemplar tracks available!'
         );
         return null;
     }
@@ -1399,7 +1406,7 @@ function createExemplarImageLayer(
         const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
         if (yOffset === undefined || yOffset == null) {
             console.error(
-                '[createExemplarImageLayer] No yOffset found for first exemplar with key:',
+                '[createExemplarImageKeyFramesLayer] No yOffset found for first exemplar with key:',
                 key
             );
         } else {
@@ -1464,15 +1471,10 @@ function createExemplarImageLayer(
         return [x1, y1, x2, y2];
     });
 
-    console.log("staticSnippetTimes and Destinations:", staticSnippetTimes, snippetDestinations);
-
-
-
-    let selection: Selection[] =[];
 
     interface KeyframeInfo {
-    index: number;
-    nearestDistance: number;
+        index: number;
+        nearestDistance: number;
     }
     const keyframeInfo: KeyframeInfo[] = [];
 
@@ -1492,11 +1494,9 @@ function createExemplarImageLayer(
 
         const keyFrameIndex = keyFrame.index;
 
-        console.log("Key Frame Index:", keyFrameIndex);
         // Find the cell in exemplar.data whose time is closest to 'time'
         const cell = exemplar.data[keyFrameIndex];
 
-        console.log("Cell found:", cell);
 
         const source = getBBoxAroundPoint(
             cell.x,
@@ -1504,7 +1504,7 @@ function createExemplarImageLayer(
             looneageViewStore.snippetSourceSize,
             looneageViewStore.snippetSourceSize
         );
-        selection.push({
+        selections.push({
             c: 0,
             t: cell.frame - 1,
             z: 0,
@@ -1512,28 +1512,126 @@ function createExemplarImageLayer(
         });
 
         index++;
-        console.log("Selection:", selection);
+    }
+
+    // Create an instance of the colormap extension.
+    const colormapExtension = new AdditiveColormapExtension();
+    // Set up a basic LRUCache for snippet data.
+        // Setup contrast limits and channel visibility.
+    const contrastLimits = [[0, 255]];
+    const channelsVisible = [true];
+    // Return an array of CellSnippetsLayer instances, one for each pixel source.
+    const snippetLayer = new CellSnippetsLayer({
+        id: `test-cell-snippets-layer ${exemplar.trackId}`,
+        loader: pixelSource, // the loaded image data
+        contrastLimits,
+        channelsVisible,
+        selections: selections,
+        extensions: [colormapExtension],
+        colormap: 'viridis',
+        cache: lruCache,
+    });
+
+    return snippetLayer;
+}
+
+function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnippetsLayer | null{
+    let hoveredSelections: Selection[] = [];
+    // Get viewConfiguration details for snippet placement.
+    const viewConfig = viewConfiguration.value;
+    const snippetWidth = viewConfig.snippetDisplayWidth;
+    const snippetHeight = viewConfig.snippetDisplayHeight;
+    let hoveredSnippetLayer: CellSnippetsLayer | null = null;
+
+    if (hoveredCell.value && hoveredExemplar.value) {
+
+        // Calculate destination Y for the snippets.
+        let destY = viewConfig.horizonChartHeight; // fallback value
+        if (exemplarTracks.value && exemplarTracks.value.length > 0) {
+            const key = uniqueExemplarKey(hoveredExemplar.value);
+            const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+            if (yOffset === undefined || yOffset == null) {
+                console.error(
+                    '[createExemplarImageKeyFramesLayer] No yOffset found for first exemplar with key:',
+                    key
+                );
+            } else {
+                // Compute destination Y such that the snippet is just above the top horizon chart.
+                destY =
+                    yOffset -
+                    viewConfig.timeBarHeightOuter -
+                    viewConfig.snippetHorizonChartGap -
+                    viewConfig.horizonChartHeight -
+                    viewConfig.snippetHorizonChartGap;
+            }
         }
+        // Find the percentage of that time to the total experiment time.
+        const percentage = (hoveredCell.value?.time - hoveredExemplar.value.minTime) / (hoveredExemplar.value.maxTime - hoveredExemplar.value.minTime);
+
+        // Find the x coordinate based on the percentage.
+        const x1 = viewConfig.horizonChartWidth * percentage - (snippetWidth / 2);
+        const y1 = destY;
+        const x2 = x1 + snippetWidth;
+        const y2 = y1 - snippetHeight;
+        let hoveredSnippetDestination: BBox = [x1, y1, x2, y2];
+
+        const source = getBBoxAroundPoint(
+            hoveredCell.value.x ?? 0,
+            hoveredCell.value.y ?? 0,
+            looneageViewStore.snippetSourceSize,
+            looneageViewStore.snippetSourceSize
+        );
+        console.log("Hovered Cell Source:", source);
+        // For the hovered snippet, create a hovered selection.
+        hoveredSelections.push({
+            c: 0,
+            t: hoveredCell.value.frame - 1,
+            z: 0,
+            snippets: [{source, destination: hoveredSnippetDestination}],
+        });
+        console.log("Hovered Selections:", hoveredSelections);
 
         // Create an instance of the colormap extension.
         const colormapExtension = new AdditiveColormapExtension();
         // Set up a basic LRUCache for snippet data.
             // Setup contrast limits and channel visibility.
         const contrastLimits = [[0, 255]];
-        const channelsVisible = [true];
-        // Return an array of CellSnippetsLayer instances, one for each pixel source.
-        const snippetLayer = new CellSnippetsLayer({
-            id: `test-cell-snippets-layer ${exemplar.trackId}`,
-            loader: pixelSource, // the loaded image data
-            contrastLimits,
-            channelsVisible,
-            selections: selection,
+        // Render the hovered snippet layer.
+        if (hoveredSelections.length > 0) {
+            console.log("Creating Hovered Snippet Layer");
+            hoveredSnippetLayer = new CellSnippetsLayer({
+            loader: pixelSource,
+            id: `hovered-snippets-layer${hoveredExemplar.value?.trackId}`,
+            contrastLimits: contrastLimits,
+            selections: hoveredSelections,
+            channelsVisible: [true],
             extensions: [colormapExtension],
             colormap: 'viridis',
             cache: lruCache,
-        });
-        return snippetLayer;
+            });
+        }
     }
+    return hoveredSnippetLayer;
+}
+
+watch(hoveredCell, () => {
+    if (hoveredCell.value && hoveredExemplar.value) {
+        console.log("Hovered Cell:", hoveredCell.value);
+        const locationId = hoveredExemplar.value?.locationId;
+        if (pixelSources.value && pixelSources.value[locationId]) {
+            console.log("Pixel Source found for locationId:", locationId);
+            const exemplarImageHoverLayer = createExemplarImageHoverLayer(pixelSources.value[locationId]);
+            if (exemplarImageHoverLayer) {
+                deckgl.value.setProps({
+                    layers: [...deckGLLayers, exemplarImageHoverLayer],
+                    controller: true,
+                });
+
+                console.log("Exemplar Image Hover Layer created");
+            }
+        }
+    }
+});
 
 function createDebugViewportLayer() {
     const bbox = viewportBBox();
