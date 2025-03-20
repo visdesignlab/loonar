@@ -44,6 +44,7 @@ export interface ViewConfiguration {
     betweenConditionGap: number;
     horizonHistogramGap: number;
     histogramWidth: number;
+    margin: number;
 }
 
 export interface conditionHistogram {
@@ -102,6 +103,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         betweenConditionGap: 20,
         horizonHistogramGap: 0,
         histogramWidth: 250,
+        margin: 20,
+    });
+
+    const visualizationWidth = computed(() => {
+        const {
+            histogramWidth,
+            horizonHistogramGap,
+            horizonChartWidth,
+            margin,
+        } = viewConfiguration.value;
+        return (
+            histogramWidth +
+            horizonHistogramGap +
+            horizonChartWidth +
+            2 * margin
+        );
+    });
+
+    const visualizationCenterX = computed(() => {
+        const { histogramWidth, horizonHistogramGap, horizonChartWidth } =
+            viewConfiguration.value;
+        return (horizonChartWidth - histogramWidth - horizonHistogramGap) / 2;
     });
 
     const exemplarHeight = computed(() => {
@@ -835,5 +858,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         loadingExemplarData, // export the loading state
+        visualizationWidth,
+        visualizationCenterX,
     };
 });

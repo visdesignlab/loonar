@@ -2,7 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount, render } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
-import { getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
+import { DetailView, getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
 import type { PixelData, PixelSource } from '@vivjs/types';
 import {
     ScatterplotLayer,
@@ -29,7 +29,7 @@ import {
     hexListToRgba,
     HORIZON_CHART_MOD_OFFSETS,
 } from './deckglUtil';
-import { isEqual } from 'lodash';
+import { isEqual, cloneDeep, clamp } from 'lodash';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
@@ -41,6 +41,7 @@ import { AdditiveColormapExtension } from '@hms-dbmi/viv';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
+import { ScrollUpDownController } from './ScrollUpDownController';
 
 const configStore = useConfigStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
@@ -91,14 +92,43 @@ const { selectedYTag } = storeToRefs(conditionSelector);
 // 1. Add a reactive reference for the hovered exemplar
 const hoveredExemplarKey = ref<string | null>(null);
 
-const initialViewState = {
+watch([deckGlHeight, deckGlWidth], () => {
+    if (!deckgl.value) return;
+
+    let targetY = clamp(
+        viewStateMirror.value.target[1],
+        scrollExtent.value.min,
+        scrollExtent.value.max
+    );
+    if (isEqual(viewStateMirror.value, defaultViewState)) {
+        targetY =
+            (deckGlHeight.value ?? 0) / 2 -
+            exemplarViewStore.viewConfiguration.margin;
+
+        // Why random? See https://github.com/visgl/deck.gl/issues/8198
+        targetY += +Math.random() * 0.00001;
+    }
+
+    let targetX = exemplarViewStore.visualizationCenterX;
+    let zoomX = Math.log2(
+        deckGlWidth.value / exemplarViewStore.visualizationWidth
+    );
+    const newViewState = {
+        zoom: [zoomX, 0],
+        target: [targetX, targetY],
+    };
+    deckgl.value.setProps({
+        initialViewState: newViewState,
+    });
+    viewStateMirror.value = cloneDeep(newViewState);
+    renderDeckGL();
+});
+
+const defaultViewState = {
     zoom: [0, 0],
     target: [0, 0],
-    minZoom: -8,
-    maxZoom: 8,
 };
-
-const viewStateMirror = ref(initialViewState);
+const viewStateMirror = ref(defaultViewState);
 
 function viewportBBox(includeBuffer = true): BBox {
     const { target } = viewStateMirror.value;
@@ -119,6 +149,36 @@ function viewportBBox(includeBuffer = true): BBox {
     return [left, top, right, bottom];
 }
 
+const scrollExtent = computed(() => {
+    const min =
+        deckGlHeight.value / 2 - exemplarViewStore.viewConfiguration.margin;
+    const max =
+        bottomYOffset.value -
+        deckGlHeight.value / 2 +
+        exemplarViewStore.viewConfiguration.margin;
+    exemplarRenderInfo.value;
+    return { min, max };
+});
+
+function handleScroll(delta: number) {
+    if (!deckgl.value) return;
+
+    // Why random? See https://github.com/visgl/deck.gl/issues/8198
+    viewStateMirror.value.target[1] -= delta;
+    viewStateMirror.value.target[1] = clamp(
+        viewStateMirror.value.target[1],
+        scrollExtent.value.min,
+        scrollExtent.value.max
+    );
+
+    const newViewState = cloneDeep(viewStateMirror.value);
+    deckgl.value.setProps({
+        initialViewState: newViewState,
+    });
+
+    renderDeckGL();
+}
+
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
     () => experimentDataInitialized.value,
@@ -130,7 +190,7 @@ watch(
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
-            const exemplarPercentiles = [5, 25, 50, 75, 95];
+            const exemplarPercentiles = [5, 50, 95];
             await exemplarViewStore.getExemplarTracks(
                 true,
                 exemplarPercentiles,
@@ -150,7 +210,10 @@ watch(
                         id: 'exemplarController',
                         controller: true,
                     }),
-                    controller: true,
+                    controller: {
+                        type: ScrollUpDownController,
+                        onScroll: handleScroll,
+                    },
                     layers: [],
                     getTooltip: (info: PickingInfo) => {
                         // If the layer is a horizon chart, show the cell index and time.
@@ -183,16 +246,16 @@ watch(
                         }
                         return null;
                     },
-                    initialViewState,
+                    initialViewState: defaultViewState,
                     onViewStateChange: ({ viewState, oldViewState }) => {
-                        // viewState.zoom[1] = 0;
-                        if (
-                            oldViewState &&
-                            !isEqual(viewState.zoom, oldViewState.zoom)
-                        ) {
-                            viewState.target[1] = oldViewState.target[1];
+                        if (oldViewState && !isEqual(viewState, oldViewState)) {
+                            // disable pan/zoom from controller, but allow scroll
+                            // the controller does have params to disable zoom/scroll
+                            // but they weren't working and this does
+                            viewState = { ...oldViewState };
                         }
-                        viewStateMirror.value = viewState as any;
+
+                        viewStateMirror.value = cloneDeep(viewState as any);
                         renderDeckGL();
                         return viewState;
                     },
@@ -387,7 +450,6 @@ function renderDeckGL(): void {
 
     deckgl.value.setProps({
         layers: deckGLLayers,
-        controller: true,
     });
     deckgl.value.redraw();
 }
@@ -407,6 +469,14 @@ interface ExemplarRenderInfo {
     yOffset: number;
     onScreen: boolean;
 }
+
+const bottomYOffset = computed(() => {
+    return Math.max(
+        ...Array.from(exemplarRenderInfo.value.values()).map(
+            (renderInfo: ExemplarRenderInfo) => renderInfo.yOffset
+        )
+    );
+});
 
 function recalculateExemplarYOffsets(): void {
     exemplarRenderInfo.value.clear();
@@ -1536,7 +1606,7 @@ const isExemplarViewReady = computed(() => {
 </script>
 
 <template>
-    <div v-show="!isExemplarViewReady" class="spinner-container">
+    <div v-if="!isExemplarViewReady" class="spinner-container">
         <!-- The loading message includes the current aggregation and attribute -->
         <q-spinner color="primary" size="3em" :thickness="10" />
         <div>
@@ -1545,7 +1615,7 @@ const isExemplarViewReady = computed(() => {
             }}
         </div>
     </div>
-    <div v-show="isExemplarViewReady">
+    <div v-if="isExemplarViewReady">
         <canvas
             v-if="experimentDataInitialized"
             id="exemplar-deckgl-canvas"
