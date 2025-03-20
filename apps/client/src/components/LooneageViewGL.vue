@@ -45,6 +45,7 @@ import {
     overlapAmount,
     outerBBox,
     pointInBBox,
+    scaleLengthForConstantVisualSize,
 } from '@/util/imageSnippets';
 
 import { LRUCache } from 'lru-cache';
@@ -1762,7 +1763,7 @@ function scaleForConstantVisualSize(
     const { zoom } = viewStateMirror.value;
     const z = direction === 'x' ? zoom[0] : zoom[1];
     // scale the size based on the inverse of the zoom so the visual is consistent
-    return size * 2 ** -z;
+    return scaleLengthForConstantVisualSize(size, z);
 }
 
 function viewportBBox(includeBuffer = true): BBox {

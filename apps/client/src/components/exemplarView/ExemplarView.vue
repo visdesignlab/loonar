@@ -20,6 +20,7 @@ import {
     type BBox,
     getBBoxAroundPoint,
     overlaps1D,
+    scaleLengthForConstantVisualSize,
 } from '@/util/imageSnippets';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
@@ -135,12 +136,22 @@ const defaultViewState = {
 };
 const viewStateMirror = ref(defaultViewState);
 
+function scaleForConstantVisualSize(
+    size: number,
+    direction: 'x' | 'y' = 'x'
+): number {
+    const { zoom } = viewStateMirror.value;
+    const z = direction === 'x' ? zoom[0] : zoom[1];
+    // scale the size based on the inverse of the zoom so the visual is consistent
+    return scaleLengthForConstantVisualSize(size, z);
+}
+
 function viewportBBox(includeBuffer = true): BBox {
     const { target } = viewStateMirror.value;
     // const buffer = includeBuffer ? viewportBuffer.value : 0;
-    const buffer = 100;
-    // const width = scaleForConstantVisualSize(deckGlWidth.value + buffer, 'x');
-    const width = deckGlWidth.value + buffer;
+    const buffer = -10;
+    const width = scaleForConstantVisualSize(deckGlWidth.value + buffer);
+    // const width = deckGlWidth.value + buffer;
     // const height = scaleForConstantVisualSize(deckGlHeight.value + buffer, 'y');
     const height = deckGlHeight.value + buffer;
     const halfWidth = width / 2;
@@ -1466,8 +1477,11 @@ function createExemplarImageKeyFramesLayer(
 
     // Get viewConfiguration details for snippet placement.
     const viewConfig = viewConfiguration.value;
-    const snippetWidth = viewConfig.snippetDisplayWidth;
-    const snippetHeight = viewConfig.snippetDisplayHeight;
+    // const snippetWidth = viewConfig.snippetDisplayWidth;
+    const snippetDestWidth = scaleForConstantVisualSize(
+        viewConfig.snippetDisplayWidth
+    );
+    const snippetDestHeight = viewConfig.snippetDisplayHeight;
 
     // Calculate destination Y for the snippets.
     let destY = viewConfig.horizonChartHeight; // fallback value
@@ -1534,10 +1548,11 @@ function createExemplarImageKeyFramesLayer(
             (time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
 
         // Find the x coordinate based on the percentage.
-        const x1 = viewConfig.horizonChartWidth * percentage - snippetWidth / 2;
+        const centerX = viewConfig.horizonChartWidth * percentage;
+        const x1 = centerX - snippetDestWidth / 2;
+        const x2 = x1 + snippetDestWidth;
         const y1 = destY;
-        const x2 = x1 + snippetWidth;
-        const y2 = y1 - snippetHeight;
+        const y2 = y1 - snippetDestHeight;
         return [x1, y1, x2, y2];
     });
 
@@ -1608,8 +1623,10 @@ function createExemplarImageHoverLayer(
     let hoveredSelections: Selection[] = [];
     // Get viewConfiguration details for snippet placement.
     const viewConfig = viewConfiguration.value;
-    const snippetWidth = viewConfig.snippetDisplayWidth;
-    const snippetHeight = viewConfig.snippetDisplayHeight;
+    const snippetDestWidth = scaleForConstantVisualSize(
+        viewConfig.snippetDisplayWidth
+    );
+    const snippetDestHeight = viewConfig.snippetDisplayHeight;
     let hoveredSnippetLayer: CellSnippetsLayer | null = null;
 
     if (hoveredCell.value && hoveredExemplar.value) {
@@ -1639,10 +1656,12 @@ function createExemplarImageHoverLayer(
             (hoveredExemplar.value.maxTime - hoveredExemplar.value.minTime);
 
         // Find the x coordinate based on the percentage.
-        const x1 = viewConfig.horizonChartWidth * percentage - snippetWidth / 2;
+
+        const centerX = viewConfig.horizonChartWidth * percentage;
+        const x1 = centerX - snippetDestWidth / 2;
+        const x2 = x1 + snippetDestWidth;
         const y1 = destY;
-        const x2 = x1 + snippetWidth;
-        const y2 = y1 - snippetHeight;
+        const y2 = y1 - snippetDestHeight;
         let hoveredSnippetDestination: BBox = [x1, y1, x2, y2];
 
         const source = getBBoxAroundPoint(

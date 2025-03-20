@@ -92,6 +92,14 @@ export function pointInBBox(x: number, y: number, bbox: BBox): boolean {
     return overlaps(bbox, singularBBox);
 }
 
+export function scaleLengthForConstantVisualSize(
+    size: number,
+    zoom: number
+): number {
+    // scale the size based on the inverse of the zoom so the visual is consistent
+    return size * 2 ** -zoom;
+}
+
 export function overlaps(
     a: BBox,
     b: BBox,
