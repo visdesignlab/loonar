@@ -12,7 +12,7 @@ import {
 } from '@deck.gl/layers';
 import { QSpinner } from 'quasar';
 import {
-type Cell,
+    type Cell,
     type ExemplarTrack,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
@@ -25,7 +25,7 @@ import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
 import CellSnippetsLayer from '../layers/CellSnippetsLayer';
-import {type Selection} from '../layers/CellSnippetsLayer';
+import { type Selection } from '../layers/CellSnippetsLayer';
 import {
     constructGeometryBase,
     hexListToRgba,
@@ -41,7 +41,10 @@ import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
-import { type SelectedSnippet, useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import {
+    type SelectedSnippet,
+    useLooneageViewStore,
+} from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
 import { ScrollUpDownController } from './ScrollUpDownController';
 
@@ -703,9 +706,7 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
         dataPointSelectionUntrracked.hoveredTime = realTimePoint;
 
         // Set current hovered exemplar value ------------------------------------------------------
-        const cell = exemplar.data.find(
-            (d) => d.time === realTimePoint
-        );
+        const cell = exemplar.data.find((d) => d.time === realTimePoint);
         if (!cell || !cell.value) {
             console.error('value is undefined');
             return;
@@ -1443,8 +1444,7 @@ function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
     exemplar: ExemplarTrack
 ): CellSnippetsLayer | null {
-
-    let selections: Selection[] =[];
+    let selections: Selection[] = [];
     // Check that the pixelSource is ready.
     if (!pixelSource) {
         console.error(
@@ -1499,8 +1499,7 @@ function createExemplarImageKeyFramesLayer(
         const estimatedTime = Math.max(
             0,
             exemplar.minTime +
-                (exemplar.maxTime - exemplar.minTime) *
-                    percentage
+                (exemplar.maxTime - exemplar.minTime) * percentage
         );
 
         // Handle edge cases where the estimated time is outside the exemplar's time range.
@@ -1531,16 +1530,16 @@ function createExemplarImageKeyFramesLayer(
     // Create Snippet Destinations based on the key frame info
     const snippetDestinations: BBox[] = staticSnippetTimes.map((time) => {
         // Find the percentage of that time to the total experiment time.
-        const percentage = (time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
+        const percentage =
+            (time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
 
         // Find the x coordinate based on the percentage.
-        const x1 = viewConfig.horizonChartWidth * percentage - (snippetWidth / 2);
+        const x1 = viewConfig.horizonChartWidth * percentage - snippetWidth / 2;
         const y1 = destY;
         const x2 = x1 + snippetWidth;
         const y2 = y1 - snippetHeight;
         return [x1, y1, x2, y2];
     });
-
 
     interface KeyframeInfo {
         index: number;
@@ -1550,7 +1549,7 @@ function createExemplarImageKeyFramesLayer(
 
     // Gets Key Frame Info...
     // TODO: Make this a separate function.
-    for (let p of [0.25, .5, .75, 0.95]) {
+    for (let p of [0.25, 0.5, 0.75, 0.95]) {
         const i = Math.round(p * exemplar.data.length);
         keyframeInfo.push({
             index: i,
@@ -1560,13 +1559,11 @@ function createExemplarImageKeyFramesLayer(
 
     let index = 0;
     // For 4 timesteps in the exemplarTrack, create 4 snippets with different source and destination parameters.
-    for(const keyFrame of keyframeInfo) {
-
+    for (const keyFrame of keyframeInfo) {
         const keyFrameIndex = keyFrame.index;
 
         // Find the cell in exemplar.data whose time is closest to 'time'
         const cell = exemplar.data[keyFrameIndex];
-
 
         const source = getBBoxAroundPoint(
             cell.x,
@@ -1578,7 +1575,7 @@ function createExemplarImageKeyFramesLayer(
             c: 0,
             t: cell.frame - 1,
             z: 0,
-            snippets: [{source, destination: snippetDestinations[index]}],
+            snippets: [{ source, destination: snippetDestinations[index] }],
         });
 
         index++;
@@ -1587,7 +1584,7 @@ function createExemplarImageKeyFramesLayer(
     // Create an instance of the colormap extension.
     const colormapExtension = new AdditiveColormapExtension();
     // Set up a basic LRUCache for snippet data.
-        // Setup contrast limits and channel visibility.
+    // Setup contrast limits and channel visibility.
     const contrastLimits = [[0, 255]];
     const channelsVisible = [true];
     // Return an array of CellSnippetsLayer instances, one for each pixel source.
@@ -1605,7 +1602,9 @@ function createExemplarImageKeyFramesLayer(
     return snippetLayer;
 }
 
-function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnippetsLayer | null{
+function createExemplarImageHoverLayer(
+    pixelSource: PixelSource<any>
+): CellSnippetsLayer | null {
     let hoveredSelections: Selection[] = [];
     // Get viewConfiguration details for snippet placement.
     const viewConfig = viewConfiguration.value;
@@ -1614,7 +1613,6 @@ function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnipp
     let hoveredSnippetLayer: CellSnippetsLayer | null = null;
 
     if (hoveredCell.value && hoveredExemplar.value) {
-
         // Calculate destination Y for the snippets.
         let destY = viewConfig.horizonChartHeight; // fallback value
         if (exemplarTracks.value && exemplarTracks.value.length > 0) {
@@ -1636,10 +1634,12 @@ function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnipp
             }
         }
         // Find the percentage of that time to the total experiment time.
-        const percentage = (hoveredCell.value?.time - hoveredExemplar.value.minTime) / (hoveredExemplar.value.maxTime - hoveredExemplar.value.minTime);
+        const percentage =
+            (hoveredCell.value?.time - hoveredExemplar.value.minTime) /
+            (hoveredExemplar.value.maxTime - hoveredExemplar.value.minTime);
 
         // Find the x coordinate based on the percentage.
-        const x1 = viewConfig.horizonChartWidth * percentage - (snippetWidth / 2);
+        const x1 = viewConfig.horizonChartWidth * percentage - snippetWidth / 2;
         const y1 = destY;
         const x2 = x1 + snippetWidth;
         const y2 = y1 - snippetHeight;
@@ -1651,33 +1651,33 @@ function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnipp
             looneageViewStore.snippetSourceSize,
             looneageViewStore.snippetSourceSize
         );
-        console.log("Hovered Cell Source:", source);
+        console.log('Hovered Cell Source:', source);
         // For the hovered snippet, create a hovered selection.
         hoveredSelections.push({
             c: 0,
             t: hoveredCell.value.frame - 1,
             z: 0,
-            snippets: [{source, destination: hoveredSnippetDestination}],
+            snippets: [{ source, destination: hoveredSnippetDestination }],
         });
-        console.log("Hovered Selections:", hoveredSelections);
+        console.log('Hovered Selections:', hoveredSelections);
 
         // Create an instance of the colormap extension.
         const colormapExtension = new AdditiveColormapExtension();
         // Set up a basic LRUCache for snippet data.
-            // Setup contrast limits and channel visibility.
+        // Setup contrast limits and channel visibility.
         const contrastLimits = [[0, 255]];
         // Render the hovered snippet layer.
         if (hoveredSelections.length > 0) {
-            console.log("Creating Hovered Snippet Layer");
+            console.log('Creating Hovered Snippet Layer');
             hoveredSnippetLayer = new CellSnippetsLayer({
-            loader: pixelSource,
-            id: `hovered-snippets-layer${hoveredExemplar.value?.trackId}`,
-            contrastLimits: contrastLimits,
-            selections: hoveredSelections,
-            channelsVisible: [true],
-            extensions: [colormapExtension],
-            colormap: 'viridis',
-            cache: lruCache,
+                loader: pixelSource,
+                id: `hovered-snippets-layer${hoveredExemplar.value?.trackId}`,
+                contrastLimits: contrastLimits,
+                selections: hoveredSelections,
+                channelsVisible: [true],
+                extensions: [colormapExtension],
+                colormap: 'viridis',
+                cache: lruCache,
             });
         }
     }
@@ -1686,18 +1686,20 @@ function createExemplarImageHoverLayer(pixelSource: PixelSource<any>): CellSnipp
 
 watch(hoveredCell, () => {
     if (hoveredCell.value && hoveredExemplar.value) {
-        console.log("Hovered Cell:", hoveredCell.value);
+        console.log('Hovered Cell:', hoveredCell.value);
         const locationId = hoveredExemplar.value?.locationId;
         if (pixelSources.value && pixelSources.value[locationId]) {
-            console.log("Pixel Source found for locationId:", locationId);
-            const exemplarImageHoverLayer = createExemplarImageHoverLayer(pixelSources.value[locationId]);
+            console.log('Pixel Source found for locationId:', locationId);
+            const exemplarImageHoverLayer = createExemplarImageHoverLayer(
+                pixelSources.value[locationId]
+            );
             if (exemplarImageHoverLayer) {
                 deckgl.value.setProps({
                     layers: [...deckGLLayers, exemplarImageHoverLayer],
                     controller: true,
                 });
 
-                console.log("Exemplar Image Hover Layer created");
+                console.log('Exemplar Image Hover Layer created');
             }
         }
     }
