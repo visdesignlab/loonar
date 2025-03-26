@@ -330,9 +330,9 @@ function storeSetup() {
 
     const selectedLineData = computed<{ data: AggLineData; trackId: string }>(
         () => {
-            if (targetKey.value !== 'selected lineage') {
-                return { data: [], trackId: '' };
-            }
+            // if (targetKey.value !== 'selected lineage') {
+            //     return { data: [], trackId: '' };
+            // }
             const trackId = dataPointSelection.selectedTrackId;
             if (trackId === null) {
                 return { data: [], trackId: '' };
