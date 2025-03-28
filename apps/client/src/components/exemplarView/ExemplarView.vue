@@ -1228,8 +1228,8 @@ function handleHistogramHover(
 
     // Set the temporary label: positioned 10 pixels left of the pin circle.
     tempLabel.value = {
-        text: `Count: ${count}\n [${minStr}, ${maxStr}]`,
-        position: [-(x0 + fixedLineLength) - 10, hoveredY],
+        text: `Count: ${count}\n[${minStr}, ${maxStr}]`,
+        position: [-(x0 + fixedLineLength), hoveredY + 10],
     };
 
     updatePinsLayer(firstExemplar);
@@ -1317,8 +1317,8 @@ function updatePinsLayer(firstExemplar: ExemplarTrack) {
                 // Set color as desired (here black) using an accessor function:
                 getColor: (d: any) => [0, 0, 0],
                 // Use the proper TextLayer props:
-                getTextAnchor: (d: any) => 'end', // 'end' aligns text to the right
-                getAlignmentBaseline: (d: any) => 'center', // 'center' is the correct baseline value
+                getTextAnchor: (d: any) => 'start', // 'end' aligns text to the right
+                getAlignmentBaseline: (d: any) => 'top', // 'center' is the correct baseline value
                 billboard: true,
             })
         );
