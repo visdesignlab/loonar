@@ -491,9 +491,9 @@ function renderDeckGL(): void {
     deckGLLayers.push(createSidewaysHistogramLayer());
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers.push(createTimeWindowLayer());
-    deckGLLayers.push(createImageLayers());
-    deckGLLayers = deckGLLayers.concat(selectedHorizonCellLayers.value);
-    deckGLLayers = deckGLLayers.concat(hoveredHorizonCellLayer.value);
+    deckGLLayers.push(createKeyFrameImageLayers());
+    deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
+    deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
 
@@ -671,9 +671,9 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
                 onHover: (info: PickingInfo, event: any) =>
-                    handleHorizonHover(info, exemplar),
+                    handleCellImageEvents(info, exemplar, "hover"),
                 onClick: (info: PickingInfo, event: any) => {
-                    handleHorizonClick(info, event);
+                    handleCellImageEvents(info, exemplar, "click");
                 },
                 instanceData: geometryData,
                 destination: [
@@ -701,223 +701,196 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
     return horizonChartLayers;
 }
 
+/**
+ * Computes the correct time point from the exemplar data given an estimated time.
+ * Returns the minTime if the estimated time is too low or maxTime if too high.
+ * Otherwise it finds the closest actual time from the exemplar data.
+ */
+function computeRealTimePoint(exemplar: ExemplarTrack, estimatedTime: number): number {
+  if (estimatedTime < exemplar.minTime) {
+    return exemplar.minTime;
+  }
+  if (estimatedTime > exemplar.maxTime) {
+    return exemplar.maxTime;
+  }
+  // Use reduce to find the closest time value
+  return exemplar.data.reduce((prev, curr) =>
+    estimatedTime > curr.time &&
+    Math.abs(curr.time - estimatedTime) < Math.abs(prev.time - estimatedTime)
+      ? curr
+      : prev,
+    exemplar.data[0]
+  ).time;
+}
+
 // The currently hovered exemplar and its currently hovered value.
 const selectedExemplar = ref<ExemplarTrack | null>(null);
 const selectedCell = ref<Cell | null>(null);
-const selectedHorizonCellLayers = ref<CellSnippetsLayer[]>([]);
-
-
-function handleHorizonClick(
-    info: PickingInfo,
-    exemplar: ExemplarTrack
-) {
-    console.log('[handleHorizonClick] Click event:', info);
-    if (info.index !== -1 && info.coordinate) {
-        const clickX = info.coordinate[0];
-        console.log('[handleHorizonClick] clickX:', clickX);
-        if (clickX == null) {
-            console.error('[handleHorizonClick] clickX is undefined');
-            return;
-        }
-        const { horizonChartWidth } = viewConfiguration.value;
-        const estimatedTime = Math.max(
-            0,
-            exemplar.minTime +
-                (exemplar.maxTime - exemplar.minTime) *
-                    (clickX / horizonChartWidth)
-        );
-        console.log('[handleHorizonClick] estimatedTime:', estimatedTime);
-        let realTimePoint: number | null = null;
-        if (estimatedTime < exemplar.minTime) {
-            realTimePoint = exemplar.minTime;
-        } else if (estimatedTime > exemplar.maxTime) {
-            realTimePoint = exemplar.maxTime;
-        } else {
-            realTimePoint = exemplar.data.reduce((prev, curr) => {
-                if (
-                    estimatedTime > curr.time &&
-                    Math.abs(curr.time - estimatedTime) <
-                        Math.abs(prev.time - estimatedTime)
-                ) {
-                    return curr;
-                }
-                return prev;
-            }, exemplar.data[0]).time;
-        }
-        console.log('[handleHorizonClick] realTimePoint:', realTimePoint);
-        const cell = exemplar.data.find((d) => d.time === realTimePoint);
-        if (!cell || !cell.value) {
-            console.error('[handleHorizonClick] cell or cell.value is undefined');
-            return;
-        }
-        selectedExemplar.value = exemplar;
-        selectedCell.value = cell;
-        console.log('[handleHorizonClick] selectedExemplar:', selectedExemplar.value);
-        console.log('[handleHorizonClick] selectedCell:', selectedCell.value);
-        
-        const locationId = exemplar.locationId;
-        if (pixelSources.value && pixelSources.value[locationId]) {
-            const selectedLayer = createExemplarImageSelectedLayer(pixelSources.value[locationId]);
-            console.log('[handleHorizonClick] Created selectedLayer:', selectedLayer);
-            if (selectedLayer) {
-                selectedHorizonCellLayers.value.push(selectedLayer);
-                console.log('[handleHorizonClick] Pinned selectedLayer. Total pinned:', selectedHorizonCellLayers.value.length);
-                renderDeckGL();
-            } else {
-                console.error('[handleHorizonClick] selectedLayer is null');
-            }
-        } else {
-            console.error('[handleHorizonClick] Pixel source not found for locationId:', locationId);
-        }
-    } else {
-        console.error('[handleHorizonClick] info.index or info.coordinate invalid');
-    }
-}
-
-function createExemplarImageSelectedLayer(
-    pixelSource: PixelSource<any>
-): CellSnippetsLayer | null {
-    console.log('[createExemplarImageSelectedLayer] Creating selected layer');
-    let selectedSelections: Selection[] = [];
-    const viewConfig = viewConfiguration.value;
-    const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
-    const snippetDestHeight = viewConfig.snippetDisplayHeight;
-    let destY = viewConfig.horizonChartHeight; // fallback value
-    if (exemplarTracks.value && exemplarTracks.value.length > 0 && selectedExemplar.value) {
-        const key = uniqueExemplarKey(selectedExemplar.value);
-        const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
-        console.log('[createExemplarImageSelectedLayer] yOffset:', yOffset);
-        if (yOffset !== undefined && yOffset !== null) {
-            destY =
-                yOffset -
-                viewConfig.timeBarHeightOuter -
-                viewConfig.snippetHorizonChartGap -
-                viewConfig.horizonChartHeight -
-                viewConfig.snippetHorizonChartGap;
-            console.log('[createExemplarImageSelectedLayer] Computed destY:', destY);
-        } else {
-            console.error('[createExemplarImageSelectedLayer] No yOffset found for key:', key);
-        }
-    }
-    
-    if (!selectedExemplar.value || !selectedCell.value) {
-        console.error('[createExemplarImageSelectedLayer] selectedExemplar or selectedCell is null');
-        return null;
-    }
-    const percentage =
-        (selectedCell.value.time - selectedExemplar.value.minTime) /
-        (selectedExemplar.value.maxTime - selectedExemplar.value.minTime);
-    console.log('[createExemplarImageSelectedLayer] percentage:', percentage);
-    const centerX = viewConfig.horizonChartWidth * percentage;
-    const x1 = centerX - snippetDestWidth / 2;
-    const x2 = x1 + snippetDestWidth;
-    const y1 = destY;
-    const y2 = y1 - snippetDestHeight;
-    console.log('[createExemplarImageSelectedLayer] snippet destination:', [x1, y1, x2, y2]);
-    const selectedSnippetDestination: BBox = [x1, y1, x2, y2];
-    
-    const source = getBBoxAroundPoint(
-        selectedCell.value.x ?? 0,
-        selectedCell.value.y ?? 0,
-        looneageViewStore.snippetSourceSize,
-        looneageViewStore.snippetSourceSize
-    );
-    console.log('[createExemplarImageSelectedLayer] source bbox:', source);
-    
-    selectedSelections.push({
-        c: 0,
-        t: selectedCell.value.frame - 1,
-        z: 0,
-        snippets: [{ source, destination: selectedSnippetDestination }],
-    });
-    
-    const colormapExtension = new AdditiveColormapExtension();
-    const contrastLimits = [[0, 255]];
-    
-    const selectedSnippetLayer = new CellSnippetsLayer({
-        loader: pixelSource,
-        id: `selected-snippets-layer-${selectedCell.value.frame}-${selectedExemplar.value.trackId}`,
-        contrastLimits: contrastLimits,
-        selections: selectedSelections,
-        channelsVisible: [true],
-        extensions: [colormapExtension],
-        colormap: 'viridis',
-        cache: lruCache,
-    });
-    console.log('[createExemplarImageSelectedLayer] Returning selectedSnippetLayer:', selectedSnippetLayer);
-    
-    return selectedSnippetLayer;
-}
-
+const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
 // The currently hovered exemplar and its currently hovered value.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
 const hoveredCell = ref<Cell | null>(null);
-const hoveredHorizonCellLayer = ref<CellSnippetsLayer[]>([]);
+const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
 
-function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
-    console.log('[handleHorizonHover] Hover event:', info);
-    if (info.index !== -1 && info.coordinate) {
-        const hoverX = info.coordinate[0];
-        console.log('[handleHorizonHover] hoverX:', hoverX);
-        if (!hoverX) {
-            console.error('[handleHorizonHover] hoverX is undefined');
-            return;
-        }
-        const { horizonChartWidth } = viewConfiguration.value;
-        const estimatedTime = Math.max(
-            0,
-            exemplar.minTime +
-                (exemplar.maxTime - exemplar.minTime) *
-                    (hoverX / horizonChartWidth)
-        );
-        console.log('[handleHorizonHover] estimatedTime:', estimatedTime);
-        let realTimePoint: number | null = null;
-        if (estimatedTime < exemplar.minTime) {
-            realTimePoint = exemplar.minTime;
-        } else if (estimatedTime > exemplar.maxTime) {
-            realTimePoint = exemplar.maxTime;
-        } else {
-            realTimePoint = exemplar.data.reduce((prev, curr) => {
-                if (
-                    estimatedTime > curr.time &&
-                    Math.abs(curr.time - estimatedTime) <
-                        Math.abs(prev.time - estimatedTime)
-                ) {
-                    return curr;
-                }
-                return prev;
-            }, exemplar.data[0]).time;
-        }
-        console.log('[handleHorizonHover] realTimePoint:', realTimePoint);
-        const cell = exemplar.data.find((d) => d.time === realTimePoint);
-        if (!cell || !cell.value) {
-            console.error('[handleHorizonHover] cell or cell.value is undefined');
-            return;
-        }
-        // Update hovered cell for tooltip purposes
-        hoveredCell.value = cell;
-        hoveredExemplar.value = exemplar;
-        console.log('[handleHorizonHover] hoveredExemplar:', hoveredExemplar.value);
-        console.log('[handleHorizonHover] hoveredCell:', hoveredCell.value);
+/**
+ * Handles cell image events for both click and hover actions.
+ * It calculates the corresponding time point from the click/hover coordinate,
+ * retrieves the relevant cell, and creates the appropriate image layer.
+ */
+function handleCellImageEvents(
+  info: PickingInfo,
+  exemplar: ExemplarTrack,
+  action: 'click' | 'hover'
+) {
+  // Validate the input coordinate
+  if (info.index === -1 || !info.coordinate) {
+    console.error('[handleHorizonCellImages] info.index or info.coordinate invalid');
+    return;
+  }
+
+  const X = info.coordinate[0];
+  if (X == null) {
+    console.error('[handleHorizonCellImages] X is undefined');
+    return;
+  }
+
+  // Calculate estimated time based on the X coordinate and chart width
+  const { horizonChartWidth } = viewConfiguration.value;
+  const estimatedTime = Math.max(
+    0,
+    exemplar.minTime +
+      (exemplar.maxTime - exemplar.minTime) * (X / horizonChartWidth)
+  );
+
+  // Compute the real time point from the exemplar data
+  const realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
+
+  // Find the cell corresponding to the computed time point
+  const cell = exemplar.data.find((d) => d.time === realTimePoint);
+  if (!cell || !cell.value) {
+    console.error('[handleHorizonCellImages] cell or cell.value is undefined');
+    return;
+  }
+
+  // Retrieve the pixel source for the exemplar's location
+  const locationId = exemplar.locationId;
+  const pixelSource = pixelSources.value?.[locationId];
+  if (!pixelSource) {
+    console.error('[handleHorizonCellImages] Pixel source not found for locationId:', locationId);
+    return;
+  }
+
+  // Create an image events layer for the cell
+  const cellImageEventsLayer = createCellImageEventLayer(pixelSource, exemplar, cell);
+  if (!cellImageEventsLayer) {
+    console.error('[handleHorizonCellImages] selectedLayer is null');
+    return;
+  }
+
+  // Update state based on the action type (click or hover)
+  if (action === 'click') {
+    selectedExemplar.value = exemplar;
+    selectedCell.value = cell;
+    selectedCellImageLayers.value.push(cellImageEventsLayer);
+  } else if (action === 'hover') {
+    hoveredExemplar.value = exemplar;
+    hoveredCell.value = cell;
+    // Reset hovered layers before adding the new layer
+    hoveredCellImageLayer.value = [cellImageEventsLayer];
+  }
+
+  // Re-render Deck.gl layers
+  renderDeckGL();
+}
+
+/**
+ * Createel a cell image layer for click/hover events.
+ * This function computes the destination coordinates for the snippet
+ * based on the cell's time position and returns a new CellSnippetsLayer.
+ */
+function createCellImageEventLayer(
+  pixelSource: PixelSource<any>,
+  exemplar: ExemplarTrack,
+  cell: Cell
+): CellSnippetsLayer | null {
+  // Initialize an array to hold snippet selection(s).
+  const selections: Selection[] = [];
+  const viewConfig = viewConfiguration.value;
+  
+  // Calculate snippet destination dimensions.
+  const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
+  const snippetDestHeight = viewConfig.snippetDisplayHeight;
+  
+  // Compute the destination Y coordinate.
+  // Start with a fallback equal to the base horizon chart height.
+  let destY = viewConfig.horizonChartHeight;
+  if (exemplarTracks.value && exemplarTracks.value.length > 0) {
+    const key = uniqueExemplarKey(exemplar);
+    // Get the yOffset for the current exemplar from the render info map.
+    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+    if (yOffset !== undefined && yOffset !== null) {
+      // Adjust destY to position the snippet above the main horizon chart.
+      destY =
+        yOffset -
+        viewConfig.timeBarHeightOuter -
+        viewConfig.snippetHorizonChartGap -
+        viewConfig.horizonChartHeight -
+        viewConfig.snippetHorizonChartGap;
     } else {
-        hoveredExemplar.value = null;
-        dataPointSelectionUntrracked.hoveredTime = null;
+      console.error('[createCellImageEventsLayer] No yOffset found for key:', key);
     }
-    const locationId = exemplar.locationId;
-    if (pixelSources.value && pixelSources.value[locationId]) {
-        const hoveredLayer = createExemplarImageHoverLayer(pixelSources.value[locationId]);
-        console.log('[handleHorizonClick] Created hoveredLayer:', hoveredLayer);
-        if (hoveredLayer) {
-            hoveredHorizonCellLayer.value = [];
-            hoveredHorizonCellLayer.value.push(hoveredLayer);
-            console.log('[handleHorizonClick] Pinned selectedLayer. Total pinned:', hoveredHorizonCellLayer.value.length);
-            renderDeckGL();
-        } else {
-            console.error('[handleHorizonClick] selectedLayer is null');
-        }
-    } else {
-        console.error('[handleHorizonClick] Pixel source not found for locationId:', locationId);
-    }
+  }
+  
+  // Validate that exemplar and its cell value are present.
+  if (!exemplar || !cell.value) {
+    console.error('[createCellImageEventsLayer] Exemplar or cell is null');
+    return null;
+  }
+  
+  // Determine the horizontal (x) position based on the cell time relative to the exemplar time range.
+  const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
+  const centerX = viewConfig.horizonChartWidth * percentage;
+  const x1 = centerX - snippetDestWidth / 2;
+  const x2 = x1 + snippetDestWidth;
+  
+  // Define the destination bounding box for the snippet.
+  const y1 = destY;
+  const y2 = y1 - snippetDestHeight;
+  const imageSnippetDestination: BBox = [x1, y1, x2, y2];
+  
+  // Extract the source bounding box around the cell's coordinates.
+  const source = getBBoxAroundPoint(
+    cell.x ?? 0,
+    cell.y ?? 0,
+    looneageViewStore.snippetSourceSize,
+    looneageViewStore.snippetSourceSize
+  );
+  
+  // Create a snippet selection entry.
+  selections.push({
+    c: 0,
+    t: cell.frame - 1,
+    z: 0,
+    snippets: [{ source, destination: imageSnippetDestination }],
+  });
+  
+  // Create a colormap extension and set contrast limits.
+  const colormapExtension = new AdditiveColormapExtension();
+  const contrastLimits = [[0, 255]];
+  
+  // Create and return a new CellSnippetsLayer with the computed settings.
+  const cellImageEventLayer = new CellSnippetsLayer({
+    loader: pixelSource,
+    id: `cell-image-event-layer-${cell.frame}-${exemplar.trackId}`,
+    contrastLimits: contrastLimits,
+    selections: selections,
+    channelsVisible: [true],
+    extensions: [colormapExtension],
+    colormap: 'viridis',
+    cache: lruCache,
+  });
+  
+  return cellImageEventLayer;
 }
 
 function constructGeometry(track: ExemplarTrack): number[] {
@@ -1615,11 +1588,11 @@ function groupExemplarsByCondition(
     return groups;
 }
 
-function createImageLayers(): CellSnippetsLayer[] {
+function createKeyFrameImageLayers(): CellSnippetsLayer[] {
     if (!pixelSources.value) {
         return [];
     }
-    const imageLayers: CellSnippetsLayer[] = [];
+    const keyFrameImageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
         const exemplarUrls = exemplarViewStore.getExemplarUrls();
@@ -1636,10 +1609,10 @@ function createImageLayers(): CellSnippetsLayer[] {
             exemplar
         );
         if (exemplarImageKeyFramesLayer) {
-            imageLayers.push(exemplarImageKeyFramesLayer);
+            keyFrameImageLayers.push(exemplarImageKeyFramesLayer);
         }
     }
-    return imageLayers;
+    return keyFrameImageLayers;
 }
 
 function valueExtent(track: ExemplarTrack): number {
