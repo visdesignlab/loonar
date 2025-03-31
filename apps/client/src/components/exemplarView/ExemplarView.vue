@@ -100,8 +100,6 @@ const exemplarDataInitialized = ref(false);
 const conditionSelector = useConditionSelectorStore();
 const { selectedYTag } = storeToRefs(conditionSelector);
 
-// 1. Add a reactive reference for the hovered exemplar
-const hoveredExemplarKey = ref<string | null>(null);
 
 watch([deckGlHeight, deckGlWidth], () => {
     if (!deckgl.value) return;
@@ -454,12 +452,6 @@ watch(
 );
 
 // --------------------------------------------------------------------------------------------
-
-watch(hoveredExemplarKey, () => {
-    if (exemplarDataInitialized.value) {
-        renderDeckGL();
-    }
-});
 
 // 4. Add a new watcher on exemplarDataInitialized.
 // TODO: Move exemplarDataInitialized to the store
@@ -1293,16 +1285,19 @@ function createSidewaysHistogramLayer(): any[] | null {
                 pickable: false,
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
-                getColor: fillColor(firstExemplar), // Black lines
+                getColor: (d: { exemplar: ExemplarTrack }) =>
+                hoveredExemplar.value && hoveredExemplar.value.trackId === d.exemplar.trackId
+                    ? colors.hovered.rgb
+                    : fillColor(d.exemplar),
                 getWidth: (d: {
                     source: [number, number];
                     target: [number, number];
                     exemplar: ExemplarTrack;
                 }) =>
-                    hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                    hoveredExemplar.value === d.exemplar
                         ? 4
                         : 1, // Thinner stroke width
-                opacity: 0.2,
+                opacity: 1,
             })
         );
 
@@ -1526,12 +1521,15 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             pickable: false,
             getSourcePosition: (d: any) => d.source,
             getTargetPosition: (d: any) => d.target,
-            getColor: (d: Pin) => (d.color ? d.color : fillColor(d.exemplar)),
-            getFillColor: (d: Pin) =>
-                d.color ? d.color : fillColor(d.exemplar),
+            getColor: (d: Pin) =>
+                hoveredExemplar.value === d.exemplar
+                ? colors.hovered.rgb
+                : d.color
+                ? d.color
+                : fillColor(d.exemplar),
             // Adjust the line width based on hover state.
             getWidth: (d: any) =>
-                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                hoveredExemplar.value === d.exemplar
                     ? 4
                     : 1,
             opacity: 0.2,
@@ -1550,12 +1548,21 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             getPosition: (d: any) => d.position,
             radiusUnits: 'pixels',
             getRadius: (d: any) =>
-                hoveredExemplarKey.value === uniqueExemplarKey(d.exemplar)
+                hoveredExemplar.value === d.exemplar
                     ? 6
                     : 3,
-            getColor: (d: Pin) => (d.color ? d.color : fillColor(d.exemplar)),
+            getColor: (d: Pin) =>
+                hoveredExemplar.value === d.exemplar
+                ? colors.hovered.rgb
+                : d.color
+                ? d.color
+                : fillColor(d.exemplar),
             getFillColor: (d: Pin) =>
-                d.color ? d.color : fillColor(d.exemplar),
+                hoveredExemplar.value === d.exemplar
+                ? colors.hovered.rgb
+                : d.color
+                ? d.color
+                : fillColor(d.exemplar),
             // When a pin is clicked, dragged or released, we log a dummy event.
             onClick: (info: PickingInfo, event: any) =>
                 handlePinClick(info, event, firstExemplar),
@@ -2036,18 +2043,6 @@ watch(
         console.log('Selected Attribute and Aggregation changed:', newValues);
     }
 );
-
-// Function to handle hover events
-function handleHover(info: PickingInfo) {
-    // If we hovered over a circle from our scatterplot data:
-    if (info.object && (info.object as any).exemplar) {
-        const pickedExemplar = (info.object as any).exemplar;
-        const newHoveredKey = uniqueExemplarKey(pickedExemplar);
-        hoveredExemplarKey.value = newHoveredKey;
-    } else {
-        hoveredExemplarKey.value = null;
-    }
-}
 
 watch(loadingExemplarData, (newVal) => {
     console.log('loadingExemplarData changed:', newVal);
