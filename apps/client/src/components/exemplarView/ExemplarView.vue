@@ -48,6 +48,11 @@ import {
 } from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
 import { ScrollUpDownController } from './ScrollUpDownController';
+import colors from '@/util/colors';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+ 
+const globalSettings = useGlobalSettings();
+const { darkMode } = storeToRefs(globalSettings);
 
 const configStore = useConfigStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
@@ -671,9 +676,9 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
                 onHover: (info: PickingInfo, event: any) =>
-                    handleCellImageEvents(info, exemplar, "hover"),
+                    handleHorizonHover(info, exemplar),
                 onClick: (info: PickingInfo, event: any) => {
-                    handleCellImageEvents(info, exemplar, "click");
+                    handleHorizonClick(info, exemplar)
                 },
                 instanceData: geometryData,
                 destination: [
@@ -697,6 +702,34 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 },
             })
         );
+        // If the current exemplar is hovered, create an extra outline layer.
+    if (hoveredExemplar.value && hoveredExemplar.value.trackId === exemplar.trackId) {
+      const outlinePolygon = [
+        // Create a rectangle matching the destination of the horizon chart.
+        [0, yOffset],
+        [viewConfiguration.value.horizonChartWidth, yOffset],
+        [viewConfiguration.value.horizonChartWidth, yOffset - viewConfiguration.value.horizonChartHeight],
+        [0, yOffset - viewConfiguration.value.horizonChartHeight],
+        [0, yOffset], // Close the polygon.
+      ];
+
+      const outlineLayer = new PolygonLayer({
+        id: `exemplar-horizon-chart-outline-${uniqueExemplarKey(exemplar)}`,
+        data: [{ polygon: outlinePolygon }],
+        pickable: false,
+        stroked: true,
+        filled: false,
+        getPolygon: (d: any) => d.polygon,
+        getLineColor: (d: any) => colors.hovered.rgb,
+        getLineWidth: () => 4, // Adjust the thickness as needed.
+        lineWidthUnits: "pixels",
+        updateTriggers: {
+          // Re-render the outline when hover changes.
+          hoveredExemplar: hoveredExemplar.value,
+        },
+      });
+      horizonChartLayers.push(outlineLayer);
+    }
     }
     return horizonChartLayers;
 }
@@ -745,11 +778,13 @@ function handleCellImageEvents(
   // Validate the input coordinate
   if (info.index === -1 || !info.coordinate) {
     console.error('[handleHorizonCellImages] info.index or info.coordinate invalid');
+    dataPointSelectionUntrracked.hoveredTrackId = null;
     return;
   }
 
   const X = info.coordinate[0];
   if (X == null) {
+    dataPointSelectionUntrracked.hoveredTrackId = null;
     console.error('[handleHorizonCellImages] X is undefined');
     return;
   }
@@ -764,6 +799,9 @@ function handleCellImageEvents(
 
   // Compute the real time point from the exemplar data
   const realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
+
+  // Update the hovered track ID in the dataPointSelectionUntrracked store
+  dataPointSelectionUntrracked.hoveredTrackId = exemplar.trackId;
 
   // Update the hovered time in the dataPointSelectionUntrracked store
   dataPointSelectionUntrracked.hoveredTime = realTimePoint;
@@ -894,6 +932,23 @@ function createCellImageEventLayer(
   });
   
   return cellImageEventLayer;
+}
+
+function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
+    if (!info.index || info.index === -1) {
+        hoveredExemplar.value = null;
+    hoveredCell.value = null;
+    renderDeckGL();
+        return;
+    }
+    handleCellImageEvents(info, exemplar, 'hover');
+}
+
+function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
+    if (!info.index || info.index === -1) {
+        return;
+    }
+    handleCellImageEvents(info, exemplar, 'click');
 }
 
 function constructGeometry(track: ExemplarTrack): number[] {
