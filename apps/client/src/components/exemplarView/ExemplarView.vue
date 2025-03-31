@@ -765,6 +765,9 @@ function handleCellImageEvents(
   // Compute the real time point from the exemplar data
   const realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
 
+  // Update the hovered time in the dataPointSelectionUntrracked store
+  dataPointSelectionUntrracked.hoveredTime = realTimePoint;
+
   // Find the cell corresponding to the computed time point
   const cell = exemplar.data.find((d) => d.time === realTimePoint);
   if (!cell || !cell.value) {
