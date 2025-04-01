@@ -16,7 +16,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
-import { clamp } from 'lodash-es';
+import { clamp, debounce } from 'lodash-es';
 import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -211,11 +211,17 @@ watch(currentLocationMetadata, async () => {
     // but this is better than the image being offset for now.
     resetView();
 });
-function createBaseImageLayer(): typeof ImageLayer {
-    // console.log('create base image layer');
+
+
+function createBaseImageLayer(refreshBaseImageLayer: boolean = false): typeof ImageLayer {
+
+    // If createNewLayer is false, we should reuse the existing imageLayer
+    const idSuffix = refreshBaseImageLayer ? `-${imageViewerStore.frameNumber}`
+        : '';
+
     return new ImageLayer({
         loader: pixelSource.value,
-        id: 'base-image-layer',
+        id: 'base-image-layer' + idSuffix,
         contrastLimits: contrastLimit.value,
         selections: imageViewerStore.selections,
         channelsVisible: [true],
@@ -223,7 +229,7 @@ function createBaseImageLayer(): typeof ImageLayer {
         // @ts-ignore
         colormap: imageViewerStore.colormap,
         // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => console.log('image viewport load'),
+        onViewportLoad: () => {console.log('image viewport load')},
     });
 }
 
@@ -562,6 +568,12 @@ function createTrajectoryGhostLayer(): TripsLayer {
 }
 
 const imageLayer = ref();
+
+// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
+let refreshBaseImageLayer = false;
+const updateBaseImageLayer = debounce(() => {console.log("Debouncing"); refreshBaseImageLayer = true; renderDeckGL();}, 300);
+watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
+
 function renderDeckGL(): void {
     if (deckgl == null) return;
     if (!cellMetaData.dataInitialized) {
@@ -571,8 +583,13 @@ function renderDeckGL(): void {
     const layers = [];
     if (imageViewerStore.showImageLayer) {
         if (pixelSource.value == null) return;
-        imageLayer.value = createBaseImageLayer();
-        layers.push(imageLayer.value);
+        // Always create a new image layer instance instead of reusing imageLayer.value.
+        const newImageLayer = createBaseImageLayer(refreshBaseImageLayer);
+        layers.push(newImageLayer);
+        // Optionally update the reactive reference.
+        imageLayer.value = newImageLayer;
+        // No need to refresh unless debounce is called above.
+        refreshBaseImageLayer = false
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
@@ -693,14 +710,10 @@ function clearSelection() {
 
 <template>
     <canvas
-        id="super-cool-unique-id"
-        ref="deckGlContainer"
-        :class="
-            dataPointSelectionUntrracked.hoveredTrackId !== null
-                ? 'force-default-cursor'
-                : ''
-        "
-        @reset-image-view="resetView"
+      id="super-cool-unique-id"
+      ref="deckGlContainer"
+      :class="dataPointSelectionUntrracked.hoveredTrackId !== null ? 'force-default-cursor' : ''"
+      @reset-image-view="resetView"
     ></canvas>
 </template>
 
