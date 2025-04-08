@@ -53,6 +53,8 @@ import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import type { Feature } from 'geojson';
+import type { Polygon } from 'geojson';
+
  
 const globalSettings = useGlobalSettings();
 const { darkMode } = storeToRefs(globalSettings);
@@ -483,7 +485,7 @@ onBeforeUnmount(() => {
 let deckGLLayers: any[] = [];
 
 // Function to render Deck.gl layers
-function renderDeckGL(): void {
+async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
 
     recalculateExemplarYOffsets();
@@ -496,6 +498,13 @@ function renderDeckGL(): void {
     deckGLLayers.push(createKeyFrameImageLayers());
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
+    
+    // Save segmentation data for every cell
+    const segmentationResults = await segmentationStore.getCellSegmentations(cellMetaData.cellArray || []);
+    cellSegmentationData.value = (segmentationResults || []).filter(
+        (feature): feature is Feature<Polygon> => feature.geometry.type === 'Polygon'
+    );
+
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
@@ -1925,37 +1934,37 @@ function createExemplarImageKeyFramesLayer(
         cache: lruCache,
     });
 
-
-    // Testing segmentation generation
-
-    // segmentationStore
-    //                 .getCellSegmentations(
-    //                     snippetCellInfo.map((info) => info.cell)
-    //                 )
-    //                 .then((data) => {
-    //                     cellSegmentationData.value = data;
-    //                 });
-    
-
     // Build segmentation data for each cell/snippet.
     const segmentationData = exemplar.data.map(cell => {
-        
+        const feature = cellSegmentationData.value?.find(
+                (feature) =>
+                    feature?.properties?.frame == cell.frame
+            );
+        console.log("Feature:", feature);
+        // Check if geometry is a Polygon before accessing coordinates
+        const polygon =
+            feature && feature.geometry.type === 'Polygon'
+            ? (feature.geometry as Polygon).coordinates
+            : undefined;
+        console.log("Seg Polygon:", polygon);
         return {
-            polygon: null,
+            polygon: polygon,
             isHovered: cell.isHovered,
             selected: cell.isSelected,
             center: [cell.x, cell.y],
-            offset: []
+            offset: [0,0],
         };
     })
     .filter((d) => d.polygon !== undefined);
 
+    console.log("Segmentation Data Final:", segmentationData);
+
     // Create a new segmentation outline layer for these cells.
     const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
         id: `snippet-segmentation-outline-layer-${exemplar.trackId}`,
-        data: segmentationData,
+        data: segmentationData.filter((d) => !d.isHovered),
         // Use the first element of the polygon
-        getPath: (d) => d.boundary[0],
+        getPath: (d) => d.polygon[0],
         getColor: () => colors.hovered.rgb,
         getWidth: 2,
         widthUnits: 'pixels',
