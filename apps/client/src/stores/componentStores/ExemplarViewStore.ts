@@ -30,6 +30,8 @@ export interface Cell {
     value: number;
     x: number;
     y: number;
+    isHovered?: boolean;
+    isSelected?: boolean;
 }
 
 export interface ViewConfiguration {
