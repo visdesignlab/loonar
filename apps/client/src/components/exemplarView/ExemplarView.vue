@@ -25,6 +25,7 @@ import {
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
+import SnippetSegmentationOutlineLayer from '../layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
 import CellSnippetsLayer from '../layers/CellSnippetsLayer';
 import { type Selection } from '../layers/CellSnippetsLayer';
 import {
@@ -50,6 +51,8 @@ import { format } from 'd3-format';
 import { ScrollUpDownController } from './ScrollUpDownController';
 import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
+import type { Feature } from 'geojson';
  
 const globalSettings = useGlobalSettings();
 const { darkMode } = storeToRefs(globalSettings);
@@ -70,6 +73,8 @@ const cellMetaData = useCellMetaData();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const { hoveredCellIndex } = storeToRefs(dataPointSelectionUntrracked);
 const looneageViewStore = useLooneageViewStore();
+
+const segmentationStore = useSegmentationStore();
 
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
@@ -491,6 +496,7 @@ function renderDeckGL(): void {
     deckGLLayers.push(createKeyFrameImageLayers());
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
+    deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
 
@@ -922,6 +928,8 @@ function createCellImageEventLayer(
     colormap: 'viridis',
     cache: lruCache,
   });
+
+  // TODO: Segmentation Layer creation here
   
   return cellImageEventLayer;
 }
@@ -1793,6 +1801,13 @@ function getKeyFrameOrder(exemplarTrack: ExemplarTrack): KeyframeInfo[] {
 }
 
 const lruCache = new LRUCache({ max: 500 });
+
+// Segmentation Information
+const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
+    []
+);
+const cellSegmentationData = ref<Feature[]>();
+
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
 function createExemplarImageKeyFramesLayer(
@@ -1910,105 +1925,53 @@ function createExemplarImageKeyFramesLayer(
         cache: lruCache,
     });
 
+
+    // Testing segmentation generation
+
+    // segmentationStore
+    //                 .getCellSegmentations(
+    //                     snippetCellInfo.map((info) => info.cell)
+    //                 )
+    //                 .then((data) => {
+    //                     cellSegmentationData.value = data;
+    //                 });
+    
+
+    // Build segmentation data for each cell/snippet.
+    const segmentationData = exemplar.data.map(cell => {
+        
+        return {
+            polygon: null,
+            isHovered: cell.isHovered,
+            selected: cell.isSelected,
+            center: [cell.x, cell.y],
+            offset: []
+        };
+    })
+    .filter((d) => d.polygon !== undefined);
+
+    // Create a new segmentation outline layer for these cells.
+    const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
+        id: `snippet-segmentation-outline-layer-${exemplar.trackId}`,
+        data: segmentationData,
+        // Use the first element of the polygon
+        getPath: (d) => d.boundary[0],
+        getColor: () => colors.hovered.rgb,
+        getWidth: 2,
+        widthUnits: 'pixels',
+        jointRounded: true,
+        getCenter: (d: any) => d.center,
+        getTranslateOffset: (d: any) => d.offset,
+        zoomX: viewStateMirror.value.zoom[0],
+        scale: looneageViewStore.snippetZoom,
+        clipSize: looneageViewStore.snippetDestSize,
+        clip: true,
+    });
+    
+    // Push the segmentation layer to be rendered alongside the snippet layer.
+    snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
+
     return snippetLayer;
-}
-
-function createExemplarImageHoverLayer(
-    pixelSource: PixelSource<any>
-): CellSnippetsLayer | null {
-    console.log('[createExemplarImageHoverLayer] Creating hovered layer');
-    let hoveredSelections: Selection[] = [];
-    const viewConfig = viewConfiguration.value;
-    const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
-    const snippetDestHeight = viewConfig.snippetDisplayHeight;
-    let destY = viewConfig.horizonChartHeight; // fallback value
-
-    if (exemplarTracks.value && exemplarTracks.value.length > 0 && hoveredExemplar.value && hoveredCell.value) {
-        const key = uniqueExemplarKey(hoveredExemplar.value);
-        const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
-        console.log('[createExemplarImageHoverLayer] yOffset:', yOffset);
-        if (yOffset !== undefined && yOffset !== null) {
-            destY =
-                yOffset -
-                viewConfig.timeBarHeightOuter -
-                viewConfig.snippetHorizonChartGap -
-                viewConfig.horizonChartHeight -
-                viewConfig.snippetHorizonChartGap;
-            console.log('[createExemplarImageHoverLayer] Computed destY:', destY);
-        } else {
-            console.error('[createExemplarImageHoverLayer] No yOffset found for key:', key);
-        }
-    } else {
-        console.error('[createExemplarImageHoverLayer] hoveredExemplar or hoveredCell is null');
-        return null;
-    }
-    
-    const percentage =
-        (hoveredCell.value.time - hoveredExemplar.value.minTime) /
-        (hoveredExemplar.value.maxTime - hoveredExemplar.value.minTime);
-    console.log('[createExemplarImageHoverLayer] percentage:', percentage);
-    const centerX = viewConfig.horizonChartWidth * percentage;
-    const x1 = centerX - snippetDestWidth / 2;
-    const x2 = x1 + snippetDestWidth;
-    const y1 = destY;
-    const y2 = y1 - snippetDestHeight;
-    console.log('[createExemplarImageHoverLayer] snippet destination:', [x1, y1, x2, y2]);
-    const hoveredSnippetDestination: BBox = [x1, y1, x2, y2];
-    
-    const source = getBBoxAroundPoint(
-        hoveredCell.value.x ?? 0,
-        hoveredCell.value.y ?? 0,
-        looneageViewStore.snippetSourceSize,
-        looneageViewStore.snippetSourceSize
-    );
-    console.log('[createExemplarImageHoverLayer] source bbox:', source);
-    
-    hoveredSelections.push({
-        c: 0,
-        t: hoveredCell.value.frame - 1,
-        z: 0,
-        snippets: [{ source, destination: hoveredSnippetDestination }],
-    });
-    
-    const colormapExtension = new AdditiveColormapExtension();
-    const contrastLimits = [[0, 255]];
-    
-    const hoveredSnippetLayer = new CellSnippetsLayer({
-        loader: pixelSource,
-        id: `hovered-snippets-layer-${hoveredExemplar.value.trackId}`,
-        contrastLimits: contrastLimits,
-        selections: hoveredSelections,
-        channelsVisible: [true],
-        extensions: [colormapExtension],
-        colormap: 'viridis',
-        cache: lruCache,
-    });
-    console.log('[createExemplarImageHoverLayer] Returning hoveredSnippetLayer:', hoveredSnippetLayer);
-    
-    return hoveredSnippetLayer;
-}
-
-function createDebugViewportLayer() {
-    const bbox = viewportBBox();
-    return new PolygonLayer({
-        id: 'debug-viewport-layer',
-        data: [
-            {
-                polygon: [
-                    [bbox[0], bbox[1]],
-                    [bbox[2], bbox[1]],
-                    [bbox[2], bbox[3]],
-                    [bbox[0], bbox[3]],
-                    [bbox[0], bbox[1]],
-                ],
-            },
-        ],
-        getPolygon: (d: any) => d.polygon,
-        getFillColor: [255, 0, 0, 50], // Semi-transparent red
-        getLineColor: [255, 0, 0, 255], // Solid red border
-        lineWidthMinPixels: 2,
-        pickable: false,
-    });
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
