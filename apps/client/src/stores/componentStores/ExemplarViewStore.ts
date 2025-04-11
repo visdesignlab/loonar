@@ -26,6 +26,7 @@ export interface ExemplarTrack {
 
 export interface Cell {
     time: number;
+    trackId: string;
     frame: number;
     value: number;
     x: number;
@@ -555,6 +556,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 agg.maxValue,
                 array_agg(
                 ARRAY[
+                    n.track_id,
                     n."${timeColumn}",
                     n."Frame ID",
                     n."${attributeColumn}",
@@ -615,6 +617,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 agg.maxValue,
                 array_agg(
                     ARRAY[
+                        n.track_id,
                         n."${timeColumn}",
                         n."Frame ID",
                         n."${attributeColumn}",
@@ -658,11 +661,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
                 // Map the returned array to Cell[] with BigInt conversion
                 const mappedData: Cell[] = data.map((d: any[]) => ({
-                    time: d[0], // Convert BigInt to Number
-                    frame: d[1], // Convert BigInt to Number
-                    value: d[2], // Convert BigInt to Number
-                    x: d[3],
-                    y: d[4],
+                    trackId: d[0].toString(), // Convert BigInt to String
+                    time: d[1], // Convert BigInt to Number
+                    frame: d[2], // Convert BigInt to Number
+                    value: d[3], // Convert BigInt to Number
+                    x: d[4],
+                    y: d[5],
                 }));
 
                 return {
