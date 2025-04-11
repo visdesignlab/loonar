@@ -22,7 +22,7 @@ import {
     overlaps1D,
     scaleLengthForConstantVisualSize,
 } from '@/util/imageSnippets';
-import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useCellMetaData} from '@/stores/dataStores/cellMetaDataStore';
 import { storeToRefs } from 'pinia';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
 import SnippetSegmentationOutlineLayer from '../layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
@@ -51,9 +51,7 @@ import { format } from 'd3-format';
 import { ScrollUpDownController } from './ScrollUpDownController';
 import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
-import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import type { Feature } from 'geojson';
-import type { Polygon } from 'geojson';
 
  
 const globalSettings = useGlobalSettings();
@@ -76,8 +74,6 @@ const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const { hoveredCellIndex } = storeToRefs(dataPointSelectionUntrracked);
 const looneageViewStore = useLooneageViewStore();
 
-const segmentationStore = useSegmentationStore();
-
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
     datasetSelectionStore
@@ -93,6 +89,13 @@ const {
     selectedAttribute,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
+
+interface SnippetCellInfo {
+    cell: Cell;
+    trackId: string;
+    destinationBottomLeft: [number, number];
+    hovered: boolean;
+}
 
 // Reactive reference for totalExperimentTime
 const totalExperimentTime = ref(0);
@@ -419,7 +422,7 @@ async function loadPixelSource(locationId: string, url: string) {
 }
 
 async function loadPixelSources() {
-    const exemplarUrls = exemplarViewStore.getExemplarUrls();
+    const exemplarUrls = exemplarViewStore.getExemplarImageUrls();
     const locationIds = Array.from(exemplarUrls.keys());
     const concurrencyLimit = 100; // adjust this number as needed
     let index = 0;
@@ -483,7 +486,8 @@ onBeforeUnmount(() => {
 });
 
 let deckGLLayers: any[] = [];
-
+const currentSnippetCellInfo = ref<SnippetCellInfo[]>();
+let cellSegmentationPolygon = ref<Feature>();
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
@@ -491,20 +495,32 @@ async function renderDeckGL(): Promise<void> {
     recalculateExemplarYOffsets();
 
     deckGLLayers = [];
+    // Find the segmentation for this cell. TEST FOR NOW
+    const cache = ref(
+            new LRUCache<string, Feature>({
+                max: 25_000,
+                // each item is small (1-2 KB)
+                fetchMethod: async (jsonUrl, staleValue, { signal }) => {
+                    return (await fetch(jsonUrl, { signal }).then((res) =>
+                        res.json()
+                    )) as Feature;
+                },
+            })
+        );
+        // Get the corresponding segmentation information for this cell.
+        const url = `http://localhost/data/MCF7DrugResponsePanelA_cellgrowthutiltes/loc_1/segmentations/cells/1-1.json`;
+        cellSegmentationPolygon.value = await cache.value.fetch(url) as Feature;
+
 
     deckGLLayers.push(createSidewaysHistogramLayer());
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers.push(createTimeWindowLayer());
-    deckGLLayers.push(createKeyFrameImageLayers());
+    if (cellSegmentationPolygon.value != null) {
+        console.log('[ExemplarView] cellSegmentationPolygon:', cellSegmentationPolygon.value);
+        deckGLLayers.push(createKeyFrameImageLayers());
+    }
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
-    
-    // Save segmentation data for every cell
-    const segmentationResults = await segmentationStore.getCellSegmentations(cellMetaData.cellArray || []);
-    cellSegmentationData.value = (segmentationResults || []).filter(
-        (feature): feature is Feature<Polygon> => feature.geometry.type === 'Polygon'
-    );
-
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
@@ -514,7 +530,6 @@ async function renderDeckGL(): Promise<void> {
     });
     deckgl.value.redraw();
 }
-
 const exemplarTracksOnScreen = computed<ExemplarTrack[]>(() => {
     return exemplarTracks.value.filter((exemplar) => {
         const renderInfo = exemplarRenderInfo.value.get(
@@ -839,12 +854,12 @@ function handleCellImageEvents(
   if (action === 'click') {
     selectedExemplar.value = exemplar;
     selectedCell.value = cell;
-    selectedCellImageLayers.value.push(cellImageEventsLayer);
+    const layer = cellImageEventsLayer; if (layer) {selectedCellImageLayers.value.push(layer);}
   } else if (action === 'hover') {
     hoveredExemplar.value = exemplar;
     hoveredCell.value = cell;
     // Reset hovered layers before adding the new layer
-    hoveredCellImageLayer.value = [cellImageEventsLayer];
+    const layer = cellImageEventsLayer; if (layer) {hoveredCellImageLayer.value.push(layer);}
   }
 
   // Re-render Deck.gl layers
@@ -1602,7 +1617,7 @@ function handlePinClick(
     event: any,
     firstExemplar: ExemplarTrack
 ) {
-    console.log('Dummy event: Pin clicked', info.object);
+    // console.log('Dummy event: Pin clicked', info.object);
 }
 function handlePinDragStart(
     info: PickingInfo,
@@ -1677,9 +1692,9 @@ function createKeyFrameImageLayers(): CellSnippetsLayer[] {
     const keyFrameImageLayers: CellSnippetsLayer[] = [];
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
-        const exemplarUrls = exemplarViewStore.getExemplarUrls();
+        const exemplarImageUrls = exemplarViewStore.getExemplarImageUrls();
         if (pixelSources.value && !pixelSources.value[locationId]) {
-            const url = exemplarUrls.get(locationId);
+            const url = exemplarImageUrls.get(locationId);
             if (url) {
                 loadPixelSource(locationId, url);
             } else {
@@ -1815,7 +1830,8 @@ const lruCache = new LRUCache({ max: 500 });
 const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
     []
 );
-const cellSegmentationData = ref<Feature[]>();
+// const cellSegmentationData = ref<Feature[]>();
+// const snippetCellInfo: SnippetCellInfo[] = [];
 
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
@@ -1845,7 +1861,7 @@ function createExemplarImageKeyFramesLayer(
 
     // Get viewConfiguration details for snippet placement.
     const viewConfig = viewConfiguration.value;
-    // const snippetWidth = viewConfig.snippetDisplayWidth;
+
     const snippetDestWidth = scaleForConstantVisualSize(
         viewConfig.snippetDisplayWidth
     );
@@ -1878,7 +1894,14 @@ function createExemplarImageKeyFramesLayer(
             (exemplar.maxTime - exemplar.minTime)
         );
     };
+
+    // Order of key frames.
     const keyFrames = getKeyFrameOrder(exemplar);
+    const exemplarSegmentationData = [];
+
+    // For each key frame image:
+    // 1. Assign the image's coordinate destination
+    // 2. Find the proper sementation, assign the segmentation's coordinate destination to be the same as the image's
     for (const { index, nearestDistance } of keyFrames) {
         const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
         if (nearestDistanceWidth <= snippetDestWidth) {
@@ -1914,7 +1937,22 @@ function createExemplarImageKeyFramesLayer(
             z: 0,
             snippets: [{ source, destination }],
         });
+
+
+        console.log('cellSegmentationPolygon', cellSegmentationPolygon);
+        console.log('cellSegmentationPolygon coordinates', cellSegmentationPolygon?.value?.geometry?.coordinates);
+        // Calculate the destination coordinates for the segmentation.
+        const [x, y] = [destination[0], destination[1]];
+        // Push the current cell's segmentation data to the segmentationData array.
+        exemplarSegmentationData.push({
+            // @ts-ignore coordinates does exist on geometry
+            polygon: cellSegmentationPolygon?.value.geometry?.coordinates,
+            hovered: cell.isHovered,
+            selected: cell.isSelected,
+            center: [70, 100],
+            offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
     }
+
 
     // Create an instance of the colormap extension.
     const colormapExtension = new AdditiveColormapExtension();
@@ -1934,47 +1972,23 @@ function createExemplarImageKeyFramesLayer(
         cache: lruCache,
     });
 
-    // Build segmentation data for each cell/snippet.
-    const segmentationData = exemplar.data.map(cell => {
-        const feature = cellSegmentationData.value?.find(
-                (feature) =>
-                    feature?.properties?.frame == cell.frame
-            );
-        console.log("Feature:", feature);
-        // Check if geometry is a Polygon before accessing coordinates
-        const polygon =
-            feature && feature.geometry.type === 'Polygon'
-            ? (feature.geometry as Polygon).coordinates
-            : undefined;
-        console.log("Seg Polygon:", polygon);
-        return {
-            polygon: polygon,
-            isHovered: cell.isHovered,
-            selected: cell.isSelected,
-            center: [cell.x, cell.y],
-            offset: [0,0],
-        };
-    })
-    .filter((d) => d.polygon !== undefined);
-
-    console.log("Segmentation Data Final:", segmentationData);
 
     // Create a new segmentation outline layer for these cells.
     const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
         id: `snippet-segmentation-outline-layer-${exemplar.trackId}`,
-        data: segmentationData.filter((d) => !d.isHovered),
+        data: exemplarSegmentationData.filter((d) => !d.hovered),
         // Use the first element of the polygon
         getPath: (d) => d.polygon[0],
         getColor: () => colors.hovered.rgb,
-        getWidth: 2,
+        getWidth: 1.5,
         widthUnits: 'pixels',
         jointRounded: true,
         getCenter: (d: any) => d.center,
         getTranslateOffset: (d: any) => d.offset,
-        zoomX: viewStateMirror.value.zoom[0],
-        scale: looneageViewStore.snippetZoom,
+        zoomX: 0,
+        scale: 1,
         clipSize: looneageViewStore.snippetDestSize,
-        clip: true,
+        clip: false,
     });
     
     // Push the segmentation layer to be rendered alongside the snippet layer.
