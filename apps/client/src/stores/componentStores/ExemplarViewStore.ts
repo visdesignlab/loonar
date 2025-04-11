@@ -134,7 +134,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { experimentDataInitialized, currentExperimentMetadata } =
         storeToRefs(datasetSelectionStore);
 
-    function getExemplarUrls(): Map<string, string> {
+    function getExemplarImageUrls(): Map<string, string> {
         const map = new Map();
         for (const track of exemplarTracks.value) {
             const url = datasetSelectionStore.getLocationMetadata(
@@ -839,7 +839,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     return {
         getExemplarTracks,
-        getExemplarUrls,
+        getExemplarImageUrls,
         exemplarTracks,
         viewConfiguration,
         exemplarHeight,
