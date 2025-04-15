@@ -50,6 +50,7 @@ import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import type { Feature } from 'geojson';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
+import { render } from 'vue';
 
  
 const globalSettings = useGlobalSettings();
@@ -90,6 +91,10 @@ interface SnippetCellInfo {
     trackId: string;
     destinationBottomLeft: [number, number];
     hovered: boolean;
+}
+interface CellImageLayerResult {
+  cellImageLayer: CellSnippetsLayer | null;
+  segmentationLayer: SnippetSegmentationOutlineLayer | null;
 }
 
 // Reactive reference for totalExperimentTime
@@ -840,8 +845,8 @@ function handleCellImageEvents(
   }
 
   // Create an image events layer for the cell
-  const cellImageEventsLayer = createCellImageEventLayer(pixelSource, exemplar, cell);
-  if (!cellImageEventsLayer) {
+  const cellImageLayerResult = createCellImageLayer(pixelSource, exemplar, cell);
+  if (!cellImageLayerResult) {
     console.error('[handleHorizonCellImages] selectedLayer is null');
     return;
   }
@@ -850,16 +855,19 @@ function handleCellImageEvents(
   if (action === 'click') {
     selectedExemplar.value = exemplar;
     selectedCell.value = cell;
-    const layer = cellImageEventsLayer; if (layer) {selectedCellImageLayers.value.push(layer);}
+    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
+    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
+    renderDeckGL(); // Trigger a re-render after updating the layers
+    }
   } else if (action === 'hover') {
     hoveredExemplar.value = exemplar;
     hoveredCell.value = cell;
-    // Reset hovered layers before adding the new layer
-    const layer = cellImageEventsLayer; if (layer) {hoveredCellImageLayer.value.push(layer);}
+    // if (cellImageLayerResult.cellImageLayer) { hoveredCellImageLayer.value.push(cellImageLayerResult.cellImageLayer); }
+    // if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer); }
   }
 
   deckgl.value?.setProps({
-    layers: [deckGLLayers, ...selectedCellImageLayers.value, ...hoveredCellImageLayer.value],
+    layers: [deckGLLayers, cellImageLayerResult.cellImageLayer, cellImageLayerResult.segmentationLayer],
   });
 }
 
@@ -868,11 +876,11 @@ function handleCellImageEvents(
  * This function computes the destination coordinates for the snippet
  * based on the cell's time position and returns a new CellSnippetsLayer.
  */
-function createCellImageEventLayer(
+function createCellImageLayer(
   pixelSource: PixelSource<any>,
   exemplar: ExemplarTrack,
   cell: Cell
-): CellSnippetsLayer | null {
+): CellImageLayerResult  | null {
   // Initialize an array to hold snippet selection(s).
   const selections: Selection[] = [];
   const viewConfig = viewConfiguration.value;
@@ -939,7 +947,7 @@ function createCellImageEventLayer(
   const contrastLimits = [[0, 255]];
   
   // Create and return a new CellSnippetsLayer with the computed settings.
-  const cellImageEventLayer = new CellSnippetsLayer({
+  const cellImageLayer = new CellSnippetsLayer({
     loader: pixelSource,
     id: `cell-image-event-layer-${cell.frame}-${exemplar.trackId}`,
     contrastLimits: contrastLimits,
@@ -950,9 +958,43 @@ function createCellImageEventLayer(
     cache: lruCache,
   });
 
+    // Find the cell's segmentation.
+    const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+        
+    // Calculate the destination coordinates for the segmentation.
+    const [x, y] = [imageSnippetDestination[0], imageSnippetDestination[1]];
+
+    // Push the current cell's segmentation data to the segmentationData array.
+    const imageSegmentationData = [];
+    
+    imageSegmentationData.push({
+        // @ts-ignore coordinates does exist on geometry
+        polygon: cellSegmentationPolygon?.geometry?.coordinates,
+        hovered: cell.isHovered,
+        selected: cell.isSelected,
+        center: [cell.x, cell.y],
+        offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+
   // TODO: Segmentation Layer creation here
+  // Create a new segmentation outline layer for these cells.
+  const segmentationLayer = new SnippetSegmentationOutlineLayer({
+        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
+        data: imageSegmentationData,
+        // Use the first element of the polygon
+        getPath: (d: any) => d.polygon[0],
+        getColor: () => colors.hovered.rgb,
+        getWidth: 1.5,
+        widthUnits: 'pixels',
+        jointRounded: true,
+        getCenter: (d: any) => d.center,
+        getTranslateOffset: (d: any) => d.offset,
+        zoomX: viewStateMirror.value.zoom[0],
+        scale: 1,
+        clipSize: looneageViewStore.snippetDestSize,
+        clip: false,
+    });
   
-  return cellImageEventLayer;
+    return { cellImageLayer, segmentationLayer };
 }
 
 function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
@@ -1941,7 +1983,6 @@ function createExemplarImageKeyFramesLayer(
         });
 
         // Segmentation data for the cell --------------------------
-
         // Find the cell's segmentation.
         const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
         
