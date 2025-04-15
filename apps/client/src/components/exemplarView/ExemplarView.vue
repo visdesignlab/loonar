@@ -858,8 +858,9 @@ function handleCellImageEvents(
     const layer = cellImageEventsLayer; if (layer) {hoveredCellImageLayer.value.push(layer);}
   }
 
-  // Re-render Deck.gl layers
-  renderDeckGL();
+  deckgl.value?.setProps({
+    layers: [deckGLLayers, ...selectedCellImageLayers.value, ...hoveredCellImageLayer.value],
+  });
 }
 
 /**
@@ -955,12 +956,17 @@ function createCellImageEventLayer(
 }
 
 function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
-    if (!info.index || info.index === -1) {
+    // If no coordinate or index indicates no hit, clear the hover state.
+    if (!info.coordinate || info.index === -1) {
         hoveredExemplar.value = null;
-    hoveredCell.value = null;
-    renderDeckGL();
+        hoveredCell.value = null;
+        // Clear hoveredCellImageLayer so the layer goes away.
+        hoveredCellImageLayer.value = [];
+        renderDeckGL();
         return;
     }
+    // Clear previous hover layers before adding a new one.
+    hoveredCellImageLayer.value = [];
     handleCellImageEvents(info, exemplar, 'hover');
 }
 
