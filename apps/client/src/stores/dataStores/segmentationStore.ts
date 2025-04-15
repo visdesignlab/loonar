@@ -10,6 +10,11 @@ import type { Feature } from 'geojson';
 import { LRUCache } from 'lru-cache';
 import { useConfigStore } from '../misc/configStore';
 
+
+// interface LocationSegmentations {
+//     location: string,
+//     segmentations: Feature[];
+// }
 /**
  * Custom store for managing segmentations.
  * @returns An object containing functions to retrieve segmentations.
@@ -66,6 +71,23 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
         return url;
     });
 
+    async function getCellLocationSegmentations(
+        cells: Cell[]
+    ): Promise<Feature[] | undefined> {
+        const promises = cells.map((cell) => getCellSegmentation(cell));
+        return (await Promise.all(promises)).filter(
+            (x) => x != null
+        ) as Feature[];
+    }
+
+    // Based on the frame, the id, and the location, return the feature (segmentation)
+    async function getCellLocationSegmentation (frame: string, trackId: string, location: string): Promise<Feature | undefined> {
+        const locationSegmentationUrl = configStore.getFileUrl(datasetSelectionStore.getLocationMetadata(location)?.segmentationsFolder || '');
+        return await cache.value.fetch(
+            `${locationSegmentationUrl}/cells/${frame}-${trackId}.json`
+        );
+    }
+
     /**
      * Get segmentations for a specific cell.
      * @param cell - The cell object.
@@ -92,6 +114,8 @@ export const useSegmentationStore = defineStore('segmentationStore', () => {
 
     return {
         getFrameSegmentations,
+        getCellLocationSegmentation,
+        getCellLocationSegmentations,
         // getTrackSegmentations,
         getCellSegmentation,
         getCellSegmentations,

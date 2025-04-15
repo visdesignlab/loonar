@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, render, nextTick } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
-import { DetailView, getChannelStats, loadOmeTiff } from '@hms-dbmi/viv';
-import type { PixelData, PixelSource } from '@vivjs/types';
+import { loadOmeTiff } from '@hms-dbmi/viv';
+import type { PixelSource } from '@vivjs/types';
 import {
     ScatterplotLayer,
     PolygonLayer,
@@ -36,15 +36,12 @@ import {
 import { isEqual, cloneDeep, clamp } from 'lodash';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
-import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
-import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useConfigStore } from '@/stores/misc/configStore';
 import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
 import { AdditiveColormapExtension } from '@hms-dbmi/viv';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import {
-    type SelectedSnippet,
     useLooneageViewStore,
 } from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
@@ -52,15 +49,14 @@ import { ScrollUpDownController } from './ScrollUpDownController';
 import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import type { Feature } from 'geojson';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 
  
 const globalSettings = useGlobalSettings();
 const { darkMode } = storeToRefs(globalSettings);
 
 const configStore = useConfigStore();
-const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
-const imageViewerStore = useImageViewerStore();
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const segmentationStore = useSegmentationStore();
 
 const deckGlContainer = ref<HTMLCanvasElement | null>(null);
 const { width: deckGlWidth, height: deckGlHeight } =
@@ -71,7 +67,6 @@ const conditionSelectorStore = useConditionSelectorStore();
 
 const cellMetaData = useCellMetaData();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
-const { hoveredCellIndex } = storeToRefs(dataPointSelectionUntrracked);
 const looneageViewStore = useLooneageViewStore();
 
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -386,32 +381,6 @@ async function loadPixelSource(locationId: string, url: string) {
         pool: loadingPool,
     });
 
-    // Update image dimensions from metadata
-    // imageViewerStoreUntrracked.sizeX =
-    //     loader.value.metadata.Pixels.SizeX;
-    // imageViewerStoreUntrracked.sizeY =
-    //     loader.value.metadata.Pixels.SizeY;
-    // imageViewerStoreUntrracked.sizeT =
-    //     loader.value.metadata.Pixels.SizeT;
-
-    // testRaster.value = await loader.value.data[0].getRaster({
-    //     selection: { c: 0, t: 0, z: 0 },
-    // });
-
-    // if (testRaster.value == null) {
-    //     console.warn('[ExemplarView] testRaster is null.');
-    //     return;
-    // }
-
-    // const copy = testRaster.value.data.slice();
-    // const channelStats = getChannelStats(copy);
-    // contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    // contrastLimitSlider.value.max = channelStats.contrastLimits[1];
-    // imageViewerStore.contrastLimitExtentSlider.min =
-    //     channelStats.domain[0];
-    // imageViewerStore.contrastLimitExtentSlider.max =
-    //     channelStats.domain[1];
-
     // If pixelSources.value is null, first initialize it as an empty object.
     if (!pixelSources.value) {
         pixelSources.value = {};
@@ -485,43 +454,70 @@ onBeforeUnmount(() => {
     exemplarDataInitialized.value = false;
 });
 
+// Segmentation Data ---------------------------------------------------------------------------
+interface LocationSegmentation {
+    location: string,
+    segmentation: Feature;
+}
+let cellSegmentationData = ref<LocationSegmentation[]>([]);
+async function getCellSegmentationData() {
+    // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
+    // For every exemplar track, iterate through its cells to get segmentation and location
+    for (const exemplar of exemplarTracks.value) {
+        if (!exemplar.data || exemplar.data.length === 0) continue;
+        for (const cell of exemplar.data) {
+            const segmentation = await segmentationStore.getCellLocationSegmentation(
+                cell.frame.toString(),
+                exemplar.trackId,
+                exemplar.locationId
+            );
+            if (segmentation) {
+                cellSegmentationData.value.push({
+                    location: exemplar.locationId,
+                    segmentation: segmentation,
+                });
+            }
+        }
+    }
+}
+function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
+    console.log("Cell Segmentation Data: ", cellSegmentationData.value);
+    const cellSegmentation = cellSegmentationData.value?.find(
+        (locationSegmentation) =>
+            locationSegmentation?.location == location &&
+            locationSegmentation?.segmentation?.properties?.id == trackId &&
+            locationSegmentation?.segmentation?.properties?.frame == frame
+    );
+
+    return cellSegmentation ? cellSegmentation.segmentation : undefined;
+}
+
+// Main rendering function -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
-const currentSnippetCellInfo = ref<SnippetCellInfo[]>();
-let cellSegmentationPolygon = ref<Feature>();
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
 
     recalculateExemplarYOffsets();
 
+    await getCellSegmentationData();
+
     deckGLLayers = [];
-    // Find the segmentation for this cell. TEST FOR NOW
-    const cache = ref(
-            new LRUCache<string, Feature>({
-                max: 25_000,
-                // each item is small (1-2 KB)
-                fetchMethod: async (jsonUrl, staleValue, { signal }) => {
-                    return (await fetch(jsonUrl, { signal }).then((res) =>
-                        res.json()
-                    )) as Feature;
-                },
-            })
-        );
-        // Get the corresponding segmentation information for this cell.
-        const url = `http://localhost/data/MCF7DrugResponsePanelA_cellgrowthutiltes/loc_1/segmentations/cells/1-1.json`;
-        cellSegmentationPolygon.value = await cache.value.fetch(url) as Feature;
-
-
     deckGLLayers.push(createSidewaysHistogramLayer());
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers.push(createTimeWindowLayer());
-    if (cellSegmentationPolygon.value != null) {
-        console.log('[ExemplarView] cellSegmentationPolygon:', cellSegmentationPolygon.value);
-        deckGLLayers.push(createKeyFrameImageLayers());
-    }
+    // devin pull out the layer + backing data
+    deckGLLayers.push(createKeyFrameImageLayers());
+
+    // use backing data to fetch all seg data. do not await. instead .then to populate ref var
+    // use ref var to render segmentations
+    // devin somewhere else watch(ref var)
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
+
+    // This should be part of createKeyFrameImageLayers? 
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
+
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
 
@@ -1701,6 +1697,7 @@ function createKeyFrameImageLayers(): CellSnippetsLayer[] {
                 console.error(`URL not found for locationId: ${locationId}`);
             }
         }
+        // devin collect layer + backing data (cells + position arguments)
         const exemplarImageKeyFramesLayer = createExemplarImageKeyFramesLayer(
             pixelSources.value[locationId],
             exemplar
@@ -1709,7 +1706,7 @@ function createKeyFrameImageLayers(): CellSnippetsLayer[] {
             keyFrameImageLayers.push(exemplarImageKeyFramesLayer);
         }
     }
-    return keyFrameImageLayers;
+    return keyFrameImageLayers; //devin return combined list of backing data as well
 }
 
 function valueExtent(track: ExemplarTrack): number {
@@ -1830,8 +1827,6 @@ const lruCache = new LRUCache({ max: 500 });
 const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
     []
 );
-// const cellSegmentationData = ref<Feature[]>();
-// const snippetCellInfo: SnippetCellInfo[] = [];
 
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
@@ -1931,6 +1926,7 @@ function createExemplarImageKeyFramesLayer(
         const y2 = y1 - snippetDestHeight;
         const destination: BBox = [x1, y1, x2, y2];
 
+        // Selections is the image data for the cell.
         selections.push({
             c: 0,
             t: cell.frame - 1,
@@ -1938,18 +1934,21 @@ function createExemplarImageKeyFramesLayer(
             snippets: [{ source, destination }],
         });
 
+        // Segmentation data for the cell --------------------------
 
-        console.log('cellSegmentationPolygon', cellSegmentationPolygon);
-        console.log('cellSegmentationPolygon coordinates', cellSegmentationPolygon?.value?.geometry?.coordinates);
+        // Find the cell's segmentation.
+        const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+        
         // Calculate the destination coordinates for the segmentation.
         const [x, y] = [destination[0], destination[1]];
+
         // Push the current cell's segmentation data to the segmentationData array.
         exemplarSegmentationData.push({
             // @ts-ignore coordinates does exist on geometry
-            polygon: cellSegmentationPolygon?.value.geometry?.coordinates,
+            polygon: cellSegmentationPolygon?.geometry?.coordinates,
             hovered: cell.isHovered,
             selected: cell.isSelected,
-            center: [70, 100],
+            center: [cell.x, cell.y],
             offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
     }
 
@@ -1975,17 +1974,17 @@ function createExemplarImageKeyFramesLayer(
 
     // Create a new segmentation outline layer for these cells.
     const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
-        id: `snippet-segmentation-outline-layer-${exemplar.trackId}`,
+        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
         data: exemplarSegmentationData.filter((d) => !d.hovered),
         // Use the first element of the polygon
-        getPath: (d) => d.polygon[0],
+        getPath: (d: any) => d.polygon[0],
         getColor: () => colors.hovered.rgb,
         getWidth: 1.5,
         widthUnits: 'pixels',
         jointRounded: true,
         getCenter: (d: any) => d.center,
         getTranslateOffset: (d: any) => d.offset,
-        zoomX: 0,
+        zoomX: viewStateMirror.value.zoom[0],
         scale: 1,
         clipSize: looneageViewStore.snippetDestSize,
         clip: false,
@@ -1994,6 +1993,7 @@ function createExemplarImageKeyFramesLayer(
     // Push the segmentation layer to be rendered alongside the snippet layer.
     snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
 
+    //devin return layer object and data object that has list of cells and position info
     return snippetLayer;
 }
 
