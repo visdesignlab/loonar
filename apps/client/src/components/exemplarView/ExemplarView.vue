@@ -507,7 +507,7 @@ async function renderDeckGL(): Promise<void> {
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers.push(createTimeWindowLayer());
     // devin pull out the layer + backing data
-    deckGLLayers.push(createKeyFrameImageLayers());
+    deckGLLayers.push(createExemplarImageKeyFrameLayers());
 
     // use backing data to fetch all seg data. do not await. instead .then to populate ref var
     // use ref var to render segmentations
@@ -1687,7 +1687,7 @@ function groupExemplarsByCondition(
     return groups;
 }
 
-function createKeyFrameImageLayers(): CellSnippetsLayer[] {
+function createExemplarImageKeyFrameLayers(): CellSnippetsLayer[] {
     if (!pixelSources.value) {
         return [];
     }
