@@ -136,10 +136,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     function getExemplarImageUrls(): Map<string, string> {
         const map = new Map();
+        const metadataLookup = new Map()
+        for (const locationMetadata of currentExperimentMetadata.value
+            ?.locationMetadataList ?? []) {
+            metadataLookup.set(locationMetadata.id, locationMetadata);
+        }
         for (const track of exemplarTracks.value) {
-            const url = datasetSelectionStore.getLocationMetadata(
-                track.locationId
-            )?.imageDataFilename;
+            const locationMetadata = metadataLookup.get(track.locationId);
+            const url = locationMetadata?.imageDataFilename;
             if (url) {
                 map.set(track.locationId, url);
             }

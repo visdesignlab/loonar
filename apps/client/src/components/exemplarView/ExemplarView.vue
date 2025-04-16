@@ -288,9 +288,9 @@ watch(
                                 '.2f'
                             );
                             const formattedValue =
-                                hoveredCell.value !== null
+                                hoveredCellInfo.value !== null
                                     ? customNumberFormatter(
-                                          hoveredCell.value.value,
+                                          hoveredCellInfo.value[1].value,
                                           '.3f'
                                       )
                                     : '';
@@ -436,17 +436,6 @@ watch(
 
 // --------------------------------------------------------------------------------------------
 
-// 4. Add a new watcher on exemplarDataInitialized.
-// TODO: Move exemplarDataInitialized to the store
-watch(
-    exemplarDataInitialized,
-    (initialized) => {
-        if (initialized) {
-            renderDeckGL();
-        }
-    },
-    { immediate: false }
-);
 
 // Clean up Deck.gl on component unmount
 onBeforeUnmount(() => {
@@ -505,41 +494,39 @@ async function renderDeckGL(): Promise<void> {
 
     recalculateExemplarYOffsets();
 
+    // Needs to not loop over every exemplar (only on screen)
     if (!cellSegmentationDataInitialized.value) {
-    console.log("Initializing cell segmentation data");
-    await getCellSegmentationData();
-  }
+        console.log("Initializing cell segmentation data");
+        await getCellSegmentationData();
+    }
 
     deckGLLayers = [];
     deckGLLayers.push(createSidewaysHistogramLayer());
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers.push(createTimeWindowLayer());
-    // devin pull out the layer + backing data
-    deckGLLayers.push(createExemplarImageKeyFrameLayers());
-
-    // use backing data to fetch all seg data. do not await. instead .then to populate ref var
-    // use ref var to render segmentations
-    // devin somewhere else watch(ref var)
+    deckGLLayers.push(...createExemplarImageKeyFrameLayers());
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
+    deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
+    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
 
-    // This should be part of createKeyFrameImageLayers? 
-    deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
 
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
-
 
     deckgl.value.setProps({
         layers: deckGLLayers,
     });
     deckgl.value.redraw();
 }
-const exemplarTracksOnScreen = computed<ExemplarTrack[]>(() => {
-    return exemplarTracks.value.filter((exemplar) => {
+
+
+
+const exemplarTracksOnScreen = computed(() => {
+    return exemplarTracks.value.filter((exemplar: ExemplarTrack) => {
         const renderInfo = exemplarRenderInfo.value.get(
             uniqueExemplarKey(exemplar)
         );
         return renderInfo ? renderInfo.onScreen : false;
-    });
+    }) as ExemplarTrack[];
 });
 
 const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
@@ -734,6 +721,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
 // Create a reactive reference for the hovered outline layer.
 const hoveredOutlineLayer = ref<PolygonLayer | null>(null);
+const horizonTextLayer = ref<TextLayer | null>(null);
 
 function createHoveredHorizonOutlineLayer() {
   // Find the exemplar corresponding to the hovered value
@@ -748,7 +736,7 @@ function createHoveredHorizonOutlineLayer() {
     renderInfo.yOffset -
     viewConfiguration.value.timeBarHeightOuter;
 
-  hoveredOutlineLayer.value = new PolygonLayer({
+    hoveredOutlineLayer.value = new PolygonLayer({
     id: `exemplar-hovered-outline-${uniqueExemplarKey(exemplar)}`,
     data: [
       {
@@ -774,7 +762,33 @@ function createHoveredHorizonOutlineLayer() {
     updateTriggers: {
       hoveredExemplar: hoveredExemplar.value,
     },
-  });
+});
+
+  const label = `${exemplarViewStore.selectedAggregation.value} ${selectedAttribute.value}`;
+  console.log("label", label);
+  const labelData = [
+    {
+      position: [
+        0, yOffset
+      ],
+      label: label,
+    },
+  ];
+   horizonTextLayer.value = new TextLayer({
+        id: `horizon-chart-label-layer-${uniqueExemplarKey(exemplar)}`,
+        data: labelData,
+        getPosition: (d: any) => d.position,
+        getText: (d: any) => d.label,
+        getSize: 12,
+        getAngle: 0,
+        getTextAnchor: 'start',
+        getAlignmentBaseline: 'bottom',
+        getColor: [0, 0, 0, 255],
+        backgroundPadding: [5, 2],
+        background: true,
+        backgroundColor: [255, 255, 255, 160],
+    });
+    console.log("HorizonTextLayer:", horizonTextLayer.value);
 }
 
 /**
@@ -807,7 +821,7 @@ const selectedCell = ref<Cell | null>(null);
 const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
 // The currently hovered exemplar, its currently hovered value, and hovered image layers.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
-const hoveredCell = ref<Cell | null>(null);
+const hoveredCellInfo = ref<[BBox, Cell] | null>(null);
 const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
 
 /**
@@ -875,52 +889,13 @@ function createCellImageEventsLayer(
 
   // Update state based on the action type (click or hover)
   if (action === 'hover') {
-    hoveredCell.value = cell;
+    // The currently hovered bounding box for the cell image layer.
+    const hoveredBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
+    hoveredCellInfo.value = [hoveredBBox,cell];
 
     // Handle collisions with existing cell images and the hovered cell image --------------
 
-    // The currently hovered bounding box for the cell image layer.
-    const hoveredBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
-
-    // If any existing cell image layers (selectedCellImageLayers or KeyFrameImageLayers) clash with this hover layer, 'hide' them.
-    // For debugging purposes, print which layer's bounding box overlapped with the hovered layer.
-//     if (hoveredBBox) {
-//         console.log("hovered b box exists:", hoveredBBox);
-//         selectedCellImageLayers.value = selectedCellImageLayers.value.filter(layer => {
-//         if (layer.snippetBBox && rectsOverlap(layer.snippetBBox, hoveredBBox)) {
-//             console.log(
-//             "[Debug] Overlapping selectedCellImageLayer bbox:",
-//             layer.snippetBBox,
-//             "overlaps hovered bbox:",
-//             hoveredBBox
-//             );
-//             return false;
-//         }
-//         return true;
-//         });
-//         keyFrameImageLayers.value = keyFrameImageLayers.value.filter(layer => {
-//             console.log("layer:", layer);
-//             console.log("layer bbox:", layer.snippetBBox);
-//         if (layer.snippetBBox && rectsOverlap(layer.snippetBBox, hoveredBBox)) {
-//             console.log(
-//             "[Debug] Overlapping keyFrameImageLayer bbox:",
-//             layer.snippetBBox,
-//             "overlaps hovered bbox:",
-//             hoveredBBox
-//             );
-//             return false;
-//         }
-//         return true;
-//         });
-//   }
-
-    //  'Hide' the first keyframeimagelayer.
-    // if (keyFrameImageLayers.value.length > 0) {
-    //     const firstKeyFrameLayer = keyFrameImageLayers.value[0];
-    //     firstKeyFrameLayer.setProps({
-    //         visible: false,
-    //     });
-    // }
+    renderDeckGL();
   }
   else if (action === 'click') {
     selectedExemplar.value = exemplar;
@@ -1057,7 +1032,7 @@ function createCellImageLayer(
   // TODO: Segmentation Layer creation here
   // Create a new segmentation outline layer for these cells.
   const segmentationLayer = new SnippetSegmentationOutlineLayer({
-        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
+        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
         data: imageSegmentationData,
         // Use the first element of the polygon
         getPath: (d: any) => d.polygon[0],
@@ -1081,18 +1056,20 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
     // Set hoveredExemplar based on the info index
     if (info.index === undefined || info.index === -1) {
+        console.log("note hovered");
         hoveredExemplar.value = null;
-        hoveredCell.value = null;
+        hoveredCellInfo.value = null;
+        hoveredOutlineLayer.value = null;
+        renderDeckGL();
         return;
     }
     hoveredExemplar.value = exemplar;
+    createHoveredHorizonOutlineLayer();
 
     // Cell image + segmentation appears on mouse hover
     const cellImageEventsLayer = createCellImageEventsLayer(info, exemplar, 'hover');
 
-    // Creates the highlighted outline of a horizon chart when hovered.
-    createHoveredHorizonOutlineLayer();
-    deckgl.value?.setProps({layers: [...deckGLLayers, cellImageEventsLayer?.cellImageLayer, cellImageEventsLayer?.segmentationLayer, hoveredOutlineLayer.value]});
+    deckgl.value?.setProps({layers: [...deckGLLayers, cellImageEventsLayer?.cellImageLayer, cellImageEventsLayer?.segmentationLayer]});
 }
 
 function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
@@ -1812,32 +1789,31 @@ function groupExemplarsByCondition(
     return groups;
 }
 
-function createExemplarImageKeyFrameLayers(): CellSnippetsLayer[] {
-    if (!pixelSources.value) {
-        return [];
+function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] {
+  const keyFrameLayers: (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] = [];
+  if (!pixelSources.value) return keyFrameLayers;
+  const exemplarImageUrls = exemplarViewStore.getExemplarImageUrls();
+  for (const exemplar of exemplarTracksOnScreen.value) {
+    const locationId = exemplar.locationId;
+    if (pixelSources.value && !pixelSources.value[locationId]) {
+      const url = exemplarImageUrls.get(locationId);
+      if (url) {
+        loadPixelSource(locationId, url);
+      } else {
+        console.error(`URL not found for locationId: ${locationId}`);
+      }
     }
-    keyFrameImageLayers.value = [];
-    for (const exemplar of exemplarTracksOnScreen.value) {
-        const locationId = exemplar.locationId;
-        const exemplarImageUrls = exemplarViewStore.getExemplarImageUrls();
-        if (pixelSources.value && !pixelSources.value[locationId]) {
-            const url = exemplarImageUrls.get(locationId);
-            if (url) {
-                loadPixelSource(locationId, url);
-            } else {
-                console.error(`URL not found for locationId: ${locationId}`);
-            }
-        }
-        // devin collect layer + backing data (cells + position arguments)
-        const exemplarImageKeyFramesLayer = createExemplarImageKeyFramesLayer(
-            pixelSources.value[locationId],
-            exemplar
-        );
-        if (exemplarImageKeyFramesLayer) {
-            keyFrameImageLayers.value.push(exemplarImageKeyFramesLayer);
-        }
+    const keyFrameLayersWrapper = createExemplarImageKeyFramesLayer(pixelSources.value[locationId], exemplar);
+    if (keyFrameLayersWrapper) {
+      if (keyFrameLayersWrapper.snippetLayer) {
+        keyFrameLayers.push(keyFrameLayersWrapper.snippetLayer);
+      }
+      if (keyFrameLayersWrapper.snippetSegmentationOutlineLayer) {
+        keyFrameLayers.push(keyFrameLayersWrapper.snippetSegmentationOutlineLayer);
+      }
     }
-    return keyFrameImageLayers.value; //devin return combined list of backing data as well
+  }
+  return keyFrameLayers;
 }
 
 function valueExtent(track: ExemplarTrack): number {
@@ -1964,7 +1940,7 @@ const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
 function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
     exemplar: ExemplarTrack
-): CellSnippetsLayer | null {
+): { snippetLayer: CellSnippetsLayer | null; snippetSegmentationOutlineLayer: SnippetSegmentationOutlineLayer | null } {
     let selections: Selection[] = [];
     // Check that the pixelSource is ready.
     if (!pixelSource) {
@@ -1974,7 +1950,7 @@ function createExemplarImageKeyFramesLayer(
         console.warn(
             '[createExemplarImageKeyFramesLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
         );
-        return null; // Do not create the layer until pixelSource.value is available.
+        return { snippetLayer: null, snippetSegmentationOutlineLayer: null }; // Do not create the layer until pixelSource.value is available.
     }
 
     // Check that exemplarTracks is available.
@@ -1982,7 +1958,7 @@ function createExemplarImageKeyFramesLayer(
         console.error(
             '[createExemplarImageKeyFramesLayer] No exemplar tracks available!'
         );
-        return null;
+        return { snippetLayer: null, snippetSegmentationOutlineLayer: null };
     }
 
     // Get viewConfiguration details for snippet placement.
@@ -2027,13 +2003,13 @@ function createExemplarImageKeyFramesLayer(
 
     // For each key frame image:
     // 1. Assign the image's coordinate destination
-    // 2. Find the proper sementation, assign the segmentation's coordinate destination to be the same as the image's
+    // 2. Find the proper segmentation, assign the segmentation's coordinate destination to be the same as the image's
     for (const { index, nearestDistance } of keyFrames) {
 
         // Find the cell in exemplar.data whose time is closest to 'time'
         const cell = exemplar.data[index];
         const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
-        if (nearestDistanceWidth <= snippetDestWidth) {
+        if (nearestDistanceWidth <= snippetDestWidth + 4) {
             break;
         }
 
@@ -2057,29 +2033,42 @@ function createExemplarImageKeyFramesLayer(
         const y2 = y1 - snippetDestHeight;
         const destination: BBox = [x1, y1, x2, y2];
 
-        // Selections is the image data for the cell.
-        selections.push({
-            c: 0,
-            t: cell.frame - 1,
-            z: 0,
-            snippets: [{ source, destination }],
-        });
-
-        // Segmentation data for the cell --------------------------
-        // Find the cell's segmentation.
-        const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+        // Check for collisions with the hoveredCell.
+        const hoveredCellBBox = hoveredCellInfo.value?.[0];
         
-        // Calculate the destination coordinates for the segmentation.
-        const [x, y] = [destination[0], destination[1]];
+        const cellCollisionDetected = hoveredCellBBox 
+            ? rectsOverlap(destination, hoveredCellBBox) 
+            : false;
 
-        // Push the current cell's segmentation data to the segmentationData array.
-        exemplarSegmentationData.push({
-            // @ts-ignore coordinates does exist on geometry
-            polygon: cellSegmentationPolygon?.geometry?.coordinates,
-            hovered: cell.isHovered,
-            selected: cell.isSelected,
-            center: [cell.x, cell.y],
-            offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+        console.log('HoveredCellBbox:', hoveredCellBBox);
+        console.log('Destination:', destination);
+        console.log('Cell Collision Detected:', cellCollisionDetected);
+
+        if (!cellCollisionDetected) {
+            // Selections is the image data for the cell.
+            selections.push({
+                c: 0,
+                t: cell.frame - 1,
+                z: 0,
+                snippets: [{ source, destination }],
+            });
+
+            // Segmentation data for the cell --------------------------
+            // Find the cell's segmentation.
+            const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+            
+            // Calculate the destination coordinates for the segmentation.
+            const [x, y] = [destination[0], destination[1]];
+
+            // Push the current cell's segmentation data to the segmentationData array.
+            exemplarSegmentationData.push({
+                // @ts-ignore coordinates does exist on geometry
+                polygon: cellSegmentationPolygon?.geometry?.coordinates,
+                hovered: cell.isHovered,
+                selected: cell.isSelected,
+                center: [cell.x, cell.y],
+                offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+        }
     }
 
 
@@ -2100,7 +2089,6 @@ function createExemplarImageKeyFramesLayer(
         colormap: 'viridis',
         cache: lruCache,
     });
-
 
     // Create a new segmentation outline layer for these cells.
     const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
@@ -2124,12 +2112,10 @@ function createExemplarImageKeyFramesLayer(
         clipSize: looneageViewStore.snippetDestSize,
         clip: false,
     });
-    
     // Push the segmentation layer to be rendered alongside the snippet layer.
     snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
 
-    //devin return layer object and data object that has list of cells and position info
-    return snippetLayer;
+    return { snippetLayer, snippetSegmentationOutlineLayer };
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
