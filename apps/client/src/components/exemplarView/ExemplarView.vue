@@ -483,6 +483,7 @@ async function getCellSegmentationData() {
             }
         }
     }
+    cellSegmentationDataInitialized.value = true;
 }
 function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
     const cellSegmentation = cellSegmentationData.value?.find(
@@ -497,13 +498,17 @@ function getCellSegmentationPolygon(location: string, trackId: string, frame: st
 
 // Main rendering function -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
+const cellSegmentationDataInitialized = ref(false);
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
 
     recalculateExemplarYOffsets();
 
+    if (!cellSegmentationDataInitialized.value) {
+    console.log("Initializing cell segmentation data");
     await getCellSegmentationData();
+  }
 
     deckGLLayers = [];
     deckGLLayers.push(createSidewaysHistogramLayer());
@@ -516,7 +521,6 @@ async function renderDeckGL(): Promise<void> {
     // use ref var to render segmentations
     // devin somewhere else watch(ref var)
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
-    deckGLLayers = deckGLLayers.concat(hoveredCellImageLayer.value);
 
     // This should be part of createKeyFrameImageLayers? 
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
@@ -795,11 +799,13 @@ function computeRealTimePoint(exemplar: ExemplarTrack, estimatedTime: number): n
   ).time;
 }
 
-// The currently hovered exemplar and its currently hovered value.
+// The current key frame image layers.
+const keyFrameImageLayers = ref<CellSnippetsLayer[]>([]);
+// The currently selected exemplar, its currently selected value, and selected image layers.
 const selectedExemplar = ref<ExemplarTrack | null>(null);
 const selectedCell = ref<Cell | null>(null);
 const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
-// The currently hovered exemplar and its currently hovered value.
+// The currently hovered exemplar, its currently hovered value, and hovered image layers.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
 const hoveredCell = ref<Cell | null>(null);
 const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
@@ -868,22 +874,75 @@ function createCellImageEventsLayer(
   }
 
   // Update state based on the action type (click or hover)
-  if (action === 'click') {
+  if (action === 'hover') {
+    hoveredCell.value = cell;
+
+    // Handle collisions with existing cell images and the hovered cell image --------------
+
+    // The currently hovered bounding box for the cell image layer.
+    const hoveredBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
+
+    // If any existing cell image layers (selectedCellImageLayers or KeyFrameImageLayers) clash with this hover layer, 'hide' them.
+    // For debugging purposes, print which layer's bounding box overlapped with the hovered layer.
+//     if (hoveredBBox) {
+//         console.log("hovered b box exists:", hoveredBBox);
+//         selectedCellImageLayers.value = selectedCellImageLayers.value.filter(layer => {
+//         if (layer.snippetBBox && rectsOverlap(layer.snippetBBox, hoveredBBox)) {
+//             console.log(
+//             "[Debug] Overlapping selectedCellImageLayer bbox:",
+//             layer.snippetBBox,
+//             "overlaps hovered bbox:",
+//             hoveredBBox
+//             );
+//             return false;
+//         }
+//         return true;
+//         });
+//         keyFrameImageLayers.value = keyFrameImageLayers.value.filter(layer => {
+//             console.log("layer:", layer);
+//             console.log("layer bbox:", layer.snippetBBox);
+//         if (layer.snippetBBox && rectsOverlap(layer.snippetBBox, hoveredBBox)) {
+//             console.log(
+//             "[Debug] Overlapping keyFrameImageLayer bbox:",
+//             layer.snippetBBox,
+//             "overlaps hovered bbox:",
+//             hoveredBBox
+//             );
+//             return false;
+//         }
+//         return true;
+//         });
+//   }
+
+    //  'Hide' the first keyframeimagelayer.
+    // if (keyFrameImageLayers.value.length > 0) {
+    //     const firstKeyFrameLayer = keyFrameImageLayers.value[0];
+    //     firstKeyFrameLayer.setProps({
+    //         visible: false,
+    //     });
+    // }
+  }
+  else if (action === 'click') {
     selectedExemplar.value = exemplar;
     selectedCell.value = cell;
     if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
     if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
     renderDeckGL(); // Trigger a re-render after updating the layers
     }
-  } else if (action === 'hover') {
-    hoveredCell.value = cell;
-    // if (cellImageLayerResult.cellImageLayer) { hoveredCellImageLayer.value.push(cellImageLayerResult.cellImageLayer); }
-    // if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer); }
-  }
+  } 
 
   return cellImageLayerResult;
 }
 
+function rectsOverlap(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): boolean {
+  // They do not overlap if one is left of or above the other
+  return !(
+    bbox1[2] <= bbox2[0] || // bbox1 right is left of bbox2 left
+    bbox1[0] >= bbox2[2] || // bbox1 left is right of bbox2 right
+    bbox1[3] >= bbox2[1] || // bbox1 bottom is above bbox2 top
+    bbox1[1] <= bbox2[3]    // bbox1 top is below bbox2 bottom
+  );
+}
 /**
  * Createel a cell image layer for click/hover events.
  * This function computes the destination coordinates for the snippet
@@ -969,6 +1028,13 @@ function createCellImageLayer(
     extensions: [colormapExtension],
     colormap: 'viridis',
     cache: lruCache,
+  });
+
+  // Attach the computed bbox using Object.defineProperty.
+  Object.defineProperty(cellImageLayer, 'snippetBBox', {
+    value: imageSnippetDestination,
+    writable: true,
+    configurable: true,
   });
 
     // Find the cell's segmentation.
@@ -1750,7 +1816,7 @@ function createExemplarImageKeyFrameLayers(): CellSnippetsLayer[] {
     if (!pixelSources.value) {
         return [];
     }
-    const keyFrameImageLayers: CellSnippetsLayer[] = [];
+    keyFrameImageLayers.value = [];
     for (const exemplar of exemplarTracksOnScreen.value) {
         const locationId = exemplar.locationId;
         const exemplarImageUrls = exemplarViewStore.getExemplarImageUrls();
@@ -1768,10 +1834,10 @@ function createExemplarImageKeyFrameLayers(): CellSnippetsLayer[] {
             exemplar
         );
         if (exemplarImageKeyFramesLayer) {
-            keyFrameImageLayers.push(exemplarImageKeyFramesLayer);
+            keyFrameImageLayers.value.push(exemplarImageKeyFramesLayer);
         }
     }
-    return keyFrameImageLayers; //devin return combined list of backing data as well
+    return keyFrameImageLayers.value; //devin return combined list of backing data as well
 }
 
 function valueExtent(track: ExemplarTrack): number {
