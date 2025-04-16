@@ -508,6 +508,7 @@ async function renderDeckGL(): Promise<void> {
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
     deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
+    deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
 
 
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
@@ -900,8 +901,8 @@ function createCellImageEventsLayer(
   else if (action === 'click') {
     selectedExemplar.value = exemplar;
     selectedCell.value = cell;
-    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
-    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
+    if (cellImageLayerResult.cellImageLayer) { console.log("Pushing selected cell image"); selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
+    if (cellImageLayerResult.segmentationLayer) { console.log("Pushing selected cell seg"); snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
     renderDeckGL(); // Trigger a re-render after updating the layers
     }
   } 
@@ -2113,7 +2114,7 @@ function createExemplarImageKeyFramesLayer(
         clip: false,
     });
     // Push the segmentation layer to be rendered alongside the snippet layer.
-    snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
+    // snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
 
     return { snippetLayer, snippetSegmentationOutlineLayer };
 }
