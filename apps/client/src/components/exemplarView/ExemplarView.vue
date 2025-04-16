@@ -50,7 +50,6 @@ import colors from '@/util/colors';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import type { Feature } from 'geojson';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
-import { render } from 'vue';
 
  
 const globalSettings = useGlobalSettings();
@@ -486,7 +485,6 @@ async function getCellSegmentationData() {
     }
 }
 function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
-    console.log("Cell Segmentation Data: ", cellSegmentationData.value);
     const cellSegmentation = cellSegmentationData.value?.find(
         (locationSegmentation) =>
             locationSegmentation?.location == location &&
@@ -698,8 +696,9 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
-                onHover: (info: PickingInfo, event: any) =>
-                    handleHorizonHover(info, exemplar),
+                onHover: (info: PickingInfo, event: any) => {
+                    handleHorizonHover(info, exemplar);
+                },
                 onClick: (info: PickingInfo, event: any) => {
                     handleHorizonClick(info, exemplar)
                 },
@@ -725,36 +724,53 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 },
             })
         );
-        // If the current exemplar is hovered, create an extra outline layer.
-    if (hoveredExemplar.value && hoveredExemplar.value.trackId === exemplar.trackId) {
-      const outlinePolygon = [
-        // Create a rectangle matching the destination of the horizon chart.
-        [0, yOffset],
-        [viewConfiguration.value.horizonChartWidth, yOffset],
-        [viewConfiguration.value.horizonChartWidth, yOffset - viewConfiguration.value.horizonChartHeight],
-        [0, yOffset - viewConfiguration.value.horizonChartHeight],
-        [0, yOffset], // Close the polygon.
-      ];
-
-      const outlineLayer = new PolygonLayer({
-        id: `exemplar-horizon-chart-outline-${uniqueExemplarKey(exemplar)}`,
-        data: [{ polygon: outlinePolygon }],
-        pickable: false,
-        stroked: true,
-        filled: false,
-        getPolygon: (d: any) => d.polygon,
-        getLineColor: (d: any) => colors.hovered.rgb,
-        getLineWidth: () => 4, // Adjust the thickness as needed.
-        lineWidthUnits: "pixels",
-        updateTriggers: {
-          // Re-render the outline when hover changes.
-          hoveredExemplar: hoveredExemplar.value,
-        },
-      });
-      horizonChartLayers.push(outlineLayer);
-    }
     }
     return horizonChartLayers;
+}
+
+// Create a reactive reference for the hovered outline layer.
+const hoveredOutlineLayer = ref<PolygonLayer | null>(null);
+
+function createHoveredHorizonOutlineLayer() {
+  // Find the exemplar corresponding to the hovered value
+  if (!hoveredExemplar.value) {
+    hoveredOutlineLayer.value = null;
+    return;
+  }
+  const exemplar = hoveredExemplar.value;
+  const renderInfo = exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar));
+  if (!renderInfo) return;
+  const yOffset =
+    renderInfo.yOffset -
+    viewConfiguration.value.timeBarHeightOuter -
+    viewConfiguration.value.horizonTimeBarGap;
+  hoveredOutlineLayer.value = new PolygonLayer({
+    id: `exemplar-hovered-outline-${uniqueExemplarKey(exemplar)}`,
+    data: [
+      {
+        polygon: [
+          [0, yOffset],
+          [viewConfiguration.value.horizonChartWidth, yOffset],
+          [
+            viewConfiguration.value.horizonChartWidth,
+            yOffset - viewConfiguration.value.horizonChartHeight,
+          ],
+          [0, yOffset - viewConfiguration.value.horizonChartHeight],
+          [0, yOffset],
+        ],
+      },
+    ],
+    pickable: false,
+    stroked: true,
+    filled: false,
+    getPolygon: (d: any) => d.polygon,
+    getLineColor: (d: any) => colors.hovered.rgb,
+    getLineWidth: () => 4,
+    lineWidthUnits: "pixels",
+    updateTriggers: {
+      hoveredExemplar: hoveredExemplar.value,
+    },
+  });
 }
 
 /**
@@ -793,7 +809,7 @@ const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
  * It calculates the corresponding time point from the click/hover coordinate,
  * retrieves the relevant cell, and creates the appropriate image layer.
  */
-function handleCellImageEvents(
+function createCellImageEventsLayer(
   info: PickingInfo,
   exemplar: ExemplarTrack,
   action: 'click' | 'hover'
@@ -860,15 +876,12 @@ function handleCellImageEvents(
     renderDeckGL(); // Trigger a re-render after updating the layers
     }
   } else if (action === 'hover') {
-    hoveredExemplar.value = exemplar;
     hoveredCell.value = cell;
     // if (cellImageLayerResult.cellImageLayer) { hoveredCellImageLayer.value.push(cellImageLayerResult.cellImageLayer); }
     // if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer); }
   }
 
-  deckgl.value?.setProps({
-    layers: [deckGLLayers, cellImageLayerResult.cellImageLayer, cellImageLayerResult.segmentationLayer],
-  });
+  return cellImageLayerResult;
 }
 
 /**
@@ -997,26 +1010,30 @@ function createCellImageLayer(
     return { cellImageLayer, segmentationLayer };
 }
 
+// Event handlers for horizon chart interactions
 function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
-    // If no coordinate or index indicates no hit, clear the hover state.
-    if (!info.coordinate || info.index === -1) {
+
+    // Set hoveredExemplar based on the info index
+    if (info.index === undefined || info.index === -1) {
         hoveredExemplar.value = null;
         hoveredCell.value = null;
-        // Clear hoveredCellImageLayer so the layer goes away.
-        hoveredCellImageLayer.value = [];
-        renderDeckGL();
         return;
     }
-    // Clear previous hover layers before adding a new one.
-    hoveredCellImageLayer.value = [];
-    handleCellImageEvents(info, exemplar, 'hover');
+    hoveredExemplar.value = exemplar;
+
+    // Cell image + segmentation appears on mouse hover
+    const cellImageEventsLayer = createCellImageEventsLayer(info, exemplar, 'hover');
+
+    // Creates the highlighted outline of a horizon chart when hovered.
+    createHoveredHorizonOutlineLayer();
+    deckgl.value?.setProps({layers: [...deckGLLayers, cellImageEventsLayer?.cellImageLayer, cellImageEventsLayer?.segmentationLayer, hoveredOutlineLayer.value]});
 }
 
 function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     if (!info.index || info.index === -1) {
         return;
     }
-    handleCellImageEvents(info, exemplar, 'click');
+    createCellImageEventsLayer(info, exemplar, 'click');
 }
 
 function constructGeometry(track: ExemplarTrack): number[] {
@@ -1946,13 +1963,13 @@ function createExemplarImageKeyFramesLayer(
     // 1. Assign the image's coordinate destination
     // 2. Find the proper sementation, assign the segmentation's coordinate destination to be the same as the image's
     for (const { index, nearestDistance } of keyFrames) {
+
+        // Find the cell in exemplar.data whose time is closest to 'time'
+        const cell = exemplar.data[index];
         const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
         if (nearestDistanceWidth <= snippetDestWidth) {
             break;
         }
-
-        // Find the cell in exemplar.data whose time is closest to 'time'
-        const cell = exemplar.data[index];
 
         const source = getBBoxAroundPoint(
             cell.x,
@@ -2025,7 +2042,12 @@ function createExemplarImageKeyFramesLayer(
         data: exemplarSegmentationData.filter((d) => !d.hovered),
         // Use the first element of the polygon
         getPath: (d: any) => d.polygon[0],
-        getColor: () => colors.hovered.rgb,
+        getColor: (d: any) => {
+                if (d.selected) {
+                    return globalSettings.normalizedSelectedRgb;
+                }
+                return colors.unselectedBoundary.rgb;
+            },
         getWidth: 1.5,
         widthUnits: 'pixels',
         jointRounded: true,
