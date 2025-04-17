@@ -2099,7 +2099,7 @@ function createExemplarImageKeyFramesLayer(
 
         console.log("Hovered Coordinate:", hoveredCoordinate);
             // If the mouse pointer is within the destination box, console log("In destination")
-            const imageHovered = pointInBBox(hoveredCoordinate ?? [0, 0], destination);
+            const imageHovered = pointInBBox(hoveredCoordinate ?? [-1000, 0], destination);
             console.log("Image Hovered:", imageHovered);
             if (imageHovered) {
                 const margin = 2;
