@@ -2137,6 +2137,42 @@ function createExemplarImageKeyFramesLayer(
                 addSegmentation(cell.frame, destination, true);
                 addSegmentation(cell.frame - 1, prevCellDest, true);
                 addSegmentation(cell.frame + 1, nextCellDest, true);
+
+                const tickX = x1 + snippetDestWidth / 2;
+                const tickY = y1
+                const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
+                tickData.push({
+                    path: [
+                    [tickX, tickY],
+                    [tickX, tickY + tickLength]
+                    ],
+                    hovered: cell.isHovered,
+                    selected: cell.isSelected,
+                });
+                tickData.push({
+                    path: [
+                    [tickX + 20, tickY + 5],
+                    [tickX + 20, tickY + tickLength]
+                    ],
+                    hovered: cell.isHovered,
+                    selected: cell.isSelected,
+                });
+                tickData.push({
+                    path: [
+                    [tickX - 20, tickY + 5],
+                    [tickX - 20, tickY + tickLength]
+                    ],
+                    hovered: cell.isHovered,
+                    selected: cell.isSelected,
+                });
+                tickData.push({
+                    path: [
+                    [tickX - 1.5* snippetDestWidth - margin, tickY + 5],
+                    [tickX + 1.5 * snippetDestWidth + margin, tickY + 5]
+                    ],
+                    hovered: cell.isHovered,
+                    selected: cell.isSelected,
+                });
             }
         // Get the currently interacted with cell boundaries.
         const hoveredCellBBoxes = hoveredCellsInfo.value 
