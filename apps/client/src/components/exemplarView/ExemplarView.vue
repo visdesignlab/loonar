@@ -290,12 +290,9 @@ watch(
                                 '.2f'
                             );
                             const formattedValue =
-                                hoveredCellInfo.value !== null
-                                    ? customNumberFormatter(
-                                          hoveredCellInfo.value[1].value,
-                                          '.3f'
-                                      )
-                                    : '';
+                            hoveredCellsInfo.value && hoveredCellsInfo.value.length > 0
+                                ? customNumberFormatter(hoveredCellsInfo.value[0][1].value, '.3f')
+                                : '';
                             // Create the tooltip HTML, with the currently hovered exemplar and time.
                             let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
                             html += `<div>Time: ${formattedTime}</div>`;
@@ -821,8 +818,10 @@ const selectedExemplar = ref<ExemplarTrack | null>(null);
 const selectedCellsInfo = ref<[BBox, Cell][]>([]);const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
 // The currently hovered exemplar, its currently hovered value, and hovered image layers.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
-const hoveredCellInfo = ref<[BBox, Cell] | null>(null);
+const hoveredCellsInfo = ref<[BBox, Cell][]>([]);
 const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
+const hoveredImagesInfo = ref<[BBox, Cell][]>([]);
+
 
 /**
  * Handles cell image events for both click and hover actions.
@@ -892,7 +891,7 @@ function createCellImageEventsLayer(
   if (action === 'hover') {
     // The currently hovered bounding box for the cell image layer.
     
-    hoveredCellInfo.value = [eventCellBBox,cell];
+    hoveredCellsInfo.value = [[eventCellBBox,cell]];
 
     // Handle collisions with existing cell images and the hovered cell image --------------
 
@@ -1053,7 +1052,7 @@ function createCellImageLayer(
   // The tick should be placed at the center of the snippet.
   const tickX = x1 + snippetDestWidth / 2;
   const tickY = y1
-  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap;
+  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
   const tickData = {
     path: [
       [tickX, tickY],
@@ -1101,7 +1100,7 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     if (info.index === undefined || info.index === -1) {
         console.log("note hovered");
         hoveredExemplar.value = null;
-        hoveredCellInfo.value = null;
+        hoveredCellsInfo.value = [];
         hoveredOutlineLayer.value = null;
         renderDeckGL();
         return;
@@ -2062,6 +2061,8 @@ function createExemplarImageKeyFramesLayer(
     const keyFrames = getKeyFrameOrder(exemplar);
     const exemplarSegmentationData = [];
     const tickData = [];
+    let hoveredFound = ref(false);
+    let hoveredImagesCollected: [BBox, Cell][] = [];
 
     // For each key frame image:
     // 1. Assign the image's coordinate destination
@@ -2095,43 +2096,68 @@ function createExemplarImageKeyFramesLayer(
         const y2 = y1 - snippetDestHeight;
         const destination: BBox = [x1, y1, x2, y2];
 
+
+        console.log("Hovered Coordinate:", hoveredCoordinate);
+            // If the mouse pointer is within the destination box, console log("In destination")
+            const imageHovered = pointInBBox(hoveredCoordinate ?? [0, 0], destination);
+            console.log("Image Hovered:", imageHovered);
+            if (imageHovered) {
+                const margin = 2;
+                const prevCellDest: BBox = [x1 - snippetDestWidth - margin, y1, x2 - snippetDestWidth - margin, y2];
+                const nextCellDest: BBox = [x1 + snippetDestWidth + margin, y1, x2 + snippetDestWidth + margin, y2];
+                hoveredFound.value = true;
+                hoveredImagesInfo.value = [
+                    [prevCellDest, cell],
+                    [nextCellDest, cell],
+                    [destination, cell]
+                ];
+
+                selections.push(
+                    { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source, destination: prevCellDest }] },
+                    { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source, destination: destination }] },
+                    { c: 0, t: cell.frame, z: 0, snippets: [{ source, destination: nextCellDest }] }
+                );
+
+                const addSegmentation = (frame: number, dest: BBox) => {
+                    if (frame <= 0) return;
+                    const segmentationPolygon = getCellSegmentationPolygon(
+                        exemplar.locationId,
+                        exemplar.trackId.toString(),
+                        frame.toString()
+                    );
+                    if (!segmentationPolygon) return;
+                    const [destX, destY] = [dest[0], dest[1]];
+                    exemplarSegmentationData.push({
+                        // @ts-ignore: coordinates exist on geometry
+                        polygon: segmentationPolygon.geometry.coordinates,
+                        hovered: true,
+                        selected: cell.isSelected,
+                        center: [cell.x, cell.y],
+                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
+                    });
+                };
+                addSegmentation(cell.frame, destination);
+                addSegmentation(cell.frame - 1, prevCellDest);
+                addSegmentation(cell.frame + 1, nextCellDest);
+            }
         // Get the currently interacted with cell boundaries.
-        const hoveredCellBBox = hoveredCellInfo.value?.[0];
+        const hoveredCellBBoxes = hoveredCellsInfo.value 
+        ? hoveredCellsInfo.value.map(info => info[0])
+        : [];
         const selectedCellBBoxes = selectedCellsInfo.value 
         ? selectedCellsInfo.value.map(info => info[0])
         : [];
-        const interactedCellBBoxes = hoveredCellBBox ? [hoveredCellBBox, ...selectedCellBBoxes] : selectedCellBBoxes;
+        const hoveredImageBBoxes = hoveredImagesInfo.value 
+        ? hoveredImagesInfo.value.map(info => info[0])
+        : [];
 
-        // Check for collisions with this key frame and a currently interacted cell boundary.
+        const interactedCellBBoxes = [...hoveredCellBBoxes, ...selectedCellBBoxes, ...hoveredImageBBoxes];
+
         const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
 
         // Get hovered cell bbox (if any) and selected cell bboxes
 
         if (!cellCollisionDetected) {
-
-            console.log("Hovered Coordinate:", hoveredCoordinate);
-            // If the mouse pointer is within the destination box, console log("In destination")
-            const imageHovered = pointInBBox(
-                hoveredCoordinate ?? [0, 0],
-                destination
-            );
-            console.log("Image Hovered:", imageHovered);    
-            if (imageHovered) {
-                const prevCellDest: BBox = [x1 - snippetDestWidth - 2, y1, x2 - snippetDestWidth - 2, y2];
-                const nextCellDest: BBox = [x1 + snippetDestWidth + 2, y1, x2 + snippetDestWidth + 2, y2];
-                selections.push({
-                c: 0,
-                t: cell.frame - 2,
-                z: 0,
-                snippets: [{ source, destination: prevCellDest }]});
-
-                selections.push({
-                c: 0,
-                t: cell.frame,
-                z: 0,
-                snippets: [{ source, destination: nextCellDest }]});
-            }
-
 
             // Selections is the image data for the cell.
             selections.push({
@@ -2160,7 +2186,7 @@ function createExemplarImageKeyFramesLayer(
             // The tick should be placed at the center of the snippet.
             const tickX = x1 + snippetDestWidth / 2;
             const tickY = y1
-            const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap;
+            const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
             tickData.push({
                 path: [
                 [tickX, tickY],
@@ -2171,6 +2197,11 @@ function createExemplarImageKeyFramesLayer(
             });
         }
     }
+    if (!hoveredFound.value) {
+            hoveredImagesInfo.value = [];
+    }
+
+
 
 
     // Create an instance of the colormap extension.
@@ -2199,19 +2230,25 @@ function createExemplarImageKeyFramesLayer(
         cache: lruCache,
     });
 
+    const hoveredWithAlpha = colors.hovered.rgba;
+    hoveredWithAlpha[3] = 200;
     // Create a new segmentation outline layer for these cells.
     const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
         id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
-        data: exemplarSegmentationData.filter((d) => !d.hovered),
+        data: exemplarSegmentationData,
         // Use the first element of the polygon
         getPath: (d: any) => d.polygon[0],
         getColor: (d: any) => {
                 if (d.selected) {
                     return globalSettings.normalizedSelectedRgb;
                 }
+                if (d.hovered) {
+                    return hoveredWithAlpha;
+                }
                 return colors.unselectedBoundary.rgb;
             },
-        getWidth: 1.5,
+        getWidth: (d: any) => d.hovered ? 3 : 1.5,
+        opacity: 1, 
         widthUnits: 'pixels',
         jointRounded: true,
         getCenter: (d: any) => d.center,
