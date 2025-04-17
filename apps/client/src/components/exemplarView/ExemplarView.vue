@@ -1839,6 +1839,7 @@ function groupExemplarsByCondition(
     return groups;
 }
 
+
 function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] {
   const keyFrameLayers: (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] = [];
   if (!pixelSources.value) return keyFrameLayers;
@@ -1988,8 +1989,15 @@ const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
     []
 );
 
+function pointInBBox(point: [number, number], bbox: [number, number, number, number]): boolean {
+    const [x, y] = point;
+    const [x1, y1, x2, y2] = bbox;
+    return x >= x1 && x <= x2 && y <= y1 && y >= y2;
+}
+
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
+let hoveredCoordinate = <[number, number] | null>null;
 function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
     exemplar: ExemplarTrack
@@ -2100,6 +2108,31 @@ function createExemplarImageKeyFramesLayer(
         // Get hovered cell bbox (if any) and selected cell bboxes
 
         if (!cellCollisionDetected) {
+
+            console.log("Hovered Coordinate:", hoveredCoordinate);
+            // If the mouse pointer is within the destination box, console log("In destination")
+            const imageHovered = pointInBBox(
+                hoveredCoordinate ?? [0, 0],
+                destination
+            );
+            console.log("Image Hovered:", imageHovered);    
+            if (imageHovered) {
+                const prevCellDest: BBox = [x1 - snippetDestWidth - 2, y1, x2 - snippetDestWidth - 2, y2];
+                const nextCellDest: BBox = [x1 + snippetDestWidth + 2, y1, x2 + snippetDestWidth + 2, y2];
+                selections.push({
+                c: 0,
+                t: cell.frame - 2,
+                z: 0,
+                snippets: [{ source, destination: prevCellDest }]});
+
+                selections.push({
+                c: 0,
+                t: cell.frame,
+                z: 0,
+                snippets: [{ source, destination: nextCellDest }]});
+            }
+
+
             // Selections is the image data for the cell.
             selections.push({
                 c: 0,
@@ -2150,6 +2183,14 @@ function createExemplarImageKeyFramesLayer(
     const snippetLayer = new CellSnippetsLayer({
         id: `test-cell-snippets-layer ${exemplar.trackId}`,
         loader: pixelSource, // the loaded image data
+        onHover: (info: PickingInfo) => {
+            if (info.coordinate) {
+             if (info.coordinate.length === 2) {
+                 hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
+             }
+             renderDeckGL();
+            // Optionally do additional work when hovered
+            }},
         contrastLimits,
         channelsVisible,
         selections: selections,
