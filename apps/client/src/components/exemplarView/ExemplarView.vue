@@ -8,6 +8,7 @@ import {
     ScatterplotLayer,
     PolygonLayer,
     LineLayer,
+    PathLayer,
     TextLayer,
 } from '@deck.gl/layers';
 import { QSpinner } from 'quasar';
@@ -94,6 +95,7 @@ interface SnippetCellInfo {
 interface CellImageLayerResult {
   cellImageLayer: CellSnippetsLayer | null;
   segmentationLayer: SnippetSegmentationOutlineLayer | null;
+  tickMarkLayer: LineLayer | null;
 }
 
 // Reactive reference for totalExperimentTime
@@ -766,7 +768,6 @@ function createHoveredHorizonOutlineLayer() {
 });
 
   const label = `${exemplarViewStore.selectedAggregation.value} ${selectedAttribute.value}`;
-  console.log("label", label);
   const labelData = [
     {
       position: [
@@ -789,7 +790,6 @@ function createHoveredHorizonOutlineLayer() {
         background: true,
         backgroundColor: [255, 255, 255, 160],
     });
-    console.log("HorizonTextLayer:", horizonTextLayer.value);
 }
 
 /**
@@ -907,6 +907,7 @@ function createCellImageEventsLayer(
     }
   } 
 
+  console.log("tick layer result", cellImageLayerResult.tickMarkLayer);
   return cellImageLayerResult;
 }
 
@@ -1049,7 +1050,48 @@ function createCellImageLayer(
         clip: false,
     });
   
-    return { cellImageLayer, segmentationLayer };
+  // The tick should be placed at the center of the snippet.
+  const tickX = x1 + snippetDestWidth / 2;
+  const tickY = y1
+  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap;
+  const tickData = {
+    path: [
+      [tickX, tickY],
+      [tickX, tickY + tickLength]
+    ],
+    hovered: cell.isHovered,
+    selected: cell.isSelected,
+  };
+  
+  console.log("Hovered cell", cell.isHovered);
+  const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
+
+    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
+}
+
+function createTickMarkLayer(tickData: any): LineLayer {
+    return new LineLayer({
+        id: `snippet-tick-marks-layer-${Date.now()}`,
+        data: tickData,
+        getSourcePosition: (d: any) => d.path[0],
+        getTargetPosition: (d: any) => d.path[1],
+        getColor: (d: any) => {
+            if (d.hovered | d.pinned) {
+                return [130, 145, 170, 200];
+            } else if (d.drawerLine) {
+                if (globalSettings.darkMode) {
+                    return [195, 217, 250, 200];
+                } else {
+                    return [65, 72, 85, 200];
+                }
+            } else {
+                return [130, 145, 170, 150];
+            }
+        },
+        getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+        widthUnits: 'pixels',
+        capRounded: false,
+    });
 }
 
 // Event handlers for horizon chart interactions
@@ -1070,7 +1112,14 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     // Cell image + segmentation appears on mouse hover
     const cellImageEventsLayer = createCellImageEventsLayer(info, exemplar, 'hover');
 
-    deckgl.value?.setProps({layers: [...deckGLLayers, cellImageEventsLayer?.cellImageLayer, cellImageEventsLayer?.segmentationLayer]});
+    deckgl.value?.setProps({
+  layers: [
+    ...deckGLLayers,
+    cellImageEventsLayer?.tickMarkLayer,  // Render tick layer behind
+    cellImageEventsLayer?.cellImageLayer,
+    cellImageEventsLayer?.segmentationLayer
+  ]
+});
 }
 
 function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
@@ -1806,11 +1855,14 @@ function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmen
     }
     const keyFrameLayersWrapper = createExemplarImageKeyFramesLayer(pixelSources.value[locationId], exemplar);
     if (keyFrameLayersWrapper) {
-      if (keyFrameLayersWrapper.snippetLayer) {
-        keyFrameLayers.push(keyFrameLayersWrapper.snippetLayer);
+      if (keyFrameLayersWrapper.imageLayerResult.cellImageLayer) {
+        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.cellImageLayer);
       }
-      if (keyFrameLayersWrapper.snippetSegmentationOutlineLayer) {
-        keyFrameLayers.push(keyFrameLayersWrapper.snippetSegmentationOutlineLayer);
+      if (keyFrameLayersWrapper.imageLayerResult.segmentationLayer) {
+        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.segmentationLayer);
+      }
+      if (keyFrameLayersWrapper.imageLayerResult.tickMarkLayer) {
+        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.tickMarkLayer);
       }
     }
   }
@@ -1941,7 +1993,7 @@ const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
 function createExemplarImageKeyFramesLayer(
     pixelSource: PixelSource<any>,
     exemplar: ExemplarTrack
-): { snippetLayer: CellSnippetsLayer | null; snippetSegmentationOutlineLayer: SnippetSegmentationOutlineLayer | null } {
+): { imageLayerResult: CellImageLayerResult } {
     let selections: Selection[] = [];
     // Check that the pixelSource is ready.
     if (!pixelSource) {
@@ -1951,7 +2003,7 @@ function createExemplarImageKeyFramesLayer(
         console.warn(
             '[createExemplarImageKeyFramesLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
         );
-        return { snippetLayer: null, snippetSegmentationOutlineLayer: null }; // Do not create the layer until pixelSource.value is available.
+        return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } }; // Do not create the layer until pixelSource.value is available.
     }
 
     // Check that exemplarTracks is available.
@@ -1959,7 +2011,7 @@ function createExemplarImageKeyFramesLayer(
         console.error(
             '[createExemplarImageKeyFramesLayer] No exemplar tracks available!'
         );
-        return { snippetLayer: null, snippetSegmentationOutlineLayer: null };
+        return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
     }
 
     // Get viewConfiguration details for snippet placement.
@@ -2001,6 +2053,7 @@ function createExemplarImageKeyFramesLayer(
     // Order of key frames.
     const keyFrames = getKeyFrameOrder(exemplar);
     const exemplarSegmentationData = [];
+    const tickData = [];
 
     // For each key frame image:
     // 1. Assign the image's coordinate destination
@@ -2070,6 +2123,19 @@ function createExemplarImageKeyFramesLayer(
                 selected: cell.isSelected,
                 center: [cell.x, cell.y],
                 offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+
+            // The tick should be placed at the center of the snippet.
+            const tickX = x1 + snippetDestWidth / 2;
+            const tickY = y1
+            const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap;
+            tickData.push({
+                path: [
+                [tickX, tickY],
+                [tickX, tickY + tickLength]
+                ],
+                hovered: cell.isHovered,
+                selected: cell.isSelected,
+            });
         }
     }
 
@@ -2117,7 +2183,10 @@ function createExemplarImageKeyFramesLayer(
     // Push the segmentation layer to be rendered alongside the snippet layer.
     // snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
 
-    return { snippetLayer, snippetSegmentationOutlineLayer };
+    console.log("key frame tick data:", tickData);
+    const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
+    console.log("key frame tick layer:", keyFrameTickMarkLayer);
+    return {imageLayerResult: { cellImageLayer: snippetLayer,segmentationLayer: snippetSegmentationOutlineLayer,tickMarkLayer: keyFrameTickMarkLayer }};
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
