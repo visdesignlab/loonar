@@ -2095,7 +2095,24 @@ function createExemplarImageKeyFramesLayer(
         const y1 = destY;
         const y2 = y1 - snippetDestHeight;
         const destination: BBox = [x1, y1, x2, y2];
-
+        const addSegmentation = (frame: number, dest: BBox, selected: boolean) => {
+                    if (frame <= 0) return;
+                    const segmentationPolygon = getCellSegmentationPolygon(
+                        exemplar.locationId,
+                        exemplar.trackId.toString(),
+                        frame.toString()
+                    );
+                    if (!segmentationPolygon) return;
+                    const [destX, destY] = [dest[0], dest[1]];
+                    exemplarSegmentationData.push({
+                        // @ts-ignore: coordinates exist on geometry
+                        polygon: segmentationPolygon.geometry.coordinates,
+                        hovered: selected,
+                        selected: cell.isSelected,
+                        center: [cell.x, cell.y],
+                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
+                    });
+                };
 
         console.log("Hovered Coordinate:", hoveredCoordinate);
             // If the mouse pointer is within the destination box, console log("In destination")
@@ -2117,28 +2134,9 @@ function createExemplarImageKeyFramesLayer(
                     { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source, destination: destination }] },
                     { c: 0, t: cell.frame, z: 0, snippets: [{ source, destination: nextCellDest }] }
                 );
-
-                const addSegmentation = (frame: number, dest: BBox) => {
-                    if (frame <= 0) return;
-                    const segmentationPolygon = getCellSegmentationPolygon(
-                        exemplar.locationId,
-                        exemplar.trackId.toString(),
-                        frame.toString()
-                    );
-                    if (!segmentationPolygon) return;
-                    const [destX, destY] = [dest[0], dest[1]];
-                    exemplarSegmentationData.push({
-                        // @ts-ignore: coordinates exist on geometry
-                        polygon: segmentationPolygon.geometry.coordinates,
-                        hovered: true,
-                        selected: cell.isSelected,
-                        center: [cell.x, cell.y],
-                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
-                    });
-                };
-                addSegmentation(cell.frame, destination);
-                addSegmentation(cell.frame - 1, prevCellDest);
-                addSegmentation(cell.frame + 1, nextCellDest);
+                addSegmentation(cell.frame, destination, true);
+                addSegmentation(cell.frame - 1, prevCellDest, true);
+                addSegmentation(cell.frame + 1, nextCellDest, true);
             }
         // Get the currently interacted with cell boundaries.
         const hoveredCellBBoxes = hoveredCellsInfo.value 
@@ -2169,19 +2167,19 @@ function createExemplarImageKeyFramesLayer(
 
             // Segmentation data for the cell --------------------------
             // Find the cell's segmentation.
-            const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+            addSegmentation(cell.frame, destination, false);
             
-            // Calculate the destination coordinates for the segmentation.
-            const [x, y] = [destination[0], destination[1]];
+            // // Calculate the destination coordinates for the segmentation.
+            // const [x, y] = [destination[0], destination[1]];
 
-            // Push the current cell's segmentation data to the segmentationData array.
-            exemplarSegmentationData.push({
-                // @ts-ignore coordinates does exist on geometry
-                polygon: cellSegmentationPolygon?.geometry?.coordinates,
-                hovered: cell.isHovered,
-                selected: cell.isSelected,
-                center: [cell.x, cell.y],
-                offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+            // // Push the current cell's segmentation data to the segmentationData array.
+            // exemplarSegmentationData.push({
+            //     // @ts-ignore coordinates does exist on geometry
+            //     polygon: cellSegmentationPolygon?.geometry?.coordinates,
+            //     hovered: cell.isHovered,
+            //     selected: cell.isSelected,
+            //     center: [cell.x, cell.y],
+            //     offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
 
             // The tick should be placed at the center of the snippet.
             const tickX = x1 + snippetDestWidth / 2;
