@@ -818,8 +818,7 @@ function computeRealTimePoint(exemplar: ExemplarTrack, estimatedTime: number): n
 const keyFrameImageLayers = ref<CellSnippetsLayer[]>([]);
 // The currently selected exemplar, its currently selected value, and selected image layers.
 const selectedExemplar = ref<ExemplarTrack | null>(null);
-const selectedCell = ref<Cell | null>(null);
-const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
+const selectedCellsInfo = ref<[BBox, Cell][]>([]);const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
 // The currently hovered exemplar, its currently hovered value, and hovered image layers.
 const hoveredExemplar = ref<ExemplarTrack | null>(null);
 const hoveredCellInfo = ref<[BBox, Cell] | null>(null);
@@ -888,11 +887,12 @@ function createCellImageEventsLayer(
     return;
   }
 
+  const eventCellBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
   // Update state based on the action type (click or hover)
   if (action === 'hover') {
     // The currently hovered bounding box for the cell image layer.
-    const hoveredBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
-    hoveredCellInfo.value = [hoveredBBox,cell];
+    
+    hoveredCellInfo.value = [eventCellBBox,cell];
 
     // Handle collisions with existing cell images and the hovered cell image --------------
 
@@ -900,7 +900,7 @@ function createCellImageEventsLayer(
   }
   else if (action === 'click') {
     selectedExemplar.value = exemplar;
-    selectedCell.value = cell;
+    selectedCellsInfo.value?.push([eventCellBBox, cell]);
     if (cellImageLayerResult.cellImageLayer) { console.log("Pushing selected cell image"); selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
     if (cellImageLayerResult.segmentationLayer) { console.log("Pushing selected cell seg"); snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
     renderDeckGL(); // Trigger a re-render after updating the layers
@@ -2034,16 +2034,17 @@ function createExemplarImageKeyFramesLayer(
         const y2 = y1 - snippetDestHeight;
         const destination: BBox = [x1, y1, x2, y2];
 
-        // Check for collisions with the hoveredCell.
+        // Get the currently interacted with cell boundaries.
         const hoveredCellBBox = hoveredCellInfo.value?.[0];
-        
-        const cellCollisionDetected = hoveredCellBBox 
-            ? rectsOverlap(destination, hoveredCellBBox) 
-            : false;
+        const selectedCellBBoxes = selectedCellsInfo.value 
+        ? selectedCellsInfo.value.map(info => info[0])
+        : [];
+        const interactedCellBBoxes = hoveredCellBBox ? [hoveredCellBBox, ...selectedCellBBoxes] : selectedCellBBoxes;
 
-        console.log('HoveredCellBbox:', hoveredCellBBox);
-        console.log('Destination:', destination);
-        console.log('Cell Collision Detected:', cellCollisionDetected);
+        // Check for collisions with this key frame and a currently interacted cell boundary.
+        const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
+
+        // Get hovered cell bbox (if any) and selected cell bboxes
 
         if (!cellCollisionDetected) {
             // Selections is the image data for the cell.
