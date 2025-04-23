@@ -85,9 +85,10 @@ watch(currentLocationMetadata, async () => {
     imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
     imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
     imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
+    imageViewerStoreUntrracked.sizeC = loader.value.metadata.Pixels.SizeC;
 
     testRaster.value = await loader.value.data[0].getRaster({
-        selection: { c: 0, t: 0, z: 0 },
+        selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     if (testRaster.value == null) return;
     const copy = testRaster.value.data.slice();
@@ -271,7 +272,7 @@ const selections = computed<
         const destination: BBox = [xOffset, 0, xOffset + width, -height];
         xOffset += width + padding;
         selections.push({
-            c: 0,
+            c: imageViewerStore.selectedChannel,
             z: 0,
             t,
             snippets: [{ source, destination }],
