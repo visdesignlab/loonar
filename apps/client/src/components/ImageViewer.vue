@@ -193,9 +193,10 @@ watch(currentLocationMetadata, async () => {
     imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
     imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
     imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
+    imageViewerStoreUntrracked.sizeC = loader.value.metadata.Pixels.SizeC;
 
     const raster: PixelData = await loader.value.data[0].getRaster({
-        selection: { c: 0, t: 0, z: 0 },
+        selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
     contrastLimitSlider.value.min = channelStats.contrastLimits[0];
@@ -211,6 +212,39 @@ watch(currentLocationMetadata, async () => {
     // but this is better than the image being offset for now.
     resetView();
 });
+
+watch(
+    () => imageViewerStore.selectedChannel,
+    async () => {
+        if (currentLocationMetadata.value?.imageDataFilename == null) return;
+        if (deckgl == null) return;
+        if (loader.value == null) return;
+        // if (contrastLimitSlider == null) return;
+        // renderLoadingDeckGL();
+        // imageViewerStore.frameIndex = 0;
+        // pixelSource.value = null;
+
+        // const fullImageUrl = configStore.getFileUrl(
+        //     currentLocationMetadata.value.imageDataFilename
+        // );
+        // loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
+        // imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
+        // imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
+        // imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
+
+        const raster: PixelData = await loader.value.data[0].getRaster({
+            selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
+        });
+        const channelStats = getChannelStats(raster.data);
+        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
+        imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
+        renderDeckGL();
+        // resetView();
+    }
+);
+
 function createBaseImageLayer(): typeof ImageLayer {
     // console.log('create base image layer');
     return new ImageLayer({
@@ -271,9 +305,9 @@ function createSegmentationsLayer(): typeof GeoJsonLayer {
                 info.properties?.id?.toString()
             );
             // Removes outline
-            if (filtered) {
-                return [0, 0, 0];
-            }
+            // if (filtered) {
+            //     return [0, 0, 0];
+            // }
             if (selected) {
                 return colors.highlightedBoundary.rgb;
             }
