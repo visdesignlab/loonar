@@ -63,9 +63,25 @@ export const useImageViewerStore = defineStore('imageViewerStore', () => {
             maxValue
         );
     }
+
+    function stepChannelBackwards() {
+        selectedChannel.value = Math.max(selectedChannel.value - 1, 0);
+    }
+    function stepChannelForwards(maxValue: number) {
+        selectedChannel.value = Math.min(selectedChannel.value + 1, maxValue);
+    }
+
     const selections = computed(() => {
-        return [{ c: 0, t: dataPointSelection.currentFrameIndex, z: 0 }];
+        return [
+            {
+                c: selectedChannel.value,
+                t: dataPointSelection.currentFrameIndex,
+                z: 0,
+            },
+        ];
     });
+
+    const selectedChannel = ref<number>(0);
 
     const trailLength = ref(10);
     const effectiveTrailLength = computed(() => {
@@ -84,6 +100,7 @@ export const useImageViewerStore = defineStore('imageViewerStore', () => {
     const showLineageLayer = ref(true);
 
     return {
+        selectedChannel,
         colormap,
         colormapOptions,
         contrastLimitSliderDebounced,
@@ -91,6 +108,8 @@ export const useImageViewerStore = defineStore('imageViewerStore', () => {
         frameNumber,
         stepBackwards,
         stepForwards,
+        stepChannelBackwards,
+        stepChannelForwards,
         selections,
         trailLength,
         effectiveTrailLength,
