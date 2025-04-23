@@ -31,8 +31,6 @@ services:
       - "8000:8000"
     environment:
       DJANGO_ENV_FILE: "/app/.env"
-    volumes:
-      - ${MIGRATIONS_SOURCE}:/app/api/migrations
     depends_on:
       db:
         condition: service_healthy
