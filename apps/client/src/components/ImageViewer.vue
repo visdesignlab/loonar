@@ -245,16 +245,15 @@ watch(
     }
 );
 
-function createBaseImageLayer(
-    refreshBaseImageLayer: boolean = false
-): typeof ImageLayer {
+function createBaseImageLayer(): typeof ImageLayer {
     // If createNewLayer is false, we should reuse the existing imageLayer
-    const idSuffix = refreshBaseImageLayer
-        ? `-${imageViewerStore.frameNumber}`
-        : '';
+    let id = imageLayer.value?.id ?? 'base-image-layer';
+    if (refreshBaseImageLayer.value) {
+        id = `base-image-layer-${imageViewerStore.frameNumber}`;
+    }
     return new ImageLayer({
         loader: pixelSource.value,
-        id: 'base-image-layer' + idSuffix,
+        id,
         contrastLimits: contrastLimit.value,
         selections: imageViewerStore.selections,
         channelsVisible: [true],
@@ -605,9 +604,9 @@ function createTrajectoryGhostLayer(): TripsLayer {
 const imageLayer = ref();
 
 // Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
-let refreshBaseImageLayer = false;
+const refreshBaseImageLayer = ref<boolean>(false);
 const updateBaseImageLayer = debounce(() => {
-    refreshBaseImageLayer = true;
+    refreshBaseImageLayer.value = true;
     renderDeckGL();
 }, 300);
 watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
@@ -621,13 +620,10 @@ function renderDeckGL(): void {
     const layers = [];
     if (imageViewerStore.showImageLayer) {
         if (pixelSource.value == null) return;
-        // Always create a new image layer instance instead of reusing imageLayer.value.
-        const newImageLayer = createBaseImageLayer(refreshBaseImageLayer);
-        layers.push(newImageLayer);
-        // Optionally update the reactive reference.
-        imageLayer.value = newImageLayer;
+        imageLayer.value = createBaseImageLayer();
+        layers.push(imageLayer.value);
         // No need to refresh unless debounce is called above.
-        refreshBaseImageLayer = false;
+        refreshBaseImageLayer.value = false;
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
