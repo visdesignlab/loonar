@@ -245,10 +245,12 @@ watch(
     }
 );
 
-function createBaseImageLayer(refreshBaseImageLayer: boolean = false): typeof ImageLayer {
-
+function createBaseImageLayer(
+    refreshBaseImageLayer: boolean = false
+): typeof ImageLayer {
     // If createNewLayer is false, we should reuse the existing imageLayer
-    const idSuffix = refreshBaseImageLayer ? `-${imageViewerStore.frameNumber}`
+    const idSuffix = refreshBaseImageLayer
+        ? `-${imageViewerStore.frameNumber}`
         : '';
     return new ImageLayer({
         loader: pixelSource.value,
@@ -260,7 +262,9 @@ function createBaseImageLayer(refreshBaseImageLayer: boolean = false): typeof Im
         // @ts-ignore
         colormap: imageViewerStore.colormap,
         // onClick: () => console.log('click in base image layer'),
-        onViewportLoad: () => {console.log('image viewport load')},
+        onViewportLoad: () => {
+            console.log('image viewport load');
+        },
     });
 }
 
@@ -602,7 +606,11 @@ const imageLayer = ref();
 
 // Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
 let refreshBaseImageLayer = false;
-const updateBaseImageLayer = debounce(() => {console.log("Debouncing"); refreshBaseImageLayer = true; renderDeckGL();}, 300);
+const updateBaseImageLayer = debounce(() => {
+    console.log('Debouncing');
+    refreshBaseImageLayer = true;
+    renderDeckGL();
+}, 300);
 watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
 
 function renderDeckGL(): void {
@@ -620,7 +628,7 @@ function renderDeckGL(): void {
         // Optionally update the reactive reference.
         imageLayer.value = newImageLayer;
         // No need to refresh unless debounce is called above.
-        refreshBaseImageLayer = false
+        refreshBaseImageLayer = false;
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
@@ -741,10 +749,14 @@ function clearSelection() {
 
 <template>
     <canvas
-      id="super-cool-unique-id"
-      ref="deckGlContainer"
-      :class="dataPointSelectionUntrracked.hoveredTrackId !== null ? 'force-default-cursor' : ''"
-      @reset-image-view="resetView"
+        id="super-cool-unique-id"
+        ref="deckGlContainer"
+        :class="
+            dataPointSelectionUntrracked.hoveredTrackId !== null
+                ? 'force-default-cursor'
+                : ''
+        "
+        @reset-image-view="resetView"
     ></canvas>
 </template>
 
