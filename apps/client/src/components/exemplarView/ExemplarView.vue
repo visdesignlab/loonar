@@ -1,56 +1,63 @@
 <script setup lang="ts">
+// Vue and core libraries
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useElementSize } from '@vueuse/core';
+
+// Deck.gl and related visualization libraries
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
-import { loadOmeTiff } from '@hms-dbmi/viv';
-import type { PixelSource } from '@vivjs/types';
 import {
     ScatterplotLayer,
     PolygonLayer,
     LineLayer,
-    PathLayer,
     TextLayer,
 } from '@deck.gl/layers';
-import { QSpinner } from 'quasar';
+
+// Viv libraries for image loading and extensions
+import { loadOmeTiff } from '@hms-dbmi/viv';
+import { AdditiveColormapExtension } from '@hms-dbmi/viv';
+import type { PixelSource } from '@vivjs/types';
+
+// Stores and state management (including Pinia)
+import { storeToRefs } from 'pinia';
 import {
     type Cell,
     type ExemplarTrack,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
+import { useConfigStore } from '@/stores/misc/configStore';
+import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
+import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+
+// Utility functions and external libraries
 import {
     type BBox,
     getBBoxAroundPoint,
     overlaps1D,
     scaleLengthForConstantVisualSize,
 } from '@/util/imageSnippets';
-import { useCellMetaData} from '@/stores/dataStores/cellMetaDataStore';
-import { storeToRefs } from 'pinia';
-import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
-import SnippetSegmentationOutlineLayer from '../layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
-import CellSnippetsLayer from '../layers/CellSnippetsLayer';
-import { type Selection } from '../layers/CellSnippetsLayer';
 import {
     constructGeometryBase,
     hexListToRgba,
     HORIZON_CHART_MOD_OFFSETS,
 } from './deckglUtil';
 import { isEqual, cloneDeep, clamp } from 'lodash';
-import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
-import { useConfigStore } from '@/stores/misc/configStore';
 import Pool from '@/util/Pool';
 import { LRUCache } from 'lru-cache';
-import { AdditiveColormapExtension } from '@hms-dbmi/viv';
-import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
-import {
-    useLooneageViewStore,
-} from '@/stores/componentStores/looneageViewStore';
 import { format } from 'd3-format';
-import { ScrollUpDownController } from './ScrollUpDownController';
 import colors from '@/util/colors';
-import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
+
+// Layers, controllers, and miscellaneous types
+import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
+import SnippetSegmentationOutlineLayer from '../layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
+import CellSnippetsLayer from '../layers/CellSnippetsLayer';
+import { type Selection } from '../layers/CellSnippetsLayer';
 import type { Feature } from 'geojson';
-import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
+import { ScrollUpDownController } from './ScrollUpDownController';
 
 // The y-position and visibility of each exemplar track.
 interface ExemplarRenderInfo {
@@ -169,6 +176,7 @@ watch([deckGlHeight, deckGlWidth], () => {
         target: [visualizationCenterX(zoomX), targetY],
     };
     viewStateMirror.value = cloneDeep(newViewState);
+    console.log("DeckGL view state:", viewStateMirror.value);
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
@@ -291,6 +299,7 @@ watch(
 
             // Initialize Deck.gl if not already initialized
             if (!deckgl.value) {
+                console.log("Creating Deck GL");
                 deckgl.value = new Deck({
                     pickingRadius: 5,
                     canvas: deckGlContainer.value,
@@ -535,8 +544,8 @@ async function renderDeckGL(): Promise<void> {
     deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
 
-
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
+    console.log("DeckGL layers Count:", deckGLLayers.length);
 
     deckgl.value.setProps({
         layers: deckGLLayers,
@@ -1536,12 +1545,12 @@ function createSidewaysHistogramLayer(): any[] | null {
     return layers;
 }
 
-const tempPin = ref<Pin | null>(null);
+const tempPin = ref<HistogramPin | null>(null);
 const tempLabel = ref<{ text: string; position: [number, number] } | null>(
     null
 );
-const pinnedPins = ref<Pin[]>([]);
-const dragPin = ref<Pin | null>(null);
+const pinnedPins = ref<HistogramPin[]>([]);
+const dragPin = ref<HistogramPin | null>(null);
 
 // -----------------------------------------------------------------------------
 // UPDATED: Handle hovering on the histogram hover box.
@@ -2340,13 +2349,14 @@ watch(loadingExemplarData, (newVal) => {
 });
 
 const isExemplarViewReady = computed(() => {
+    console.log("Experiment Data Intialized:", experimentDataInitialized.value);
+    console.log("Exemplar Data Intialized:", loadingExemplarData.value);
     return !loadingExemplarData.value && exemplarDataInitialized;
 });
 </script>
 
 <template>
     <div v-if="!isExemplarViewReady" class="spinner-container">
-        <!-- The loading message includes the current aggregation and attribute -->
         <q-spinner color="primary" size="3em" :thickness="10" />
         <div>
             {{
@@ -2354,9 +2364,9 @@ const isExemplarViewReady = computed(() => {
             }}
         </div>
     </div>
-    <div v-if="isExemplarViewReady">
+    <div v-show="isExemplarViewReady">
         <canvas
-            v-if="experimentDataInitialized"
+            v-show="experimentDataInitialized"
             id="exemplar-deckgl-canvas"
             ref="deckGlContainer"
         ></canvas>
