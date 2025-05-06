@@ -52,29 +52,61 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import type { Feature } from 'geojson';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 
- 
-const globalSettings = useGlobalSettings();
-const { darkMode } = storeToRefs(globalSettings);
+// The y-position and visibility of each exemplar track.
+interface ExemplarRenderInfo {
+    yOffset: number;
+    onScreen: boolean;
+}
+// Combined layers for a cell snippet: cell image, segmentation outline, and tick marks.
+interface CellImageLayerResult {
+  cellImageLayer: CellSnippetsLayer | null;
+  segmentationLayer: SnippetSegmentationOutlineLayer | null;
+  tickMarkLayer: LineLayer | null;
+}
+// Interface for the segmentation data of a cell.
+interface LocationSegmentation {
+    location: string,
+    segmentation: Feature;
+}
+// Used for ordering and avoiding collisions with other cell images.
+interface KeyframeInfo {
+    index: number;
+    nearestDistance: number;
+}
+// Text for the histogram. Hardcoded as drug and conc for now.
+interface HistogramTextData {
+    coordinates: [number, number];
+    drug: string;
+    conc: string;
+}
+// Information on a histogram pin.
+interface HistogramPin {
+    source: number[];
+    target: number[];
+    exemplar: ExemplarTrack;
+    id: string;
+    color?: number[];
+}
 
+// Store imports -------------------------------------------------
+
+// For cell images
 const configStore = useConfigStore();
 const segmentationStore = useSegmentationStore();
 
-const deckGlContainer = ref<HTMLCanvasElement | null>(null);
-const { width: deckGlWidth, height: deckGlHeight } =
-    useElementSize(deckGlContainer);
-
-const exemplarViewStore = useExemplarViewStore();
+// For condition selector
 const conditionSelectorStore = useConditionSelectorStore();
+const { selectedYTag } = storeToRefs(conditionSelectorStore);
 
-const cellMetaData = useCellMetaData();
-const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
-const looneageViewStore = useLooneageViewStore();
-
+// For dataset selection
 const datasetSelectionStore = useDatasetSelectionStore();
 const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
     datasetSelectionStore
 );
 
+
+const looneageViewStore = useLooneageViewStore();
+const exemplarViewStore = useExemplarViewStore();
 const {
     viewConfiguration,
     exemplarTracks,
@@ -86,31 +118,29 @@ const {
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
-interface SnippetCellInfo {
-    cell: Cell;
-    trackId: string;
-    destinationBottomLeft: [number, number];
-    hovered: boolean;
-}
-interface CellImageLayerResult {
-  cellImageLayer: CellSnippetsLayer | null;
-  segmentationLayer: SnippetSegmentationOutlineLayer | null;
-  tickMarkLayer: LineLayer | null;
-}
+const cellMetaData = useCellMetaData();
+const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+
+// Dark mode settings
+const globalSettings = useGlobalSettings();
+const { darkMode } = storeToRefs(globalSettings);
+
+// Exemplar data has/hasn't been initialized.
+const exemplarDataInitialized = ref(false);
 
 // Reactive reference for totalExperimentTime
 const totalExperimentTime = ref(0);
 
+// Deck.gl instance ------------------------------------------------
+
 // Reactive Deck.gl instance
 const deckgl = ref<any | null>(null);
 
-// 1. Introduce exemplarDataInitialized
-const exemplarDataInitialized = ref(false);
+const deckGlContainer = ref<HTMLCanvasElement | null>(null);
+const { width: deckGlWidth, height: deckGlHeight } =
+    useElementSize(deckGlContainer);
 
-// Access the condition selector store
-const conditionSelector = useConditionSelectorStore();
-const { selectedYTag } = storeToRefs(conditionSelector);
-
+// View state (sizing, scrolling, etc.) -------------------------------------------------------
 
 watch([deckGlHeight, deckGlWidth], () => {
     if (!deckgl.value) return;
@@ -239,7 +269,7 @@ function handleScroll(delta: number) {
 
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
-    () => experimentDataInitialized.value,
+    () => [ experimentDataInitialized.value, selectedAttribute],
     async (initialized) => {
         if (initialized) {
             console.log('Experiment data initialized.');
@@ -447,10 +477,6 @@ onBeforeUnmount(() => {
 });
 
 // Segmentation Data ---------------------------------------------------------------------------
-interface LocationSegmentation {
-    location: string,
-    segmentation: Feature;
-}
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
 async function getCellSegmentationData() {
     // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
@@ -531,10 +557,6 @@ const exemplarTracksOnScreen = computed(() => {
 
 const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
 
-interface ExemplarRenderInfo {
-    yOffset: number;
-    onScreen: boolean;
-}
 
 const bottomYOffset = computed(() => {
     return Math.max(
@@ -1232,12 +1254,6 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     return placeholderLayer;
 }
 
-interface TextDatum {
-    coordinates: [number, number];
-    drug: string;
-    conc: string;
-}
-
 function getAverageAttr(exemplar: ExemplarTrack): number {
     if (!exemplar.data || exemplar.data.length === 0) return 0;
     const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
@@ -1489,7 +1505,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         // Text Layer
         const yOffset = (groupBottom + groupTop) / 2;
 
-        const textData: TextDatum[] = [
+        const textData: HistogramTextData[] = [
             {
                 coordinates: [-hGap - 0.1 * histWidth, yOffset],
                 drug: drug,
@@ -1503,8 +1519,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                     firstExemplar
                 )}`,
                 data: textData,
-                getPosition: (d: TextDatum) => d.coordinates,
-                getText: (d: TextDatum) => `${d.drug} ${d.conc}`,
+                getPosition: (d: HistogramTextData) => d.coordinates,
+                getText: (d: HistogramTextData) => `${d.drug} ${d.conc}`,
                 sizeScale: 1,
                 sizeUnits: 'pixels',
                 sizeMaxPixels: 25,
@@ -1518,14 +1534,6 @@ function createSidewaysHistogramLayer(): any[] | null {
     }
 
     return layers;
-}
-
-interface Pin {
-    source: number[];
-    target: number[];
-    exemplar: ExemplarTrack;
-    id: string;
-    color?: number[];
 }
 
 const tempPin = ref<Pin | null>(null);
@@ -1706,7 +1714,7 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             pickable: false,
             getSourcePosition: (d: any) => d.source,
             getTargetPosition: (d: any) => d.target,
-            getColor: (d: Pin) =>
+            getColor: (d: HistogramPin) =>
                 hoveredExemplar.value === d.exemplar
                 ? colors.hovered.rgb
                 : d.color
@@ -1736,13 +1744,13 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
                 hoveredExemplar.value === d.exemplar
                     ? 6
                     : 3,
-            getColor: (d: Pin) =>
+            getColor: (d: HistogramPin) =>
                 hoveredExemplar.value === d.exemplar
                 ? colors.hovered.rgb
                 : d.color
                 ? d.color
                 : fillColor(d.exemplar),
-            getFillColor: (d: Pin) =>
+            getFillColor: (d: HistogramPin) =>
                 hoveredExemplar.value === d.exemplar
                 ? colors.hovered.rgb
                 : d.color
@@ -1770,7 +1778,7 @@ function handlePinClick(
     event: any,
     firstExemplar: ExemplarTrack
 ) {
-    // console.log('Dummy event: Pin clicked', info.object);
+    // console.log('Dummy event: HistogramPin clicked', info.object);
 }
 function handlePinDragStart(
     info: PickingInfo,
@@ -1809,7 +1817,7 @@ function handlePinDragEnd(
     updatePinsLayer(firstExemplar);
 }
 
-// End of Pin Layer Creation
+// End of HistogramPin Layer Creation
 // ---------------------------------------------------------------
 
 function groupExemplarsByCondition(
@@ -1888,11 +1896,6 @@ function getTimeExtent(track: ExemplarTrack): [number, number] {
     let minTime = track.minTime;
     let maxTime = track.maxTime;
     return [minTime, maxTime];
-}
-
-interface KeyframeInfo {
-    index: number;
-    nearestDistance: number;
 }
 
 const keyframeOrderLookup = ref<Map<string, KeyframeInfo[]>>();
@@ -2114,10 +2117,8 @@ function createExemplarImageKeyFramesLayer(
                     });
                 };
 
-        console.log("Hovered Coordinate:", hoveredCoordinate);
             // If the mouse pointer is within the destination box, console log("In destination")
             const imageHovered = pointInBBox(hoveredCoordinate ?? [-1000, 0], destination);
-            console.log("Image Hovered:", imageHovered);
             if (imageHovered) {
                 const margin = 2;
                 const prevCellDest: BBox = [x1 - snippetDestWidth - margin, y1, x2 - snippetDestWidth - margin, y2];
