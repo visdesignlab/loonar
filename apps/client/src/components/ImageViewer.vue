@@ -16,7 +16,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
-import { clamp } from 'lodash-es';
+import { clamp, debounce } from 'lodash-es';
 import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -246,10 +246,14 @@ watch(
 );
 
 function createBaseImageLayer(): typeof ImageLayer {
-    // console.log('create base image layer');
+    // If createNewLayer is false, we should reuse the existing imageLayer
+    let id = imageLayer.value?.id ?? 'base-image-layer';
+    if (refreshBaseImageLayer.value) {
+        id = `base-image-layer-${imageViewerStore.frameNumber}`;
+    }
     return new ImageLayer({
         loader: pixelSource.value,
-        id: 'base-image-layer',
+        id,
         contrastLimits: contrastLimit.value,
         selections: imageViewerStore.selections,
         channelsVisible: [true],
@@ -257,7 +261,9 @@ function createBaseImageLayer(): typeof ImageLayer {
         // @ts-ignore
         colormap: imageViewerStore.colormap,
         // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => console.log('image viewport load'),
+        // onViewportLoad: () => {
+        //     console.log('image viewport load');
+        // },
     });
 }
 
@@ -596,6 +602,15 @@ function createTrajectoryGhostLayer(): TripsLayer {
 }
 
 const imageLayer = ref();
+
+// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
+const refreshBaseImageLayer = ref<boolean>(false);
+const updateBaseImageLayer = debounce(() => {
+    refreshBaseImageLayer.value = true;
+    renderDeckGL();
+}, 300);
+watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
+
 function renderDeckGL(): void {
     if (deckgl == null) return;
     if (!cellMetaData.dataInitialized) {
@@ -607,6 +622,8 @@ function renderDeckGL(): void {
         if (pixelSource.value == null) return;
         imageLayer.value = createBaseImageLayer();
         layers.push(imageLayer.value);
+        // No need to refresh unless debounce is called above.
+        refreshBaseImageLayer.value = false;
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
