@@ -262,9 +262,9 @@ function createBaseImageLayer(
         // @ts-ignore
         colormap: imageViewerStore.colormap,
         // onClick: () => console.log('click in base image layer'),
-        onViewportLoad: () => {
-            console.log('image viewport load');
-        },
+        // onViewportLoad: () => {
+        //     console.log('image viewport load');
+        // },
     });
 }
 
@@ -607,7 +607,6 @@ const imageLayer = ref();
 // Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
 let refreshBaseImageLayer = false;
 const updateBaseImageLayer = debounce(() => {
-    console.log('Debouncing');
     refreshBaseImageLayer = true;
     renderDeckGL();
 }, 300);
