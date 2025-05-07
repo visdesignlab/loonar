@@ -260,10 +260,6 @@ function createBaseImageLayer(): typeof ImageLayer {
         extensions: [colormapExtension],
         // @ts-ignore
         colormap: imageViewerStore.colormap,
-        // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => {
-        //     console.log('image viewport load');
-        // },
     });
 }
 
