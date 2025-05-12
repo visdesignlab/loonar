@@ -501,7 +501,7 @@ function storeSetup() {
         // If the custom range is set, use it
         return [
             customRangeMin.value ?? defaultMin,
-            customRangeMax.value ?? defaultMax
+            customRangeMax.value ?? defaultMax,
         ] as const;
     });
 
