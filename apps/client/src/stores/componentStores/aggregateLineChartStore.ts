@@ -481,20 +481,28 @@ function storeSetup() {
         return [];
     });
 
+    // Reactive refs for custom range
+    const customRangeMin = ref<number | null>(null);
+    const customRangeMax = ref<number | null>(null);
+
     const aggLineDataListExtent = computed(() => {
-        const minVal = min(aggLineDataList.value, (aggLineData) => {
-            return min(aggLineData.data, (point) => {
+        const defaultMin = min(aggLineDataList.value, (aggLineData) =>
+            min(aggLineData.data, (point) => {
                 if (point.variance) return point.variance[0];
                 return point.value;
-            });
-        });
-        const maxVal = max(aggLineDataList.value, (aggLineData) => {
-            return max(aggLineData.data, (point) => {
+            })
+        );
+        const defaultMax = max(aggLineDataList.value, (aggLineData) =>
+            max(aggLineData.data, (point) => {
                 if (point.variance) return point.variance[1];
                 return point.value;
-            });
-        });
-        return [minVal, maxVal] as const;
+            })
+        );
+        // If the custom range is set, use it
+        return [
+            customRangeMin.value ?? defaultMin,
+            customRangeMax.value ?? defaultMax
+        ] as const;
     });
 
     function medianFilterSmooth(points: AggDataPoint[]): AggDataPoint[] {
@@ -556,6 +564,8 @@ function storeSetup() {
         smoothWindowComputed,
         onSmoothWindowChange,
         aggLineDataList,
+        customRangeMin,
+        customRangeMax,
         aggLineDataListExtent,
         hoveredLineData,
         selectedLineData,

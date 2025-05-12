@@ -41,7 +41,26 @@ const currentKey = computed({
         :options="cellMetaData.cellNumAttributeHeaderNames"
         :dark="globalSettings.darkMode"
     ></q-select>
-
+    <div class="row items-center q-col-gutter-lg">
+        <q-input
+            label="Range Min"
+            class="col"
+            style="max-width: 100px;"
+            dense
+            v-model.number="aggregateLineChartStore.customRangeMin"
+            type="number"
+            :dark="globalSettings.darkMode"
+        />
+        <q-input
+            label="Range Max"
+            class="col"
+            style="max-width: 100px; margin-left: auto;"
+            dense
+            v-model.number="aggregateLineChartStore.customRangeMax"
+            type="number"
+            :dark="globalSettings.darkMode"
+        />
+    </div>
     <q-select
         label="Band"
         :disable="!aggregateLineChartStore.showVarianceBand"
