@@ -481,10 +481,14 @@ function storeSetup() {
         return [];
     });
 
-    // Reactive refs for custom range
-    const customRangeMin = ref<number | null>(null);
-    const customRangeMax = ref<number | null>(null);
+    // Reactive refs for custom axis ranges
+    let customYRangeMin = ref<number | null>(null);
+    let customYRangeMax = ref<number | null>(null);
 
+    let customXRangeMin = ref<number | null>(null);
+    let customXRangeMax = ref<number | null>(null);
+
+    // Y-axis range
     const aggLineDataListExtent = computed(() => {
         const defaultMin = min(aggLineDataList.value, (aggLineData) =>
             min(aggLineData.data, (point) => {
@@ -498,10 +502,17 @@ function storeSetup() {
                 return point.value;
             })
         );
+        // If the custom range is not set, use the default range
+        if (customYRangeMin.value === null) {
+            customYRangeMin.value = defaultMin ?? null;
+        }
+        if (customYRangeMax.value === null) {
+            customYRangeMax.value = defaultMax ?? null;
+        }
         // If the custom range is set, use it
         return [
-            customRangeMin.value ?? defaultMin,
-            customRangeMax.value ?? defaultMax,
+            customYRangeMin.value,
+            customYRangeMax.value,
         ] as const;
     });
 
@@ -564,8 +575,10 @@ function storeSetup() {
         smoothWindowComputed,
         onSmoothWindowChange,
         aggLineDataList,
-        customRangeMin,
-        customRangeMax,
+        customYRangeMin,
+        customYRangeMax,
+        customXRangeMin,
+        customXRangeMax,
         aggLineDataListExtent,
         hoveredLineData,
         selectedLineData,

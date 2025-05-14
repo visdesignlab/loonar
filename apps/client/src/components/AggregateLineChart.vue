@@ -56,6 +56,8 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+let { customXRangeMin, customXRangeMax } =
+    storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
@@ -76,38 +78,53 @@ const chartHeight = computed(
     () => containerHeight.value - margin.value.top - margin.value.bottom
 );
 
-const scaleX = computed(() => {
-    let domain = extent(cellMetaData.timeList) as [number, number];
+// Default custom X range where min and max are timeMin and timeMax.
+function defaultCustomXRange() {
+    let defaultDomain = extent(cellMetaData.timeList) as [number, number];
+
+    // Set the default domain as the min and max time values from the data
     if (
         aggregateLineChartStore.aggLineDataList &&
         aggregateLineChartStore.aggLineDataList.length > 0
     ) {
         const timeMin = min(
             aggregateLineChartStore.aggLineDataList,
-            (agglineData) => {
-                return min(
-                    agglineData.data,
-                    (aggPoint: AggDataPoint) => aggPoint.time
-                );
-            }
+            (aggLineData) => min(aggLineData.data, (aggPoint: AggDataPoint) => aggPoint.time)
         );
-
         const timeMax = max(
             aggregateLineChartStore.aggLineDataList,
-            (agglineData) => {
-                return max(
-                    agglineData.data,
-                    (aggPoint: AggDataPoint) => aggPoint.time
-                );
-            }
+            (aggLineData) => max(aggLineData.data, (aggPoint: AggDataPoint) => aggPoint.time)
         );
         if (timeMin != null && timeMax != null) {
-            domain = [timeMin, timeMax];
+            defaultDomain = [timeMin, timeMax];
         }
     }
+    // If custom ranges are still null, initialize them
+    if (customXRangeMin.value === null) {
+        customXRangeMin.value = defaultDomain[0];
+    }
+    if (customXRangeMax.value === null) {
+        customXRangeMax.value = defaultDomain[1];
+    }
+}
+// Updates the custom X range when the time list changes
+watch(
+    () => cellMetaData.timeList,
+    () => {
+        defaultCustomXRange();
+    }
+);
+
+// ScaleX set to custom x axis range.
+const scaleX = computed(() => {
+    const domain: [number, number] = [
+        customXRangeMin.value ?? 0, 
+        customXRangeMax.value ?? 1
+    ];
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
+// Scale Y set to the extent of the data points in the y axis.
 const scaleY = computed(() => {
     return scaleLinear()
         .domain(

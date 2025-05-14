@@ -23,7 +23,7 @@ const currentKey = computed({
 
 <template>
     <q-select
-        label="show"
+        label="Show"
         v-model="aggregateLineChartStore.targetKey"
         :options="aggregateLineChartStore.targetOptions"
         :dark="globalSettings.darkMode"
@@ -43,18 +43,32 @@ const currentKey = computed({
     ></q-select>
     <div class="row items-center q-col-gutter-sm">
         <q-input
-            label="Range Min"
+            label="Y Axis Min"
             class="col"
-            style="max-width: 200px;"
-            v-model.number="aggregateLineChartStore.customRangeMin"
+            v-model.number="aggregateLineChartStore.customYRangeMin"
             type="number"
             :dark="globalSettings.darkMode"
         />
         <q-input
-            label="Range Max"
+            label="Y Axis Max"
             class="col"
-            style="max-width: 200px;"
-            v-model.number="aggregateLineChartStore.customRangeMax"
+            v-model.number="aggregateLineChartStore.customYRangeMax"
+            type="number"
+            :dark="globalSettings.darkMode"
+        />
+    </div>
+    <div class="row items-center q-col-gutter-sm">
+        <q-input
+            label="X Axis Min"
+            class="col"
+            v-model.number="aggregateLineChartStore.customXRangeMin"
+            type="number"
+            :dark="globalSettings.darkMode"
+        />
+        <q-input
+            label="X Axis Max"
+            class="col"
+            v-model.number="aggregateLineChartStore.customXRangeMax"
             type="number"
             :dark="globalSettings.darkMode"
         />
