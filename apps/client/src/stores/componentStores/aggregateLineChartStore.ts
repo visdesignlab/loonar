@@ -481,20 +481,39 @@ function storeSetup() {
         return [];
     });
 
+    // Reactive refs for custom axis ranges
+    let customYRangeMin = ref<number | null>(null);
+    let customYRangeMax = ref<number | null>(null);
+
+    let customXRangeMin = ref<number | null>(null);
+    let customXRangeMax = ref<number | null>(null);
+
+    // Y-axis range
     const aggLineDataListExtent = computed(() => {
-        const minVal = min(aggLineDataList.value, (aggLineData) => {
-            return min(aggLineData.data, (point) => {
+        const defaultMin = min(aggLineDataList.value, (aggLineData) =>
+            min(aggLineData.data, (point) => {
                 if (point.variance) return point.variance[0];
                 return point.value;
-            });
-        });
-        const maxVal = max(aggLineDataList.value, (aggLineData) => {
-            return max(aggLineData.data, (point) => {
+            })
+        );
+        const defaultMax = max(aggLineDataList.value, (aggLineData) =>
+            max(aggLineData.data, (point) => {
                 if (point.variance) return point.variance[1];
                 return point.value;
-            });
-        });
-        return [minVal, maxVal] as const;
+            })
+        );
+        // If the custom range is not set, use the default range
+        if (customYRangeMin.value === null) {
+            customYRangeMin.value = defaultMin ?? null;
+        }
+        if (customYRangeMax.value === null) {
+            customYRangeMax.value = defaultMax ?? null;
+        }
+        // If the custom range is set, use it
+        return [
+            customYRangeMin.value,
+            customYRangeMax.value,
+        ] as const;
     });
 
     function medianFilterSmooth(points: AggDataPoint[]): AggDataPoint[] {
@@ -556,6 +575,10 @@ function storeSetup() {
         smoothWindowComputed,
         onSmoothWindowChange,
         aggLineDataList,
+        customYRangeMin,
+        customYRangeMax,
+        customXRangeMin,
+        customXRangeMax,
         aggLineDataListExtent,
         hoveredLineData,
         selectedLineData,
