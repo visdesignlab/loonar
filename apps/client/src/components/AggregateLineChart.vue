@@ -105,7 +105,6 @@ function defaultCustomXRange() {
         if (customXRangeMax.value === null) {
             customXRangeMax.value = defaultDomain[1];
         }
-        console.log("Reset the custom x range to the default values", customXRangeMin.value, customXRangeMax.value);
     }
 }
 // Updates the custom X range when the time list changes
