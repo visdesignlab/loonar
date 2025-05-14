@@ -488,6 +488,13 @@ function storeSetup() {
     let customXRangeMin = ref<number | null>(null);
     let customXRangeMax = ref<number | null>(null);
 
+    // Immediately after declaring the custom axis refs:
+    watch([targetKey, aggregatorKey, attributeKey], () => {
+        customYRangeMin.value = null;
+        customYRangeMax.value = null;
+        customXRangeMin.value = null;
+        customXRangeMax.value = null;
+    });
     // Y-axis range
     const aggLineDataListExtent = computed(() => {
         const defaultMin = min(aggLineDataList.value, (aggLineData) =>

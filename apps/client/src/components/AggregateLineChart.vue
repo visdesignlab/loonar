@@ -98,29 +98,37 @@ function defaultCustomXRange() {
         if (timeMin != null && timeMax != null) {
             defaultDomain = [timeMin, timeMax];
         }
-    }
-    // If custom ranges are still null, initialize them
-    if (customXRangeMin.value === null) {
-        customXRangeMin.value = defaultDomain[0];
-    }
-    if (customXRangeMax.value === null) {
-        customXRangeMax.value = defaultDomain[1];
+        // If custom ranges are still null, initialize them
+        if (customXRangeMin.value === null) {
+            customXRangeMin.value = defaultDomain[0];
+        }
+        if (customXRangeMax.value === null) {
+            customXRangeMax.value = defaultDomain[1];
+        }
+        console.log("Reset the custom x range to the default values", customXRangeMin.value, customXRangeMax.value);
     }
 }
 // Updates the custom X range when the time list changes
 watch(
-    () => cellMetaData.timeList,
+    () => [
+        aggregateLineChartStore.targetKey,
+        aggregateLineChartStore.aggregatorKey,
+        aggregateLineChartStore.attributeKey
+    ],
     () => {
+        // Reinitialize with default values based on the current timeList and aggLineDataList
         defaultCustomXRange();
     }
 );
 
 // ScaleX set to custom x axis range.
 const scaleX = computed(() => {
+   
     const domain: [number, number] = [
         customXRangeMin.value ?? 0, 
         customXRangeMax.value ?? 1
     ];
+    console.log("Domain:", domain);
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
