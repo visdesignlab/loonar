@@ -504,6 +504,7 @@ const otherUnmuted = computed(() => {
     <div v-if="cellMetaData.dataInitialized" class="d-flex flex-column h-100">
         <div ref="aggLineChartContainer" class="h-100">
             <svg
+                id="aggLineChartSvg"
                 :width="containerWidth"
                 :height="containerHeight"
                 @mousemove="onMouseMove"
