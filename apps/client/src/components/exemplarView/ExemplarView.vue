@@ -166,11 +166,15 @@ watch([deckGlHeight, deckGlWidth], () => {
     }
     // zoomX depends on zoomX so this is a simple iterative solver
     let zoomX = viewStateMirror.value.zoom[0];
+    console.log("ZoomX before solver iterations:", zoomX);
+    console.log("DeckGL Width before solver iterations:", deckGlWidth.value);
     const solverIterations = 10;
-    for (let i = 0; i < solverIterations; i++) {
-        zoomX = Math.log2(deckGlWidth.value / visualizationWidth(zoomX));
+    if (deckGlWidth.value != 0) {  
+        for (let i = 0; i < solverIterations; i++) {
+            zoomX = Math.log2(deckGlWidth.value / visualizationWidth(zoomX));
+            console.log("ZoomX:", zoomX);
+        }
     }
-
     const newViewState = {
         zoom: [zoomX, 0],
         target: [visualizationCenterX(zoomX), targetY],
@@ -2305,9 +2309,7 @@ function createExemplarImageKeyFramesLayer(
     // Push the segmentation layer to be rendered alongside the snippet layer.
     // snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
 
-    console.log("key frame tick data:", tickData);
     const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
-    console.log("key frame tick layer:", keyFrameTickMarkLayer);
     return {imageLayerResult: { cellImageLayer: snippetLayer,segmentationLayer: snippetSegmentationOutlineLayer,tickMarkLayer: keyFrameTickMarkLayer }};
 }
 
