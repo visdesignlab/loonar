@@ -2,6 +2,10 @@
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useAggregateLineChartStore } from '@/stores/componentStores/aggregateLineChartStore';
+import { matFileDownload } from '@quasar/extras/material-icons'
+import { downloadLineChartSvg } from '@/util/downloadSvg';
+
+
 const cellMetaData = useCellMetaData();
 const aggregateLineChartStore = useAggregateLineChartStore();
 const globalSettings = useGlobalSettings();
@@ -16,6 +20,11 @@ const globalSettings = useGlobalSettings();
         :options="cellMetaData.cellNumAttributeHeaderNames"
         :dark="globalSettings.darkMode"
     ></q-select>
+    <q-btn 
+    round
+    flat
+    :icon="matFileDownload" 
+    @click="downloadLineChartSvg" />
 </template>
 
 <style scoped lang="scss">

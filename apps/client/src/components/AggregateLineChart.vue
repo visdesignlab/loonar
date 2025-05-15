@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -43,6 +43,7 @@ import { LRUCache } from 'lru-cache';
 import { getBBoxAroundPoint } from '@/util/imageSnippets';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
+import { downloadLineChartSvg } from '@/util/downloadSvg';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -63,6 +64,9 @@ const aggLineChartContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
     aggLineChartContainer
 );
+
+// Add a reactive flag to track mouse position
+const isMouseInside = ref(false);
 
 // container height must be less than the outer container height in order for
 // height to shrink when the outer container is reduced in height. Without
@@ -243,6 +247,21 @@ function onMouseMove(event: MouseEvent) {
     if (time < timeExtent[0] || time > timeExtent[1]) return;
     dataPointSelectionUntrracked.hoveredTime = time;
 }
+// Listen for keydown events to trigger download
+function handleKeyDown(e: KeyboardEvent) {
+  if (isMouseInside.value && e.key.toLowerCase() === 'd') {
+    downloadLineChartSvg();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown);
+  // ...existing onMounted code...
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown);
+});
 
 const deckGlContainer = ref(null);
 
@@ -511,10 +530,12 @@ const otherUnmuted = computed(() => {
     <div v-if="cellMetaData.dataInitialized" class="d-flex flex-column h-100">
         <div ref="aggLineChartContainer" class="h-100">
             <svg
+                id="aggLineChartSvg"
                 :width="containerWidth"
                 :height="containerHeight"
                 @mousemove="onMouseMove"
-                @mouseleave="dataPointSelectionUntrracked.hoveredTime = null"
+                @mouseenter="isMouseInside = true"
+                @mouseleave="() => { dataPointSelectionUntrracked.hoveredTime = null; isMouseInside = false; }"
                 @click="onSvgClick"
             >
                 <g
