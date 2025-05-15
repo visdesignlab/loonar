@@ -9,7 +9,7 @@ import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useLooneageViewStore } from './looneageViewStore';
 
-import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
+import { min, max, mean, sum, median, quantile, deviation, extent } from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
@@ -488,39 +488,52 @@ function storeSetup() {
     let customXRangeMin = ref<number | null>(null);
     let customXRangeMax = ref<number | null>(null);
 
-    // Immediately after declaring the custom axis refs:
+    // Function to set default custom axis ranges
+    function defaultCustomAxisRanges() {
+        if (aggLineDataList && aggLineDataList.value.length > 0) {
+            // Set Y-axis defaults
+            const defaultYMin = min(aggLineDataList.value, (aggLineData) =>
+                min(aggLineData.data, (point) =>
+                    point.variance ? point.variance[0] : point.value
+                )
+            );
+            const defaultYMax = max(aggLineDataList.value, (aggLineData) =>
+                max(aggLineData.data, (point) =>
+                    point.variance ? point.variance[1] : point.value
+                )
+            );
+    
+            // Set X-axis defaults
+            const timeMin = min(aggLineDataList.value, (aggLineData) =>
+                min(aggLineData.data, (point: AggDataPoint) => point.time)
+            );
+            const timeMax = max(aggLineDataList.value, (aggLineData) =>
+                max(aggLineData.data, (point: AggDataPoint) => point.time)
+            );
+
+            // Assign default values if custom ranges are null
+            if (customYRangeMin.value === null) {
+                customYRangeMin.value = defaultYMin ?? null;
+            }
+            if (customYRangeMax.value === null) {
+                customYRangeMax.value = defaultYMax ?? null;
+            }
+            if (customXRangeMin.value === null) {
+                customXRangeMin.value = timeMin ?? null;
+            }
+            if (customXRangeMax.value === null) {
+                customXRangeMax.value = timeMax  ?? null;
+            }
+        }
+    }
+    
+    // Reset the custom axis ranges to default values when the targetKey, aggregatorKey, or attributeKey changes
     watch([targetKey, aggregatorKey, attributeKey], () => {
         customYRangeMin.value = null;
         customYRangeMax.value = null;
         customXRangeMin.value = null;
         customXRangeMax.value = null;
-    });
-    // Y-axis range
-    const aggLineDataListExtent = computed(() => {
-        const defaultMin = min(aggLineDataList.value, (aggLineData) =>
-            min(aggLineData.data, (point) => {
-                if (point.variance) return point.variance[0];
-                return point.value;
-            })
-        );
-        const defaultMax = max(aggLineDataList.value, (aggLineData) =>
-            max(aggLineData.data, (point) => {
-                if (point.variance) return point.variance[1];
-                return point.value;
-            })
-        );
-        // If the custom range is not set, use the default range
-        if (customYRangeMin.value === null) {
-            customYRangeMin.value = defaultMin ?? null;
-        }
-        if (customYRangeMax.value === null) {
-            customYRangeMax.value = defaultMax ?? null;
-        }
-        // If the custom range is set, use it
-        return [
-            customYRangeMin.value,
-            customYRangeMax.value,
-        ] as const;
+        defaultCustomAxisRanges();
     });
 
     function medianFilterSmooth(points: AggDataPoint[]): AggDataPoint[] {
@@ -586,7 +599,6 @@ function storeSetup() {
         customYRangeMax,
         customXRangeMin,
         customXRangeMax,
-        aggLineDataListExtent,
         hoveredLineData,
         selectedLineData,
         selectedLineLineageConnections,
@@ -596,3 +608,4 @@ function storeSetup() {
 }
 const storeId = 'aggregateLineChartStore';
 export const useAggregateLineChartStore = defineStore(storeId, storeSetup);
+
