@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -56,6 +56,7 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+import { toSvg } from 'html-to-image'; 
 let { customXRangeMin, customXRangeMax } =
     storeToRefs(aggregateLineChartStore);
 
@@ -63,6 +64,66 @@ const aggLineChartContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
     aggLineChartContainer
 );
+
+// Add a reactive flag to track mouse position
+const isMouseInside = ref(false);
+
+function inlineComputedStyle(el: HTMLElement) {
+    const computed = window.getComputedStyle(el);
+    let styleString = '';
+    for (let i = 0; i < computed.length; i++) {
+        const key = computed[i];
+        styleString += `${key}:${computed.getPropertyValue(key)};`;
+    }
+    el.setAttribute('style', styleString);
+}
+
+function inlineAllStyles(root: HTMLElement) {
+    // Inline style for the root element.
+    inlineComputedStyle(root);
+    // Then, inline for all child elements.
+    root.querySelectorAll('*').forEach((el) => {
+        inlineComputedStyle(el as HTMLElement);
+    });
+}
+
+function downloadSvg(): void {
+  const element = document.getElementById('aggLineChartSvg');
+  if (!(element instanceof SVGElement)) {
+    console.error('SVG element not found!');
+    return;
+  }
+
+  // Create a clone of the SVG element.
+  const clone = element.cloneNode(true) as SVGElement;
+
+  // Create a hidden container and attach the clone to it.
+  const hiddenContainer = document.createElement('div');
+  hiddenContainer.style.position = 'absolute';
+  hiddenContainer.style.left = '-9999px';
+  hiddenContainer.style.top = '-9999px';
+  hiddenContainer.appendChild(clone);
+  document.body.appendChild(hiddenContainer);
+
+  // Inline computed styles on the clone.
+  inlineAllStyles(clone as unknown as HTMLElement);
+
+  // Convert the cloned SVG to an SVG data URL.
+  toSvg(clone as unknown as HTMLElement)
+    .then((dataUrl) => {
+      const link = document.createElement('a');
+      link.download = 'aggregateLineChart.svg';
+      link.href = dataUrl;
+      link.click();
+      // Remove the temporary container.
+      document.body.removeChild(hiddenContainer);
+    })
+    .catch((err) => {
+      console.error('oops, something went wrong!', err);
+      // Remove the temporary container on error.
+      document.body.removeChild(hiddenContainer);
+    });
+}
 
 // container height must be less than the outer container height in order for
 // height to shrink when the outer container is reduced in height. Without
@@ -236,6 +297,21 @@ function onMouseMove(event: MouseEvent) {
     if (time < timeExtent[0] || time > timeExtent[1]) return;
     dataPointSelectionUntrracked.hoveredTime = time;
 }
+// Listen for keydown events to trigger download
+function handleKeyDown(e: KeyboardEvent) {
+  if (isMouseInside.value && e.key.toLowerCase() === 'd') {
+    downloadSvg();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown);
+  // ...existing onMounted code...
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown);
+});
 
 const deckGlContainer = ref(null);
 
@@ -508,7 +584,8 @@ const otherUnmuted = computed(() => {
                 :width="containerWidth"
                 :height="containerHeight"
                 @mousemove="onMouseMove"
-                @mouseleave="dataPointSelectionUntrracked.hoveredTime = null"
+                @mouseenter="isMouseInside = true"
+                @mouseleave="() => { dataPointSelectionUntrracked.hoveredTime = null; isMouseInside = false; }"
                 @click="onSvgClick"
             >
                 <g
