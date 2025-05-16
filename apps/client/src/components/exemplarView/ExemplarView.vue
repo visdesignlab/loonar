@@ -857,6 +857,12 @@ const hoveredCellsInfo = ref<[BBox, Cell][]>([]);
 const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
 const hoveredImagesInfo = ref<[BBox, Cell][]>([]);
 
+const hoveredImageBBoxes = computed(() => {
+    return hoveredImagesInfo.value
+        ? hoveredImagesInfo.value.map(info => info[0])
+        : [];
+});
+
 
 /**
  * Handles cell image events for both click and hover actions.
@@ -2080,11 +2086,10 @@ function createExemplarImageKeyFramesLayer(
     let hoveredFound = ref(false);
     let hoveredImagesCollected: [BBox, Cell][] = [];
 
-    // For each key frame image:
-    // 1. Assign the image's coordinate destination
-    // 2. Find the proper segmentation, assign the segmentation's coordinate destination to be the same as the image's
-    for (const { index, nearestDistance } of keyFrames) {
 
+
+    // Testing separate loop for hovered images
+    for (const {index, nearestDistance} of keyFrames) {
         // Find the cell in exemplar.data whose time is closest to 'time'
         const cell = exemplar.data[index];
         const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
@@ -2188,6 +2193,59 @@ function createExemplarImageKeyFramesLayer(
                     selected: cell.isSelected,
                 });
             }
+    }
+
+    // For each key frame image:
+    // 1. Assign the image's coordinate destination
+    // 2. Find the proper segmentation, assign the segmentation's coordinate destination to be the same as the image's
+    for (const { index, nearestDistance } of keyFrames) {
+
+        // Find the cell in exemplar.data whose time is closest to 'time'
+        const cell = exemplar.data[index];
+        const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
+        if (nearestDistanceWidth <= snippetDestWidth + 4) {
+            break;
+        }
+
+        const source = getBBoxAroundPoint(
+            cell.x,
+            cell.y,
+            looneageViewStore.snippetSourceSize,
+            looneageViewStore.snippetSourceSize
+        );
+
+        // Find the percentage of that time to the total experiment time.
+        const percentage =
+            (cell.time - exemplar.minTime) /
+            (exemplar.maxTime - exemplar.minTime);
+
+        // Find the x coordinate based on the percentage.
+        const centerX = viewConfig.horizonChartWidth * percentage;
+        const x1 = centerX - snippetDestWidth / 2;
+        const x2 = x1 + snippetDestWidth;
+        const y1 = destY;
+        const y2 = y1 - snippetDestHeight;
+        const destination: BBox = [x1, y1, x2, y2];
+        const addSegmentation = (frame: number, dest: BBox, selected: boolean) => {
+                    if (frame <= 0) return;
+                    const segmentationPolygon = getCellSegmentationPolygon(
+                        exemplar.locationId,
+                        exemplar.trackId.toString(),
+                        frame.toString()
+                    );
+                    if (!segmentationPolygon) return;
+                    const [destX, destY] = [dest[0], dest[1]];
+                    exemplarSegmentationData.push({
+                        // @ts-ignore: coordinates exist on geometry
+                        polygon: segmentationPolygon.geometry.coordinates,
+                        hovered: selected,
+                        selected: cell.isSelected,
+                        center: [cell.x, cell.y],
+                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
+                    });
+                };
+
+
         // Get the currently interacted with cell boundaries.
         const hoveredCellBBoxes = hoveredCellsInfo.value 
         ? hoveredCellsInfo.value.map(info => info[0])
@@ -2195,11 +2253,8 @@ function createExemplarImageKeyFramesLayer(
         const selectedCellBBoxes = selectedCellsInfo.value 
         ? selectedCellsInfo.value.map(info => info[0])
         : [];
-        const hoveredImageBBoxes = hoveredImagesInfo.value 
-        ? hoveredImagesInfo.value.map(info => info[0])
-        : [];
 
-        const interactedCellBBoxes = [...hoveredCellBBoxes, ...selectedCellBBoxes, ...hoveredImageBBoxes];
+        const interactedCellBBoxes = [...hoveredCellBBoxes, ...selectedCellBBoxes, ...hoveredImageBBoxes.value];
 
         const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
 
