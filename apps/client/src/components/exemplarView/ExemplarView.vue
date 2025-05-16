@@ -2020,352 +2020,234 @@ function pointInBBox(point: [number, number], bbox: [number, number, number, num
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
 let hoveredCoordinate = <[number, number] | null>null;
 function createExemplarImageKeyFramesLayer(
-    pixelSource: PixelSource<any>,
-    exemplar: ExemplarTrack
+  pixelSource: PixelSource<any>,
+  exemplar: ExemplarTrack
 ): { imageLayerResult: CellImageLayerResult } {
-    let selections: Selection[] = [];
-    // Check that the pixelSource is ready.
-    if (!pixelSource) {
-        console.error(
-            '[createExemplarImageKeyFramesLayer] pixelSource.value is not set!'
-        );
-        console.warn(
-            '[createExemplarImageKeyFramesLayer] pixelSource might not have loaded yet. Is loadOmeTiff() being called and awaited?'
-        );
-        return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } }; // Do not create the layer until pixelSource.value is available.
+  // --- Validation and basic setup ---
+  if (!pixelSource) {
+    console.error('[createExemplarImageKeyFramesLayer] pixelSource is not set!');
+    return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
+  }
+  if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
+    console.error('[createExemplarImageKeyFramesLayer] No exemplar tracks available!');
+    return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
+  }
+
+  const viewConfig = viewConfiguration.value;
+  const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
+  const snippetDestHeight = viewConfig.snippetDisplayHeight;
+
+  // Calculate destination Y from the yOffset of the current exemplar.
+  let destY = viewConfig.horizonChartHeight; // fallback
+  {
+    const key = uniqueExemplarKey(exemplar);
+    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+    if (yOffset !== undefined && yOffset !== null) {
+      destY =
+        yOffset -
+        viewConfig.timeBarHeightOuter -
+        viewConfig.snippetHorizonChartGap -
+        viewConfig.horizonChartHeight -
+        viewConfig.snippetHorizonChartGap;
+    } else {
+      console.error('[createExemplarImageKeyFramesLayer] No yOffset found for key:', key);
     }
+  }
 
-    // Check that exemplarTracks is available.
-    if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
-        console.error(
-            '[createExemplarImageKeyFramesLayer] No exemplar tracks available!'
-        );
-        return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
-    }
+  // --- Helper Functions ---
+  // Calculate the destination bbox for a given cell.
+  function computeDestination(cell: Cell): [number, number, number, number] {
+    const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
+    const centerX = viewConfig.horizonChartWidth * percentage;
+    const x1 = centerX - snippetDestWidth / 2;
+    const x2 = x1 + snippetDestWidth;
+    const y1 = destY;
+    const y2 = y1 - snippetDestHeight;
+    return [x1, y1, x2, y2];
+  }
 
-    // Get viewConfiguration details for snippet placement.
-    const viewConfig = viewConfiguration.value;
-
-    const snippetDestWidth = scaleForConstantVisualSize(
-        viewConfig.snippetDisplayWidth
+  // Add segmentation data given a cell, its destination, and whether it is “selected” (or hovered).
+  function addSegmentation(frame: number, dest: [number, number, number, number], selected: boolean, cell: Cell) {
+    if (frame <= 0) return;
+    const segmentationPolygon = getCellSegmentationPolygon(
+      exemplar.locationId,
+      exemplar.trackId.toString(),
+      frame.toString()
     );
-    const snippetDestHeight = viewConfig.snippetDisplayHeight;
-
-    // Calculate destination Y for the snippets.
-    let destY = viewConfig.horizonChartHeight; // fallback value
-    if (exemplarTracks.value && exemplarTracks.value.length > 0) {
-        const key = uniqueExemplarKey(exemplar);
-        const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
-        if (yOffset === undefined || yOffset == null) {
-            console.error(
-                '[createExemplarImageKeyFramesLayer] No yOffset found for first exemplar with key:',
-                key
-            );
-        } else {
-            // Compute destination Y such that the snippet is just above the top horizon chart.
-            destY =
-                yOffset -
-                viewConfig.timeBarHeightOuter -
-                viewConfig.snippetHorizonChartGap -
-                viewConfig.horizonChartHeight -
-                viewConfig.snippetHorizonChartGap;
-        }
-    }
-
-    const convertDurationToWidth = (duration: number) => {
-        return (
-            (viewConfiguration.value.horizonChartWidth * duration) /
-            (exemplar.maxTime - exemplar.minTime)
-        );
-    };
-
-    // Order of key frames.
-    const keyFrames = getKeyFrameOrder(exemplar);
-    const exemplarSegmentationData = [];
-    const tickData = [];
-    let hoveredFound = ref(false);
-    let hoveredImagesCollected: [BBox, Cell][] = [];
-
-
-
-    // Testing separate loop for hovered images
-    for (const {index, nearestDistance} of keyFrames) {
-        // Find the cell in exemplar.data whose time is closest to 'time'
-        const cell = exemplar.data[index];
-        const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
-        if (nearestDistanceWidth <= snippetDestWidth + 4) {
-            break;
-        }
-
-        const source = getBBoxAroundPoint(
-            cell.x,
-            cell.y,
-            looneageViewStore.snippetSourceSize,
-            looneageViewStore.snippetSourceSize
-        );
-
-        // Find the percentage of that time to the total experiment time.
-        const percentage =
-            (cell.time - exemplar.minTime) /
-            (exemplar.maxTime - exemplar.minTime);
-
-        // Find the x coordinate based on the percentage.
-        const centerX = viewConfig.horizonChartWidth * percentage;
-        const x1 = centerX - snippetDestWidth / 2;
-        const x2 = x1 + snippetDestWidth;
-        const y1 = destY;
-        const y2 = y1 - snippetDestHeight;
-        const destination: BBox = [x1, y1, x2, y2];
-        const addSegmentation = (frame: number, dest: BBox, selected: boolean) => {
-                    if (frame <= 0) return;
-                    const segmentationPolygon = getCellSegmentationPolygon(
-                        exemplar.locationId,
-                        exemplar.trackId.toString(),
-                        frame.toString()
-                    );
-                    if (!segmentationPolygon) return;
-                    const [destX, destY] = [dest[0], dest[1]];
-                    exemplarSegmentationData.push({
-                        // @ts-ignore: coordinates exist on geometry
-                        polygon: segmentationPolygon.geometry.coordinates,
-                        hovered: selected,
-                        selected: cell.isSelected,
-                        center: [cell.x, cell.y],
-                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
-                    });
-                };
-
-            // If the mouse pointer is within the destination box, console log("In destination")
-            const imageHovered = pointInBBox(hoveredCoordinate ?? [-1000, 0], destination);
-            if (imageHovered) {
-                const margin = 2;
-                const prevCellDest: BBox = [x1 - snippetDestWidth - margin, y1, x2 - snippetDestWidth - margin, y2];
-                const nextCellDest: BBox = [x1 + snippetDestWidth + margin, y1, x2 + snippetDestWidth + margin, y2];
-                hoveredFound.value = true;
-                hoveredImagesInfo.value = [
-                    [prevCellDest, cell],
-                    [nextCellDest, cell],
-                    [destination, cell]
-                ];
-
-                selections.push(
-                    { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source, destination: prevCellDest }] },
-                    { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source, destination: destination }] },
-                    { c: 0, t: cell.frame, z: 0, snippets: [{ source, destination: nextCellDest }] }
-                );
-                addSegmentation(cell.frame, destination, true);
-                addSegmentation(cell.frame - 1, prevCellDest, true);
-                addSegmentation(cell.frame + 1, nextCellDest, true);
-
-                const tickX = x1 + snippetDestWidth / 2;
-                const tickY = y1
-                const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
-                tickData.push({
-                    path: [
-                    [tickX, tickY],
-                    [tickX, tickY + tickLength]
-                    ],
-                    hovered: cell.isHovered,
-                    selected: cell.isSelected,
-                });
-                tickData.push({
-                    path: [
-                    [tickX + 20, tickY + 5],
-                    [tickX + 20, tickY + tickLength]
-                    ],
-                    hovered: cell.isHovered,
-                    selected: cell.isSelected,
-                });
-                tickData.push({
-                    path: [
-                    [tickX - 20, tickY + 5],
-                    [tickX - 20, tickY + tickLength]
-                    ],
-                    hovered: cell.isHovered,
-                    selected: cell.isSelected,
-                });
-                tickData.push({
-                    path: [
-                    [tickX - 1.5* snippetDestWidth - margin, tickY + 5],
-                    [tickX + 1.5 * snippetDestWidth + margin, tickY + 5]
-                    ],
-                    hovered: cell.isHovered,
-                    selected: cell.isSelected,
-                });
-            }
-    }
-
-    // For each key frame image:
-    // 1. Assign the image's coordinate destination
-    // 2. Find the proper segmentation, assign the segmentation's coordinate destination to be the same as the image's
-    for (const { index, nearestDistance } of keyFrames) {
-
-        // Find the cell in exemplar.data whose time is closest to 'time'
-        const cell = exemplar.data[index];
-        const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
-        if (nearestDistanceWidth <= snippetDestWidth + 4) {
-            break;
-        }
-
-        const source = getBBoxAroundPoint(
-            cell.x,
-            cell.y,
-            looneageViewStore.snippetSourceSize,
-            looneageViewStore.snippetSourceSize
-        );
-
-        // Find the percentage of that time to the total experiment time.
-        const percentage =
-            (cell.time - exemplar.minTime) /
-            (exemplar.maxTime - exemplar.minTime);
-
-        // Find the x coordinate based on the percentage.
-        const centerX = viewConfig.horizonChartWidth * percentage;
-        const x1 = centerX - snippetDestWidth / 2;
-        const x2 = x1 + snippetDestWidth;
-        const y1 = destY;
-        const y2 = y1 - snippetDestHeight;
-        const destination: BBox = [x1, y1, x2, y2];
-        const addSegmentation = (frame: number, dest: BBox, selected: boolean) => {
-                    if (frame <= 0) return;
-                    const segmentationPolygon = getCellSegmentationPolygon(
-                        exemplar.locationId,
-                        exemplar.trackId.toString(),
-                        frame.toString()
-                    );
-                    if (!segmentationPolygon) return;
-                    const [destX, destY] = [dest[0], dest[1]];
-                    exemplarSegmentationData.push({
-                        // @ts-ignore: coordinates exist on geometry
-                        polygon: segmentationPolygon.geometry.coordinates,
-                        hovered: selected,
-                        selected: cell.isSelected,
-                        center: [cell.x, cell.y],
-                        offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
-                    });
-                };
-
-
-        // Get the currently interacted with cell boundaries.
-        const hoveredCellBBoxes = hoveredCellsInfo.value 
-        ? hoveredCellsInfo.value.map(info => info[0])
-        : [];
-        const selectedCellBBoxes = selectedCellsInfo.value 
-        ? selectedCellsInfo.value.map(info => info[0])
-        : [];
-
-        const interactedCellBBoxes = [...hoveredCellBBoxes, ...selectedCellBBoxes, ...hoveredImageBBoxes.value];
-
-        const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
-
-        // Get hovered cell bbox (if any) and selected cell bboxes
-
-        if (!cellCollisionDetected) {
-
-            // Selections is the image data for the cell.
-            selections.push({
-                c: 0,
-                t: cell.frame - 1,
-                z: 0,
-                snippets: [{ source, destination }],
-            });
-
-            // Segmentation data for the cell --------------------------
-            // Find the cell's segmentation.
-            addSegmentation(cell.frame, destination, false);
-            
-            // // Calculate the destination coordinates for the segmentation.
-            // const [x, y] = [destination[0], destination[1]];
-
-            // // Push the current cell's segmentation data to the segmentationData array.
-            // exemplarSegmentationData.push({
-            //     // @ts-ignore coordinates does exist on geometry
-            //     polygon: cellSegmentationPolygon?.geometry?.coordinates,
-            //     hovered: cell.isHovered,
-            //     selected: cell.isSelected,
-            //     center: [cell.x, cell.y],
-            //     offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
-
-            // The tick should be placed at the center of the snippet.
-            const tickX = x1 + snippetDestWidth / 2;
-            const tickY = y1
-            const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
-            tickData.push({
-                path: [
-                [tickX, tickY],
-                [tickX, tickY + tickLength]
-                ],
-                hovered: cell.isHovered,
-                selected: cell.isSelected,
-            });
-        }
-    }
-    if (!hoveredFound.value) {
-            hoveredImagesInfo.value = [];
-    }
-
-
-
-
-    // Create an instance of the colormap extension.
-    const colormapExtension = new AdditiveColormapExtension();
-    // Set up a basic LRUCache for snippet data.
-    // Setup contrast limits and channel visibility.
-    const contrastLimits = [[0, 255]];
-    const channelsVisible = [true];
-    // Return an array of CellSnippetsLayer instances, one for each pixel source.
-    const snippetLayer = new CellSnippetsLayer({
-        id: `test-cell-snippets-layer ${exemplar.trackId}`,
-        loader: pixelSource, // the loaded image data
-        onHover: (info: PickingInfo) => {
-            if (info.coordinate) {
-             if (info.coordinate.length === 2) {
-                 hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
-             }
-             renderDeckGL();
-            // Optionally do additional work when hovered
-            }},
-        contrastLimits,
-        channelsVisible,
-        selections: selections,
-        extensions: [colormapExtension],
-        colormap: 'viridis',
-        cache: lruCache,
+    if (!segmentationPolygon) return;
+    const [destX, destY] = [dest[0], dest[1]];
+    exemplarSegmentationData.push({
+      // @ts-ignore: coordinates exist on geometry
+      polygon: segmentationPolygon.geometry.coordinates,
+      hovered: selected,
+      selected: cell.isSelected,
+      center: [cell.x, cell.y],
+      offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
     });
+  }
 
-    const hoveredWithAlpha = colors.hovered.rgba;
-    hoveredWithAlpha[3] = 200;
-    // Create a new segmentation outline layer for these cells.
-    const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
-        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
-        data: exemplarSegmentationData,
-        // Use the first element of the polygon
-        getPath: (d: any) => d.polygon[0],
-        getColor: (d: any) => {
-                if (d.selected) {
-                    return globalSettings.normalizedSelectedRgb;
-                }
-                if (d.hovered) {
-                    return hoveredWithAlpha;
-                }
-                return colors.unselectedBoundary.rgb;
-            },
-        getWidth: (d: any) => d.hovered ? 3 : 1.5,
-        opacity: 1, 
-        widthUnits: 'pixels',
-        jointRounded: true,
-        getCenter: (d: any) => d.center,
-        getTranslateOffset: (d: any) => d.offset,
-        zoomX: viewStateMirror.value.zoom[0],
-        scale: 1,
-        clipSize: looneageViewStore.snippetDestSize,
-        clip: false,
-    });
-    // Push the segmentation layer to be rendered alongside the snippet layer.
-    // snippetSegmentationOutlineLayers.value.push(snippetSegmentationOutlineLayer);
+  // Convert a duration to its display width.
+  const convertDurationToWidth = (duration: number): number => {
+    return (viewConfig.horizonChartWidth * duration) / (exemplar.maxTime - exemplar.minTime);
+  };
 
-    const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
-    return {imageLayerResult: { cellImageLayer: snippetLayer,segmentationLayer: snippetSegmentationOutlineLayer,tickMarkLayer: keyFrameTickMarkLayer }};
+  // --- Initialize arrays for selections, segmentation and tick data ---
+  let selections: Selection[] = [];
+  const exemplarSegmentationData: any[] = [];
+  const tickData: any[] = [];
+  let hoveredFound = ref(false);
+
+  // --- Loop 1: Process hovered images (prev, current, next) ---
+  const margin = 2;
+  const keyFrames = getKeyFrameOrder(exemplar);
+  for (const { index, nearestDistance } of keyFrames) {
+    const cell = exemplar.data[index];
+    const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
+    if (nearestDistanceWidth <= snippetDestWidth + 4) break;
+    const destination = computeDestination(cell);
+
+    // Check if the hovered pointer falls within this destination.
+    if (pointInBBox(hoveredCoordinate ?? [-1000, 0], destination)) {
+      // Compute neighboring destinations.
+      const [x1, y1, x2, y2] = destination;
+      const prevCellDest: [number, number, number, number] = [
+        x1 - snippetDestWidth - margin,
+        y1,
+        x2 - snippetDestWidth - margin,
+        y2
+      ];
+      const nextCellDest: [number, number, number, number] = [
+        x1 + snippetDestWidth + margin,
+        y1,
+        x2 + snippetDestWidth + margin,
+        y2
+      ];
+
+      hoveredFound.value = true;
+      hoveredImagesInfo.value = [
+        [prevCellDest, cell],
+        [nextCellDest, cell],
+        [destination, cell]
+      ];
+
+      // Push selections for previous, current and next locations.
+      selections.push(
+        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: prevCellDest }] },
+        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: destination }] },
+        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: nextCellDest }] }
+      );
+
+      // Add segmentation for these three destinations.
+      addSegmentation(cell.frame, destination, true, cell);
+      addSegmentation(cell.frame - 1, prevCellDest, true, cell);
+      addSegmentation(cell.frame + 1, nextCellDest, true, cell);
+
+      // Compute tick data using the snippet center.
+      const tickX = x1 + snippetDestWidth / 2;
+      const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
+      tickData.push({
+        path: [
+          [tickX, y1],
+          [tickX, y1 + tickLength]
+        ],
+        hovered: cell.isHovered,
+        selected: cell.isSelected,
+      });
+    }
+  }
+
+  // --- Loop 2: Process non-hovered keyframes, checking for collisions ---
+  // Combine bounding boxes of already interacted cells.
+  const hoveredCellBBoxes = hoveredCellsInfo.value ? hoveredCellsInfo.value.map(info => info[0]) : [];
+  const selectedCellBBoxes = selectedCellsInfo.value ? selectedCellsInfo.value.map(info => info[0]) : [];
+  const interactedCellBBoxes = [...hoveredCellBBoxes, ...selectedCellBBoxes, ...(hoveredImagesInfo.value ? hoveredImagesInfo.value.map(info => info[0]) : [])];
+
+  for (const { index, nearestDistance } of keyFrames) {
+    const cell = exemplar.data[index];
+    const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
+    if (nearestDistanceWidth <= snippetDestWidth + 4) break;
+    const destination = computeDestination(cell);
+
+    // Check for collisions.
+    const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
+    if (!cellCollisionDetected) {
+      // Normal keyframe selection and segmentation.
+      selections.push({
+        c: 0,
+        t: cell.frame - 1,
+        z: 0,
+        snippets: [{
+          source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize),
+          destination: destination
+        }]
+      });
+      addSegmentation(cell.frame, destination, false, cell);
+
+      // Add tick mark for this snippet.
+      const [x1, y1, , ] = destination;
+      const tickX = x1 + snippetDestWidth / 2;
+      const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
+      tickData.push({
+        path: [
+          [tickX, y1],
+          [tickX, y1 + tickLength]
+        ],
+        hovered: cell.isHovered,
+        selected: cell.isSelected,
+      });
+    }
+  }
+
+  if (!hoveredFound.value) {
+    hoveredImagesInfo.value = [];
+  }
+
+  // --- Create layer instances using the computed data ---
+  const colormapExtension = new AdditiveColormapExtension();
+  const contrastLimits = [[0, 255]];
+  const snippetLayer = new CellSnippetsLayer({
+    id: `test-cell-snippets-layer ${exemplar.trackId}`,
+    loader: pixelSource,
+    onHover: (info: PickingInfo) => {
+      if (info.coordinate && info.coordinate.length === 2) {
+        hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
+      }
+      renderDeckGL();
+    },
+    contrastLimits,
+    channelsVisible: [true],
+    selections: selections,
+    extensions: [colormapExtension],
+    colormap: 'viridis',
+    cache: lruCache,
+  });
+
+  const hoveredWithAlpha = colors.hovered.rgba;
+  hoveredWithAlpha[3] = 200;
+  const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
+    id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
+    data: exemplarSegmentationData,
+    getPath: (d: any) => d.polygon[0],
+    getColor: (d: any) => {
+      if (d.selected) return globalSettings.normalizedSelectedRgb;
+      if (d.hovered) return hoveredWithAlpha;
+      return colors.unselectedBoundary.rgb;
+    },
+    getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+    opacity: 1,
+    widthUnits: 'pixels',
+    jointRounded: true,
+    getCenter: (d: any) => d.center,
+    getTranslateOffset: (d: any) => d.offset,
+    zoomX: viewStateMirror.value.zoom[0],
+    scale: 1,
+    clipSize: looneageViewStore.snippetDestSize,
+    clip: false,
+  });
+
+  const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
+
+  return { imageLayerResult: { cellImageLayer: snippetLayer, segmentationLayer: snippetSegmentationOutlineLayer, tickMarkLayer: keyFrameTickMarkLayer } };
 }
 
 // 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
