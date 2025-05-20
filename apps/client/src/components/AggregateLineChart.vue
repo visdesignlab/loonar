@@ -57,10 +57,11 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
-let { customXRangeMin, customXRangeMax } =
+let { customXRangeMin, customXRangeMax, attributeKey, aggregatorKey } =
     storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
+const deckGlContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
     aggLineChartContainer
 );
@@ -240,23 +241,19 @@ function onMouseMove(event: MouseEvent) {
     if (time < timeExtent[0] || time > timeExtent[1]) return;
     dataPointSelectionUntrracked.hoveredTime = time;
 }
-// Listen for keydown events to trigger download
+// Listen for keydown events to trigger download -------------------------------------
 function handleKeyDown(e: KeyboardEvent) {
   if (isMouseInside.value && e.key.toLowerCase() === 'd') {
-    downloadLineChartSvg();
+    downloadLineChartSvg(attributeKey.value, aggregatorKey.value);
   }
 }
-
 onMounted(() => {
   document.addEventListener('keydown', handleKeyDown);
-  // ...existing onMounted code...
 });
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown);
 });
-
-const deckGlContainer = ref(null);
 
 // TODO: share cache with looneage view?
 const lruCache = new LRUCache({

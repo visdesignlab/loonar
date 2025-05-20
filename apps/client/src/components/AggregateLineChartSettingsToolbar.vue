@@ -4,11 +4,15 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import { useAggregateLineChartStore } from '@/stores/componentStores/aggregateLineChartStore';
 import { matFileDownload } from '@quasar/extras/material-icons'
 import { downloadLineChartSvg } from '@/util/downloadSvg';
+import { computed } from 'vue';
+import { storeToRefs } from 'pinia';
 
 
 const cellMetaData = useCellMetaData();
 const aggregateLineChartStore = useAggregateLineChartStore();
 const globalSettings = useGlobalSettings();
+let { attributeKey, aggregatorKey } = storeToRefs(aggregateLineChartStore);
+
 </script>
 
 <template>
@@ -16,7 +20,7 @@ const globalSettings = useGlobalSettings();
         label="Attribute"
         class="min-w-75"
         dense
-        v-model="aggregateLineChartStore.attributeKey"
+        v-model="attributeKey"
         :options="cellMetaData.cellNumAttributeHeaderNames"
         :dark="globalSettings.darkMode"
     ></q-select>
@@ -24,7 +28,7 @@ const globalSettings = useGlobalSettings();
     round
     flat
     :icon="matFileDownload" 
-    @click="downloadLineChartSvg" />
+    @click="downloadLineChartSvg(attributeKey.toString(), aggregatorKey.toString())" />
 </template>
 
 <style scoped lang="scss">

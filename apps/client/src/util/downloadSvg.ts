@@ -3,13 +3,16 @@ import { toSvg } from 'html-to-image';
 function inlineComputedStyle(el: HTMLElement) {
     const computed = window.getComputedStyle(el);
     let styleString = '';
+    // For each property in the computed style, add it to the style string
     for (let i = 0; i < computed.length; i++) {
         const key = computed[i];
         styleString += `${key}:${computed.getPropertyValue(key)};`;
     }
+    // Set the style attribute of the element to the computed style string
     el.setAttribute('style', styleString);
 }
 
+// Inline all styles for the root element and its children.
 function inlineAllStyles(root: HTMLElement) {
     // Inline style for the root element.
     inlineComputedStyle(root);
@@ -19,7 +22,11 @@ function inlineAllStyles(root: HTMLElement) {
     });
 }
 
-export function downloadLineChartSvg(): void {
+export function downloadLineChartSvg(attribute: string, aggregation: string): void {
+    // Ensure the first letter of attribute and aggregation is capitalized.
+    attribute = attribute.charAt(0).toUpperCase() + attribute.slice(1);
+    aggregation = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
+
     const element = document.getElementById('aggLineChartSvg');
     if (!(element instanceof SVGElement)) {
         console.error('SVG element not found!');
@@ -28,12 +35,15 @@ export function downloadLineChartSvg(): void {
   
     // Create a clone of the SVG element.
     const clone = element.cloneNode(true) as SVGElement;
+
+    // Remove hovered‐time and current‐time lines from the clone
+    clone
+      .querySelectorAll('.hovered.time.agg-line, .current.time.agg-line')
+      .forEach(el => el.remove());
   
     // Create a hidden container and attach the clone to it.
     const hiddenContainer = document.createElement('div');
-    hiddenContainer.style.position = 'absolute';
-    hiddenContainer.style.left = '-9999px';
-    hiddenContainer.style.top = '-9999px';
+    Object.assign(hiddenContainer.style, { position: 'absolute', left: '-9999px', top: '-9999px' });
     hiddenContainer.appendChild(clone);
     document.body.appendChild(hiddenContainer);
   
@@ -44,7 +54,7 @@ export function downloadLineChartSvg(): void {
     toSvg(clone as unknown as HTMLElement)
         .then((dataUrl) => {
             const link = document.createElement('a');
-            link.download = 'aggregateLineChart.svg';
+            link.download = `Loon_${aggregation}_${attribute}_Line_Chart.svg`;
             link.href = dataUrl;
             link.click();
             // Remove the temporary container.
