@@ -9,7 +9,16 @@ import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useLooneageViewStore } from './looneageViewStore';
 
-import { min, max, mean, sum, median, quantile, deviation, extent } from 'd3-array';
+import {
+    min,
+    max,
+    mean,
+    sum,
+    median,
+    quantile,
+    deviation,
+    extent,
+} from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
@@ -502,7 +511,7 @@ function storeSetup() {
                     point.variance ? point.variance[1] : point.value
                 )
             );
-    
+
             // Set X-axis defaults
             const timeMin = min(aggLineDataList.value, (aggLineData) =>
                 min(aggLineData.data, (point: AggDataPoint) => point.time)
@@ -522,11 +531,11 @@ function storeSetup() {
                 customXRangeMin.value = timeMin ?? null;
             }
             if (customXRangeMax.value === null) {
-                customXRangeMax.value = timeMax  ?? null;
+                customXRangeMax.value = timeMax ?? null;
             }
         }
     }
-    
+
     // Reset the custom axis ranges to default values when the targetKey, aggregatorKey, or attributeKey changes
     watch([targetKey, aggregatorKey, attributeKey], () => {
         customYRangeMin.value = null;
@@ -608,4 +617,3 @@ function storeSetup() {
 }
 const storeId = 'aggregateLineChartStore';
 export const useAggregateLineChartStore = defineStore(storeId, storeSetup);
-

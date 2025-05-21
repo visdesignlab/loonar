@@ -81,19 +81,19 @@ const chartHeight = computed(
 // Scale X set to custom x axis range (default is data extent)
 const scaleX = computed(() => {
     const domain: [number, number] = [
-        customXRangeMin.value ?? 0, 
-        customXRangeMax.value ?? 1
+        customXRangeMin.value ?? 0,
+        customXRangeMax.value ?? 1,
     ];
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
 // Scale Y set to custom y axis range (default is data extent)
 const scaleY = computed(() => {
-   const domain: [number, number] = [
-       customYRangeMin.value ?? 0, 
-       customYRangeMax.value ?? 1
-   ];
-   return scaleLinear().domain(domain).range([chartHeight.value, 0]);
+    const domain: [number, number] = [
+        customYRangeMin.value ?? 0,
+        customYRangeMax.value ?? 1,
+    ];
+    return scaleLinear().domain(domain).range([chartHeight.value, 0]);
 });
 
 const temp = ref(0);
