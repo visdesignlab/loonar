@@ -538,7 +538,7 @@ function storeSetup() {
     }
 
     // Reset the custom axis ranges to default values when the targetKey, aggregatorKey, or attributeKey changes
-    watch([targetKey, aggregatorKey, attributeKey], () => {
+    watch([targetKey, aggregatorKey, attributeKey, aggLineDataList], () => {
         customYRangeMin.value = null;
         customYRangeMax.value = null;
         customXRangeMin.value = null;
