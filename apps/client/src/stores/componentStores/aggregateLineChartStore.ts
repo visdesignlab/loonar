@@ -499,40 +499,41 @@ function storeSetup() {
 
     // Function to set default custom axis ranges
     function defaultCustomAxisRanges() {
-        if (aggLineDataList.value && aggLineDataList.value.length > 0) {
-            // Set Y-axis defaults
-            const defaultYMin = min(aggLineDataList.value, (aggLineData) =>
-                min(aggLineData.data, (point) =>
-                    point.variance ? point.variance[0] : point.value
-                )
-            );
-            const defaultYMax = max(aggLineDataList.value, (aggLineData) =>
-                max(aggLineData.data, (point) =>
-                    point.variance ? point.variance[1] : point.value
-                )
-            );
+        if (!aggLineDataList.value || aggLineDataList.value.length == 0) {
+            return;
+        }
+        // Set Y-axis defaults
+        const defaultYMin = min(aggLineDataList.value, (aggLineData) =>
+            min(aggLineData.data, (point) =>
+                point.variance ? point.variance[0] : point.value
+            )
+        );
+        const defaultYMax = max(aggLineDataList.value, (aggLineData) =>
+            max(aggLineData.data, (point) =>
+                point.variance ? point.variance[1] : point.value
+            )
+        );
 
-            // Set X-axis defaults
-            const timeMin = min(aggLineDataList.value, (aggLineData) =>
-                min(aggLineData.data, (point: AggDataPoint) => point.time)
-            );
-            const timeMax = max(aggLineDataList.value, (aggLineData) =>
-                max(aggLineData.data, (point: AggDataPoint) => point.time)
-            );
+        // Set X-axis defaults
+        const timeMin = min(aggLineDataList.value, (aggLineData) =>
+            min(aggLineData.data, (point: AggDataPoint) => point.time)
+        );
+        const timeMax = max(aggLineDataList.value, (aggLineData) =>
+            max(aggLineData.data, (point: AggDataPoint) => point.time)
+        );
 
-            // Assign default values if custom ranges are null
-            if (customYRangeMin.value === null) {
-                customYRangeMin.value = defaultYMin ?? null;
-            }
-            if (customYRangeMax.value === null) {
-                customYRangeMax.value = defaultYMax ?? null;
-            }
-            if (customXRangeMin.value === null) {
-                customXRangeMin.value = timeMin ?? null;
-            }
-            if (customXRangeMax.value === null) {
-                customXRangeMax.value = timeMax ?? null;
-            }
+        // Assign default values if custom ranges are null
+        if (customYRangeMin.value === null) {
+            customYRangeMin.value = defaultYMin ?? null;
+        }
+        if (customYRangeMax.value === null) {
+            customYRangeMax.value = defaultYMax ?? null;
+        }
+        if (customXRangeMin.value === null) {
+            customXRangeMin.value = timeMin ?? null;
+        }
+        if (customXRangeMax.value === null) {
+            customXRangeMax.value = timeMax ?? null;
         }
     }
 
