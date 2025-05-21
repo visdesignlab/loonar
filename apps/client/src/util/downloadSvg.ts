@@ -64,12 +64,12 @@ export function downloadLineChartSvg(
             link.download = `Loon_${aggregation}_${attribute}_Line_Chart.svg`;
             link.href = dataUrl;
             link.click();
-            // Remove the temporary container.
-            document.body.removeChild(hiddenContainer);
         })
         .catch((err) => {
             console.error('oops, something went wrong!', err);
-            // Remove the temporary container on error.
+        })
+        .finally(() => {
+            // Remove the temporary container.
             document.body.removeChild(hiddenContainer);
         });
 }
