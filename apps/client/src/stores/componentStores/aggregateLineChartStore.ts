@@ -499,7 +499,7 @@ function storeSetup() {
 
     // Function to set default custom axis ranges
     function defaultCustomAxisRanges() {
-        if (aggLineDataList && aggLineDataList.value.length > 0) {
+        if (aggLineDataList.value && aggLineDataList.value.length > 0) {
             // Set Y-axis defaults
             const defaultYMin = min(aggLineDataList.value, (aggLineData) =>
                 min(aggLineData.data, (point) =>
