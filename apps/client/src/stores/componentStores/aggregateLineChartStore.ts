@@ -491,11 +491,11 @@ function storeSetup() {
     });
 
     // Reactive refs for custom axis ranges
-    let customYRangeMin = ref<number | null>(null);
-    let customYRangeMax = ref<number | null>(null);
+    const customYRangeMin = ref<number | null>(null);
+    const customYRangeMax = ref<number | null>(null);
 
-    let customXRangeMin = ref<number | null>(null);
-    let customXRangeMax = ref<number | null>(null);
+    const customXRangeMin = ref<number | null>(null);
+    const customXRangeMax = ref<number | null>(null);
 
     // Function to set default custom axis ranges
     function defaultCustomAxisRanges() {
