@@ -22,7 +22,10 @@ function inlineAllStyles(root: HTMLElement) {
     });
 }
 
-export function downloadLineChartSvg(attribute: string, aggregation: string): void {
+export function downloadLineChartSvg(
+    attribute: string,
+    aggregation: string
+): void {
     // Ensure the first letter of attribute and aggregation is capitalized.
     attribute = attribute.charAt(0).toUpperCase() + attribute.slice(1);
     aggregation = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
@@ -32,24 +35,28 @@ export function downloadLineChartSvg(attribute: string, aggregation: string): vo
         console.error('SVG element not found!');
         return;
     }
-  
+
     // Create a clone of the SVG element.
     const clone = element.cloneNode(true) as SVGElement;
 
     // Remove hovered‐time and current‐time lines from the clone
     clone
-      .querySelectorAll('.hovered.time.agg-line, .current.time.agg-line')
-      .forEach(el => el.remove());
-  
+        .querySelectorAll('.hovered.time.agg-line, .current.time.agg-line')
+        .forEach((el) => el.remove());
+
     // Create a hidden container and attach the clone to it.
     const hiddenContainer = document.createElement('div');
-    Object.assign(hiddenContainer.style, { position: 'absolute', left: '-9999px', top: '-9999px' });
+    Object.assign(hiddenContainer.style, {
+        position: 'absolute',
+        left: '-9999px',
+        top: '-9999px',
+    });
     hiddenContainer.appendChild(clone);
     document.body.appendChild(hiddenContainer);
-  
+
     // Inline computed styles on the clone.
     inlineAllStyles(clone as unknown as HTMLElement);
-  
+
     // Convert the cloned SVG to an SVG data URL.
     toSvg(clone as unknown as HTMLElement)
         .then((dataUrl) => {
