@@ -425,7 +425,88 @@ onBeforeUnmount(() => {
     exemplarDataInitialized.value = false;
 });
 
-// Loading Image Data ---------------------------------------------------------------------------
+// Exemplar track choices and positioning ---------------------------------------------------------------
+
+// Map of exemplar tracks to their y-offsets and visibility
+const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
+
+// Finds the exemplar tracks that are currently on screen.
+const exemplarTracksOnScreen = computed(() => {
+    return exemplarTracks.value.filter((exemplar: ExemplarTrack) => {
+        const renderInfo = exemplarRenderInfo.value.get(
+            uniqueExemplarKey(exemplar)
+        );
+        return renderInfo ? renderInfo.onScreen : false;
+    }) as ExemplarTrack[];
+});
+
+function groupExemplarsByCondition(
+    exemplars: ExemplarTrack[]
+): ExemplarTrack[][] {
+    const groups: ExemplarTrack[][] = [];
+    let currentGroup: ExemplarTrack[] = [];
+
+    for (const exemplar of exemplars) {
+        if (currentGroup.length === 0) {
+            currentGroup.push(exemplar);
+        } else {
+            const lastExemplar = currentGroup[currentGroup.length - 1];
+            if (isEqual(exemplar.tags, lastExemplar.tags)) {
+                currentGroup.push(exemplar);
+            } else {
+                groups.push(currentGroup);
+                currentGroup = [exemplar];
+            }
+        }
+    }
+    if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+    }
+
+    return groups;
+}
+
+const bottomYOffset = computed(() => {
+    return Math.max(
+        ...Array.from(exemplarRenderInfo.value.values()).map(
+            (renderInfo: ExemplarRenderInfo) => renderInfo.yOffset
+        )
+    );
+});
+
+// Finds the exemplar tracks Y-values on screen.
+function recalculateExemplarYOffsets(): void {
+    exemplarRenderInfo.value.clear();
+    let yOffset = 0;
+    let lastExemplar = exemplarTracks.value[0];
+    for (let i = 0; i < exemplarTracks.value.length; i++) {
+        const exemplar = exemplarTracks.value[i];
+        yOffset += exemplarHeight.value;
+        if (i !== 0) {
+            if (isEqual(exemplar.tags, lastExemplar.tags)) {
+                yOffset += viewConfiguration.value.betweenExemplarGap;
+            } else {
+                yOffset += viewConfiguration.value.betweenConditionGap;
+            }
+        }
+        const key = uniqueExemplarKey(exemplar);
+        // TODO: calc onscreen
+        const viewBBox = viewportBBox();
+        const lastYOffset =
+            exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))
+                ?.yOffset ?? yOffset;
+        const onScreen = overlaps1D(
+            lastYOffset,
+            yOffset,
+            viewBBox[3],
+            viewBBox[1]
+        );
+        exemplarRenderInfo.value.set(key, { yOffset, onScreen });
+        lastExemplar = exemplar;
+    }
+}
+
+// Loading Image Data -----------------------------------------------------------------------------------
 
 const pixelSources = ref<{ [key: string]: PixelSource<any> } | null>(null);
 const loader = ref<any | null>(null);
@@ -493,13 +574,13 @@ watch(
     { immediate: true }
 );
 
-// Segmentation Data ---------------------------------------------------------------------------
+// Getting Segmentation Data ------------------------------------------------------------------------------------
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
 async function getCellSegmentationData() {
     // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
-    // For every exemplar track, iterate through its cells to get segmentation and location
     for (const exemplar of exemplarTracks.value) {
         if (!exemplar.data || exemplar.data.length === 0) continue;
+        // For every exemplar track, iterate through its cells to get segmentation and location
         for (const cell of exemplar.data) {
             const segmentation = await segmentationStore.getCellLocationSegmentation(
                 cell.frame.toString(),
@@ -516,6 +597,8 @@ async function getCellSegmentationData() {
     }
     cellSegmentationDataInitialized.value = true;
 }
+
+// Gets the segmentation polygon for a specific cell
 function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
     const cellSegmentation = cellSegmentationData.value?.find(
         (locationSegmentation) =>
@@ -527,71 +610,7 @@ function getCellSegmentationPolygon(location: string, trackId: string, frame: st
     return cellSegmentation ? cellSegmentation.segmentation : undefined;
 }
 
-
-
-const exemplarTracksOnScreen = computed(() => {
-    return exemplarTracks.value.filter((exemplar: ExemplarTrack) => {
-        const renderInfo = exemplarRenderInfo.value.get(
-            uniqueExemplarKey(exemplar)
-        );
-        return renderInfo ? renderInfo.onScreen : false;
-    }) as ExemplarTrack[];
-});
-
-const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
-
-
-const bottomYOffset = computed(() => {
-    return Math.max(
-        ...Array.from(exemplarRenderInfo.value.values()).map(
-            (renderInfo: ExemplarRenderInfo) => renderInfo.yOffset
-        )
-    );
-});
-
-function recalculateExemplarYOffsets(): void {
-    exemplarRenderInfo.value.clear();
-    let yOffset = 0;
-    let lastExemplar = exemplarTracks.value[0];
-    for (let i = 0; i < exemplarTracks.value.length; i++) {
-        const exemplar = exemplarTracks.value[i];
-        yOffset += exemplarHeight.value;
-        if (i !== 0) {
-            if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                yOffset += viewConfiguration.value.betweenExemplarGap;
-            } else {
-                yOffset += viewConfiguration.value.betweenConditionGap;
-            }
-        }
-        const key = uniqueExemplarKey(exemplar);
-        // TODO: calc onscreen
-        const viewBBox = viewportBBox();
-        const lastYOffset =
-            exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))
-                ?.yOffset ?? yOffset;
-        const onScreen = overlaps1D(
-            lastYOffset,
-            yOffset,
-            viewBBox[3],
-            viewBBox[1]
-        );
-        exemplarRenderInfo.value.set(key, { yOffset, onScreen });
-        lastExemplar = exemplar;
-    }
-}
-
-function customNumberFormatter(num: number, defaultFormat: string): string {
-    if (num % 1 === 0) {
-        return format('.0f')(num);
-    } else {
-        return format(defaultFormat)(num);
-    }
-}
-
-function uniqueExemplarKey(exemplar: ExemplarTrack): string {
-    return exemplar.trackId + '-' + exemplar.locationId;
-}
-
+// Horizon Chart Layer ------------------------------------------------------------------------------------------
 const horizonChartScheme = [
     '#e6e3e3', // Light Grey 1
     '#cccccc', // Light Grey 2
@@ -603,55 +622,6 @@ const horizonChartScheme = [
     '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
-const hexToRgb = (hex: string): [number, number, number] => {
-    // Remove '#' if present
-    hex = hex.replace(/^#/, '');
-
-    // Parse the RGB values
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    return [r, g, b];
-};
-
-// wait for conditionSelectorStore to be initialized
-const fillColor = (exemplar: ExemplarTrack | undefined) => {
-    if (
-        !exemplar ||
-        !exemplar.tags ||
-        !exemplar.tags.conc ||
-        !exemplar.tags.drug
-    ) {
-        return [0, 0, 0]; // Default black color
-    }
-    let conditionKey = '';
-
-    if (selectedYTag.value === 'Drug') {
-        conditionKey = exemplar.tags.drug;
-    } else {
-        conditionKey = exemplar.tags.conc;
-    }
-    const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
-
-    if (!hexColor) {
-        console.error(`No color found for key: ${conditionKey}`);
-        return [0, 0, 0]; // Default color in case of error
-    }
-
-    // Convert hex to RGB
-    const rgbList = hexToRgb(hexColor);
-    return rgbList;
-};
-watch(
-    () => conditionSelectorStore.conditionColorMap,
-    (newConditionColorMap) => {
-        if (exemplarDataInitialized.value && newConditionColorMap) {
-            renderDeckGL();
-        }
-    },
-    { deep: true }
-);
 
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
@@ -792,312 +762,6 @@ function createHoveredHorizonOutlineLayer() {
     });
 }
 
-/**
- * Computes the correct time point from the exemplar data given an estimated time.
- * Returns the minTime if the estimated time is too low or maxTime if too high.
- * Otherwise it finds the closest actual time from the exemplar data.
- */
-function computeRealTimePoint(exemplar: ExemplarTrack, estimatedTime: number): number {
-  if (estimatedTime < exemplar.minTime) {
-    return exemplar.minTime;
-  }
-  if (estimatedTime > exemplar.maxTime) {
-    return exemplar.maxTime;
-  }
-  // Use reduce to find the closest time value
-  return exemplar.data.reduce((prev, curr) =>
-    estimatedTime > curr.time &&
-    Math.abs(curr.time - estimatedTime) < Math.abs(prev.time - estimatedTime)
-      ? curr
-      : prev,
-    exemplar.data[0]
-  ).time;
-}
-
-// The current key frame image layers.
-const keyFrameImageLayers = ref<CellSnippetsLayer[]>([]);
-// The currently selected exemplar, its currently selected value, and selected image layers.
-const selectedExemplar = ref<ExemplarTrack | null>(null);
-const selectedCellsInfo = ref<[BBox, Cell][]>([]);const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
-// The currently hovered exemplar, its currently hovered value, and hovered image layers.
-const hoveredExemplar = ref<ExemplarTrack | null>(null);
-const hoveredCellsInfo = ref<[BBox, Cell][]>([]);
-const hoveredCellImageLayer = ref<CellSnippetsLayer[]>([]);
-const hoveredImagesInfo = ref<[BBox, Cell][]>([]);
-
-const hoveredImageBBoxes = computed(() => {
-    return hoveredImagesInfo.value
-        ? hoveredImagesInfo.value.map(info => info[0])
-        : [];
-});
-
-
-/**
- * Handles cell image events for both click and hover actions.
- * It calculates the corresponding time point from the click/hover coordinate,
- * retrieves the relevant cell, and creates the appropriate image layer.
- */
-function createCellImageEventsLayer(
-  info: PickingInfo,
-  exemplar: ExemplarTrack,
-  action: 'click' | 'hover'
-) {
-  // Validate the input coordinate
-  if (info.index === -1 || !info.coordinate) {
-    console.error('[handleHorizonCellImages] info.index or info.coordinate invalid');
-    dataPointSelectionUntrracked.hoveredTrackId = null;
-    return;
-  }
-
-  const X = info.coordinate[0];
-  if (X == null) {
-    dataPointSelectionUntrracked.hoveredTrackId = null;
-    console.error('[handleHorizonCellImages] X is undefined');
-    return;
-  }
-
-  // Calculate estimated time based on the X coordinate and chart width
-  const { horizonChartWidth } = viewConfiguration.value;
-  const estimatedTime = Math.max(
-    0,
-    exemplar.minTime +
-      (exemplar.maxTime - exemplar.minTime) * (X / horizonChartWidth)
-  );
-
-  // Compute the real time point from the exemplar data
-  const realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
-
-  // Update the hovered track ID in the dataPointSelectionUntrracked store
-  dataPointSelectionUntrracked.hoveredTrackId = exemplar.trackId;
-
-  // Update the hovered time in the dataPointSelectionUntrracked store
-  dataPointSelectionUntrracked.hoveredTime = realTimePoint;
-
-  // Find the cell corresponding to the computed time point
-  const cell = exemplar.data.find((d) => d.time === realTimePoint);
-  if (!cell || !cell.value) {
-    console.error('[handleHorizonCellImages] cell or cell.value is undefined');
-    return;
-  }
-
-  // Retrieve the pixel source for the exemplar's location
-  const locationId = exemplar.locationId;
-  const pixelSource = pixelSources.value?.[locationId];
-  if (!pixelSource) {
-    console.error('[handleHorizonCellImages] Pixel source not found for locationId:', locationId);
-    return;
-  }
-
-  // Create an image events layer for the cell
-  const cellImageLayerResult = createCellImageLayer(pixelSource, exemplar, cell);
-  if (!cellImageLayerResult) {
-    console.error('[handleHorizonCellImages] selectedLayer is null');
-    return;
-  }
-
-  const eventCellBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
-  // Update state based on the action type (click or hover)
-  if (action === 'hover') {
-    // The currently hovered bounding box for the cell image layer.
-    
-    hoveredCellsInfo.value = [[eventCellBBox,cell]];
-
-    // Handle collisions with existing cell images and the hovered cell image --------------
-
-    renderDeckGL();
-  }
-  else if (action === 'click') {
-    selectedExemplar.value = exemplar;
-    selectedCellsInfo.value?.push([eventCellBBox, cell]);
-    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
-    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
-    renderDeckGL(); // Trigger a re-render after updating the layers
-    }
-  } 
-  return cellImageLayerResult;
-}
-
-function rectsOverlap(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): boolean {
-  // They do not overlap if one is left of or above the other
-  return !(
-    bbox1[2] <= bbox2[0] || // bbox1 right is left of bbox2 left
-    bbox1[0] >= bbox2[2] || // bbox1 left is right of bbox2 right
-    bbox1[3] >= bbox2[1] || // bbox1 bottom is above bbox2 top
-    bbox1[1] <= bbox2[3]    // bbox1 top is below bbox2 bottom
-  );
-}
-/**
- * Createel a cell image layer for click/hover events.
- * This function computes the destination coordinates for the snippet
- * based on the cell's time position and returns a new CellSnippetsLayer.
- */
-function createCellImageLayer(
-  pixelSource: PixelSource<any>,
-  exemplar: ExemplarTrack,
-  cell: Cell
-): CellImageLayerResult  | null {
-  // Initialize an array to hold snippet selection(s).
-  const selections: Selection[] = [];
-  const viewConfig = viewConfiguration.value;
-  
-  // Calculate snippet destination dimensions.
-  const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
-  const snippetDestHeight = viewConfig.snippetDisplayHeight;
-  
-  // Compute the destination Y coordinate.
-  // Start with a fallback equal to the base horizon chart height.
-  let destY = viewConfig.horizonChartHeight;
-  if (exemplarTracks.value && exemplarTracks.value.length > 0) {
-    const key = uniqueExemplarKey(exemplar);
-    // Get the yOffset for the current exemplar from the render info map.
-    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
-    if (yOffset !== undefined && yOffset !== null) {
-      // Adjust destY to position the snippet above the main horizon chart.
-      destY =
-        yOffset -
-        viewConfig.timeBarHeightOuter -
-        viewConfig.snippetHorizonChartGap -
-        viewConfig.horizonChartHeight -
-        viewConfig.snippetHorizonChartGap;
-    } else {
-      console.error('[createCellImageEventsLayer] No yOffset found for key:', key);
-    }
-  }
-  
-  // Validate that exemplar and its cell value are present.
-  if (!exemplar || !cell.value) {
-    console.error('[createCellImageEventsLayer] Exemplar or cell is null');
-    return null;
-  }
-  
-  // Determine the horizontal (x) position based on the cell time relative to the exemplar time range.
-  const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
-  const centerX = viewConfig.horizonChartWidth * percentage;
-  const x1 = centerX - snippetDestWidth / 2;
-  const x2 = x1 + snippetDestWidth;
-  
-  // Define the destination bounding box for the snippet.
-  const y1 = destY;
-  const y2 = y1 - snippetDestHeight;
-  const imageSnippetDestination: BBox = [x1, y1, x2, y2];
-  
-  // Extract the source bounding box around the cell's coordinates.
-  const source = getBBoxAroundPoint(
-    cell.x ?? 0,
-    cell.y ?? 0,
-    looneageViewStore.snippetSourceSize,
-    looneageViewStore.snippetSourceSize
-  );
-  
-  // Create a snippet selection entry.
-  selections.push({
-    c: 0,
-    t: cell.frame - 1,
-    z: 0,
-    snippets: [{ source, destination: imageSnippetDestination }],
-  });
-  
-  // Create a colormap extension and set contrast limits.
-  const colormapExtension = new AdditiveColormapExtension();
-  const contrastLimits = [[0, 255]];
-  
-  // Create and return a new CellSnippetsLayer with the computed settings.
-  const cellImageLayer = new CellSnippetsLayer({
-    loader: pixelSource,
-    id: `cell-image-event-layer-${cell.frame}-${exemplar.trackId}`,
-    contrastLimits: contrastLimits,
-    selections: selections,
-    channelsVisible: [true],
-    extensions: [colormapExtension],
-    colormap: 'viridis',
-    cache: lruCache,
-  });
-
-  // Attach the computed bbox using Object.defineProperty.
-  Object.defineProperty(cellImageLayer, 'snippetBBox', {
-    value: imageSnippetDestination,
-    writable: true,
-    configurable: true,
-  });
-
-    // Find the cell's segmentation.
-    const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
-        
-    // Calculate the destination coordinates for the segmentation.
-    const [x, y] = [imageSnippetDestination[0], imageSnippetDestination[1]];
-
-    // Push the current cell's segmentation data to the segmentationData array.
-    const imageSegmentationData = [];
-    
-    imageSegmentationData.push({
-        // @ts-ignore coordinates does exist on geometry
-        polygon: cellSegmentationPolygon?.geometry?.coordinates,
-        hovered: cell.isHovered,
-        selected: cell.isSelected,
-        center: [cell.x, cell.y],
-        offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
-
-  // TODO: Segmentation Layer creation here
-  // Create a new segmentation outline layer for these cells.
-  const segmentationLayer = new SnippetSegmentationOutlineLayer({
-        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
-        data: imageSegmentationData,
-        // Use the first element of the polygon
-        getPath: (d: any) => d.polygon[0],
-        getColor: () => colors.hovered.rgb,
-        getWidth: 1.5,
-        widthUnits: 'pixels',
-        jointRounded: true,
-        getCenter: (d: any) => d.center,
-        getTranslateOffset: (d: any) => d.offset,
-        zoomX: viewStateMirror.value.zoom[0],
-        scale: 1,
-        clipSize: looneageViewStore.snippetDestSize,
-        clip: false,
-    });
-  
-  // The tick should be placed at the center of the snippet.
-  const tickX = x1 + snippetDestWidth / 2;
-  const tickY = y1
-  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
-  const tickData = {
-    path: [
-      [tickX, tickY],
-      [tickX, tickY + tickLength]
-    ],
-    hovered: cell.isHovered,
-    selected: cell.isSelected,
-  };
-  const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
-
-    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
-}
-
-function createTickMarkLayer(tickData: any): LineLayer {
-    return new LineLayer({
-        id: `snippet-tick-marks-layer-${Date.now()}`,
-        data: tickData,
-        getSourcePosition: (d: any) => d.path[0],
-        getTargetPosition: (d: any) => d.path[1],
-        getColor: (d: any) => {
-            if (d.hovered | d.pinned) {
-                return [130, 145, 170, 200];
-            } else if (d.drawerLine) {
-                if (globalSettings.darkMode) {
-                    return [195, 217, 250, 200];
-                } else {
-                    return [65, 72, 85, 200];
-                }
-            } else {
-                return [130, 145, 170, 150];
-            }
-        },
-        getWidth: (d: any) => (d.hovered ? 3 : 1.5),
-        widthUnits: 'pixels',
-        capRounded: false,
-    });
-}
-
 // Event handlers for horizon chart interactions
 function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
@@ -1132,10 +796,7 @@ function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     createCellImageEventsLayer(info, exemplar, 'click');
 }
 
-function constructGeometry(track: ExemplarTrack): number[] {
-    return constructGeometryBase(track.data, cellMetaData.timestep);
-}
-
+// Time Window Layer -------------------------------------------------------------------------------------------
 function createTimeWindowLayer(): PolygonLayer[] | null {
     // TODO: implement
     const placeholderLayer: PolygonLayer[] = [];
@@ -1234,12 +895,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     return placeholderLayer;
 }
 
-function getAverageAttr(exemplar: ExemplarTrack): number {
-    if (!exemplar.data || exemplar.data.length === 0) return 0;
-    const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
-    return sum / exemplar.data.length;
-}
-
+// Sideways histogram layer ----------------------------------------------------------------------------------------
 function createSidewaysHistogramLayer(): any[] | null {
     const layers: any[] = [];
 
@@ -1516,16 +1172,13 @@ function createSidewaysHistogramLayer(): any[] | null {
     return layers;
 }
 
+// Histogram Pins ------------------------------------------------------
 const tempPin = ref<HistogramPin | null>(null);
-const tempLabel = ref<{ text: string; position: [number, number] } | null>(
-    null
-);
+const tempLabel = ref<{ text: string; position: [number, number] } | null>(null);
 const pinnedPins = ref<HistogramPin[]>([]);
 const dragPin = ref<HistogramPin | null>(null);
 
-// -----------------------------------------------------------------------------
-// UPDATED: Handle hovering on the histogram hover box.
-// This function now updates the temporary pin (or clears it if the pointer
+// Handle hovering on the histogram hover box. This function now updates the temporary pin (or clears it if the pointer
 // has left the hovered area) and then calls updatePinsLayer() to re-render all pins.
 function handleHistogramHover(
     info: PickingInfo,
@@ -1586,10 +1239,8 @@ function handleHistogramHover(
     updatePinsLayer(firstExemplar);
 }
 
-// -----------------------------------------------------------------------------
-// NEW: When the histogram hover box is clicked, pin the current temporary pin.
-// The current temporary pin is added to the pinnedPins array, a dummy event is logged,
-// and the temporary pin is cleared so that future hovering creates a new one.
+// When the histogram hover box is clicked, pin the current temporary pin
+// The current temporary pin is added to the pinnedPins array and temporary pin is cleared
 async function handleHistogramClick(
     info: PickingInfo,
     event: any,
@@ -1639,7 +1290,6 @@ async function handleHistogramClick(
     }
 }
 
-// -----------------------------------------------------------------------------
 // Helper function to update the pins layer.
 // Combines any pinned pins with the temporary pin (if it exists) and updates
 // deck.gl's layers to include both the base layers and the pin layers.
@@ -1681,10 +1331,6 @@ function updatePinsLayer(firstExemplar: ExemplarTrack) {
     });
 }
 
-// -----------------------------------------------------------------------------
-// NEW: Create deck.gl layers for pins from an array of pin data.
-// In this example we build a LineLayer (to draw horizontal connector lines)
-// and a ScatterplotLayer (to draw the circle endpoints that are pickable/interactive).
 function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
     const pinLayers = [];
     pinLayers.push(
@@ -1748,9 +1394,6 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
     return pinLayers;
 }
 
-// -----------------------------------------------------------------------------
-// NEW: Dummy event handlers for interacting with pins.
-
 function handlePinDragStart(
     info: PickingInfo,
     event: any,
@@ -1758,6 +1401,7 @@ function handlePinDragStart(
 ) {
     dragPin.value = info.object;
 }
+
 function handlePinDrag(
     info: PickingInfo,
     event: any,
@@ -1779,6 +1423,7 @@ function handlePinDrag(
         updatePinsLayer(firstExemplar);
     }
 }
+
 function handlePinDragEnd(
     info: PickingInfo,
     event: any,
@@ -1788,35 +1433,314 @@ function handlePinDragEnd(
     updatePinsLayer(firstExemplar);
 }
 
-// End of HistogramPin Layer Creation
-// ---------------------------------------------------------------
+// Cell Image Layers -----------------------------------------------------------------------------------------------------
 
-function groupExemplarsByCondition(
-    exemplars: ExemplarTrack[]
-): ExemplarTrack[][] {
-    const groups: ExemplarTrack[][] = [];
-    let currentGroup: ExemplarTrack[] = [];
-
-    for (const exemplar of exemplars) {
-        if (currentGroup.length === 0) {
-            currentGroup.push(exemplar);
-        } else {
-            const lastExemplar = currentGroup[currentGroup.length - 1];
-            if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                currentGroup.push(exemplar);
-            } else {
-                groups.push(currentGroup);
-                currentGroup = [exemplar];
-            }
-        }
-    }
-    if (currentGroup.length > 0) {
-        groups.push(currentGroup);
-    }
-
-    return groups;
+/**
+ * Computes the correct time point from the exemplar data given an estimated time.
+ * Returns the minTime if the estimated time is too low or maxTime if too high.
+ * Otherwise it finds the closest actual time from the exemplar data.
+ */
+ function computeRealTimePoint(exemplar: ExemplarTrack, estimatedTime: number): number {
+  if (estimatedTime < exemplar.minTime) {
+    return exemplar.minTime;
+  }
+  if (estimatedTime > exemplar.maxTime) {
+    return exemplar.maxTime;
+  }
+  // Use reduce to find the closest time value
+  return exemplar.data.reduce((prev, curr) =>
+    estimatedTime > curr.time &&
+    Math.abs(curr.time - estimatedTime) < Math.abs(prev.time - estimatedTime)
+      ? curr
+      : prev,
+    exemplar.data[0]
+  ).time;
 }
 
+// The currently selected exemplar, its currently selected value, and selected image layers.
+const selectedExemplar = ref<ExemplarTrack | null>(null);
+const selectedCellsInfo = ref<[BBox, Cell][]>([]);const selectedCellImageLayers = ref<CellSnippetsLayer[]>([]);
+// The currently hovered exemplar, its currently hovered value, and hovered image layers.
+const hoveredExemplar = ref<ExemplarTrack | null>(null);
+const hoveredCellsInfo = ref<[BBox, Cell][]>([]);
+const hoveredImagesInfo = ref<[BBox, Cell][]>([]);
+
+
+/**
+ * Handles cell image events for both click and hover actions.
+ * It calculates the corresponding time point from the click/hover coordinate,
+ * retrieves the relevant cell, and creates the appropriate image layer.
+ */
+function createCellImageEventsLayer(
+  info: PickingInfo,
+  exemplar: ExemplarTrack,
+  action: 'click' | 'hover'
+) {
+  // Validate the input coordinate
+  if (info.index === -1 || !info.coordinate) {
+    console.error('[handleHorizonCellImages] info.index or info.coordinate invalid');
+    dataPointSelectionUntrracked.hoveredTrackId = null;
+    return;
+  }
+
+  const X = info.coordinate[0];
+  if (X == null) {
+    dataPointSelectionUntrracked.hoveredTrackId = null;
+    console.error('[handleHorizonCellImages] X is undefined');
+    return;
+  }
+
+  // Calculate estimated time based on the X coordinate and chart width
+  const { horizonChartWidth } = viewConfiguration.value;
+  const estimatedTime = Math.max(
+    0,
+    exemplar.minTime +
+      (exemplar.maxTime - exemplar.minTime) * (X / horizonChartWidth)
+  );
+
+  // Compute the real time point from the exemplar data
+  const realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
+
+  // Update the hovered track ID in the dataPointSelectionUntrracked store
+  dataPointSelectionUntrracked.hoveredTrackId = exemplar.trackId;
+
+  // Update the hovered time in the dataPointSelectionUntrracked store
+  dataPointSelectionUntrracked.hoveredTime = realTimePoint;
+
+  // Find the cell corresponding to the computed time point
+  const cell = exemplar.data.find((d) => d.time === realTimePoint);
+  if (!cell || !cell.value) {
+    console.error('[handleHorizonCellImages] cell or cell.value is undefined');
+    return;
+  }
+
+  // Retrieve the pixel source for the exemplar's location
+  const locationId = exemplar.locationId;
+  const pixelSource = pixelSources.value?.[locationId];
+  if (!pixelSource) {
+    console.error('[handleHorizonCellImages] Pixel source not found for locationId:', locationId);
+    return;
+  }
+
+  // Create an image events layer for the cell
+  const cellImageLayerResult = createCellImageLayer(pixelSource, exemplar, cell);
+  if (!cellImageLayerResult) {
+    console.error('[handleHorizonCellImages] selectedLayer is null');
+    return;
+  }
+
+  const eventCellBBox = cellImageLayerResult.cellImageLayer?.snippetBBox;
+  // Update state based on the action type (click or hover)
+  if (action === 'hover') {
+    // The currently hovered bounding box for the cell image layer.
+    
+    hoveredCellsInfo.value = [[eventCellBBox,cell]];
+
+    // Handle collisions with existing cell images and the hovered cell image --------------
+
+    renderDeckGL();
+  }
+  else if (action === 'click') {
+    selectedExemplar.value = exemplar;
+    selectedCellsInfo.value?.push([eventCellBBox, cell]);
+    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
+    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
+    renderDeckGL(); // Trigger a re-render after updating the layers
+    }
+  } 
+  return cellImageLayerResult;
+}
+
+function rectsOverlap(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): boolean {
+  // They do not overlap if one is left of or above the other
+  return !(
+    bbox1[2] <= bbox2[0] || // bbox1 right is left of bbox2 left
+    bbox1[0] >= bbox2[2] || // bbox1 left is right of bbox2 right
+    bbox1[3] >= bbox2[1] || // bbox1 bottom is above bbox2 top
+    bbox1[1] <= bbox2[3]    // bbox1 top is below bbox2 bottom
+  );
+}
+/**
+ * Createel a cell image layer for click/hover events.
+ * This function computes the destination coordinates for the snippet
+ * based on the cell's time position and returns a new CellSnippetsLayer.
+ */
+function createCellImageLayer(
+  pixelSource: PixelSource<any>,
+  exemplar: ExemplarTrack,
+  cell: Cell
+): CellImageLayerResult  | null {
+  // Initialize an array to hold snippet selection(s).
+  const selections: Selection[] = [];
+  const viewConfig = viewConfiguration.value;
+  
+  // Calculate snippet destination dimensions.
+  const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
+  const snippetDestHeight = viewConfig.snippetDisplayHeight;
+  
+  // Compute the destination Y coordinate.
+  // Start with a fallback equal to the base horizon chart height.
+  let destY = viewConfig.horizonChartHeight;
+  if (exemplarTracks.value && exemplarTracks.value.length > 0) {
+    const key = uniqueExemplarKey(exemplar);
+    // Get the yOffset for the current exemplar from the render info map.
+    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+    if (yOffset !== undefined && yOffset !== null) {
+      // Adjust destY to position the snippet above the main horizon chart.
+      destY =
+        yOffset -
+        viewConfig.timeBarHeightOuter -
+        viewConfig.snippetHorizonChartGap -
+        viewConfig.horizonChartHeight -
+        viewConfig.snippetHorizonChartGap;
+    } else {
+      console.error('[createCellImageEventsLayer] No yOffset found for key:', key);
+    }
+  }
+  
+  // Validate that exemplar and its cell value are present.
+  if (!exemplar || !cell.value) {
+    console.error('[createCellImageEventsLayer] Exemplar or cell is null');
+    return null;
+  }
+  
+  // Determine the horizontal (x) position based on the cell time relative to the exemplar time range.
+  const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
+  const centerX = viewConfig.horizonChartWidth * percentage;
+  const x1 = centerX - snippetDestWidth / 2;
+  const x2 = x1 + snippetDestWidth;
+  
+  // Define the destination bounding box for the snippet.
+  const y1 = destY;
+  const y2 = y1 - snippetDestHeight;
+  const imageSnippetDestination: BBox = [x1, y1, x2, y2];
+  
+  // Extract the source bounding box around the cell's coordinates.
+  const source = getBBoxAroundPoint(
+    cell.x ?? 0,
+    cell.y ?? 0,
+    looneageViewStore.snippetSourceSize,
+    looneageViewStore.snippetSourceSize
+  );
+  
+  // Create a snippet selection entry.
+  selections.push({
+    c: 0,
+    t: cell.frame - 1,
+    z: 0,
+    snippets: [{ source, destination: imageSnippetDestination }],
+  });
+  
+  // Create a colormap extension and set contrast limits.
+  const colormapExtension = new AdditiveColormapExtension();
+  const contrastLimits = [[0, 255]];
+  
+  // Create and return a new CellSnippetsLayer with the computed settings.
+  const cellImageLayer = new CellSnippetsLayer({
+    loader: pixelSource,
+    id: `cell-image-event-layer-${cell.frame}-${exemplar.trackId}`,
+    contrastLimits: contrastLimits,
+    selections: selections,
+    channelsVisible: [true],
+    extensions: [colormapExtension],
+    colormap: 'viridis',
+    cache: lruCache,
+  });
+
+  // Attach the computed bbox using Object.defineProperty.
+  Object.defineProperty(cellImageLayer, 'snippetBBox', {
+    value: imageSnippetDestination,
+    writable: true,
+    configurable: true,
+  });
+
+    // Find the cell's segmentation.
+    const cellSegmentationPolygon = getCellSegmentationPolygon(exemplar.locationId, exemplar.trackId.toString(), cell.frame.toString());
+        
+    // Calculate the destination coordinates for the segmentation.
+    const [x, y] = [imageSnippetDestination[0], imageSnippetDestination[1]];
+
+    // Push the current cell's segmentation data to the segmentationData array.
+    const imageSegmentationData = [];
+    
+    imageSegmentationData.push({
+        // @ts-ignore coordinates does exist on geometry
+        polygon: cellSegmentationPolygon?.geometry?.coordinates,
+        hovered: cell.isHovered,
+        selected: cell.isSelected,
+        center: [cell.x, cell.y],
+        offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
+
+  // TODO: Segmentation Layer creation here
+  // Create a new segmentation outline layer for these cells.
+  const segmentationLayer = new SnippetSegmentationOutlineLayer({
+        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
+        data: imageSegmentationData,
+        // Use the first element of the polygon
+        getPath: (d: any) => d.polygon[0],
+        getColor: () => colors.hovered.rgb,
+        getWidth: 1.5,
+        widthUnits: 'pixels',
+        jointRounded: true,
+        getCenter: (d: any) => d.center,
+        getTranslateOffset: (d: any) => d.offset,
+        zoomX: viewStateMirror.value.zoom[0],
+        scale: 1,
+        clipSize: looneageViewStore.snippetDestSize,
+        clip: false,
+    });
+  
+  // The tick should be placed at the center of the snippet.
+  const tickX = x1 + snippetDestWidth / 2;
+  const tickY = y1
+  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
+  const tickData = {
+    path: [
+      [tickX, tickY],
+      [tickX, tickY + tickLength]
+    ],
+    hovered: cell.isHovered,
+    selected: cell.isSelected,
+  };
+  const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
+
+    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
+}
+
+function createTickMarkLayer(tickData: any): LineLayer {
+    return new LineLayer({
+        id: `snippet-tick-marks-layer-${Date.now()}`,
+        data: tickData,
+        getSourcePosition: (d: any) => d.path[0],
+        getTargetPosition: (d: any) => d.path[1],
+        getColor: (d: any) => {
+            if (d.hovered | d.pinned) {
+                return [130, 145, 170, 200];
+            } else if (d.drawerLine) {
+                if (globalSettings.darkMode) {
+                    return [195, 217, 250, 200];
+                } else {
+                    return [65, 72, 85, 200];
+                }
+            } else {
+                return [130, 145, 170, 150];
+            }
+        },
+        getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+        widthUnits: 'pixels',
+        capRounded: false,
+    });
+}
+
+function constructGeometry(track: ExemplarTrack): number[] {
+    return constructGeometryBase(track.data, cellMetaData.timestep);
+}
+
+function getAverageAttr(exemplar: ExemplarTrack): number {
+    if (!exemplar.data || exemplar.data.length === 0) return 0;
+    const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
+    return sum / exemplar.data.length;
+}
 
 function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] {
   const keyFrameLayers: (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] = [];
@@ -1848,16 +1772,6 @@ function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmen
   return keyFrameLayers;
 }
 
-function valueExtent(track: ExemplarTrack): number {
-    let min = Infinity;
-    let max = -Infinity;
-    for (let cell of track.data) {
-        min = Math.min(min, cell.value);
-        max = Math.max(max, cell.value);
-    }
-    return max - min;
-}
-
 function getTimeDuration(track: ExemplarTrack): number {
     let [minTime, maxTime] = getTimeExtent(track);
     return maxTime - minTime;
@@ -1867,6 +1781,17 @@ function getTimeExtent(track: ExemplarTrack): [number, number] {
     let minTime = track.minTime;
     let maxTime = track.maxTime;
     return [minTime, maxTime];
+}
+
+// Helper: Retrieves the extent of the value of the track
+function valueExtent(track: ExemplarTrack): number {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let cell of track.data) {
+        min = Math.min(min, cell.value);
+        max = Math.max(max, cell.value);
+    }
+    return max - min;
 }
 
 const keyframeOrderLookup = ref<Map<string, KeyframeInfo[]>>();
@@ -2202,9 +2127,14 @@ function createExemplarImageKeyFramesLayer(
   return { imageLayerResult: { cellImageLayer: snippetLayer, segmentationLayer: snippetSegmentationOutlineLayer, tickMarkLayer: keyFrameTickMarkLayer } };
 }
 
-// 1. Watch for changes in histogramDomains or conditionHistograms to re-render Deck.gl
+// General purpose watchers ---------------------------------------------------------------------------------------------------
+// Watch for changes in histogramDomains, conditionHistograms, and exemplarTracks
 watch(
-    () => [histogramDomains.value, conditionHistograms.value],
+    () => [
+        histogramDomains.value, 
+        conditionHistograms.value, 
+        exemplarTracks.value
+    ],
     () => {
         if (exemplarDataInitialized.value) {
             renderDeckGL();
@@ -2213,17 +2143,75 @@ watch(
     { deep: true }
 );
 
-// 2. Also watch for changes in exemplarTracks
 watch(
-    () => exemplarTracks.value,
-    () => {
-        if (exemplarDataInitialized.value) {
+    () => conditionSelectorStore.conditionColorMap,
+    (newConditionColorMap) => {
+        if (exemplarDataInitialized.value && newConditionColorMap) {
             renderDeckGL();
         }
     },
     { deep: true }
 );
+// General purpose helpers --------------------------------------------------------------------------------------------------
 
+// Finds the fill color for the exemplar track based on the selected Y tag.
+const fillColor = (exemplar: ExemplarTrack | undefined) => {
+    if (
+        !exemplar ||
+        !exemplar.tags ||
+        !exemplar.tags.conc ||
+        !exemplar.tags.drug
+    ) {
+        return [0, 0, 0]; // Default black color
+    }
+    let conditionKey = '';
+
+    if (selectedYTag.value === 'Drug') {
+        conditionKey = exemplar.tags.drug;
+    } else {
+        conditionKey = exemplar.tags.conc;
+    }
+    const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
+
+    if (!hexColor) {
+        console.error(`No color found for key: ${conditionKey}`);
+        return [0, 0, 0]; // Default color in case of error
+    }
+
+    // Convert hex to RGB
+    const rgbList = hexToRgb(hexColor);
+    return rgbList;
+};
+
+// Formatters -----------------------------------------------------------------------------------------------------------------
+function customNumberFormatter(num: number, defaultFormat: string): string {
+    if (num % 1 === 0) {
+        return format('.0f')(num);
+    } else {
+        return format(defaultFormat)(num);
+    }
+}
+
+/**
+ * @returns {string} A unique key for the exemplar track, combining trackId and locationId.
+ */
+function uniqueExemplarKey(exemplar: ExemplarTrack): string {
+    return exemplar.trackId + '-' + exemplar.locationId;
+}
+
+const hexToRgb = (hex: string): [number, number, number] => {
+    // Remove '#' if present
+    hex = hex.replace(/^#/, '');
+
+    // Parse the RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    return [r, g, b];
+};
+
+// Determines if the exemplar view should be shown yet -------------------------
 const isExemplarViewReady = computed(() => {
     return !loadingExemplarData.value && exemplarDataInitialized;
 });
