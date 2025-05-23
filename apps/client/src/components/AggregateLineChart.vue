@@ -56,9 +56,16 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
-let { customXRangeMin, customXRangeMax, customYRangeMin, customYRangeMax, 
-    defaultXRangeMax, defaultXRangeMin, defaultYRangeMax, defaultYRangeMin } =
-    storeToRefs(aggregateLineChartStore);
+let {
+    customXRangeMin,
+    customXRangeMax,
+    customYRangeMin,
+    customYRangeMax,
+    defaultXRangeMax,
+    defaultXRangeMin,
+    defaultYRangeMax,
+    defaultYRangeMin,
+} = storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
