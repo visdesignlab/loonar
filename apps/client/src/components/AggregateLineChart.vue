@@ -6,7 +6,6 @@ import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore'
 import {
     useAggregateLineChartStore,
     type AggDataPoint,
-    type AggLineData,
 } from '@/stores/componentStores/aggregateLineChartStore';
 import { scaleLinear } from 'd3-scale';
 import { extent, max, min } from 'd3-array';
@@ -18,18 +17,12 @@ import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/data
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
-import type { Selection } from './layers/CellSnippetsLayer';
 import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
-    GeoJsonLayer,
-    LineLayer,
-    PathLayer,
-    PolygonLayer,
     ScatterplotLayer,
-    TextLayer,
 } from '@deck.gl/layers/typed';
 import type { PixelData, PixelSource } from '@vivjs/types';
 import Pool from '../util/Pool';
@@ -43,7 +36,6 @@ import { LRUCache } from 'lru-cache';
 import { getBBoxAroundPoint } from '@/util/imageSnippets';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
-import { downloadLineChartSvg } from '@/util/downloadSvg';
 
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
@@ -241,19 +233,6 @@ function onMouseMove(event: MouseEvent) {
     if (time < timeExtent[0] || time > timeExtent[1]) return;
     dataPointSelectionUntrracked.hoveredTime = time;
 }
-// Listen for keydown events to trigger download -------------------------------------
-function handleKeyDown(e: KeyboardEvent) {
-  if (isMouseInside.value && e.key.toLowerCase() === 'd') {
-    downloadLineChartSvg(attributeKey.value, aggregatorKey.value);
-  }
-}
-onMounted(() => {
-  document.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeyDown);
-});
 
 // TODO: share cache with looneage view?
 const lruCache = new LRUCache({
