@@ -522,27 +522,16 @@ function storeSetup() {
             max(aggLineData.data, (point: AggDataPoint) => point.time)
         );
 
-        // Assign default values if custom ranges are null
-        if (customYRangeMin.value === null) {
-            customYRangeMin.value = defaultYMin ?? null;
-        }
-        if (customYRangeMax.value === null) {
-            customYRangeMax.value = defaultYMax ?? null;
-        }
-        if (customXRangeMin.value === null) {
-            customXRangeMin.value = timeMin ?? null;
-        }
-        if (customXRangeMax.value === null) {
-            customXRangeMax.value = timeMax ?? null;
-        }
+        // Assign default values to the custom axis ranges
+        if (defaultYMin != null) customYRangeMin.value = defaultYMin;
+        if (defaultYMax != null) customYRangeMax.value = defaultYMax;
+        if (timeMin != null) customXRangeMin.value = timeMin;
+        if (timeMax != null) customXRangeMax.value = timeMax;
+        
     }
 
     // Reset the custom axis ranges to default values when the targetKey, aggregatorKey, or attributeKey changes
-    watch([targetKey, aggregatorKey, attributeKey, aggLineDataList], () => {
-        customYRangeMin.value = null;
-        customYRangeMax.value = null;
-        customXRangeMin.value = null;
-        customXRangeMax.value = null;
+    watch([targetKey, aggregatorKey, attributeKey], () => {
         defaultCustomAxisRanges();
     });
 
