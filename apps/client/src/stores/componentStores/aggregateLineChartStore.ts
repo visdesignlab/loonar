@@ -493,47 +493,33 @@ function storeSetup() {
     // Reactive refs for custom axis ranges
     const customYRangeMin = ref<number | null>(null);
     const customYRangeMax = ref<number | null>(null);
-
     const customXRangeMin = ref<number | null>(null);
     const customXRangeMax = ref<number | null>(null);
 
-    // Function to set default custom axis ranges
-    function defaultCustomAxisRanges() {
-        if (!aggLineDataList.value || aggLineDataList.value.length == 0) {
-            return;
-        }
-        // Set Y-axis defaults
-        const defaultYMin = min(aggLineDataList.value, (aggLineData) =>
-            min(aggLineData.data, (point) =>
-                point.variance ? point.variance[0] : point.value
-            )
-        );
-        const defaultYMax = max(aggLineDataList.value, (aggLineData) =>
-            max(aggLineData.data, (point) =>
-                point.variance ? point.variance[1] : point.value
-            )
-        );
-
-        // Set X-axis defaults
-        const timeMin = min(aggLineDataList.value, (aggLineData) =>
-            min(aggLineData.data, (point: AggDataPoint) => point.time)
-        );
-        const timeMax = max(aggLineDataList.value, (aggLineData) =>
-            max(aggLineData.data, (point: AggDataPoint) => point.time)
-        );
-
-        // Assign default values to the custom axis ranges
-        if (defaultYMin != null) customYRangeMin.value = defaultYMin;
-        if (defaultYMax != null) customYRangeMax.value = defaultYMax;
-        if (timeMin != null) customXRangeMin.value = timeMin;
-        if (timeMax != null) customXRangeMax.value = timeMax;
-        
-    }
-
-    // Reset the custom axis ranges to default values when the targetKey, aggregatorKey, or attributeKey changes
-    watch([targetKey, aggregatorKey, attributeKey], () => {
-        defaultCustomAxisRanges();
-    });
+    // Fix defaultXRangeMin computed property
+    const defaultXRangeMin = computed(() => 
+        aggLineDataList.value?.length 
+            ? min(aggLineDataList.value, d => min(d.data, p => p.time))
+            : null
+    );
+    
+    const defaultXRangeMax = computed(() => 
+        aggLineDataList.value?.length 
+            ? max(aggLineDataList.value, d => max(d.data, p => p.time))
+            : null
+    );
+    
+    const defaultYRangeMin = computed(() => 
+        aggLineDataList.value?.length 
+            ? min(aggLineDataList.value, d => min(d.data, p => p.variance?.[0] ?? p.value))
+            : null
+    );
+    
+    const defaultYRangeMax = computed(() => 
+        aggLineDataList.value?.length 
+            ? max(aggLineDataList.value, d => max(d.data, p => p.variance?.[1] ?? p.value))
+            : null
+    );
 
     function medianFilterSmooth(points: AggDataPoint[]): AggDataPoint[] {
         if (smoothWindow.value <= 0) return points;
@@ -598,6 +584,10 @@ function storeSetup() {
         customYRangeMax,
         customXRangeMin,
         customXRangeMax,
+        defaultYRangeMin,
+        defaultYRangeMax,
+        defaultXRangeMin,
+        defaultXRangeMax,
         hoveredLineData,
         selectedLineData,
         selectedLineLineageConnections,

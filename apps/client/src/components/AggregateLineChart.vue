@@ -56,7 +56,8 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
-let { customXRangeMin, customXRangeMax, customYRangeMin, customYRangeMax } =
+let { customXRangeMin, customXRangeMax, customYRangeMin, customYRangeMax, 
+    defaultXRangeMax, defaultXRangeMin, defaultYRangeMax, defaultYRangeMin } =
     storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
@@ -81,8 +82,8 @@ const chartHeight = computed(
 // Scale X set to custom x axis range (default is data extent)
 const scaleX = computed(() => {
     const domain: [number, number] = [
-        customXRangeMin.value ?? 0,
-        customXRangeMax.value ?? 1,
+        customXRangeMin.value ?? defaultXRangeMin.value ?? 0,
+        customXRangeMax.value ?? defaultXRangeMax.value ?? 0,
     ];
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
@@ -90,8 +91,8 @@ const scaleX = computed(() => {
 // Scale Y set to custom y axis range (default is data extent)
 const scaleY = computed(() => {
     const domain: [number, number] = [
-        customYRangeMin.value ?? 0,
-        customYRangeMax.value ?? 1,
+        customYRangeMin.value ?? defaultYRangeMin.value ?? 0,
+        customYRangeMax.value ?? defaultYRangeMax.value ?? 0,
     ];
     return scaleLinear().domain(domain).range([chartHeight.value, 0]);
 });
