@@ -3,13 +3,11 @@ import { defineStore } from 'pinia';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import * as vg from '@uwdata/vgplot';
-
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
 // Import the utility function and type for building the aggregate object
 import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
 import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
-
 export interface ExemplarTrack {
     trackId: string;
     locationId: string;
@@ -86,6 +84,10 @@ const histogramDomains = ref<HistogramDomains>({
 });
 
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
+
+    const conditionSelectorStore = useConditionSelectorStore();
+    const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
+     
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAggregation = ref<AggregationOption>({
         label: 'Average',
@@ -271,17 +273,19 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 })
             );
 
+            console.log("Conidition One:", selectedXTag.value);
+            console.log("Conidition Two:", selectedYTag.value);
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
             const histogramConditionQuery = `
                 WITH aggregated_data AS (
                     SELECT
                         "track_id",
-                        "Drug",
-                        "Concentration (um)",
+                        "${selectedXTag.value}" AS "conditionOne",
+                        "${selectedYTag.value}" AS "conditionTwo",
                         CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS agg_value,
                         COUNT(*) AS row_count
                     FROM "${tableName}"
-                    GROUP BY "track_id", "Drug", "Concentration (um)"
+                    GROUP BY "track_id", "conditionOne", "conditionTwo"
                 ),
                 bins AS (
                     SELECT
@@ -302,8 +306,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     ) t
                 )
                 SELECT
-                    aggregated_data."Drug" AS drug,
-                    aggregated_data."Concentration (um)" AS conc,
+                    aggregated_data.conditionOne AS c1,
+                    aggregated_data.conditionTwo AS c2,
                     bins.bin_index,
                     CAST(COUNT(*) AS DOUBLE PRECISION) AS count
                 FROM aggregated_data
@@ -311,8 +315,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 WHERE aggregated_data.row_count > 50
                     AND aggregated_data.agg_value >= bins.bin_min
                     AND aggregated_data.agg_value < bins.bin_max
-                GROUP BY drug, conc, bins.bin_index
-                ORDER BY drug, conc, bins.bin_index
+                GROUP BY c1, c2, bins.bin_index
+                ORDER BY c1, c2, bins.bin_index
                 `;
 
             const histogramCounts = await vg
@@ -331,13 +335,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const conditionMap = new Map<string, number[]>();
 
             for (const row of histogramCounts) {
-                // row.bin_index, row.count, row.drug, row.conc are guaranteed to be numbers/strings now
+                // row.bin_index, row.count, row.conditionOne, row.conditionTwo are guaranteed to be numbers/strings now
                 const binIndex = row.bin_index;
                 const count = row.count;
-                const drug = row.drug;
-                const conc = row.conc;
+                const c1 = row.c1;
+                const c2 = row.c2;
 
-                const conditionKey = `${drug}__${conc}`;
+                const conditionKey = `${c1}__${c2}`;
                 if (!conditionMap.has(conditionKey)) {
                     conditionMap.set(conditionKey, Array(binCount).fill(0));
                 }
@@ -347,11 +351,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // This is storing the result of the query.
             conditionHistograms.value = Array.from(conditionMap.entries()).map(
                 ([key, counts]) => {
-                    const [drug, concentration] = key.split('__');
+                    const [c1, c2] = key.split('__');
                     return {
                         condition: {
-                            Drug: drug,
-                            'Concentration (um)': concentration,
+                            conditionOne: c1,
+                            conditionTwo: c2,
                         },
                         histogramData: counts,
                     };
@@ -442,42 +446,42 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     ): ExemplarTrack[][] {
         // Sorted ExemplarTrack[][]
         const sortedExemplarTracks: Record<string, ExemplarTrack[]> = {};
-        // Find all unique drugs and concentrations.
-        const uniqueDrugs = Array.from(
+        // Find all unique condition values.
+        const uniqueFirstConditions = Array.from(
             new Set(
                 currentExperimentMetadata.value?.locationMetadataList?.map(
-                    (locationMetadata) => locationMetadata.tags?.Drug
+                    (locationMetadata) => locationMetadata.tags?.[selectedXTag.value]
                 ) ?? []
             )
         ).filter(Boolean);
-        const uniqueConcentrations = Array.from(
+        const uniqueSecondConditions = Array.from(
             new Set(
                 currentExperimentMetadata.value?.locationMetadataList?.map(
                     (locationMetadata) =>
-                        locationMetadata.tags?.['Concentration (um)']
+                        locationMetadata.tags?.[selectedYTag.value]
                 ) ?? []
             )
         ).filter(Boolean);
 
-        //
-        for (const uniqueDrug of uniqueDrugs) {
-            const drugExemplars: ExemplarTrack[] = [];
+        // For every set of conditions, push unique exemplars to the sortedExemplarTracks
+        for (const uniqueFirstCondition of uniqueFirstConditions) {
+            const c1Exemplars: ExemplarTrack[] = [];
             for (const exemplar of exemplars) {
-                if (exemplar.tags.drug === uniqueDrug) {
-                    drugExemplars.push(exemplar);
+                if (exemplar.tags.conditionOne === uniqueFirstCondition) {
+                    c1Exemplars.push(exemplar);
                 }
             }
-            // For each concentration that exists, find exemplars from the drug array with that concentration, and add them to the final exemplartrack[][]
-            for (const uniqueConc of uniqueConcentrations) {
-                const matchingExemplars = drugExemplars.filter(
-                    (exemplar) => exemplar.tags.conc === uniqueConc
+            // For each conditionTwo that exists, find exemplars from the conditionOne array with that conditionTwo, and add them to the final exemplartrack[][]
+            for (const uniqueSecondCondition of uniqueSecondConditions) {
+                const matchingExemplars = c1Exemplars.filter(
+                    (exemplar) => exemplar.tags.conditionTwo === uniqueSecondCondition
                 );
                 matchingExemplars.sort((a, b) => a.p - b.p);
-                if (uniqueDrug && matchingExemplars.length > 0) {
-                    if (!sortedExemplarTracks[uniqueDrug]) {
-                        sortedExemplarTracks[uniqueDrug] = [];
+                if (uniqueFirstCondition && matchingExemplars.length > 0) {
+                    if (!sortedExemplarTracks[uniqueFirstCondition]) {
+                        sortedExemplarTracks[uniqueFirstCondition] = [];
                     }
-                    sortedExemplarTracks[uniqueDrug].push(...matchingExemplars);
+                    sortedExemplarTracks[uniqueFirstCondition].push(...matchingExemplars);
                 }
             }
         }
@@ -486,8 +490,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }
 
     async function getExemplarTrackData(
-        drug: string,
-        conc: string,
+        conditionOne: string,
+        conditionTwo: string,
         p?: number,
         additionalTrackValue?: number
     ): Promise<{
@@ -501,8 +505,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }> {
         const pDecimal = p ? p / 100 : undefined;
         const timeColumn = 'Time (h)';
-        const drugColumn = 'Drug';
-        const concColumn = 'Concentration (um)';
+        const condOneColumn = selectedXTag.value;
+        const condTwoColumn = selectedYTag.value;
         const attributeColumn = selectedAttribute.value; // Use selected attribute
         const aggregationColumn = selectedAggregation.value.label;
         const experimentName = currentExperimentMetadata?.value?.name;
@@ -517,8 +521,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             WITH valid_tracks AS (
                 SELECT "track_id"
                 FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${drugColumn}" = '${drug}'
-                AND "${concColumn}" = '${conc}'
+                WHERE "${condOneColumn}" = '${conditionOne}'
+                AND "${condTwoColumn}" = '${conditionTwo}'
                 GROUP BY "track_id"
                 HAVING COUNT(*) >= 50
             ),
@@ -532,8 +536,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 "Maximum ${attributeColumn}" AS maxValue,
                 "${aggregationColumn} ${attributeColumn}" AS avg_attr
                 FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
-                WHERE "Drug" = '${drug}'
-                AND "Concentration (um)" = '${conc}'
+                WHERE "${condOneColumn}"  = '${conditionOne}'
+                AND "${condTwoColumn}"  = '${conditionTwo}'
                 AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
             ),
             selected_track AS (
@@ -581,8 +585,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             WITH valid_tracks AS (
                 SELECT "track_id"
                 FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${drugColumn}" = '${drug}'
-                AND "${concColumn}" = '${conc}'
+                WHERE "${condOneColumn}" = '${conditionOne}'
+                AND "${condTwoColumn}" = '${conditionTwo}'
                 GROUP BY "track_id"
                 HAVING COUNT(*) >= 50
             ),
@@ -596,8 +600,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     "Maximum ${attributeColumn}" AS maxValue,
                     "${aggregationColumn} ${attributeColumn}" AS avg_attr
                 FROM "${experimentName}_composite_experiment_cell_metadata_aggregate"
-                WHERE "Drug" = '${drug}'
-                AND "Concentration (um)" = '${conc}'
+                WHERE "${condOneColumn}"  = '${conditionOne}'
+                AND "${condTwoColumn}"  = '${conditionTwo}'
                 AND "tracking_id" IN (SELECT track_id FROM valid_tracks)
             ),
             selected_track AS (
@@ -684,7 +688,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
         } catch (error) {
             console.error(
-                `Error querying times for ${drug}-${conc} with p=${p}:`,
+                `Error querying times for ${conditionOne}-${conditionTwo} with p=${p}:`,
                 error
             );
             return {
@@ -700,8 +704,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }
 
     async function getExemplarTrack(
-        drug: string,
-        conc: string,
+        conditionOne: string,
+        conditionTwo: string,
         p?: number,
         additionalTrackValue?: number
     ): Promise<ExemplarTrack> {
@@ -714,8 +718,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             maxValue,
             data,
         } = await getExemplarTrackData(
-            drug,
-            conc,
+            conditionOne,
+            conditionTwo,
             p ?? undefined,
             additionalTrackValue ?? undefined
         );
@@ -728,8 +732,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             maxValue: maxValue,
             data,
             tags: {
-                drug: drug,
-                conc: conc,
+                conditionOne,
+                conditionTwo,
             },
             p: p ?? undefined,
             pinned: false,
@@ -745,52 +749,52 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     ): Promise<void> {
         const trackPromises: Promise<ExemplarTrack>[] = [];
 
-        // 1. Build a mapping of drug -> set of concentrations
-        const drugOrder: string[] = []; // helps preserve the order of first appearance
-        const drugToConcs = new Map<string, Set<string>>();
+        // 1. Build a mapping of conditionOne -> set of conditionTwos
+        const conditionOneOrder: string[] = []; // helps preserve the order of first appearance
+        const conditionMapping = new Map<string, Set<string>>();
 
         for (const locationMetadata of currentExperimentMetadata.value
             ?.locationMetadataList ?? []) {
             // Skip if no tags
             if (!locationMetadata.tags) continue;
 
-            // Directly pull out the Drug and Concentration tags
-            const drug = locationMetadata.tags['Drug'];
-            const conc = locationMetadata.tags['Concentration (um)'];
+            // Directly pull out the condition tags
+            const c1 = locationMetadata.tags[selectedXTag.value];
+            const c2 = locationMetadata.tags[selectedYTag.value];
 
             // If both exist
-            if (drug && conc) {
-                // If it's the first time we see this drug, remember its order
-                if (!drugToConcs.has(drug)) {
-                    drugToConcs.set(drug, new Set<string>());
-                    drugOrder.push(drug);
+            if (c1 && c2) {
+                // If it's the first time we see this conditionOne, remember its order
+                if (!conditionMapping.has(c1)) {
+                    conditionMapping.set(c1, new Set<string>());
+                    conditionOneOrder.push(c1);
                 }
 
-                // Add the concentration to the Set
-                drugToConcs.get(drug)?.add(conc);
+                // Add the conditionTwos to the Set
+                conditionMapping.get(c1)?.add(c2);
             }
         }
 
-        // 2. Now enqueue promises grouped by each drug
-        for (const drug of drugOrder) {
-            const concs = drugToConcs.get(drug);
-            if (!concs) continue;
+        // 2. Now enqueue promises grouped by each c1
+        for (const c1 of conditionOneOrder) {
+            const c2s = conditionMapping.get(c1);
+            if (!c2s) continue;
 
-            for (const conc of concs) {
+            for (const c2 of c2s) {
                 if (
                     additionalTrackValue === undefined ||
                     additionalTrackValue === null
                 ) {
                     for (const p of exemplarPercentiles) {
                         trackPromises.push(
-                            getExemplarTrack(drug, conc, p, undefined)
+                            getExemplarTrack(c1, c2, p, undefined)
                         );
                     }
                 } else {
                     trackPromises.push(
                         getExemplarTrack(
-                            drug,
-                            conc,
+                            c1,
+                            c2,
                             undefined,
                             additionalTrackValue
                         )

@@ -80,11 +80,11 @@ interface KeyframeInfo {
     index: number;
     nearestDistance: number;
 }
-// Text for the histogram. Hardcoded as drug and conc for now.
+// Text for the histogram
 interface HistogramTextData {
     coordinates: [number, number];
-    drug: string;
-    conc: string;
+    conditionOne: string;
+    conditionTwo: string;
 }
 // Information on a histogram pin.
 interface HistogramPin {
@@ -899,7 +899,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
 function createSidewaysHistogramLayer(): any[] | null {
     const layers: any[] = [];
 
-    // Group exemplars by condition (drug + conc)
+    // Group exemplars by condition (conditionOne + conditionTwo)
     const groupedExemplars = groupExemplarsByCondition(
         exemplarTracksOnScreen.value
     );
@@ -914,15 +914,15 @@ function createSidewaysHistogramLayer(): any[] | null {
         if (group.length === 0) continue;
 
         const firstExemplar = group[0];
-        const drug = firstExemplar.tags.drug;
-        const conc = firstExemplar.tags.conc;
+        const conditionOne = firstExemplar.tags.conditionOne;
+        const conditionTwo = firstExemplar.tags.conditionTwo;
 
         // Find histogram data for this group
         const histogramDataForGroup =
             conditionHistograms.value.find(
                 (ch) =>
-                    ch.condition.Drug === drug &&
-                    ch.condition['Concentration (um)'] === conc
+                    ch.condition.conditionOne === conditionOne &&
+                    ch.condition.conditionTwo === conditionTwo
             )?.histogramData || [];
 
         // Basic geometry for the condition grouping
@@ -1144,8 +1144,8 @@ function createSidewaysHistogramLayer(): any[] | null {
         const textData: HistogramTextData[] = [
             {
                 coordinates: [-hGap - 0.1 * histWidth, yOffset],
-                drug: drug,
-                conc: conc,
+                conditionOne,
+                conditionTwo,
             },
         ];
 
@@ -1156,7 +1156,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 )}`,
                 data: textData,
                 getPosition: (d: HistogramTextData) => d.coordinates,
-                getText: (d: HistogramTextData) => `${d.drug} ${d.conc}`,
+                getText: (d: HistogramTextData) => `${d.conditionOne} ${d.conditionTwo}`,
                 sizeScale: 1,
                 sizeUnits: 'pixels',
                 sizeMaxPixels: 25,
@@ -2159,28 +2159,25 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
     if (
         !exemplar ||
         !exemplar.tags ||
-        !exemplar.tags.conc ||
-        !exemplar.tags.drug
+        !exemplar.tags.conditionTwo ||
+        !exemplar.tags.conditionOne
     ) {
-        return [0, 0, 0]; // Default black color
+        console.log('Failing validation check with:', {
+            exemplarExists: !!exemplar,
+            tagsExist: !!exemplar?.tags,
+            conditionTwoExists: !!exemplar?.tags?.conditionTwo,
+            conditionOneExists: !!exemplar?.tags?.conditionOne
+        });
+        return [0, 0, 0];
     }
-    let conditionKey = '';
+    let conditionKey = exemplar.tags.conditionOne;
 
-    if (selectedYTag.value === 'Drug') {
-        conditionKey = exemplar.tags.drug;
-    } else {
-        conditionKey = exemplar.tags.conc;
-    }
     const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
-
+    
     if (!hexColor) {
-        console.error(`No color found for key: ${conditionKey}`);
-        return [0, 0, 0]; // Default color in case of error
+        console.error(`No color found for key: "${conditionKey}" in colorMap:`, conditionSelectorStore.conditionColorMap);
+        return [0, 0, 0];
     }
-
-    // Convert hex to RGB
-    const rgbList = hexToRgb(hexColor);
-    return rgbList;
 };
 
 // Formatters -----------------------------------------------------------------------------------------------------------------
