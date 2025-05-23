@@ -88,18 +88,30 @@ const chartHeight = computed(
 
 // Scale X set to custom x axis range (default is data extent)
 const scaleX = computed(() => {
+    let xMin = customXRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMin === '') xMin = null;
+    let xMax = customXRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMax === '') xMax = null;
     const domain: [number, number] = [
-        customXRangeMin.value ?? defaultXRangeMin.value ?? 0,
-        customXRangeMax.value ?? defaultXRangeMax.value ?? 0,
+        xMin ?? defaultXRangeMin.value ?? 0,
+        xMax ?? defaultXRangeMax.value ?? 0,
     ];
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
 // Scale Y set to custom y axis range (default is data extent)
 const scaleY = computed(() => {
+    let yMin = customYRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMin === '') yMin = null;
+    let yMax = customYRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMax === '') yMax = null;
     const domain: [number, number] = [
-        customYRangeMin.value ?? defaultYRangeMin.value ?? 0,
-        customYRangeMax.value ?? defaultYRangeMax.value ?? 0,
+        yMin ?? defaultYRangeMin.value ?? 0,
+        yMax ?? defaultYRangeMax.value ?? 0,
     ];
     return scaleLinear().domain(domain).range([chartHeight.value, 0]);
 });
