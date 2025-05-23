@@ -497,27 +497,31 @@ function storeSetup() {
     const customXRangeMax = ref<number | null>(null);
 
     // Fix defaultXRangeMin computed property
-    const defaultXRangeMin = computed(() => 
-        aggLineDataList.value?.length 
-            ? min(aggLineDataList.value, d => min(d.data, p => p.time))
+    const defaultXRangeMin = computed(() =>
+        aggLineDataList.value?.length
+            ? min(aggLineDataList.value, (d) => min(d.data, (p) => p.time))
             : null
     );
-    
-    const defaultXRangeMax = computed(() => 
-        aggLineDataList.value?.length 
-            ? max(aggLineDataList.value, d => max(d.data, p => p.time))
+
+    const defaultXRangeMax = computed(() =>
+        aggLineDataList.value?.length
+            ? max(aggLineDataList.value, (d) => max(d.data, (p) => p.time))
             : null
     );
-    
-    const defaultYRangeMin = computed(() => 
-        aggLineDataList.value?.length 
-            ? min(aggLineDataList.value, d => min(d.data, p => p.variance?.[0] ?? p.value))
+
+    const defaultYRangeMin = computed(() =>
+        aggLineDataList.value?.length
+            ? min(aggLineDataList.value, (d) =>
+                  min(d.data, (p) => p.variance?.[0] ?? p.value)
+              )
             : null
     );
-    
-    const defaultYRangeMax = computed(() => 
-        aggLineDataList.value?.length 
-            ? max(aggLineDataList.value, d => max(d.data, p => p.variance?.[1] ?? p.value))
+
+    const defaultYRangeMax = computed(() =>
+        aggLineDataList.value?.length
+            ? max(aggLineDataList.value, (d) =>
+                  max(d.data, (p) => p.variance?.[1] ?? p.value)
+              )
             : null
     );
 
