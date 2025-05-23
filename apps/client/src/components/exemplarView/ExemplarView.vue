@@ -111,7 +111,7 @@ const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
     datasetSelectionStore
 );
 
-
+// Data Stores
 const looneageViewStore = useLooneageViewStore();
 const exemplarViewStore = useExemplarViewStore();
 const {
@@ -166,13 +166,10 @@ watch([deckGlHeight, deckGlWidth], () => {
     }
     // zoomX depends on zoomX so this is a simple iterative solver
     let zoomX = viewStateMirror.value.zoom[0];
-    console.log("ZoomX before solver iterations:", zoomX);
-    console.log("DeckGL Width before solver iterations:", deckGlWidth.value);
     const solverIterations = 10;
     if (deckGlWidth.value != 0) {  
         for (let i = 0; i < solverIterations; i++) {
             zoomX = Math.log2(deckGlWidth.value / visualizationWidth(zoomX));
-            console.log("ZoomX:", zoomX);
         }
     }
     const newViewState = {
@@ -180,7 +177,6 @@ watch([deckGlHeight, deckGlWidth], () => {
         target: [visualizationCenterX(zoomX), targetY],
     };
     viewStateMirror.value = cloneDeep(newViewState);
-    console.log("DeckGL view state:", viewStateMirror.value);
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
@@ -233,11 +229,8 @@ function scaleForConstantVisualSize(
 
 function viewportBBox(includeBuffer = true): BBox {
     const { target } = viewStateMirror.value;
-    // const buffer = includeBuffer ? viewportBuffer.value : 0;
     const buffer = 200;
     const width = scaleForConstantVisualSize(deckGlWidth.value + buffer);
-    // const width = deckGlWidth.value + buffer;
-    // const height = scaleForConstantVisualSize(deckGlHeight.value + buffer, 'y');
     const height = deckGlHeight.value + buffer;
     const halfWidth = width / 2;
     const halfHeight = height / 2;
@@ -286,10 +279,12 @@ watch(
         if (initialized) {
             console.log('Experiment data initialized.');
 
+            // Load exemplar data -----------------------
             // Fetch total experiment time
             totalExperimentTime.value =
                 await exemplarViewStore.getTotalExperimentTime();
 
+            // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
             const exemplarPercentiles = [5, 50, 95];
             await exemplarViewStore.getExemplarTracks(
                 true,
@@ -298,10 +293,11 @@ watch(
             );
             console.log('Exemplar tracks generated.');
 
+            // Get the histogram data
             await getHistogramData();
             console.log('Histogram data fetched.');
 
-            // Initialize Deck.gl if not already initialized
+            // Initialize Deck.gl if not already initialized -----------------
             if (!deckgl.value) {
                 console.log("Creating Deck GL");
                 deckgl.value = new Deck({
@@ -386,33 +382,53 @@ watch(
     { immediate: false } // We don't need to run this immediately on mount
 );
 
+
+// Main rendering function for DeckGL -------------------------------------------------------------------
+let deckGLLayers: any[] = [];
+const cellSegmentationDataInitialized = ref(false);
+// Function to render Deck.gl layers
+async function renderDeckGL(): Promise<void> {
+    if (!deckgl.value) return;
+
+    recalculateExemplarYOffsets();
+
+    // Needs to not loop over every exemplar (only on screen)
+    if (!cellSegmentationDataInitialized.value) {
+        await getCellSegmentationData();
+    }
+
+    deckGLLayers = [];
+    deckGLLayers.push(createSidewaysHistogramLayer());
+    deckGLLayers.push(createHorizonChartLayer());
+    deckGLLayers.push(createTimeWindowLayer());
+    deckGLLayers.push(...createExemplarImageKeyFrameLayers());
+    deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
+    deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
+    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
+    deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
+
+    deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
+
+    deckgl.value.setProps({
+        layers: deckGLLayers,
+    });
+    deckgl.value.redraw();
+}
+
+// Clean up Deck.gl on component unmount
+onBeforeUnmount(() => {
+    if (deckgl.value) {
+        deckgl.value.finalize();
+        deckgl.value = null;
+    }
+    // Reset exemplarDataInitialized on unmount
+    exemplarDataInitialized.value = false;
+});
+
 // Loading Image Data ---------------------------------------------------------------------------
 
 const pixelSources = ref<{ [key: string]: PixelSource<any> } | null>(null);
 const loader = ref<any | null>(null);
-// const testRaster = ref<any | null>(null);
-
-// Debug watch to see when currentLocationMetadata becomes available.
-watch(
-    currentLocationMetadata,
-    (newMeta) => {
-        console.log('[ExemplarView] currentLocationMetadata changed:', newMeta);
-    },
-    { immediate: true }
-);
-
-// Watch pixelSources so you can see when it gets set.
-watch(
-    pixelSources,
-    (newVal) => {
-        if (newVal) {
-            // console.log('[ExemplarView] pixelSources loaded:', newVal);
-        } else {
-            console.warn('[ExemplarView] pixelSources is still null.');
-        }
-    },
-    { immediate: true }
-);
 
 const loadingPool = new Pool();
 // Load the pixel source from the current location metadata.
@@ -436,6 +452,7 @@ async function loadPixelSource(locationId: string, url: string) {
     pixelSources.value[locationId] = loader.value.data[0];
 }
 
+// Load all pixel sources for each exemplar track.
 async function loadPixelSources() {
     const exemplarUrls = exemplarViewStore.getExemplarImageUrls();
     const locationIds = Array.from(exemplarUrls.keys());
@@ -476,19 +493,6 @@ watch(
     { immediate: true }
 );
 
-// --------------------------------------------------------------------------------------------
-
-
-// Clean up Deck.gl on component unmount
-onBeforeUnmount(() => {
-    if (deckgl.value) {
-        deckgl.value.finalize();
-        deckgl.value = null;
-    }
-    // 5. Reset exemplarDataInitialized on unmount
-    exemplarDataInitialized.value = false;
-});
-
 // Segmentation Data ---------------------------------------------------------------------------
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
 async function getCellSegmentationData() {
@@ -521,40 +525,6 @@ function getCellSegmentationPolygon(location: string, trackId: string, frame: st
     );
 
     return cellSegmentation ? cellSegmentation.segmentation : undefined;
-}
-
-// Main rendering function -------------------------------------------------------------------
-let deckGLLayers: any[] = [];
-const cellSegmentationDataInitialized = ref(false);
-// Function to render Deck.gl layers
-async function renderDeckGL(): Promise<void> {
-    if (!deckgl.value) return;
-
-    recalculateExemplarYOffsets();
-
-    // Needs to not loop over every exemplar (only on screen)
-    if (!cellSegmentationDataInitialized.value) {
-        console.log("Initializing cell segmentation data");
-        await getCellSegmentationData();
-    }
-
-    deckGLLayers = [];
-    deckGLLayers.push(createSidewaysHistogramLayer());
-    deckGLLayers.push(createHorizonChartLayer());
-    deckGLLayers.push(createTimeWindowLayer());
-    deckGLLayers.push(...createExemplarImageKeyFrameLayers());
-    deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
-    deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
-    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
-    deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
-
-    deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
-    console.log("DeckGL layers Count:", deckGLLayers.length);
-
-    deckgl.value.setProps({
-        layers: deckGLLayers,
-    });
-    deckgl.value.redraw();
 }
 
 
@@ -653,7 +623,6 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
         !exemplar.tags.conc ||
         !exemplar.tags.drug
     ) {
-        // console.log(`Invalid exemplar or missing property:`, exemplar);
         return [0, 0, 0]; // Default black color
     }
     let conditionKey = '';
@@ -695,7 +664,6 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         tracks.length > 0 ? Math.max(...tracks.map((t) => t.maxValue)) : 0;
 
     for (const exemplar of exemplarTracksOnScreen.value) {
-        // console.log(exemplar.tags);
         if (!exemplar.data || exemplar.data.length === 0) {
             continue; // Skip this exemplar if there's no data
         }
@@ -941,13 +909,11 @@ function createCellImageEventsLayer(
   else if (action === 'click') {
     selectedExemplar.value = exemplar;
     selectedCellsInfo.value?.push([eventCellBBox, cell]);
-    if (cellImageLayerResult.cellImageLayer) { console.log("Pushing selected cell image"); selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
-    if (cellImageLayerResult.segmentationLayer) { console.log("Pushing selected cell seg"); snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
+    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
+    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
     renderDeckGL(); // Trigger a re-render after updating the layers
     }
   } 
-
-  console.log("tick layer result", cellImageLayerResult.tickMarkLayer);
   return cellImageLayerResult;
 }
 
@@ -1102,8 +1068,6 @@ function createCellImageLayer(
     hovered: cell.isHovered,
     selected: cell.isSelected,
   };
-  
-  console.log("Hovered cell", cell.isHovered);
   const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
 
     return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
@@ -1139,7 +1103,6 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
     // Set hoveredExemplar based on the info index
     if (info.index === undefined || info.index === -1) {
-        console.log("note hovered");
         hoveredExemplar.value = null;
         hoveredCellsInfo.value = [];
         hoveredOutlineLayer.value = null;
@@ -1177,8 +1140,6 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
     // TODO: implement
     const placeholderLayer: PolygonLayer[] = [];
 
-    // Testing
-    // console.log('Total Experiment Time:', totalExperimentTime.value);
     // Total Experiment Time - 1/4 of the time bar height
     placeholderLayer.push(
         new PolygonLayer({
@@ -1776,8 +1737,6 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
                 ? d.color
                 : fillColor(d.exemplar),
             // When a pin is clicked, dragged or released, we log a dummy event.
-            onClick: (info: PickingInfo, event: any) =>
-                handlePinClick(info, event, firstExemplar),
             onDragStart: (info: PickingInfo, event: any) =>
                 handlePinDragStart(info, event, firstExemplar),
             onDrag: (info: PickingInfo, event: any) =>
@@ -1791,14 +1750,7 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
 
 // -----------------------------------------------------------------------------
 // NEW: Dummy event handlers for interacting with pins.
-// These log a message whenever a pin is clicked or dragged.
-function handlePinClick(
-    info: PickingInfo,
-    event: any,
-    firstExemplar: ExemplarTrack
-) {
-    // console.log('Dummy event: HistogramPin clicked', info.object);
-}
+
 function handlePinDragStart(
     info: PickingInfo,
     event: any,
@@ -2272,24 +2224,7 @@ watch(
     { deep: true }
 );
 
-// Optionally, watch selectedAttribute and selectedAggregation for debugging
-watch(
-    () => [
-        exemplarViewStore.selectedAttribute,
-        exemplarViewStore.selectedAggregation,
-    ],
-    (newValues) => {
-        console.log('Selected Attribute and Aggregation changed:', newValues);
-    }
-);
-
-watch(loadingExemplarData, (newVal) => {
-    console.log('loadingExemplarData changed:', newVal);
-});
-
 const isExemplarViewReady = computed(() => {
-    console.log("Experiment Data Intialized:", experimentDataInitialized.value);
-    console.log("Exemplar Data Intialized:", loadingExemplarData.value);
     return !loadingExemplarData.value && exemplarDataInitialized;
 });
 </script>

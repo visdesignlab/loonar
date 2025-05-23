@@ -134,6 +134,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { experimentDataInitialized, currentExperimentMetadata } =
         storeToRefs(datasetSelectionStore);
 
+    /**
+     * 
+     * @returns A Map of location IDs to image URLs for the exemplar tracks.
+     */
     function getExemplarImageUrls(): Map<string, string> {
         const map = new Map();
         const metadataLookup = new Map()
@@ -266,14 +270,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     max: min_attr + binSize * (i + 1),
                 })
             );
-
-            // // Console log the selected attribute, and the values of the bin ranges for each histogram.
-            // console.log(
-            //     `${selectedAttribute.value}: binRanges: ` +
-            //         histogramDomains.value.histogramBinRanges
-            //             .map((bin) => `[min: ${bin.min}, max: ${bin.max}]`)
-            //             .join(', ')
-            // );
 
             // 3) Query to get histogram counts (all cast to DOUBLE or INT so no BigInt is returned).
             const histogramConditionQuery = `
@@ -418,7 +414,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     aggObject,
                     currentExperimentMetadata.value.headerTransforms
                 );
-                console.log(`Aggregate column added: ${addedColumnName}`);
             } catch (error) {
                 console.error('Error adding aggregate column:', error);
             }
@@ -517,7 +512,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             additionalTrackValue === undefined ||
             additionalTrackValue === null
         ) {
-            console.log('getExemplarTrackData - p query called');
             // Start of Selection
             query = `
             WITH valid_tracks AS (
@@ -657,11 +651,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     maxValue,
                     data,
                 } = result[0];
-                // console.log(
-                //     `getExemplarTrackData - Drug: ${drug}, Conc: ${conc}, p: ${p}`
-                // );
-                // console.log('Birth Time:', birthTime, 'Death Time:', deathTime);
-                // console.log('Data Array:', data);
 
                 // Map the returned array to Cell[] with BigInt conversion
                 const mappedData: Cell[] = data.map((d: any[]) => ({
@@ -814,17 +803,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const tracks = await Promise.all(trackPromises);
 
             if (replace) {
-                console.log('replacing');
                 exemplarTracks.value = tracks;
             } else {
-                console.log('pushing');
                 exemplarTracks.value.push(...tracks);
             }
-
-            // console.log(
-            //     'sortExemplarsByCondition',
-            //     sortExemplarsByCondition(exemplarTracks.value).flat()
-            // );
             // Group exemplars by condition
             exemplarTracks.value = sortExemplarsByCondition(
                 exemplarTracks.value
