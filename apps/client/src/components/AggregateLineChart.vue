@@ -56,8 +56,16 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
-let { customXRangeMin, customXRangeMax } =
-    storeToRefs(aggregateLineChartStore);
+let {
+    customXRangeMin,
+    customXRangeMax,
+    customYRangeMin,
+    customYRangeMax,
+    defaultXRangeMax,
+    defaultXRangeMin,
+    defaultYRangeMax,
+    defaultYRangeMin,
+} = storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
@@ -78,66 +86,34 @@ const chartHeight = computed(
     () => containerHeight.value - margin.value.top - margin.value.bottom
 );
 
-// Default custom X range where min and max are timeMin and timeMax.
-function defaultCustomXRange() {
-    let defaultDomain = extent(cellMetaData.timeList) as [number, number];
-
-    // Set the default domain as the min and max time values from the data
-    if (
-        aggregateLineChartStore.aggLineDataList &&
-        aggregateLineChartStore.aggLineDataList.length > 0
-    ) {
-        const timeMin = min(
-            aggregateLineChartStore.aggLineDataList,
-            (aggLineData) => min(aggLineData.data, (aggPoint: AggDataPoint) => aggPoint.time)
-        );
-        const timeMax = max(
-            aggregateLineChartStore.aggLineDataList,
-            (aggLineData) => max(aggLineData.data, (aggPoint: AggDataPoint) => aggPoint.time)
-        );
-        if (timeMin != null && timeMax != null) {
-            defaultDomain = [timeMin, timeMax];
-        }
-        // If custom ranges are still null, initialize them
-        if (customXRangeMin.value === null) {
-            customXRangeMin.value = defaultDomain[0];
-        }
-        if (customXRangeMax.value === null) {
-            customXRangeMax.value = defaultDomain[1];
-        }
-    }
-}
-// Updates the custom X range when the time list changes
-watch(
-    () => [
-        aggregateLineChartStore.targetKey,
-        aggregateLineChartStore.aggregatorKey,
-        aggregateLineChartStore.attributeKey
-    ],
-    () => {
-        // Reinitialize with default values based on the current timeList and aggLineDataList
-        defaultCustomXRange();
-    }
-);
-
-// ScaleX set to custom x axis range.
+// Scale X set to custom x axis range (default is data extent)
 const scaleX = computed(() => {
-   
+    let xMin = customXRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMin === '') xMin = null;
+    let xMax = customXRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMax === '') xMax = null;
     const domain: [number, number] = [
-        customXRangeMin.value ?? 0, 
-        customXRangeMax.value ?? 1
+        xMin ?? defaultXRangeMin.value ?? 0,
+        xMax ?? defaultXRangeMax.value ?? 0,
     ];
-    console.log("Domain:", domain);
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
-// Scale Y set to the extent of the data points in the y axis.
+// Scale Y set to custom y axis range (default is data extent)
 const scaleY = computed(() => {
-    return scaleLinear()
-        .domain(
-            aggregateLineChartStore.aggLineDataListExtent as [number, number]
-        )
-        .range([chartHeight.value, 0]);
+    let yMin = customYRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMin === '') yMin = null;
+    let yMax = customYRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMax === '') yMax = null;
+    const domain: [number, number] = [
+        yMin ?? defaultYRangeMin.value ?? 0,
+        yMax ?? defaultYRangeMax.value ?? 0,
+    ];
+    return scaleLinear().domain(domain).range([chartHeight.value, 0]);
 });
 
 const temp = ref(0);
