@@ -2154,6 +2154,30 @@ watch(
 );
 // General purpose helpers --------------------------------------------------------------------------------------------------
 
+const conditionKey = ref<'conditionOne' | 'conditionTwo'>('conditionOne');
+// If we sense a change in selectedYTag, conditionKey toggles between condition one and two.
+watch(
+    () => conditionSelectorStore.selectedYTag,
+    () => {
+        if (conditionKey.value === 'conditionTwo') {
+            conditionKey.value = 'conditionOne';
+        }
+        else {
+            conditionKey.value = 'conditionTwo';
+        }
+    },
+);
+
+// Add a new watch to trigger renderDeckGL when conditionKey changes
+watch(
+    () => conditionKey.value,
+    () => {
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
+    }
+);
+
 // Finds the fill color for the exemplar track based on the selected Y tag.
 const fillColor = (exemplar: ExemplarTrack | undefined) => {
     if (
@@ -2170,11 +2194,10 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
         });
         return [0, 0, 0];
     }
-    
-    let conditionKey = exemplar.tags.conditionTwo;
 
-    const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
-    console.log('Condition Key:', conditionKey, 'Hex Color:', hexColor);
+    // Value (Example, 4HT, Ethanol, etc).
+    const conditionKeyValue = exemplar.tags?.[conditionKey.value];
+    const hexColor = conditionSelectorStore.conditionColorMap[conditionKeyValue];
     
     if (!hexColor) {
         console.error(`No color found for key: "${conditionKey}" in colorMap:`, conditionSelectorStore.conditionColorMap);
