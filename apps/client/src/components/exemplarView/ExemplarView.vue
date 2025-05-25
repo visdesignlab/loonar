@@ -2170,14 +2170,17 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
         });
         return [0, 0, 0];
     }
-    let conditionKey = exemplar.tags.conditionOne;
+    
+    let conditionKey = exemplar.tags.conditionTwo;
 
     const hexColor = conditionSelectorStore.conditionColorMap[conditionKey];
+    console.log('Condition Key:', conditionKey, 'Hex Color:', hexColor);
     
     if (!hexColor) {
         console.error(`No color found for key: "${conditionKey}" in colorMap:`, conditionSelectorStore.conditionColorMap);
         return [0, 0, 0];
     }
+    else return hexToRgb(hexColor);
 };
 
 // Formatters -----------------------------------------------------------------------------------------------------------------
