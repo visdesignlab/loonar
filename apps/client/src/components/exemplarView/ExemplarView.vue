@@ -120,7 +120,7 @@ const {
     exemplarHeight,
     conditionHistograms,
     histogramDomains,
-    loadingExemplarData,
+    exemplarDataLoaded,
     selectedAttribute,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
@@ -2236,7 +2236,7 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 // Determines if the exemplar view should be shown yet -------------------------
 const isExemplarViewReady = computed(() => {
-    return !loadingExemplarData.value && exemplarDataInitialized;
+    return exemplarDataLoaded.value && exemplarDataInitialized;
 });
 </script>
 

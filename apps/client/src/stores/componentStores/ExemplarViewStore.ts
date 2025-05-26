@@ -93,8 +93,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         label: 'Average',
         value: 'AVG',
     });
-    // New reactive property to track whether exemplar data is loading
-    const loadingExemplarData = ref<boolean>(false);
+    // New reactive property to track whether exemplar data is loaded
+    const exemplarDataLoaded = ref<boolean>(true);
 
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
@@ -221,6 +221,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
 
         try {
+
             const aggregationColumn = selectedAggregation.value.value;
             // 1) Get global minX / maxX of selected attribute, ensuring they are double
 
@@ -430,12 +431,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     watch(
         () => [selectedAttribute.value, selectedAggregation.value],
         async ([newAttr, newAgg]) => {
-            loadingExemplarData.value = true;
+            exemplarDataLoaded.value = false;
             try {
                 await getHistogramData();
                 await getExemplarTracks(true);
             } finally {
-                loadingExemplarData.value = false;
+                exemplarDataLoaded.value = true;
             }
         },
         { immediate: false }
@@ -840,6 +841,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getHistogramData,
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
-        loadingExemplarData, // export the loading state
+        exemplarDataLoaded, // export the loading state
     };
 });
