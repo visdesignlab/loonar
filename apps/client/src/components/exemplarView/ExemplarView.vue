@@ -286,16 +286,11 @@ watch(
 
             // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
             const exemplarPercentiles = [5, 50, 95];
-            await exemplarViewStore.getExemplarTracks(
+            await exemplarViewStore.getExemplarViewData(
                 true,
                 exemplarPercentiles,
                 undefined
             );
-            console.log('Exemplar tracks generated.');
-
-            // Get the histogram data
-            await getHistogramData();
-            console.log('Histogram data fetched.');
 
             // Initialize Deck.gl if not already initialized -----------------
             if (!deckgl.value) {

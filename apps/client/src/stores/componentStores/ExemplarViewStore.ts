@@ -8,6 +8,9 @@ import { useConditionSelectorStore } from '@/stores/componentStores/conditionSel
 // Import the utility function and type for building the aggregate object
 import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
 import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
+
+import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { getPredicateFilterComposite} from '@/util/predicateGenerator';
 export interface ExemplarTrack {
     trackId: string;
     locationId: string;
@@ -87,6 +90,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     const conditionSelectorStore = useConditionSelectorStore();
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
+    const selectionStore = useSelectionStore();
+    const { dataSelections } = storeToRefs(selectionStore);
      
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAggregation = ref<AggregationOption>({
@@ -199,6 +204,20 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             console.error('Error fetching total experiment time:', error);
             return 0;
         }
+    }
+
+    /** This function gets all the data for the exemplar view. */
+    async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[], additionalTrackValue?: number): Promise<void> {
+            exemplarDataLoaded.value = false;
+            try {
+                await getHistogramData();
+
+                console.log('Exemplar tracks generated.');
+                await getExemplarTracks(replace, exemplarPercentiles, additionalTrackValue);
+                console.log('Exemplar tracks fetched.');
+            } finally {
+                exemplarDataLoaded.value = true;
+            }
     }
 
     /**
@@ -431,15 +450,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     watch(
         () => [selectedAttribute.value, selectedAggregation.value],
         async ([newAttr, newAgg]) => {
-            exemplarDataLoaded.value = false;
-            try {
-                await getHistogramData();
-                await getExemplarTracks(true);
-            } finally {
-                exemplarDataLoaded.value = true;
-            }
+            getExemplarViewData(true);
         },
         { immediate: false }
+    );
+
+    // If the filters from the selection store update, update the data.
+    watch(() => dataSelections, async (newSelections) => {
+        console.log("Data selections changed:", newSelections);
+        getExemplarViewData(true);
+    }, { deep: true }
     );
 
     function sortExemplarsByCondition(
@@ -839,6 +859,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         selectedAggregation,
         getTotalExperimentTime,
         getHistogramData,
+        getExemplarViewData,
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
