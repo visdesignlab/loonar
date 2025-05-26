@@ -737,7 +737,7 @@ function createHoveredHorizonOutlineLayer() {
     },
 });
 
-  const label = `${exemplarViewStore.selectedAggregation.value} ${selectedAttribute.value}`;
+  const label = `${selectedAttribute.value}`;
   const labelData = [
     {
       position: [
