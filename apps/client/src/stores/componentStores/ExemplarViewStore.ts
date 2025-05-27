@@ -91,7 +91,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const conditionSelectorStore = useConditionSelectorStore();
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
     const selectionStore = useSelectionStore();
-    const { dataSelections } = storeToRefs(selectionStore);
+    const { dataSelections, dataFilters } = storeToRefs(selectionStore);
      
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAggregation = ref<AggregationOption>({
@@ -220,6 +220,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
     }
 
+    const filterWhereClause = computed(() => {
+        const filterPredicates = dataSelections.value
+            .map(filter => getPredicateFilterComposite(filter))
+            .filter(predicate => predicate !== null)
+            .join(' AND ');
+    
+        const filterClause = filterPredicates ? `WHERE ${filterPredicates}` : '';
+        console.log('Filter Where Clause:', filterClause);
+        return filterClause;
+    });
+
     /**
      * This function gets the histogram data for the selected attribute and aggregation.
      * It first queries the domain of the attribute, then builds the bin ranges, and then
@@ -254,6 +265,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     "track_id",
                     CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS attribute_value
                 FROM "${tableName}"
+                ${filterWhereClause.value}
                 GROUP BY "track_id"
                 HAVING COUNT(*) > 50
             ) AS subquery
@@ -305,6 +317,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                         CAST(${aggregationColumn}("${selectedAttribute.value}") AS DOUBLE PRECISION) AS agg_value,
                         COUNT(*) AS row_count
                     FROM "${tableName}"
+                    ${filterWhereClause.value}
                     GROUP BY "track_id", "conditionOne", "conditionTwo"
                 ),
                 bins AS (
@@ -456,8 +469,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     );
 
     // If the filters from the selection store update, update the data.
-    watch(() => dataSelections, async (newSelections) => {
-        console.log("Data selections changed:", newSelections);
+    watch(() => dataSelections, async (newFilters) => {
+        console.log("Data selections changed:", newFilters);
         getExemplarViewData(true);
     }, { deep: true }
     );
@@ -532,6 +545,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggregationColumn = selectedAggregation.value.label;
         const experimentName = currentExperimentMetadata?.value?.name;
 
+        const baseFilterWhereClause = filterWhereClause.value ? 
+        `${filterWhereClause.value.replace('WHERE', '')} AND` : '';
+
         let query;
         if (
             additionalTrackValue === undefined ||
@@ -542,7 +558,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             WITH valid_tracks AS (
                 SELECT "track_id"
                 FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${condOneColumn}" = '${conditionOne}'
+                WHERE ${baseFilterWhereClause}
+                "${condOneColumn}" = '${conditionOne}'
                 AND "${condTwoColumn}" = '${conditionTwo}'
                 GROUP BY "track_id"
                 HAVING COUNT(*) >= 50
@@ -606,7 +623,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             WITH valid_tracks AS (
                 SELECT "track_id"
                 FROM "${experimentName}_composite_experiment_cell_metadata"
-                WHERE "${condOneColumn}" = '${conditionOne}'
+                WHERE ${baseFilterWhereClause}
+                "${condOneColumn}" = '${conditionOne}'
                 AND "${condTwoColumn}" = '${conditionTwo}'
                 GROUP BY "track_id"
                 HAVING COUNT(*) >= 50
