@@ -991,10 +991,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                 exemplar,
             });
 
+            
             // Draw vertical connector line from end of horizontal line to horizon chart
             pinToHorizonChartData.push({
                 source: [-x0, yMid],
-                target: [hGap, yOffset],
+                target: [0, yOffset - viewConfiguration.value.horizonTimeBarGap],
                 exemplar,
             });
 
@@ -1105,6 +1106,8 @@ function createSidewaysHistogramLayer(): any[] | null {
             })
         );
 
+
+        // Create the histogram pin layers
         layers.push(...createPinLayers(pinData, firstExemplar));
 
         // Push a new LineLayer to draw these lines with thinner stroke
