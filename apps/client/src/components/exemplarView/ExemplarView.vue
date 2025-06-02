@@ -1689,29 +1689,36 @@ function createCellImageLayer(
     return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
 }
 
-function createTickMarkLayer(tickData: any): LineLayer {
-    return new LineLayer({
-        id: `snippet-tick-marks-layer-${Date.now()}`,
-        data: tickData,
-        getSourcePosition: (d: any) => d.path[0],
-        getTargetPosition: (d: any) => d.path[1],
-        getColor: (d: any) => {
-            if (d.hovered | d.pinned) {
-                return [130, 145, 170, 200];
-            } else if (d.drawerLine) {
-                if (globalSettings.darkMode) {
-                    return [195, 217, 250, 200];
-                } else {
-                    return [65, 72, 85, 200];
-                }
-            } else {
-                return [130, 145, 170, 150];
-            }
-        },
-        getWidth: (d: any) => (d.hovered ? 3 : 1.5),
-        widthUnits: 'pixels',
-        capRounded: false,
-    });
+// Add this near the top of your <script setup> block:
+let tickMarkLayerCounter = 0;
+
+// … later, replace your existing createTickMarkLayer with:
+
+function createTickMarkLayer(rawData: any): LineLayer {
+  // ensure we always hand deck.gl an array
+  const data = Array.isArray(rawData) ? rawData : [rawData];
+
+  return new LineLayer({
+    // use an ever‐incrementing counter instead of Date.now()
+    id: `snippet-tick-marks-layer-${tickMarkLayerCounter++}`,
+    data,
+    pickable: false,
+    getSourcePosition: (d: any) => d.path[0],
+    getTargetPosition: (d: any) => d.path[1],
+    getColor: (d: any) => {
+      if (d.hovered || d.pinned) {
+        return [130, 145, 170, 200];
+      } else if (d.drawerLine) {
+        return darkMode.value
+          ? [195, 217, 250, 200]
+          : [65, 72, 85, 200];
+      }
+      return [130, 145, 170, 150];
+    },
+    getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+    widthUnits: 'pixels',
+    rounded: false, // deck.gl uses `rounded`, not `capRounded`
+  });
 }
 
 function constructGeometry(track: ExemplarTrack): number[] {
@@ -2061,11 +2068,12 @@ function createExemplarImageKeyFramesLayer(
     hoveredImagesInfo.value = [];
   }
 
+  let cellSnippetsLayerCount = ref(0);
   // --- Create layer instances using the computed data ---
   const colormapExtension = new AdditiveColormapExtension();
   const contrastLimits = [[0, 255]];
   const snippetLayer = new CellSnippetsLayer({
-    id: `test-cell-snippets-layer ${exemplar.trackId}`,
+    id: `test-cell-snippets-layer-${exemplar.trackId}-${cellSnippetsLayerCount.value++}`,
     loader: pixelSource,
     onHover: (info: PickingInfo) => {
       if (info.coordinate && info.coordinate.length === 2) {
