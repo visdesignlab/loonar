@@ -500,154 +500,99 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         percentiles?: number[],
         additionalTrackValue?: number
     ): Promise<ExemplarTrack[]> {
+        const attributeColumn = selectedAttribute.value
+        const aggregationColumn = selectedAggregation.value.label
+        const experimentName = currentExperimentMetadata?.value?.name
+        const aggTable = `${experimentName}_composite_experiment_cell_metadata_aggregate`
+        const cellTable = `${experimentName}_composite_experiment_cell_metadata`
+        const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : ''
+        const aggAttr = `${aggregationColumn} ${attributeColumn}`
+        const timeCol = "Time (h)"
 
-        // Percentiles
-        const percentileDecimals = percentiles?.map((p) => p / 100) ?? [];
-        const percentileValuesSql = percentileDecimals?.map((d) => `(${d})`).join(',');
+        const pctDecimals = percentiles?.map(p => p/100) ?? [];
+        const pctRanks = pctDecimals
+        .map(d => `FLOOR(dcnt*${d}) + 1`)
+        .join(', ');
 
-        // Conditions
-        const conditionsSql = conditions.map(
-            ([conditionOne, conditionTwo]) => `('${conditionOne}', '${conditionTwo}')`).join(',');
-
-        // Column names
-        const timeColumn = 'Time (h)';
-        const attributeColumn = selectedAttribute.value; // Use selected attribute
-        const aggregationColumn = selectedAggregation.value.label;
-    
-        // Table / Experiment names
-        const experimentName = currentExperimentMetadata?.value?.name;
-        const cellLevelTableName = `${experimentName}_composite_experiment_cell_metadata`;
-        const trackLevelTableName = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
-
-        // Filtering 
-        const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : '';
-        const aggregatedAttribute = `${aggregationColumn} ${attributeColumn}`;
-
-        // Query for exemplar tracks ---------------------------------------------------
-
-        // 1) Get the target aggregate attribute value for a given condition pair and percentile.
-        // Example: target_value will be 1000 pg for 50th percentile average mass, for condition pair A + B.
-            const percentileNames = percentileDecimals.map(d => d.toString().replace('.', '_'));
-            const percentileSelectList = percentileDecimals
-            .map((d, i) => 
-                `percentile_disc(${d}) WITHIN GROUP (ORDER BY "${aggregatedAttribute}") AS val${percentileNames[i]}`
-            ).join(',\n      ');
-            const lateralValues = percentileDecimals
-            .map((d, i) => `(${d}, val${percentileNames[i]})`)
-            .join(',\n        ');
-
-            const percentageValuesQuery = `
-            WITH
-            conditions(c1,c2) AS (VALUES ${conditionsSql}),
-            stats AS (
-                SELECT
-                cond.c1 AS conditionOne,
-                cond.c2 AS conditionTwo,
-                ${percentileSelectList}
-                FROM "${trackLevelTableName}" t
-                CROSS JOIN conditions cond
-                WHERE 1=1 ${whereClause}
-                AND t."${selectedXTag.value}" = cond.c1
-                AND t."${selectedYTag.value}" = cond.c2
-                GROUP BY cond.c1, cond.c2
-            )
+        const combinedQuery = `
+        WITH
+        -- 1) Rank every track by aggregate attribute, within its (c1, c2) bucket
+        ranked AS (
             SELECT
-            s.conditionOne,
-            s.conditionTwo,
-            v.p,
-            v.target_value
-            FROM stats s
-            CROSS JOIN LATERAL (
-            VALUES
-                ${lateralValues}
-            ) AS v(p, target_value)
-            `;
-        console.log('--- percentageValues SQL ---\n', percentageValuesQuery);
-        let percentageValuesResult;
-        try {
-        percentageValuesResult = await timedVgQuery('percentageValuesQuery', percentageValuesQuery);
-
-        console.log('percentageValues Result:', percentageValuesResult);
-        } catch (err) {
-        console.error('Error executing percentageValuesQuery:', err);
-        throw err;
-        }
-
-        // 2) Select all tracks that match the conditions and have the percentile target aggregate attribute value.
-        // Return the track ID, location, condition values, birth and death time, min and max values, and the p value.
-        const selectedTracksQuery = `
-        WITH percentageValues AS (${percentageValuesQuery})
-        SELECT
-            t.tracking_id::INTEGER   AS track_id,
-            t.location::INTEGER      AS location,
-            t."${selectedXTag.value}" AS conditionOne,
-            t."${selectedYTag.value}" AS conditionTwo,
-            t."Minimum Time (h)"     AS birthTime,
-            t."Maximum Time (h)"     AS deathTime,
+            t.tracking_id::INTEGER       AS track_id,
+            t.location::INTEGER          AS location,
+            t."${selectedXTag.value}"    AS conditionOne,
+            t."${selectedYTag.value}"    AS conditionTwo,
+            t."Minimum Time (h)"         AS birthTime,
+            t."Maximum Time (h)"         AS deathTime,
             t."Minimum ${attributeColumn}" AS minValue,
             t."Maximum ${attributeColumn}" AS maxValue,
-            pv.p                      AS p
-        FROM "${trackLevelTableName}" t
-        JOIN percentageValues pv
-            ON t."${selectedXTag.value}" = pv.conditionOne
-        AND t."${selectedYTag.value}" = pv.conditionTwo
-        AND t."${aggregatedAttribute}" = pv.target_value
-        `;
-        console.log('--- Selected Tracks SQL ---\n', selectedTracksQuery);
-        let selectedTracksResult;
-        try {
-        selectedTracksResult = await timedVgQuery('selectedTracksQuery', selectedTracksQuery);
-        console.log('Selected Tracks Result:', selectedTracksResult);
-        } catch (err) {
-        console.error('Error executing selectedTracksQuery:', err);
-        throw err;
-        }
+            t."${aggAttr}"               AS aggValue,
+            ROW_NUMBER() OVER (
+                PARTITION BY t."${selectedXTag.value}", t."${selectedYTag.value}"
+                ORDER BY t."${aggAttr}"
+            )                            AS dnr,
+            COUNT(*)    OVER (
+                PARTITION BY t."${selectedXTag.value}", t."${selectedYTag.value}"
+            )                            AS dcnt
+            FROM "${aggTable}" t
+            WHERE 1=1 ${whereClause}
+        ),
 
-        // 3) Include all data from the selected tracks, and also include the Cell-level data for those tracks 
-        const finalQuery = `
-        WITH selected_tracks AS (${selectedTracksQuery})
+        -- 2) Find the tracks that match the requested percentile ranks
+        selected AS (
+            SELECT
+            track_id, location,
+            conditionOne, conditionTwo,
+            birthTime, deathTime,
+            minValue, maxValue,
+            -- compute the actual p for each match
+            CASE
+                ${pctDecimals.map(d =>
+                `WHEN dnr = FLOOR(dcnt*${d}) + 1 THEN ${d}`
+                ).join('\n        ')}
+            END AS p
+            FROM ranked
+            WHERE dnr IN (${pctRanks})
+        )
+
+        -- 3) Attach the cell-level data to the selected tracks
         SELECT
-            st.track_id,
-            st.location,
-            st.birthTime,
-            st.deathTime,
-            st.minValue,
-            st.maxValue,
-            st.conditionOne,
-            st.conditionTwo,
-            st.p,
-            -- Cell-level data
-            array_agg(ARRAY[
+        s.track_id,
+        s.location,
+        s.birthTime,
+        s.deathTime,
+        s.minValue,
+        s.maxValue,
+        s.conditionOne,
+        s.conditionTwo,
+        s.p,
+        array_agg(ARRAY[
             n.track_id::TEXT,
-            n."${timeColumn}"::TEXT,
+            n."${timeCol}"::TEXT,
             n."Frame ID"::TEXT,
             n."${attributeColumn}"::TEXT,
             n.x::TEXT,
             n.y::TEXT
-            ]) AS cellLevelData
-        FROM selected_tracks st
-        JOIN "${cellLevelTableName}" n
-            ON n.track_id = st.track_id
+        ]) AS cellLevelData
+        FROM selected s
+        JOIN "${cellTable}" n
+        ON n.track_id = s.track_id
         GROUP BY
-            st.track_id,
-            st.location,
-            st.birthTime,
-            st.deathTime,
-            st.minValue,
-            st.maxValue,
-            st.conditionOne,
-            st.conditionTwo,
-            st.p
-        `;
-        console.log('--- Final Data SQL ---\n', finalQuery);
-        let finalResult;
-        try {
-        finalResult = await timedVgQuery('finalQuery', finalQuery);
-        console.log('Final Data Result:', finalResult);
-        } catch (err) {
-        console.error('Error executing finalQuery:', err);
-        throw err;
-        }
+        s.track_id,
+        s.location,
+        s.birthTime,
+        s.deathTime,
+        s.minValue,
+        s.maxValue,
+        s.conditionOne,
+        s.conditionTwo,
+        s.p;
+        `
+
+        console.log('–– single‐pass percentile query ––\n', combinedQuery)
+        const finalResult: any[] = await timedVgQuery('combinedExemplarQuery', combinedQuery)
+
 
         // Return query results -------------------------------------------------------------
         // Return Exemplar Track Array[]
