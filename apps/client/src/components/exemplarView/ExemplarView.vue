@@ -122,6 +122,7 @@ const {
     histogramDomains,
     exemplarDataLoaded,
     selectedAttribute,
+    selectedAggregation,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -274,94 +275,9 @@ function handleScroll(delta: number) {
 
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
-    () => [ experimentDataInitialized.value, selectedAttribute],
+    () =>  experimentDataInitialized.value,
     async (initialized) => {
-        if (initialized) {
-            console.log('Experiment data initialized.');
-
-            // Load exemplar data -----------------------
-            // Fetch total experiment time
-            totalExperimentTime.value =
-                await exemplarViewStore.getTotalExperimentTime();
-
-            // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
-            const exemplarPercentiles = [5, 50, 95];
-            await exemplarViewStore.getExemplarViewData(
-                true,
-                exemplarPercentiles,
-                undefined
-            );
-
-            // Initialize Deck.gl if not already initialized -----------------
-            if (!deckgl.value) {
-                console.log("Creating Deck GL");
-                deckgl.value = new Deck({
-                    pickingRadius: 5,
-                    canvas: deckGlContainer.value,
-                    views: new OrthographicView({
-                        id: 'exemplarController',
-                        controller: true,
-                    }),
-                    controller: {
-                        type: ScrollUpDownController,
-                        onScroll: handleScroll,
-                    },
-                    layers: [],
-                    getTooltip: (info: PickingInfo) => {
-                        // If the layer is a horizon chart, show the cell index and time.
-                        if (
-                            info.layer &&
-                            info.layer.id &&
-                            info.layer.id.startsWith('exemplar-horizon-chart-')
-                        ) {
-                            // Currently hovered time from store.
-                            const time =
-                                dataPointSelectionUntrracked.hoveredTime;
-                            if (time == null) return null;
-                            // Format the time and value (truncate decimals).
-                            const formattedTime = customNumberFormatter(
-                                time,
-                                '.2f'
-                            );
-                            const formattedValue =
-                            hoveredCellsInfo.value && hoveredCellsInfo.value.length > 0
-                                ? customNumberFormatter(hoveredCellsInfo.value[0][1].value, '.3f')
-                                : '';
-                            // Create the tooltip HTML, with the currently hovered exemplar and time.
-                            let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
-                            html += `<div>Time: ${formattedTime}</div>`;
-                            html += `<div>${selectedAttribute.value}: ${formattedValue}</div>`;
-                            return { html };
-                        }
-                        return null;
-                    },
-                    initialViewState: defaultViewState,
-                    onViewStateChange: ({ viewState, oldViewState }) => {
-                        if (oldViewState && !isEqual(viewState, oldViewState)) {
-                            // disable pan/zoom from controller, but allow scroll
-                            // the controller does have params to disable zoom/scroll
-                            // but they weren't working and this does
-                            if (!isEqual(viewState.zoom, oldViewState.zoom)) {
-                                viewState = { ...oldViewState };
-                            } else {
-                                viewState.target[0] = oldViewState.target[0];
-                            }
-                            // TODO: I left this in here for now to demonstrate
-                            // difference between scroll/pan performance.
-                            // I would like to remove panning though ideally.
-                        }
-
-                        viewStateMirror.value = viewState as any;
-                        renderDeckGL();
-                        return viewState;
-                    },
-                });
-                console.log('Deck.gl initialized.');
-            }
-
-            // 2. Set exemplarDataInitialized to true after data generation
-            exemplarDataInitialized.value = true;
-        } else {
+        if (!initialized) {
             // If not initialized, clean up Deck.gl instance
             if (deckgl.value) {
                 deckgl.value.finalize();
@@ -372,7 +288,88 @@ watch(
 
             // Reset exemplarDataInitialized
             exemplarDataInitialized.value = false;
+            return;
         }
+        console.log('Experiment data initialized.');
+
+        // Load exemplar data -----------------------
+        // Fetch total experiment time
+        totalExperimentTime.value = await exemplarViewStore.getTotalExperimentTime();
+
+        // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
+        await exemplarViewStore.getExemplarViewData(true);
+
+        await loadPixelSources();
+
+        // Initialize Deck.gl if not already initialized -----------------
+        if (!deckgl.value) {
+            console.log("Creating Deck GL");
+            deckgl.value = new Deck({
+                pickingRadius: 5,
+                canvas: deckGlContainer.value,
+                views: new OrthographicView({
+                    id: 'exemplarController',
+                    controller: true,
+                }),
+                controller: {
+                    type: ScrollUpDownController,
+                    onScroll: handleScroll,
+                },
+                layers: [],
+                getTooltip: (info: PickingInfo) => {
+                    // If the layer is a horizon chart, show the cell index and time.
+                    if (
+                        info.layer &&
+                        info.layer.id &&
+                        info.layer.id.startsWith('exemplar-horizon-chart-')
+                    ) {
+                        // Currently hovered time from store.
+                        const time =
+                            dataPointSelectionUntrracked.hoveredTime;
+                        if (time == null) return null;
+                        // Format the time and value (truncate decimals).
+                        const formattedTime = customNumberFormatter(
+                            time,
+                            '.2f'
+                        );
+                        const formattedValue =
+                        hoveredCellsInfo.value && hoveredCellsInfo.value.length > 0
+                            ? customNumberFormatter(hoveredCellsInfo.value[0][1].value, '.3f')
+                            : '';
+                        // Create the tooltip HTML, with the currently hovered exemplar and time.
+                        let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
+                        html += `<div>Time: ${formattedTime}</div>`;
+                        html += `<div>${selectedAttribute.value}: ${formattedValue}</div>`;
+                        return { html };
+                    }
+                    return null;
+                },
+                initialViewState: defaultViewState,
+                onViewStateChange: ({ viewState, oldViewState }) => {
+                    if (oldViewState && !isEqual(viewState, oldViewState)) {
+                        // disable pan/zoom from controller, but allow scroll
+                        // the controller does have params to disable zoom/scroll
+                        // but they weren't working and this does
+                        if (!isEqual(viewState.zoom, oldViewState.zoom)) {
+                            viewState = { ...oldViewState };
+                        } else {
+                            viewState.target[0] = oldViewState.target[0];
+                        }
+                        // TODO: I left this in here for now to demonstrate
+                        // difference between scroll/pan performance.
+                        // I would like to remove panning though ideally.
+                    }
+
+                    viewStateMirror.value = viewState as any;
+                    renderDeckGL();
+                    return viewState;
+                },
+            });
+            console.log('Deck.gl initialized.');
+        }
+
+        // 2. Set exemplarDataInitialized to true after data generation
+        exemplarDataInitialized.value = true;
     },
     { immediate: false } // We don't need to run this immediately on mount
 );
@@ -553,21 +550,6 @@ async function loadPixelSources() {
     }
     await Promise.all(pool);
 }
-// Watches for changes in currentLocationMetadata and loads the pixel source.
-watch(
-    exemplarDataInitialized, 
-    async () => {
-        try {
-            console.log('Exemplar Data Initialized. Loading Pixel Sources.');
-            await loadPixelSources();
-            // Optionally, trigger render after pixelSources loads:
-            renderDeckGL();
-        } catch (error) {
-            console.error('[ExemplarView] Error loading pixel sources:', error);
-        }
-    },
-    { immediate: true }
-);
 
 // Getting Segmentation Data ------------------------------------------------------------------------------------
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
