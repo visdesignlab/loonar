@@ -312,35 +312,46 @@ class CellSnippetsLayer extends CompositeLayer {
 
         const xrLayers = [];
         for (let i = 0; i < data.length; i++) {
-            const snippet = data[i];
-
+            const snippet = data[i] as SnippetData;
+            const [left, top, right, bottom] = snippet.destination;
+            const bounds: [number, number, number, number] = [
+              left,     // xMin
+              bottom,   // yMin must be greater than ymax
+              right,    // xMax
+              top       // yMax
+            ];
+          
+            // sanity‐check the 4 corners before pushing an XRLayer
+            if (
+              !Number.isFinite(bounds[0]) ||
+              !Number.isFinite(bounds[1]) ||
+              !Number.isFinite(bounds[2]) ||
+              !Number.isFinite(bounds[3])
+            ) {
+              continue;
+            }
+            if (bounds[1] >= bounds[3]) {
+              continue;
+            }
+          
             xrLayers.push(
-                new XRLayer({
-                    // loader: pixelSource.value,
-                    id: `${id}-snippet-${i}`,
-                    contrastLimits: this.props.contrastLimits,
-                    // selections: imageViewerStore.selections,
-                    channelsVisible: [true],
-                    // @ts-ignore
-                    extensions: this.props.extensions,
-                    colormap: this.props.colormap,
-                    // onClick: () => console.log('click in base image layer'),
-                    // onViewportLoad: () => console.log('image viewport load'),
-                    dtype,
-                    bounds: snippet.destination,
-                    // bounds: [0, 767, 767, 0],
-                    channelData: {
-                        data: [snippet.data],
-                        width: snippet.source[2] - snippet.source[0],
-                        height: snippet.source[1] - snippet.source[3],
-                    },
-                    // pickable: false,
-                    // autoHighlight: true,
-                    // highlightColor: [80, 80, 80, 50],
-                })
+              new XRLayer({
+                id: `${id}-snippet-${i}`,
+                contrastLimits: this.props.contrastLimits,
+                channelsVisible: [true],
+                // @ts-ignore
+                extensions: this.props.extensions,
+                colormap: this.props.colormap,
+                dtype,
+                bounds,
+                channelData: {
+                  data: [snippet.data],
+                  width: snippet.source[2] - snippet.source[0],
+                  height: snippet.source[1] - snippet.source[3],
+                }
+              })
             );
-            // }
-        }
+          }
 
         return xrLayers;
     }
