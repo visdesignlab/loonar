@@ -273,6 +273,8 @@ function handleScroll(delta: number) {
     renderDeckGL();
 }
 
+
+
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
     () =>  experimentDataInitialized.value,
@@ -296,7 +298,7 @@ watch(
         // Fetch total experiment time
         totalExperimentTime.value = await exemplarViewStore.getTotalExperimentTime();
 
-        // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
+        // // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
         await exemplarViewStore.getExemplarViewData(true);
 
         await loadPixelSources();

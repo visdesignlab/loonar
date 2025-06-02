@@ -436,7 +436,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             await getExemplarViewData(true);
           }
         },
-        { immediate: true }
       );
 
     function sortExemplarsByCondition(
@@ -524,26 +523,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : '';
         const aggregatedAttribute = `${aggregationColumn} ${attributeColumn}`;
 
-
-
-        console.log('Percentile values sql:', percentileValuesSql);
-        console.log('Conditions SQL:', conditionsSql);
-
-
-
         // Query for exemplar tracks ---------------------------------------------------
-        let query;
 
         // 1) Get the target aggregate attribute value for a given condition pair and percentile.
         // Example: target_value will be 1000 pg for 50th percentile average mass, for condition pair A + B.
-        // build aliases and SELECT list for each p
-            const percentileAliases = percentileDecimals.map(d => d.toString().replace('.', '_'));
+            const percentileNames = percentileDecimals.map(d => d.toString().replace('.', '_'));
             const percentileSelectList = percentileDecimals
             .map((d, i) => 
-                `percentile_disc(${d}) WITHIN GROUP (ORDER BY "${aggregatedAttribute}") AS val${percentileAliases[i]}`
+                `percentile_disc(${d}) WITHIN GROUP (ORDER BY "${aggregatedAttribute}") AS val${percentileNames[i]}`
             ).join(',\n      ');
             const lateralValues = percentileDecimals
-            .map((d, i) => `(${d}, val${percentileAliases[i]})`)
+            .map((d, i) => `(${d}, val${percentileNames[i]})`)
             .join(',\n        ');
 
             const percentageValuesQuery = `
@@ -660,9 +650,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
 
         // Return query results -------------------------------------------------------------
-        // Return new promise of finalResult as type ExemplarTrack[]
+        // Return Exemplar Track Array[]
         const tracks: ExemplarTrack[] = finalResult.map((row: any) => {
-            // reconstruct the cell‐level data
+            // Reconstruct Cell Level Data
             const data: Cell[] = row.cellLevelData.map((c: string[]) => ({
             trackId: c[0],
             time:   parseFloat(c[1]),
