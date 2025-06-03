@@ -343,7 +343,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 };
             }
             );
-            console.log('Condition Histograms:', conditionHistograms.value);
             // 5) Optionally set histogramDomains for the Y range
             histogramDomains.value.minY = 0;
             histogramDomains.value.maxY = Math.max(
@@ -419,7 +418,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const start = performance.now();
             const result = await vg.coordinator().query(query, opts);
             const elapsed = performance.now() - start;
-            console.log(`${label} took ${elapsed.toFixed(2)} ms`);
             return result;
           }
 
@@ -432,7 +430,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         async () => {
           // guard: only once, only when cond-chart filters are ready, only when aggFilPredString is non-null
           if (conditionChartSelectionsInitialized.value && aggFilPredString.value) {
-            console.log('Refreshing exemplar view data');
             await getExemplarViewData(true);
           }
         },
@@ -507,11 +504,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const cellTable = `${experimentName}_composite_experiment_cell_metadata`
         const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : ''
         const aggAttr = `${aggregationColumn} ${attributeColumn}`
-        const timeCol = "Time (h)"
+        const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
         const pctDecimals = percentiles?.map(p => p/100) ?? [];
         const pctRanks = pctDecimals
-        .map(d => `FLOOR(dcnt*${d}) + 1`)
+        .map(d => `FLOOR(count*${d}) + 1`)
         .join(', ');
 
         const combinedQuery = `
@@ -523,18 +520,18 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             t.location::INTEGER          AS location,
             t."${selectedXTag.value}"    AS conditionOne,
             t."${selectedYTag.value}"    AS conditionTwo,
-            t."Minimum Time (h)"         AS birthTime,
-            t."Maximum Time (h)"         AS deathTime,
+            t."Minimum ${timeCol}"         AS birthTime,
+            t."Maximum ${timeCol}"         AS deathTime,
             t."Minimum ${attributeColumn}" AS minValue,
             t."Maximum ${attributeColumn}" AS maxValue,
             t."${aggAttr}"               AS aggValue,
             ROW_NUMBER() OVER (
                 PARTITION BY t."${selectedXTag.value}", t."${selectedYTag.value}"
                 ORDER BY t."${aggAttr}"
-            )                            AS dnr,
+            )                            AS rank,
             COUNT(*)    OVER (
                 PARTITION BY t."${selectedXTag.value}", t."${selectedYTag.value}"
-            )                            AS dcnt
+            )                            AS count
             FROM "${aggTable}" t
             WHERE 1=1 ${whereClause}
         ),
@@ -549,11 +546,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             -- compute the actual p for each match
             CASE
                 ${pctDecimals.map(d =>
-                `WHEN dnr = FLOOR(dcnt*${d}) + 1 THEN ${d}`
+                `WHEN rank = FLOOR(count*${d}) + 1 THEN ${d}`
                 ).join('\n        ')}
             END AS p
             FROM ranked
-            WHERE dnr IN (${pctRanks})
+            WHERE rank IN (${pctRanks})
         )
 
         -- 3) Attach the cell-level data to the selected tracks
@@ -590,7 +587,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         s.p;
         `
 
-        console.log('–– single‐pass percentile query ––\n', combinedQuery)
         const finalResult: any[] = await timedVgQuery('combinedExemplarQuery', combinedQuery)
 
 
@@ -644,7 +640,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
         }
 
-        console.log('getting exemplar tracks');
         let tracks = exemplarTracks.value;
         
         try {
@@ -664,7 +659,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // Ensure the exemplar tracks are sorted by condition, and flattened.
             exemplarTracks.value = sortExemplarsByCondition(exemplarTracks.value).flat();
 
-            console.log('Exemplar tracks fetched:', exemplarTracks.value);
           } catch (error) {
             console.error('Error generating exemplar tracks:', error);
           }

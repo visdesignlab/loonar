@@ -277,7 +277,7 @@ function handleScroll(delta: number) {
 
 // Watcher to initialize Deck.gl when experimentDataInitialized becomes true
 watch(
-    () =>  experimentDataInitialized.value,
+    () =>  experimentDataInitialized.value, 
     async (initialized) => {
         if (!initialized) {
             // If not initialized, clean up Deck.gl instance
@@ -380,6 +380,16 @@ watch(
 // Main rendering function for DeckGL -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
 const cellSegmentationDataInitialized = ref(false);
+
+
+watch(
+    () => [exemplarTracks.value, selectedAttribute.value, selectedAggregation.value],
+    async () => {
+        // If the exemplar data is not initialized, do not render.
+        await getCellSegmentationData();
+    },
+    { immediate: true }
+);
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
@@ -387,9 +397,6 @@ async function renderDeckGL(): Promise<void> {
     recalculateExemplarYOffsets();
 
     // Needs to not loop over every exemplar (only on screen)
-    if (!cellSegmentationDataInitialized.value) {
-        await getCellSegmentationData();
-    }
 
     deckGLLayers = [];
     deckGLLayers.push(createSidewaysHistogramLayer());
@@ -554,7 +561,12 @@ async function loadPixelSources() {
 }
 
 // Getting Segmentation Data ------------------------------------------------------------------------------------
+
+
+// Segmentation Data for current tracks
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
+
+// Populate cellSegmentationData with all segmentation data for all cells in exemplar tracks ONCE.
 async function getCellSegmentationData() {
     // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
     for (const exemplar of exemplarTracks.value) {
@@ -574,18 +586,19 @@ async function getCellSegmentationData() {
             }
         }
     }
-    cellSegmentationDataInitialized.value = true;
 }
 
 // Gets the segmentation polygon for a specific cell
 function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
+    // console.log('cellSegmentationData.value', cellSegmentationData.value);
     const cellSegmentation = cellSegmentationData.value?.find(
         (locationSegmentation) =>
             locationSegmentation?.location == location &&
             locationSegmentation?.segmentation?.properties?.id == trackId &&
             locationSegmentation?.segmentation?.properties?.frame == frame
     );
-
+    // console.log('Finding cell segmentation for', location, trackId, frame);
+    // console.log('cellSegmentation', cellSegmentation);
     return cellSegmentation ? cellSegmentation.segmentation : undefined;
 }
 
@@ -1654,12 +1667,14 @@ function createCellImageLayer(
         offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
 
   // TODO: Segmentation Layer creation here
+
+  console.log('ImageSegmentationData:', imageSegmentationData);
   // Create a new segmentation outline layer for these cells.
   const segmentationLayer = new SnippetSegmentationOutlineLayer({
-        id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
+        id: `hovered-snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
         data: imageSegmentationData,
         // Use the first element of the polygon
-        getPath: (d: any) => d.polygon[0],
+        getPath: (d: any) => {console.log('ImageSegmentationData polygons:', d); return d.polygon[0]},
         getColor: () => colors.hovered.rgb,
         getWidth: 1.5,
         widthUnits: 'pixels',
@@ -2091,10 +2106,13 @@ function createExemplarImageKeyFramesLayer(
 
   const hoveredWithAlpha = colors.hovered.rgba;
   hoveredWithAlpha[3] = 200;
+
+
+  console.log('Exemplar Segmentation Data:', exemplarSegmentationData);
   const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
-    id: `snippet-segmentation-outline-layer-${exemplar.trackId}-${Date.now()}`,
+    id: `snippet-segmentation-outline-key-frame-layer-${exemplar.trackId}-${Date.now()}`,
     data: exemplarSegmentationData,
-    getPath: (d: any) => d.polygon[0],
+    getPath: (d: any) => {console.log("exemplarSegmentationData Polygons:", d); return d.polygon[0]},
     getColor: (d: any) => {
       if (d.selected) return globalSettings.normalizedSelectedRgb;
       if (d.hovered) return hoveredWithAlpha;
