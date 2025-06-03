@@ -275,10 +275,11 @@ function handleScroll(delta: number) {
 
 
 
-// Watcher to initialize Deck.gl when experimentDataInitialized becomes true
+// Fully re-load data & initialize Deck.gl when experiment data is loaded, selected attribute / aggregation, and filters.
 watch(
-    () =>  experimentDataInitialized.value, 
-    async (initialized) => {
+  [experimentDataInitialized, selectedAttribute, selectedAggregation, ],
+  // 2. destructure all four
+  async ([initialized, tracks, attr]) => {
         if (!initialized) {
             // If not initialized, clean up Deck.gl instance
             if (deckgl.value) {
@@ -295,13 +296,18 @@ watch(
         console.log('Experiment data initialized.');
 
         // Load exemplar data -----------------------
+
         // Fetch total experiment time
         totalExperimentTime.value = await exemplarViewStore.getTotalExperimentTime();
 
-        // // Fetch exemplar tracks - that are from exemplarPercentiles of the histogram group
+        // Fetch exemplar tracks & histogram data
         await exemplarViewStore.getExemplarViewData(true);
-
+        
+        // Fetch Images
         await loadPixelSources();
+
+        // Fetch all segmentations
+        await getCellSegmentationData();
 
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
@@ -342,6 +348,7 @@ watch(
                         let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
                         html += `<div>Time: ${formattedTime}</div>`;
                         html += `<div>${selectedAttribute.value}: ${formattedValue}</div>`;
+                        html += `<div>Location: ${hoveredExemplar.value?.locationId}</div>`;
                         return { html };
                     }
                     return null;
@@ -382,14 +389,14 @@ let deckGLLayers: any[] = [];
 const cellSegmentationDataInitialized = ref(false);
 
 
-watch(
-    () => [exemplarTracks.value, selectedAttribute.value, selectedAggregation.value],
-    async () => {
-        // If the exemplar data is not initialized, do not render.
-        await getCellSegmentationData();
-    },
-    { immediate: true }
-);
+// watch(
+//     () => [exemplarTracks.value, selectedAttribute.value, selectedAggregation.value],
+//     async () => {
+//         // If the exemplar data is not initialized, do not render.
+//         await getCellSegmentationData();
+//     },
+//     { immediate: true }
+// );
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
@@ -1684,7 +1691,7 @@ function createCellImageLayer(
         zoomX: viewStateMirror.value.zoom[0],
         scale: 1,
         clipSize: looneageViewStore.snippetDestSize,
-        clip: false,
+        clip: true,
     });
   
   // The tick should be placed at the center of the snippet.
@@ -2126,8 +2133,8 @@ function createExemplarImageKeyFramesLayer(
     getTranslateOffset: (d: any) => d.offset,
     zoomX: viewStateMirror.value.zoom[0],
     scale: 1,
-    clipSize: looneageViewStore.snippetDestSize,
-    clip: false,
+    clipSize: 200, // Make custom for exemplar view
+    clip: true,
   });
 
   const keyFrameTickMarkLayer = createTickMarkLayer(tickData);

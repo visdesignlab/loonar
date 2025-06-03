@@ -343,7 +343,7 @@ class CellSnippetsLayer extends CompositeLayer {
                 extensions: this.props.extensions,
                 colormap: this.props.colormap,
                 dtype,
-                bounds,
+                bounds: snippet.destination,
                 channelData: {
                   data: [snippet.data],
                   width: snippet.source[2] - snippet.source[0],
