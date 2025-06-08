@@ -1627,11 +1627,15 @@ function createCellImageLayer(
     return null;
   }
   
-  // Determine the horizontal (x) position based on the cell time relative to the exemplar time range.
-  const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
-  const centerX = viewConfig.horizonChartWidth * percentage;
-  const x1 = centerX - snippetDestWidth / 2;
-  const x2 = x1 + snippetDestWidth;
+  const duration = exemplar.maxTime - exemplar.minTime;
+    const percentage =
+    duration > 0
+        ? (cell.time - exemplar.minTime) / duration
+        : 0.5; // If only one frame, center it
+
+    const centerX = viewConfig.horizonChartWidth * percentage;
+    const x1 = centerX - snippetDestWidth / 2;
+    const x2 = x1 + snippetDestWidth;
   
   // Define the destination bounding box for the snippet.
   const y1 = destY;
@@ -1642,8 +1646,8 @@ function createCellImageLayer(
   const source = getBBoxAroundPoint(
     cell.x ?? 0,
     cell.y ?? 0,
-    looneageViewStore.snippetSourceSize,
-    looneageViewStore.snippetSourceSize
+    viewConfig.snippetDisplayWidth,
+    viewConfig.snippetDisplayHeight
   );
   
   // Create a snippet selection entry.
@@ -1994,15 +1998,19 @@ function createExemplarImageKeyFramesLayer(
 
   // --- Helper Functions ---
   // Calculate the destination bbox for a given cell.
-  function computeDestination(cell: Cell): [number, number, number, number] {
-    const percentage = (cell.time - exemplar.minTime) / (exemplar.maxTime - exemplar.minTime);
-    const centerX = viewConfig.horizonChartWidth * percentage;
-    const x1 = centerX - snippetDestWidth / 2;
+  function computeDestination(cell: Cell): BBox {
+    const duration = exemplar.maxTime - exemplar.minTime;
+    const pct =
+        duration > 0
+        ? (cell.time - exemplar.minTime) / duration
+        : 0.5;
+    const cx = viewConfig.horizonChartWidth * pct;
+    const x1 = cx - snippetDestWidth / 2;
     const x2 = x1 + snippetDestWidth;
     const y1 = destY;
     const y2 = y1 - snippetDestHeight;
     return [x1, y1, x2, y2];
-  }
+    }
 
   // Add segmentation data given a cell, its destination, and whether it is “selected” (or hovered).
   function addSegmentation(frame: number, dest: [number, number, number, number], selected: boolean, cell: Cell) {
@@ -2070,9 +2078,9 @@ function createExemplarImageKeyFramesLayer(
 
       // Push selections for previous, current and next locations.
       selections.push(
-        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: prevCellDest }] },
-        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: destination }] },
-        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize), destination: nextCellDest }] }
+        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: prevCellDest }] },
+        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: destination }] },
+        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: nextCellDest }] }
       );
 
       // Add segmentation for these three destinations.
@@ -2115,7 +2123,7 @@ function createExemplarImageKeyFramesLayer(
         t: cell.frame - 1,
         z: 0,
         snippets: [{
-          source: getBBoxAroundPoint(cell.x, cell.y, looneageViewStore.snippetSourceSize, looneageViewStore.snippetSourceSize),
+          source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight),
           destination: destination
         }]
       });
