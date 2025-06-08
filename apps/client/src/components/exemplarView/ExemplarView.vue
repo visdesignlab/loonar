@@ -58,16 +58,23 @@ import CellSnippetsLayer from '../layers/CellSnippetsLayer';
 import { type Selection } from '../layers/CellSnippetsLayer';
 import type { Feature } from 'geojson';
 import { ScrollUpDownController } from './ScrollUpDownController';
+import SnippetSegmentationLayer from '../layers/SnippetSegmentationLayer/SnippetSegmentationLayer';
 
 // The y-position and visibility of each exemplar track.
 interface ExemplarRenderInfo {
     yOffset: number;
     onScreen: boolean;
 }
+
+
+interface combinedSnippetSegmentationLayer {
+    snippetSegmentationOutlineLayer: SnippetSegmentationOutlineLayer | null;
+    snippetSegmentationLayer: SnippetSegmentationLayer | null;
+}
 // Combined layers for a cell snippet: cell image, segmentation outline, and tick marks.
-interface CellImageLayerResult {
+interface FinalCellImageLayer {
   cellImageLayer: CellSnippetsLayer | null;
-  segmentationLayer: SnippetSegmentationOutlineLayer | null;
+  segmentationLayer: combinedSnippetSegmentationLayer | null;
   tickMarkLayer: LineLayer | null;
 }
 // Interface for the segmentation data of a cell.
@@ -597,15 +604,12 @@ async function getCellSegmentationData() {
 
 // Gets the segmentation polygon for a specific cell
 function getCellSegmentationPolygon(location: string, trackId: string, frame: string): Feature | undefined {
-    // console.log('cellSegmentationData.value', cellSegmentationData.value);
     const cellSegmentation = cellSegmentationData.value?.find(
         (locationSegmentation) =>
             locationSegmentation?.location == location &&
             locationSegmentation?.segmentation?.properties?.id == trackId &&
             locationSegmentation?.segmentation?.properties?.frame == frame
     );
-    // console.log('Finding cell segmentation for', location, trackId, frame);
-    // console.log('cellSegmentation', cellSegmentation);
     return cellSegmentation ? cellSegmentation.segmentation : undefined;
 }
 
@@ -777,15 +781,32 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
     // Cell image + segmentation appears on mouse hover
     const cellImageEventsLayer = createCellImageEventsLayer(info, exemplar, 'hover');
+    if (!cellImageEventsLayer) return;
+
+    const hoveredFinalImageLayers: any[] = [];
+    // Back - segmentation backing
+    if (cellImageEventsLayer.segmentationLayer?.snippetSegmentationLayer) {
+        hoveredFinalImageLayers.push(cellImageEventsLayer.segmentationLayer.snippetSegmentationLayer);
+    }
+    // Image
+    if (cellImageEventsLayer.cellImageLayer) {
+        hoveredFinalImageLayers.push(cellImageEventsLayer.cellImageLayer);
+    }
+    // Segmentation front outline
+    if (cellImageEventsLayer.segmentationLayer?.snippetSegmentationOutlineLayer) {
+        hoveredFinalImageLayers.push(cellImageEventsLayer.segmentationLayer.snippetSegmentationOutlineLayer);
+    }
+    // Tick marks
+    if (cellImageEventsLayer.tickMarkLayer) {
+        hoveredFinalImageLayers.push(cellImageEventsLayer.tickMarkLayer);
+    }
 
     deckgl.value?.setProps({
-  layers: [
-    ...deckGLLayers,
-    cellImageEventsLayer?.tickMarkLayer,  // Render tick layer behind
-    cellImageEventsLayer?.cellImageLayer,
-    cellImageEventsLayer?.segmentationLayer
-  ]
-});
+        layers: [
+        ...deckGLLayers,
+        ...hoveredFinalImageLayers
+        ]
+    });
 }
 
 function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
@@ -1546,7 +1567,7 @@ function createCellImageEventsLayer(
     selectedExemplar.value = exemplar;
     selectedCellsInfo.value?.push([eventCellBBox, cell]);
     if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
-    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer);
+    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer.snippetSegmentationOutlineLayer!);
     renderDeckGL(); // Trigger a re-render after updating the layers
     }
   } 
@@ -1571,7 +1592,7 @@ function createCellImageLayer(
   pixelSource: PixelSource<any>,
   exemplar: ExemplarTrack,
   cell: Cell
-): CellImageLayerResult  | null {
+): FinalCellImageLayer  | null {
   // Initialize an array to hold snippet selection(s).
   const selections: Selection[] = [];
   const viewConfig = viewConfiguration.value;
@@ -1675,13 +1696,13 @@ function createCellImageLayer(
 
   // TODO: Segmentation Layer creation here
 
-  console.log('ImageSegmentationData:', imageSegmentationData);
+  const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = { snippetSegmentationOutlineLayer: null, snippetSegmentationLayer: null };
   // Create a new segmentation outline layer for these cells.
-  const segmentationLayer = new SnippetSegmentationOutlineLayer({
+  combinedSnippetSegmentationLayer.snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
         id: `hovered-snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
         data: imageSegmentationData,
         // Use the first element of the polygon
-        getPath: (d: any) => {console.log('ImageSegmentationData polygons:', d); return d.polygon[0]},
+        getPath: (d: any) => d.polygon[0],
         getColor: () => colors.hovered.rgb,
         getWidth: 1.5,
         widthUnits: 'pixels',
@@ -1690,9 +1711,26 @@ function createCellImageLayer(
         getTranslateOffset: (d: any) => d.offset,
         zoomX: viewStateMirror.value.zoom[0],
         scale: 1,
-        clipSize: looneageViewStore.snippetDestSize,
+        clipSize: viewConfig.snippetDisplayHeight,
         clip: true,
     });
+    const unselectedColorWithAlpha = colors.unselectedBoundary.rgba;
+  const selectedColorWithAlpha = globalSettings.normalizedSelectedRgba;
+  combinedSnippetSegmentationLayer.snippetSegmentationLayer =
+        new SnippetSegmentationLayer({
+            id:'cell-boundary-layer-'+ exemplar.trackId + '-' + Date.now(),
+            data: imageSegmentationData,
+            getPolygon: (d: any) => d.polygon,
+            getCenter: (d: any) => d.center,
+            getTranslateOffset: (d: any) => d.offset,
+            getFillColor: (d: any) => colors.hovered.rgb,
+            opacity: 0.5,
+            zoomX: viewStateMirror.value.zoom[0],
+            scale: 1,
+            clipSize: viewConfig.snippetDisplayHeight,
+            clip: false,
+            filled: true, // Only fill if not showing image
+        });
   
   // The tick should be placed at the center of the snippet.
   const tickX = x1 + snippetDestWidth / 2;
@@ -1708,7 +1746,7 @@ function createCellImageLayer(
   };
   const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
 
-    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer };
+    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer: combinedSnippetSegmentationLayer };
 }
 
 // Add this near the top of your <script setup> block:
@@ -1753,34 +1791,46 @@ function getAverageAttr(exemplar: ExemplarTrack): number {
     return sum / exemplar.data.length;
 }
 
-function createExemplarImageKeyFrameLayers(): (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] {
-  const keyFrameLayers: (CellSnippetsLayer | SnippetSegmentationOutlineLayer)[] = [];
-  if (!pixelSources.value) return keyFrameLayers;
-  const exemplarImageUrls = exemplarViewStore.getExemplarImageUrls();
+function createExemplarImageKeyFrameLayers():
+  (CellSnippetsLayer |
+   SnippetSegmentationOutlineLayer |
+   SnippetSegmentationLayer |
+   LineLayer)[] {
+  const layers: Array<
+    CellSnippetsLayer |
+    SnippetSegmentationOutlineLayer |
+    SnippetSegmentationLayer |
+    LineLayer
+  > = [];
+  if (!pixelSources.value) return layers;
+  const urls = exemplarViewStore.getExemplarImageUrls();
   for (const exemplar of exemplarTracksOnScreen.value) {
-    const locationId = exemplar.locationId;
-    if (pixelSources.value && !pixelSources.value[locationId]) {
-      const url = exemplarImageUrls.get(locationId);
-      if (url) {
-        loadPixelSource(locationId, url);
-      } else {
-        console.error(`URL not found for locationId: ${locationId}`);
-      }
+    const src = pixelSources.value![exemplar.locationId];
+    if (!src) {
+      const url = urls.get(exemplar.locationId);
+      if (url) loadPixelSource(exemplar.locationId, url);
+      continue;
     }
-    const keyFrameLayersWrapper = createExemplarImageKeyFramesLayer(pixelSources.value[locationId], exemplar);
-    if (keyFrameLayersWrapper) {
-      if (keyFrameLayersWrapper.imageLayerResult.cellImageLayer) {
-        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.cellImageLayer);
-      }
-      if (keyFrameLayersWrapper.imageLayerResult.segmentationLayer) {
-        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.segmentationLayer);
-      }
-      if (keyFrameLayersWrapper.imageLayerResult.tickMarkLayer) {
-        keyFrameLayers.push(keyFrameLayersWrapper.imageLayerResult.tickMarkLayer);
-      }
+    const result = createExemplarImageKeyFramesLayer(src, exemplar);
+    if (!result) continue;
+    // 1) back: filled segmentation
+    if (result.segmentationLayer?.snippetSegmentationLayer) {
+      layers.push(result.segmentationLayer.snippetSegmentationLayer);
+    }
+    // 2) then the image
+    if (result.cellImageLayer) {
+      layers.push(result.cellImageLayer);
+    }
+    // 3) then the outline
+    if (result.segmentationLayer?.snippetSegmentationOutlineLayer) {
+      layers.push(result.segmentationLayer.snippetSegmentationOutlineLayer);
+    }
+    // 4) front: tick marks
+    if (result.tickMarkLayer) {
+      layers.push(result.tickMarkLayer);
     }
   }
-  return keyFrameLayers;
+  return layers;
 }
 
 function getTimeDuration(track: ExemplarTrack): number {
@@ -1910,15 +1960,15 @@ let hoveredCoordinate = <[number, number] | null>null;
 function createExemplarImageKeyFramesLayer(
   pixelSource: PixelSource<any>,
   exemplar: ExemplarTrack
-): { imageLayerResult: CellImageLayerResult } {
+): FinalCellImageLayer | null {
   // --- Validation and basic setup ---
   if (!pixelSource) {
     console.error('[createExemplarImageKeyFramesLayer] pixelSource is not set!');
-    return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
+    return { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null };
   }
   if (!exemplarTracks.value || exemplarTracks.value.length === 0) {
     console.error('[createExemplarImageKeyFramesLayer] No exemplar tracks available!');
-    return { imageLayerResult: { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null } };
+    return { cellImageLayer: null, segmentationLayer: null, tickMarkLayer: null };
   }
 
   const viewConfig = viewConfiguration.value;
@@ -2095,7 +2145,7 @@ function createExemplarImageKeyFramesLayer(
   const colormapExtension = new AdditiveColormapExtension();
   const contrastLimits = [[0, 255]];
   const snippetLayer = new CellSnippetsLayer({
-    id: `test-cell-snippets-layer-${exemplar.trackId}-${cellSnippetsLayerCount.value++}`,
+    id: `cell-snippets-layer-${exemplar.trackId}-${cellSnippetsLayerCount.value++}`,
     loader: pixelSource,
     onHover: (info: PickingInfo) => {
       if (info.coordinate && info.coordinate.length === 2) {
@@ -2115,11 +2165,14 @@ function createExemplarImageKeyFramesLayer(
   hoveredWithAlpha[3] = 200;
 
 
-  console.log('Exemplar Segmentation Data:', exemplarSegmentationData);
-  const snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
+  // Segmentation Layer Instantiation -------------------------------------------------
+  const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = { snippetSegmentationOutlineLayer: null, snippetSegmentationLayer: null };
+
+  // Cell Segmentation Outline within boundaries (non-hovered)
+  combinedSnippetSegmentationLayer.snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
     id: `snippet-segmentation-outline-key-frame-layer-${exemplar.trackId}-${Date.now()}`,
     data: exemplarSegmentationData,
-    getPath: (d: any) => {console.log("exemplarSegmentationData Polygons:", d); return d.polygon[0]},
+    getPath: (d: any) => d.polygon[0],
     getColor: (d: any) => {
       if (d.selected) return globalSettings.normalizedSelectedRgb;
       if (d.hovered) return hoveredWithAlpha;
@@ -2133,13 +2186,34 @@ function createExemplarImageKeyFramesLayer(
     getTranslateOffset: (d: any) => d.offset,
     zoomX: viewStateMirror.value.zoom[0],
     scale: 1,
-    clipSize: 200, // Make custom for exemplar view
+    clipSize: viewConfig.snippetDisplayHeight, // Make custom for exemplar view
     clip: true,
   });
 
+  const unselectedColorWithAlpha = colors.unselectedBoundary.rgba;
+  const selectedColorWithAlpha = globalSettings.normalizedSelectedRgba;
+  // Cell segmentation out-of boundaries (non-hovered)
+  combinedSnippetSegmentationLayer.snippetSegmentationLayer =
+        new SnippetSegmentationLayer({
+            id:'cell-boundary-layer-'+ exemplar.trackId + '-' + Date.now(),
+            data: exemplarSegmentationData,
+            getPolygon: (d: any) => d.polygon,
+            getCenter: (d: any) => d.center,
+            getTranslateOffset: (d: any) => d.offset,
+            getFillColor: (d: any) => d.selected
+                ? selectedColorWithAlpha
+                : unselectedColorWithAlpha,
+            opacity: 1, 
+            zoomX: viewStateMirror.value.zoom[0],
+            scale: 1,
+            clipSize: viewConfig.snippetDisplayHeight,
+            clip: true,
+            filled: false, // Only fill if not showing image
+        });
+
   const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
 
-  return { imageLayerResult: { cellImageLayer: snippetLayer, segmentationLayer: snippetSegmentationOutlineLayer, tickMarkLayer: keyFrameTickMarkLayer } };
+  return { cellImageLayer: snippetLayer, segmentationLayer: combinedSnippetSegmentationLayer, tickMarkLayer: keyFrameTickMarkLayer };
 }
 
 // General purpose watchers ---------------------------------------------------------------------------------------------------
