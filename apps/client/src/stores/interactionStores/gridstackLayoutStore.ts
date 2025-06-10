@@ -300,6 +300,7 @@ export const useGridstackLayoutStore = defineStore(
                 icon: 'location_on',
                 noPadding: true,
                 hideOverflow: true,
+                sidebar: 'ExemplarViewSettingsSidebar',
                 toolbar: 'ExemplarViewSettingsToolbar',
             },
             {

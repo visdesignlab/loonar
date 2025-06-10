@@ -785,16 +785,26 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 
     const hoveredFinalImageLayers: any[] = [];
     // Back - segmentation backing
-    if (cellImageEventsLayer.segmentationLayer?.snippetSegmentationLayer) {
-        hoveredFinalImageLayers.push(cellImageEventsLayer.segmentationLayer.snippetSegmentationLayer);
+    if (
+      viewConfiguration.value.showSnippetOutline &&
+      cellImageEventsLayer.segmentationLayer?.snippetSegmentationLayer
+    ) {
+      hoveredFinalImageLayers.push(
+        cellImageEventsLayer.segmentationLayer.snippetSegmentationLayer
+      );
     }
     // Image
-    if (cellImageEventsLayer.cellImageLayer) {
-        hoveredFinalImageLayers.push(cellImageEventsLayer.cellImageLayer);
+    if (viewConfiguration.value.showSnippetImage && cellImageEventsLayer.cellImageLayer) {
+      hoveredFinalImageLayers.push(cellImageEventsLayer.cellImageLayer);
     }
     // Segmentation front outline
-    if (cellImageEventsLayer.segmentationLayer?.snippetSegmentationOutlineLayer) {
-        hoveredFinalImageLayers.push(cellImageEventsLayer.segmentationLayer.snippetSegmentationOutlineLayer);
+    if (
+      viewConfiguration.value.showSnippetOutline &&
+      cellImageEventsLayer.segmentationLayer?.snippetSegmentationOutlineLayer
+    ) {
+      hoveredFinalImageLayers.push(
+        cellImageEventsLayer.segmentationLayer.snippetSegmentationOutlineLayer
+      );
     }
     // Tick marks
     if (cellImageEventsLayer.tickMarkLayer) {
@@ -1646,8 +1656,8 @@ function createCellImageLayer(
   const source = getBBoxAroundPoint(
     cell.x ?? 0,
     cell.y ?? 0,
-    viewConfig.snippetDisplayWidth,
-    viewConfig.snippetDisplayHeight
+    viewConfig.snippetSourceSize,
+    viewConfig.snippetSourceSize
   );
   
   // Create a snippet selection entry.
@@ -1818,15 +1828,21 @@ function createExemplarImageKeyFrameLayers():
     const result = createExemplarImageKeyFramesLayer(src, exemplar);
     if (!result) continue;
     // 1) back: filled segmentation
-    if (result.segmentationLayer?.snippetSegmentationLayer) {
+    if (
+      viewConfiguration.value.showSnippetOutline &&
+      result.segmentationLayer?.snippetSegmentationLayer
+    ) {
       layers.push(result.segmentationLayer.snippetSegmentationLayer);
     }
     // 2) then the image
-    if (result.cellImageLayer) {
+    if (viewConfiguration.value.showSnippetImage && result.cellImageLayer) {
       layers.push(result.cellImageLayer);
     }
     // 3) then the outline
-    if (result.segmentationLayer?.snippetSegmentationOutlineLayer) {
+    if (
+      viewConfiguration.value.showSnippetOutline &&
+      result.segmentationLayer?.snippetSegmentationOutlineLayer
+    ) {
       layers.push(result.segmentationLayer.snippetSegmentationOutlineLayer);
     }
     // 4) front: tick marks
@@ -1877,8 +1893,7 @@ function getKeyFrameOrder(exemplarTrack: ExemplarTrack): KeyframeInfo[] {
     const frameScores: number[] = Array(L).fill(0);
     frameScores[0] = Infinity;
     frameScores[L - 1] = Infinity;
-    const spaceKeyframesEvenly = true; // TODO: bind this to something in UI
-    if (!spaceKeyframesEvenly) {
+    if (!viewConfiguration.value.spaceKeyFramesEvenly) {
         const valExtent = valueExtent(exemplarTrack);
         if (valExtent !== 0) {
             // avoid divide by zero, if vall extent is zero, then all
@@ -2078,9 +2093,9 @@ function createExemplarImageKeyFramesLayer(
 
       // Push selections for previous, current and next locations.
       selections.push(
-        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: prevCellDest }] },
-        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: destination }] },
-        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight), destination: nextCellDest }] }
+        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: prevCellDest }] },
+        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: destination }] },
+        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: nextCellDest }] }
       );
 
       // Add segmentation for these three destinations.
@@ -2123,7 +2138,7 @@ function createExemplarImageKeyFramesLayer(
         t: cell.frame - 1,
         z: 0,
         snippets: [{
-          source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetDisplayWidth, viewConfig.snippetDisplayHeight),
+          source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize),
           destination: destination
         }]
       });

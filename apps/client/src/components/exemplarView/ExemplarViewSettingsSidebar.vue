@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
+import { useExemplarViewStore } from '@/stores/componentStores/ExemplarViewStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
 import { clamp } from 'lodash-es';
 
@@ -17,6 +18,7 @@ import {
 const cellMetaData = useCellMetaData();
 const globalSettings = useGlobalSettings();
 const looneageViewStore = useLooneageViewStore();
+const exemplarViewStore = useExemplarViewStore();
 const eventBusStore = useEventBusStore();
 
 const colorSchemeOptions = [
@@ -28,16 +30,17 @@ const colorSchemeOptions = [
 ];
 
 const horizonSettingsModal = ref(false);
+
+const snippetDisplaySize = computed<number>({
+  get: () => exemplarViewStore.viewConfiguration.snippetDisplayHeight,
+  set: (val: number) => {
+    exemplarViewStore.viewConfiguration.snippetDisplayHeight = val
+    exemplarViewStore.viewConfiguration.snippetDisplayWidth  = val
+  }
+})
 </script>
 
 <template>
-    <q-btn
-        class="q-mb-sm"
-        @click="eventBusStore.emitter.emit('resetLooneageView')"
-        icon="center_focus_strong"
-        outline
-        >Reset View</q-btn
-    >
     <q-btn class="q-mb-sm" @click="horizonSettingsModal = true" outline
         >Configure Horizon Charts</q-btn
     >
@@ -135,22 +138,17 @@ const horizonSettingsModal = ref(false);
 
     <q-toggle
         label="Show Snippet Image"
-        v-model="looneageViewStore.showSnippetImage"
+        v-model="exemplarViewStore.viewConfiguration.showSnippetImage"
         :dark="globalSettings.darkMode"
     />
     <q-toggle
         label="Show Snippet Outline"
-        v-model="looneageViewStore.showSnippetOutline"
+        v-model="exemplarViewStore.viewConfiguration.showSnippetOutline"
         :dark="globalSettings.darkMode"
     />
     <q-toggle
         label="Space Snippets Evenly"
-        v-model="looneageViewStore.spaceKeyframesEvenly"
-        :dark="globalSettings.darkMode"
-    />
-    <q-toggle
-        label="Include sibling buffers"
-        v-model="looneageViewStore.includeSiblingBuffer"
+        v-model="exemplarViewStore.viewConfiguration.spaceKeyFramesEvenly"
         :dark="globalSettings.darkMode"
     />
     <q-card-section class="q-pl-none q-pr-none">
@@ -167,30 +165,9 @@ const horizonSettingsModal = ref(false);
             />
         </div>
         <q-slider
-            v-model="looneageViewStore.rowHeight"
+            v-model="exemplarViewStore.viewConfiguration.horizonChartHeight"
             :min="4"
             :max="240"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Spacing:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="looneageViewStore.spacing"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="looneageViewStore.spacing"
-            :min="0"
-            :max="300"
             label
             :dark="globalSettings.darkMode"
         />
@@ -204,14 +181,14 @@ const horizonSettingsModal = ref(false);
             <q-input
                 class="q-pl-md"
                 dense
-                v-model.number="looneageViewStore.snippetSourceSize"
+                v-model.number="exemplarViewStore.viewConfiguration.snippetSourceSize"
                 type="number"
                 :step="2"
                 :dark="globalSettings.darkMode"
             />
         </div>
         <q-slider
-            v-model="looneageViewStore.snippetSourceSize"
+            v-model="exemplarViewStore.viewConfiguration.snippetSourceSize"
             :min="8"
             :max="320"
             :step="2"
@@ -234,52 +211,9 @@ const horizonSettingsModal = ref(false);
             />
         </div>
         <q-slider
-            v-model="looneageViewStore.snippetDestSize"
+            v-model="snippetDisplaySize"
             :min="8"
             :max="320"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Max Depth</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="looneageViewStore.maxDepth"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="looneageViewStore.maxDepth"
-            :min="0"
-            :max="20"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Connecting Line Width</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="looneageViewStore.connectingLineWidth"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="looneageViewStore.connectingLineWidth"
-            :min="0.1"
-            :max="100"
             label
             :dark="globalSettings.darkMode"
         />

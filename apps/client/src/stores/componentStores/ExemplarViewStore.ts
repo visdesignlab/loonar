@@ -39,6 +39,7 @@ export interface Cell {
 
 export interface ViewConfiguration {
     afterStarredGap: number;
+    snippetSourceSize: number;
     snippetDisplayHeight: number;
     snippetDisplayWidth: number;
     snippetHorizonChartGap: number;
@@ -52,6 +53,9 @@ export interface ViewConfiguration {
     horizonHistogramGap: number;
     histogramWidth: number;
     margin: number;
+    showSnippetImage: boolean;
+    showSnippetOutline: boolean;
+    spaceKeyFramesEvenly: boolean;
 }
 
 export interface conditionHistogram {
@@ -107,6 +111,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
+        snippetSourceSize: 80,
         snippetDisplayHeight: 80,
         snippetDisplayWidth: 80,
         snippetHorizonChartGap: 5,
@@ -120,6 +125,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         horizonHistogramGap: 50,
         histogramWidth: 250,
         margin: 50,
+        showSnippetImage: true,
+        showSnippetOutline: true,
+        spaceKeyFramesEvenly: true,
+
     });
 
     const exemplarHeight = computed(() => {
