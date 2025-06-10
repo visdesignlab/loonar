@@ -297,7 +297,7 @@ export const useGridstackLayoutStore = defineStore(
                 component: 'ExemplarView',
                 displayName: 'Exemplar View',
                 id: 'ExemplarView',
-                icon: 'table_chart',
+                icon: 'location_on',
                 noPadding: true,
                 hideOverflow: true,
                 toolbar: 'ExemplarViewSettingsToolbar',
