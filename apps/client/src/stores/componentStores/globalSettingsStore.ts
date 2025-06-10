@@ -147,6 +147,7 @@ export const useGlobalSettings = defineStore('globalSettings', () => {
         LooneageViewSettingsSidebar: false,
         ImageViewerSettingsSidebar: false,
         AggregateLineChartSettingsSidebar: false,
+        ExemplarViewSettingsSidebar: false,
     });
 
     function openComponentSetting(key: string): void {

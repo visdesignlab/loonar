@@ -20,6 +20,7 @@ import ImageViewerSettingsToolbar from './components/ImageViewerSettingsToolbar.
 import AggregateLineChart from './components/AggregateLineChart.vue';
 import AggregateLineChartSettingsSidebar from './components/AggregateLineChartSettingsSidebar.vue';
 import AggregateLineChartSettingsToolbar from './components/AggregateLineChartSettingsToolbar.vue';
+import ExemplarViewSettingsSidebar from '@/components/exemplarView/ExemplarViewSettingsSidebar.vue';
 import TrrackVisWrapper from './components/TrrackVisWrapper.vue';
 import NoDataSplash from './components/NoDataSplash.vue';
 import ConditionSelector from './components/conditionSelector/ConditionSelector.vue';
@@ -83,6 +84,7 @@ createApp(App)
         'AggregateLineChartSettingsToolbar',
         AggregateLineChartSettingsToolbar
     )
+    .component('ExemplarViewSettingsSidebar', ExemplarViewSettingsSidebar)
     .component('TrrackVisWrapper', TrrackVisWrapper)
     // .component('LooneageView', LooneageView)
     .component('CellTrackView', CellTrackView)

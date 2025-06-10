@@ -74,6 +74,22 @@ const globalSettings = useGlobalSettings();
                 </q-card-section>
             </q-card>
         </q-expansion-item>
+        <q-expansion-item
+            group="settings"
+            icon="location_on"
+            label="Exemplars"
+            v-model="
+                globalSettings.settingsAccordion[
+                    'ExemplarViewSettingsSidebar'
+                ]
+            "
+        >
+            <q-card :dark="globalSettings.darkMode">
+                <q-card-section>
+                    <ExemplarViewSettingsSidebar />
+                </q-card-section>
+            </q-card>
+        </q-expansion-item>
     </q-list>
 </template>
 
