@@ -156,9 +156,16 @@ export const useCellMetaData = defineStore('cellMetaData', () => {
     }
 
     const selectedTrack = computed<Track | null>(() => {
+        console.log('selectedTrack computed called');
         if (!dataInitialized.value) return null;
+        console.log('selectedTrack data initialized');
         if (dataPointSelection.selectedTrackId == null) return null;
+
+        console.log('selectedTrack is not null');
+        console.log('Getting:', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
         const track = trackMap.value?.get(dataPointSelection.selectedTrackId);
+
+        console.log('selected track track:', track);
         return track ?? null;
     });
     function selectTrack(track: Track | null) {

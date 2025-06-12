@@ -602,10 +602,14 @@ function createHorizonChartLayers(): (
             if (!cellMetaData.trackMap) return;
             let { selectedSnippet, time } = processHorizonPickingInfo(info);
             if (time !== null) {
+                console.log("Looneage selected track time:", time);
                 dataPointSelection.setCurrentFrameIndex(time);
             }
             if (!selectedSnippet) return;
             dataPointSelection.selectedTrackId = selectedSnippet.trackId;
+            console.log(
+                `Selected track looneage: ${selectedSnippet.trackId} at time: ${time}`
+            );
             dataPointSelectionUntrracked.setTriggerRecenter();
             if (!controlDown.value) return;
             if (shiftDown.value) {

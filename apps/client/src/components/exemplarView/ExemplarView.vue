@@ -25,6 +25,7 @@ import {
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 import { useConfigStore } from '@/stores/misc/configStore';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
@@ -135,6 +136,8 @@ const { getHistogramData } = exemplarViewStore;
 
 const cellMetaData = useCellMetaData();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
+const dataPointSelection = useDataPointSelection();
+
 
 // Dark mode settings
 const globalSettings = useGlobalSettings();
@@ -396,14 +399,8 @@ let deckGLLayers: any[] = [];
 const cellSegmentationDataInitialized = ref(false);
 
 
-// watch(
-//     () => [exemplarTracks.value, selectedAttribute.value, selectedAggregation.value],
-//     async () => {
-//         // If the exemplar data is not initialized, do not render.
-//         await getCellSegmentationData();
-//     },
-//     { immediate: true }
-// );
+const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
+
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
@@ -419,7 +416,9 @@ async function renderDeckGL(): Promise<void> {
     deckGLLayers.push(...createExemplarImageKeyFrameLayers());
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
+    deckGLLayers = deckGLLayers.concat(selectedOutlineLayer.value);
     deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
+    deckGLLayers = deckGLLayers.concat(selectedCellImageTickMarkLayers.value);
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
 
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
@@ -580,6 +579,20 @@ async function loadPixelSources() {
 // Segmentation Data for current tracks
 let cellSegmentationData = ref<LocationSegmentation[]>([]);
 
+watch(
+    () => exemplarViewStore.exemplarDataLoaded,
+    async (loaded) => {
+      if (loaded) {
+        // reload your tiffs and segmentation for the new tracks
+        await loadPixelSources();
+        // clear old segmentations and fetch them for the new tracks
+        cellSegmentationData.value = [];
+        await getCellSegmentationData();
+        // repaint
+        renderDeckGL();
+      }
+    }
+  );
 // Populate cellSegmentationData with all segmentation data for all cells in exemplar tracks ONCE.
 async function getCellSegmentationData() {
     // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
@@ -693,6 +706,31 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         );
     }
     return horizonChartLayers;
+}
+const selectedOutlineLayer = ref<PolygonLayer|null>(null);
+
+function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
+  const key = uniqueExemplarKey(exemplar);
+  const info = exemplarRenderInfo.value.get(key);
+  if (!info) { selectedOutlineLayer.value = null; return; }
+  const y = info.yOffset - viewConfiguration.value.timeBarHeightOuter;
+  selectedOutlineLayer.value = new PolygonLayer({
+    id: `exemplar-selected-outline-${key}`,
+    data: [{ polygon: [
+      [0, y],
+      [viewConfiguration.value.horizonChartWidth, y],
+      [viewConfiguration.value.horizonChartWidth, y - viewConfiguration.value.horizonChartHeight],
+      [0, y - viewConfiguration.value.horizonChartHeight],
+      [0, y]
+    ] }],
+    pickable: false,
+    stroked: true,
+    filled: false,
+    getPolygon: d => d.polygon,
+    getLineColor: [255,165,0],   // orange
+    getLineWidth: 4,
+    lineWidthUnits: 'pixels'
+  });
 }
 
 // Create a reactive reference for the hovered outline layer.
@@ -823,6 +861,45 @@ function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     if (!info.index || info.index === -1) {
         return;
     }
+    // if the same exemplar is clicked again, deselect everything
+    if (selectedExemplar.value?.trackId === exemplar.trackId) {
+        selectedExemplar.value = null;
+        selectedOutlineLayer.value = null;
+        // clear any selected cell images & segmentation layers
+        selectedCellsInfo.value = [];
+        selectedCellImageLayers.value = [];
+        snippetSegmentationOutlineLayers.value = [];
+        selectedCellImageTickMarkLayers.value = [];
+        // clear store selection
+        dataPointSelection.selectedTrackId = null;
+        dataPointSelection.setCurrentFrameIndex(0);
+        renderDeckGL();
+        return;
+    }
+
+    // 1) select new exemplar
+    selectedExemplar.value = exemplar;
+    dataPointSelection.selectedTrackId = exemplar.trackId;
+    console.log('Horizon Click:', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
+    console.log('Cell meta data horizon:', cellMetaData.selectedTrack);
+    // 2) grab the store’s computed selectedTrack directly
+    const track = cellMetaData.selectedTrack;
+    if (track) {
+        dataPointSelection.selectedLineageId =
+        cellMetaData.getLineageId(track);
+    } else {
+        console.warn(`ExemplarView: no Track found for ${exemplar.trackId}`);
+    }
+
+    // also switch imaging location to match this exemplar
+    const meta = datasetSelectionStore.currentExperimentMetadata;
+    const locList = meta?.locationMetadataList || [];
+    const loc = locList.find((l) => l.id === exemplar.locationId);
+    if (loc) {
+        datasetSelectionStore.selectImagingLocation(loc);
+    }
+
+    createSelectedHorizonOutlineLayer(exemplar);
     createCellImageEventsLayer(info, exemplar, 'click');
 }
 
@@ -1156,15 +1233,20 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
                 getColor: (d: { exemplar: ExemplarTrack }) =>
-                hoveredExemplar.value && hoveredExemplar.value.trackId === d.exemplar.trackId
-                    ? colors.hovered.rgb
-                    : fillColor(d.exemplar),
+                    // 1) selected has top priority
+                    selectedExemplar.value?.trackId === d.exemplar.trackId
+                    ? [255,165,0]
+                    // 2) then hovered
+                    : hoveredExemplar.value?.trackId === d.exemplar.trackId
+                        ? colors.hovered.rgb
+                        // 3) default fill
+                        : fillColor(d.exemplar),
                 getWidth: (d: {
                     source: [number, number];
                     target: [number, number];
                     exemplar: ExemplarTrack;
                 }) =>
-                    hoveredExemplar.value === d.exemplar
+                    hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
                         ? 4
                         : 1, // Thinner stroke width
                 opacity: 1,
@@ -1374,14 +1456,20 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             getSourcePosition: (d: any) => d.source,
             getTargetPosition: (d: any) => d.target,
             getColor: (d: HistogramPin) =>
-                hoveredExemplar.value === d.exemplar
-                ? colors.hovered.rgb
-                : d.color
-                ? d.color
-                : fillColor(d.exemplar),
+                // 1) selected has top priority
+                selectedExemplar.value?.trackId === d.exemplar.trackId
+                ? [255,165,0]
+                // 2) then hovered
+                : hoveredExemplar.value === d.exemplar
+                    ? colors.hovered.rgb
+                    // 3) then its own color if pinned
+                    : d.color
+                    ? d.color
+                    // 4) default fill
+                    : fillColor(d.exemplar),
             // Adjust the line width based on hover state.
             getWidth: (d: any) =>
-                hoveredExemplar.value === d.exemplar
+                hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
                     ? 4
                     : 1,
             opacity: 0.2,
@@ -1400,21 +1488,21 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
             getPosition: (d: any) => d.position,
             radiusUnits: 'pixels',
             getRadius: (d: any) =>
-                hoveredExemplar.value === d.exemplar
+                hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
                     ? 6
                     : 3,
-            getColor: (d: HistogramPin) =>
-                hoveredExemplar.value === d.exemplar
-                ? colors.hovered.rgb
-                : d.color
-                ? d.color
-                : fillColor(d.exemplar),
             getFillColor: (d: HistogramPin) =>
-                hoveredExemplar.value === d.exemplar
-                ? colors.hovered.rgb
-                : d.color
-                ? d.color
-                : fillColor(d.exemplar),
+                // 1) selected has top priority
+                selectedExemplar.value?.trackId === d.exemplar.trackId
+                ? [255,165,0]
+                // 2) then hovered
+                : hoveredExemplar.value === d.exemplar
+                    ? colors.hovered.rgb
+                    // 3) then its own color if pinned
+                    : d.color
+                    ? d.color
+                    // 4) default fill
+                    : fillColor(d.exemplar),
             // When a pin is clicked, dragged or released, we log a dummy event.
             onDragStart: (info: PickingInfo, event: any) =>
                 handlePinDragStart(info, event, firstExemplar),
@@ -1574,13 +1662,44 @@ function createCellImageEventsLayer(
     renderDeckGL();
   }
   else if (action === 'click') {
-    selectedExemplar.value = exemplar;
-    selectedCellsInfo.value?.push([eventCellBBox, cell]);
-    if (cellImageLayerResult.cellImageLayer) { selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer); }
-    if (cellImageLayerResult.segmentationLayer) { snippetSegmentationOutlineLayers.value.push(cellImageLayerResult.segmentationLayer.snippetSegmentationOutlineLayer!);
-    renderDeckGL(); // Trigger a re-render after updating the layers
+    // see if this exact cell is already selected
+    const selIdx = selectedCellsInfo.value.findIndex(
+      ([, c]) => c.frame === cell.frame && exemplar.trackId === exemplar.trackId
+    );
+    if (selIdx >= 0) {
+      // Deselect: remove all from parallel arrays
+      selectedCellsInfo.value.splice(selIdx, 1);
+      selectedCellImageLayers.value.splice(selIdx, 1);
+      snippetSegmentationOutlineLayers.value.splice(selIdx, 1);
+      selectedCellImageTickMarkLayers.value.splice(selIdx, 1);
+      // clear store selection if nothing left
+      if (selectedCellsInfo.value.length === 0) {
+        selectedExemplar.value = null;
+        dataPointSelection.selectedTrackId = null;
+        dataPointSelection.setCurrentFrameIndex(0);
+      }
+    } else {
+      // original selection logic
+      selectedExemplar.value = exemplar;
+      selectedCellsInfo.value.push([eventCellBBox, cell]);
+      if (cellImageLayerResult.cellImageLayer) {
+        selectedCellImageLayers.value.push(cellImageLayerResult.cellImageLayer);
+      }
+      if (cellImageLayerResult.segmentationLayer) {
+        snippetSegmentationOutlineLayers.value.push(
+          cellImageLayerResult.segmentationLayer.snippetSegmentationOutlineLayer!
+        );
+      }
+      if (cellImageLayerResult.tickMarkLayer) {
+        selectedCellImageTickMarkLayers.value.push(
+          cellImageLayerResult.tickMarkLayer
+        );
+      }
+      dataPointSelection.selectedTrackId = exemplar.trackId;
+      dataPointSelection.setCurrentFrameIndex(realTimePoint);
     }
-  } 
+    renderDeckGL();
+  }
   return cellImageLayerResult;
 }
 
@@ -1758,6 +1877,9 @@ function createCellImageLayer(
     hovered: cell.isHovered,
     selected: cell.isSelected,
   };
+
+    // Create the tick mark layer using the tick data.
+    // Use the modified createTickMarkLayer function to ensure unique IDs.
   const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
 
     return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer: combinedSnippetSegmentationLayer };

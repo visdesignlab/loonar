@@ -334,6 +334,8 @@ function onClick(info: PickingInfo): void {
     dataPointSelection.selectedTrackId =
         geoJsonFeature.properties.id?.toString();
 
+    console.log('onClick', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
+    console.log('Cell meta data on click:', cellMetaData.selectedTrack);
     const lineageId = cellMetaData.getLineageId(cellMetaData.selectedTrack!);
     dataPointSelection.selectedLineageId = lineageId;
 }
