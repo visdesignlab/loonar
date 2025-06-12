@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Vue and core libraries
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
-import { useElementSize } from '@vueuse/core';
+import { until, useElementSize } from '@vueuse/core';
 
 // Deck.gl and related visualization libraries
 import { Deck, OrthographicView, type PickingInfo } from '@deck.gl/core/typed';
@@ -11,6 +11,7 @@ import {
     LineLayer,
     TextLayer,
 } from '@deck.gl/layers';
+import { nextTick } from 'vue';
 
 // Viv libraries for image loading and extensions
 import { loadOmeTiff } from '@hms-dbmi/viv';
@@ -880,7 +881,7 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     });
 }
 
-function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
+async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     if (!info.index || info.index === -1) {
         return;
     }
@@ -900,28 +901,30 @@ function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
         return;
     }
 
-    // 1) select new exemplar
-    selectedExemplar.value = exemplar;
-    dataPointSelection.selectedTrackId = exemplar.trackId;
-    // 2) grab the store’s computed selectedTrack directly
-    const track = cellMetaData.selectedTrack;
-    if (track) {
-        dataPointSelection.selectedLineageId =
-        cellMetaData.getLineageId(track);
-    } else {
-        console.warn(`ExemplarView: no Track found for ${exemplar.trackId}`);
-    }
 
-    // also switch imaging location to match this exemplar
-    const meta = datasetSelectionStore.currentExperimentMetadata;
-    const locList = meta?.locationMetadataList || [];
-    const loc = locList.find((l) => l.id === exemplar.locationId);
-    if (loc) {
-        datasetSelectionStore.selectImagingLocation(loc);
-    }
+
+     // 1) select new exemplar
+     selectedExemplar.value = exemplar;
+    dataPointSelection.selectedTrackId = exemplar.trackId;
 
     createSelectedHorizonOutlineLayer(exemplar);
     createCellImageEventsLayer(info, exemplar, 'click');
+
+    // 2) switch location (this kicks off async re-init of cellMetaData)
+    const meta = datasetSelectionStore.currentExperimentMetadata;
+    const loc = meta?.locationMetadataList?.find((l) => l.id === exemplar.locationId);
+    if (loc) {
+        datasetSelectionStore.selectImagingLocation(loc);
+
+        // wait for cellMetaData to finish loading
+        await until(() => cellMetaData.dataInitialized).toBe(true);
+        // then wait until selectedTrack is non-null
+        await until(() => cellMetaData.selectedTrack != null).toBeTruthy();
+    }
+
+    // 3) now read the computed safely
+    const track = cellMetaData.selectedTrack!;
+    dataPointSelection.selectedLineageId = cellMetaData.getLineageId(track);
 }
 
 // Time Window Layer -------------------------------------------------------------------------------------------
