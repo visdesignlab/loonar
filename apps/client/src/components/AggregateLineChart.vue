@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     useAggregateLineChartStore,
     type AggDataPoint,
-    type AggLineData,
 } from '@/stores/componentStores/aggregateLineChartStore';
 import { scaleLinear } from 'd3-scale';
 import { extent, max, min } from 'd3-array';
@@ -18,18 +17,12 @@ import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/data
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
-import type { Selection } from './layers/CellSnippetsLayer';
 import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
-    GeoJsonLayer,
-    LineLayer,
-    PathLayer,
-    PolygonLayer,
     ScatterplotLayer,
-    TextLayer,
 } from '@deck.gl/layers/typed';
 import type { PixelData, PixelSource } from '@vivjs/types';
 import Pool from '../util/Pool';
@@ -68,9 +61,13 @@ let {
 } = storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
+const deckGlContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
     aggLineChartContainer
 );
+
+// Add a reactive flag to track mouse position
+const isMouseInside = ref(false);
 
 // container height must be less than the outer container height in order for
 // height to shrink when the outer container is reduced in height. Without
@@ -219,8 +216,6 @@ function onMouseMove(event: MouseEvent) {
     if (time < timeExtent[0] || time > timeExtent[1]) return;
     dataPointSelectionUntrracked.hoveredTime = time;
 }
-
-const deckGlContainer = ref(null);
 
 // TODO: share cache with looneage view?
 const lruCache = new LRUCache({
@@ -487,10 +482,12 @@ const otherUnmuted = computed(() => {
     <div v-if="cellMetaData.dataInitialized" class="d-flex flex-column h-100">
         <div ref="aggLineChartContainer" class="h-100">
             <svg
+                id="aggLineChartSvg"
                 :width="containerWidth"
                 :height="containerHeight"
                 @mousemove="onMouseMove"
-                @mouseleave="dataPointSelectionUntrracked.hoveredTime = null"
+                @mouseenter="isMouseInside = true"
+                @mouseleave="() => { dataPointSelectionUntrracked.hoveredTime = null; isMouseInside = false; }"
                 @click="onSvgClick"
             >
                 <g
