@@ -11,50 +11,32 @@ type FeatureItem = {
 
 const FeatureListOne: FeatureItem[] = [
   {
-    title: 'Thing 1',
-    Svg: require('@site/static/img/page-analysis.svg').default,
-    description: (
-      <>
-        Stuff about thing 1!
-      </>
-    ),
-  },
-  {
-    title: 'Thing 2',
-    Svg: require('@site/static/img/cloud-acceleration.svg').default,
-    description: (
-      <>
-        Stuff about thing 2!
-      </>
-    ),
-  },
-  {
-    title: 'Thing 3',
+    title: 'Flow Cytometry Analysis',
     Svg: require('@site/static/img/data-analysis.svg').default,
     description: (
       <>
-        Stuff about thing 3!
+        Examine how cells proliferate over time
       </>
     ),
   },
   {
-    title: 'Thing 4',
-    Svg: require('@site/static/img/mobile-app.svg').default,
+    title: 'Time Series Cell Data Visualization',
+    Svg: require('@site/static/img/page-analysis.svg').default,
     description: (
       <>
-        Stuff about thing 4!
+        Cross-check multiple data types:
+        Line Charts, Tree Diagrams, & Images
       </>
     ),
-    inputClass: 'col--offset-2'
   },
   {
-    title: 'Thing 5',
-    Svg: require('@site/static/img/dns.svg').default,
-    description: (
+    title: 'Cell Segmentation Debugging',
+    Svg: require('@site/static/img/cell-drawing.svg').default,
+    description:
       <>
-        Stuff about thing 5!
-      </>
-    ),
+        Quickly visually identify errors in segmentation tracking
+      </>,
+    inputClass: styles.smallSvg, 
   },
 ];
 

@@ -48,7 +48,12 @@ const sidebars: SidebarsConfig = {
       },
       items: [
         "loon-for-scientists/quickstart",
-        "loon-for-scientists/data",
+        {
+          type: "category",
+          label: "Data",
+          link: { type: "doc", id: "loon-for-scientists/data" },
+          items: ["loon-for-scientists/data/trackmate-data"],
+        },
         "loon-for-scientists/loon-wrappers",
         "loon-for-scientists/working-with-minio"
       ],

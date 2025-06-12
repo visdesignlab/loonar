@@ -4,6 +4,12 @@
  * work well for content-centric websites.
  */
 
+ .titleContainer {
+  display: flex;
+  justify-content: center;    /* center both items */
+  align-items: center;
+  gap: 1rem;                   /* tweak this as needed */
+}
  .footer-wrapper {
   display:flex;
   flex-direction:row;

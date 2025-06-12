@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import React from 'react';
 import Link from '@docusaurus/Link';
+import Heading from '@theme/Heading';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '../components/HomepageFeatures';
@@ -10,6 +11,7 @@ import ImageSwitcher from '../components/ImageSwitcher';
 import Banner from '../components/Banner/Banner';
 
 function HomepageHeader() {
+  const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx('hero hero--secondary', styles.heroBanner)}>
       <div className="container">
@@ -43,6 +45,11 @@ function HomepageHeader() {
             className="button button--primary button--lg"
             to="/docs/introduction">
             Get Started
+          </Link>
+          <Link
+            className="button button--secondary button--lg"
+            href="https://aardvark.sci.utah.edu/">
+            Web Demo
           </Link>
         </div>
       </div>

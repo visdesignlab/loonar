@@ -2,9 +2,9 @@
 sidebar_position: 1
 ---
 
-# What Is Loon
+# Loon Software
 
-_Description of loon at a high level_
+
 
 ## Variations and using Loon
 

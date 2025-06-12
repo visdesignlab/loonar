@@ -19,11 +19,11 @@
   display:none;
 }
 
-.titleContainer{
-  display:flex;
-  flex-direction:row;
-  justify-content:space-between;
-  align-items:center;
+.titleContainer {
+  display: flex;
+  justify-content: center;  /* center logo+text as a group */
+  align-items: center;
+  gap: 1rem;                 /* adjust spacing between logo and title */
 }
 
 .titleContainer .description{
