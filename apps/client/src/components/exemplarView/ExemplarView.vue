@@ -669,7 +669,31 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
         // TODO: probably skip if not in viewport
 
-        const geometryData = constructGeometry(exemplar);
+
+        // If the exemplar has no data, create a dummy track with the min value.
+        let timeExtent: [number, number];
+        let geometryData: number[];
+
+        if (
+            !exemplar.data ||
+            exemplar.data.length < 2 ||
+            exemplar.minTime === exemplar.maxTime
+        ) {
+            timeExtent = [0, totalExperimentTime.value];
+
+            const value =
+            exemplar.data && exemplar.data.length
+                ? exemplar.data[0].value
+                : 0;
+            const dummyTrack = [
+            { time: 0, value },
+            { time: totalExperimentTime.value, value },
+            ];
+            geometryData = constructGeometryBase(dummyTrack, cellMetaData.timestep);
+        } else {
+            timeExtent = [exemplar.minTime, exemplar.maxTime];
+            geometryData = constructGeometry(exemplar);
+        }
 
         horizonChartLayers.push(
             new HorizonChartLayer({
@@ -689,8 +713,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
-                dataXExtent: [exemplar.minTime, exemplar.maxTime],
-
+                dataXExtent: timeExtent,
                 baseline: exemplarTracksMin,
                 binSize:
                     (exemplarTracksMax - exemplarTracksMin) /
@@ -880,8 +903,6 @@ function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     // 1) select new exemplar
     selectedExemplar.value = exemplar;
     dataPointSelection.selectedTrackId = exemplar.trackId;
-    console.log('Horizon Click:', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
-    console.log('Cell meta data horizon:', cellMetaData.selectedTrack);
     // 2) grab the store’s computed selectedTrack directly
     const track = cellMetaData.selectedTrack;
     if (track) {
