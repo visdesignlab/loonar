@@ -17,6 +17,7 @@ import ConditionChart from './ConditionChart.vue';
 import { storeToRefs } from 'pinia';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import ConditionSelectorCompareView from './ConditionSelectorCompareView.vue';
+import { getChartColor } from './chartColorUtils';
 const globalSettings = useGlobalSettings();
 const conditionSelectorStore = useConditionSelectorStore();
 const datasetSelectionUntrrackedStore = useDatasetSelectionStore();
@@ -30,7 +31,6 @@ const {
     yLabels,
     selectedXTag,
     selectedYTag,
-    selectedGrid,
     selectedIndividualAxes,
     selectedIndividualYAxis,
     axesOptions,
@@ -107,6 +107,7 @@ function determineSelected(elx: string, ely: string): boolean {
         conditionSelectorStore.allSelected()
     );
 }
+
 </script>
 
 <template>
@@ -273,6 +274,7 @@ function determineSelected(elx: string, ely: string): boolean {
                                         :selected="determineSelected(elx, ely)"
                                         :chartLineWidth="chartLineWidth"
                                         :height="size"
+                                        :color="getChartColor(idx, idy, xLabels, yLabels, conditionSelectorStore.chartColorScheme)"
                                     />
                                 </div>
                             </div>
