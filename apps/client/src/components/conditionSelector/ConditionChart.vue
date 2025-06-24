@@ -17,6 +17,7 @@ const props = defineProps<{
     selected: boolean;
     chartLineWidth: number;
     height: number;
+    color?: string;
 }>();
 
 const $height = vg.Param.value(props.height);
@@ -35,7 +36,7 @@ const { experimentDataInitialized, compTableName } = storeToRefs(
 const { conditionChartSelections, $conditionChartYAxisDomain } =
     useMosaicSelectionStore();
 const conditionSelectorStore = useConditionSelectorStore();
-const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore);
+const { selectedIndividualYAxis, chartColorScheme } = storeToRefs(conditionSelectorStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -59,12 +60,12 @@ watch(
     },
     { deep: true }
 );
-
-// Styles
-const lineColor =
+const lineColor = computed(() =>
+    props.color ??
     conditionSelectorStore.chartColorScheme[
         props.yIndex % conditionSelectorStore.chartColorScheme.length
-    ];
+    ]
+);
 const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
 
@@ -100,7 +101,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             {
                 x: xAxisName,
                 y: vg.avg(yAxisName),
-                stroke: lineColor,
+                stroke: lineColor.value,
                 strokeWidth: strokeWidth,
                 curve: 'linear',
                 opacity: 0.6,
@@ -115,7 +116,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             {
                 x: xAxisName,
                 y: vg.avg(yAxisName),
-                stroke: lineColor,
+                stroke: lineColor.value,
                 strokeWidth: strokeWidthSelected,
                 curve: 'linear',
                 opacity: 1,
