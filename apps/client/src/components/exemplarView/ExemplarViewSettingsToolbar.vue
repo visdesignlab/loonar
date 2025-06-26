@@ -77,8 +77,7 @@ function onAddClick() {
               :options="aggregationOptions"
               option-label="label"
               option-value="value"
-              v-model="selectedAggregation.value"
-              emit-value
+              v-model="selectedAggregation"
               map-options
             />
             <q-select
