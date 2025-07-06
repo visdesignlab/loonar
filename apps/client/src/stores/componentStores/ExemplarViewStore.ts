@@ -95,11 +95,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     const conditionSelectorStore = useConditionSelectorStore();
     const mosaicSelectionStore = useMosaicSelectionStore();
-    const {aggFilPredString,conditionChartSelectionsInitialized} = storeToRefs(mosaicSelectionStore);
+    const { aggFilPredString, conditionChartSelectionsInitialized } = storeToRefs(mosaicSelectionStore);
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
     const selectionStore = useSelectionStore();
     const { dataSelections, dataFilters } = storeToRefs(selectionStore);
-     
+
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAggregation = ref<AggregationOption>({
         label: 'Average',
@@ -220,18 +220,18 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }
 
     /** This function gets all the data for the exemplar view. */
-    async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[], additionalTrackValue?: number): Promise<void> {
+    async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[]): Promise<void> {
         exemplarDataLoaded.value = false;
         try {
             await getHistogramData();
 
             console.log('Exemplar tracks generated.');
-            await getExemplarTracks(replace, exemplarPercentiles, additionalTrackValue);
+            await getExemplarTracks(replace, exemplarPercentiles);
             console.log('Exemplar tracks fetched.');
         } finally {
             exemplarDataLoaded.value = true;
         }
-}
+    }
 
     const filterWhereClause = computed(() => {
         return aggFilPredString.value;
@@ -333,24 +333,24 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const binCountsMap = new Map<string, number[]>();
 
             for (const { c1, c2, bin_index, count } of histogramBinCounts) {
-            const conditionKey = `${c1}__${c2}`;
-            // initialize on first sight
-            if (!binCountsMap.has(conditionKey)) {
-                binCountsMap.set(conditionKey, Array(binCount).fill(0));
-            }
-            // place the count into its bin index
-            binCountsMap.get(conditionKey)![bin_index] = count;
+                const conditionKey = `${c1}__${c2}`;
+                // initialize on first sight
+                if (!binCountsMap.has(conditionKey)) {
+                    binCountsMap.set(conditionKey, Array(binCount).fill(0));
+                }
+                // place the count into its bin index
+                binCountsMap.get(conditionKey)![bin_index] = count;
             }
 
             // 5) Convert Map -> Ref<{condition, histogramData}[]>
             conditionHistograms.value = Array.from(binCountsMap.entries()).map(
-            ([key, counts]) => {
-                const [conditionOne, conditionTwo] = key.split('__');
-                return {
-                condition: { conditionOne, conditionTwo },
-                histogramData: counts
-                };
-            }
+                ([key, counts]) => {
+                    const [conditionOne, conditionTwo] = key.split('__');
+                    return {
+                        condition: { conditionOne, conditionTwo },
+                        histogramData: counts
+                    };
+                }
             );
             // 5) Optionally set histogramDomains for the Y range
             histogramDomains.value.minY = 0;
@@ -418,31 +418,31 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { immediate: true }
     );
 
-        // helper to time all vg queries
-        async function timedVgQuery<T = any>(
-            label: string,
-            query: string,
-            opts = { type: 'json' }
-          ): Promise<T> {
-            const start = performance.now();
-            const result = await vg.coordinator().query(query, opts);
-            const elapsed = performance.now() - start;
-            return result;
-          }
+    // helper to time all vg queries
+    async function timedVgQuery<T = any>(
+        label: string,
+        query: string,
+        opts = { type: 'json' }
+    ): Promise<T> {
+        const start = performance.now();
+        const result = await vg.coordinator().query(query, opts);
+        const elapsed = performance.now() - start;
+        return result;
+    }
 
     watch(
         [
-          () => aggFilPredString.value,
-          () => selectedAggregation.value,
-          () => selectedAttribute.value
+            () => aggFilPredString.value,
+            () => selectedAggregation.value,
+            () => selectedAttribute.value
         ],
         async () => {
-          // guard: only once, only when cond-chart filters are ready, only when aggFilPredString is non-null
-          if (conditionChartSelectionsInitialized.value && aggFilPredString.value) {
-            await getExemplarViewData(true);
-          }
+            // guard: only once, only when cond-chart filters are ready, only when aggFilPredString is non-null
+            if (conditionChartSelectionsInitialized.value && aggFilPredString.value) {
+                await getExemplarViewData(true);
+            }
         },
-      );
+    );
 
     function sortExemplarsByCondition(
         exemplars: ExemplarTrack[]
@@ -498,13 +498,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
      *
      * @param conditions            Array of [conditionOne, conditionTwo] pairs.
      * @param percentiles?          Optional list of percentiles (e.g. [5, 50, 95]).
-     * @param additionalTrackValue? Optional extra track value to include.
      * @returns Promise resolving to an array of ExemplarTrack objects.
      */
     async function getExemplarTracksData(
         conditions: [string, string][],
         percentiles?: number[],
-        additionalTrackValue?: number
     ): Promise<ExemplarTrack[]> {
         const attributeColumn = selectedAttribute.value
         const aggregationColumn = selectedAggregation.value.label
@@ -515,10 +513,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggAttr = `${aggregationColumn} ${attributeColumn}`
         const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
-        const pctDecimals = percentiles?.map(p => p/100) ?? [];
+        const pctDecimals = percentiles?.map(p => p / 100) ?? [];
         const pctRanks = pctDecimals
-        .map(d => `FLOOR(count*${d}) + 1`)
-        .join(', ');
+            .map(d => `FLOOR(count*${d}) + 1`)
+            .join(', ');
 
         const combinedQuery = `
         WITH
@@ -555,8 +553,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             -- compute the actual p for each match
             CASE
                 ${pctDecimals.map(d =>
-                `WHEN rank = FLOOR(count*${d}) + 1 THEN ${d}`
-                ).join('\n        ')}
+            `WHEN rank = FLOOR(count*${d}) + 1 THEN ${d}`
+        ).join('\n        ')}
             END AS p
             FROM ranked
             WHERE rank IN (${pctRanks})
@@ -604,29 +602,29 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const tracks: ExemplarTrack[] = finalResult.map((row: any) => {
             // Reconstruct Cell Level Data
             const data: Cell[] = row.cellLevelData.map((c: string[]) => ({
-            trackId: c[0],
-            time:   parseFloat(c[1]),
-            frame:  parseInt(c[2], 10),
-            value:  parseFloat(c[3]),
-            x:      parseFloat(c[4]),
-            y:      parseFloat(c[5]),
+                trackId: c[0],
+                time: parseFloat(c[1]),
+                frame: parseInt(c[2], 10),
+                value: parseFloat(c[3]),
+                x: parseFloat(c[4]),
+                y: parseFloat(c[5]),
             }));
-        
+
             return {
-            trackId:    row.track_id.toString(),
-            locationId: row.location.toString(),
-            minTime:    row.birthTime,
-            maxTime:    row.deathTime,
-            minValue:   row.minValue,
-            maxValue:   row.maxValue,
-            data,
-            tags: {
-                conditionOne: row.conditionOne,
-                conditionTwo: row.conditionTwo
-            },
-            p:       row.p,
-            pinned:  false,
-            starred: false
+                trackId: row.track_id.toString(),
+                locationId: row.location.toString(),
+                minTime: row.birthTime,
+                maxTime: row.deathTime,
+                minValue: row.minValue,
+                maxValue: row.maxValue,
+                data,
+                tags: {
+                    conditionOne: row.conditionOne,
+                    conditionTwo: row.conditionTwo
+                },
+                p: row.p,
+                pinned: false,
+                starred: false
             };
         });
         return tracks;
@@ -636,7 +634,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     async function getExemplarTracks(
         replace?: boolean,
         percentiles: number[] = exemplarPercentiles.value,
-        additionalTrackValue?: number
     ): Promise<void> {
 
         // Collect unique (condition one value, condition two value) pairs
@@ -645,32 +642,31 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const c1 = locMeta.tags?.[selectedXTag.value];
             const c2 = locMeta.tags?.[selectedYTag.value];
             if (c1 && c2 && !selectedConditionPairs.some(([x, y]) => x === c1 && y === c2)) {
-            selectedConditionPairs.push([c1, c2]);
+                selectedConditionPairs.push([c1, c2]);
             }
         }
 
         let tracks = exemplarTracks.value;
-        
+
         try {
             // fetch all tracks in one call
             tracks = await getExemplarTracksData(
-              selectedConditionPairs,
-              percentiles,
-              additionalTrackValue
+                selectedConditionPairs,
+                percentiles,
             );
-        
+
             if (replace) {
-              exemplarTracks.value = tracks;
+                exemplarTracks.value = tracks;
             } else {
-              exemplarTracks.value = [...exemplarTracks.value, ...tracks];
+                exemplarTracks.value = [...exemplarTracks.value, ...tracks];
             }
-        
+
             // Ensure the exemplar tracks are sorted by condition, and flattened.
             exemplarTracks.value = sortExemplarsByCondition(exemplarTracks.value).flat();
 
-          } catch (error) {
+        } catch (error) {
             console.error('Error generating exemplar tracks:', error);
-          }
+        }
     }
 
     // Remove histogramData related computed properties

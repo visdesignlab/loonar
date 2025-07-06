@@ -406,22 +406,30 @@ const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
 
+    // Find which exemplar tracks are currently on screen.
     recalculateExemplarYOffsets();
 
-    // Needs to not loop over every exemplar (only on screen)
-
+    // Create deck gl Layers ----------------------------------------------
     deckGLLayers = [];
+    // Histograms -------------------
     deckGLLayers.push(createSidewaysHistogramLayer());
+
+    // Horizon Charts (Data over time) with text ---------
     deckGLLayers.push(createHorizonChartLayer());
+    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
+    // Time bar for cell lifespan
     deckGLLayers.push(createTimeWindowLayer());
+
+    // Cell Images ------------------
     deckGLLayers.push(...createExemplarImageKeyFrameLayers());
     deckGLLayers = deckGLLayers.concat(selectedCellImageLayers.value);
     deckGLLayers = deckGLLayers.concat(hoveredOutlineLayer.value);
     deckGLLayers = deckGLLayers.concat(selectedOutlineLayer.value);
-    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
-    deckGLLayers = deckGLLayers.concat(selectedCellImageTickMarkLayers.value);
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
+    deckGLLayers = deckGLLayers.concat(selectedCellImageTickMarkLayers.value);
 
+    // Draw layers --------------------------------------------
+    // Filter out null layers
     deckGLLayers = deckGLLayers.filter((layer) => layer !== null);
 
     deckgl.value.setProps({
@@ -1044,9 +1052,9 @@ function createSidewaysHistogramLayer(): any[] | null {
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
 
-        const firstExemplar = group[0];
-        const conditionOne = firstExemplar.tags.conditionOne;
-        const conditionTwo = firstExemplar.tags.conditionTwo;
+        const conditionGroupKey = group[0];
+        const conditionOne = conditionGroupKey.tags.conditionOne;
+        const conditionTwo = conditionGroupKey.tags.conditionTwo;
 
         // Find histogram data for this group
         const histogramDataForGroup =
@@ -1058,7 +1066,7 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         // Basic geometry for the condition grouping
         const firstOffset =
-            exemplarRenderInfo.value.get(uniqueExemplarKey(firstExemplar))
+            exemplarRenderInfo.value.get(uniqueExemplarKey(conditionGroupKey))
                 ?.yOffset ?? 0;
         const lastOffset =
             exemplarRenderInfo.value.get(
@@ -1147,12 +1155,12 @@ function createSidewaysHistogramLayer(): any[] | null {
         layers.push(
             new LineLayer({
                 id: `exemplar-sideways-histogram-base-line-${uniqueExemplarKey(
-                    firstExemplar
+                    conditionGroupKey
                 )}`,
                 data: [group],
                 getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
                 getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
-                getColor: fillColor(firstExemplar),
+                getColor: fillColor(conditionGroupKey),
                 // Start of Selection
                 lineWidthUnits: 'common',
                 lineWidth: 7, // Adjust thickness as needed
@@ -1191,7 +1199,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         layers.push(
             new PolygonLayer({
                 id: `sideways-histogram-layer-${uniqueExemplarKey(
-                    firstExemplar
+                    conditionGroupKey
                 )}`,
                 data: histogramValues,
                 pickable: false,
@@ -1208,7 +1216,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         layers.push(
             new PolygonLayer({
                 id: `sideways-histogram-hover-layer-${uniqueExemplarKey(
-                    firstExemplar
+                    conditionGroupKey
                 )}`,
                 pickable: true,
                 data: [group],
@@ -1227,14 +1235,14 @@ function createSidewaysHistogramLayer(): any[] | null {
                     handleHistogramHover(
                         info,
                         event,
-                        firstExemplar,
+                        conditionGroupKey,
                         histogramValues
                     ),
                 onClick: (info: PickingInfo, event: any) =>
                     handleHistogramClick(
                         info,
                         event,
-                        firstExemplar,
+                        conditionGroupKey,
                         histogramValues,
                         groupBottom,
                         groupTop
@@ -1244,13 +1252,13 @@ function createSidewaysHistogramLayer(): any[] | null {
 
 
         // Create the histogram pin layers
-        layers.push(...createPinLayers(pinData, firstExemplar));
+        layers.push(...createPinLayers(pinData, conditionGroupKey));
 
         // Push a new LineLayer to draw these lines with thinner stroke
         layers.push(
             new LineLayer({
                 id: `exemplar-sideways-histogram-lines-${uniqueExemplarKey(
-                    firstExemplar
+                    conditionGroupKey
                 )}`,
                 data: pinToHorizonChartData,
                 pickable: false,
@@ -1291,7 +1299,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         layers.push(
             new TextLayer({
                 id: `exemplar-sideways-histogram-text-${uniqueExemplarKey(
-                    firstExemplar
+                    conditionGroupKey
                 )}`,
                 data: textData,
                 getPosition: (d: HistogramTextData) => d.coordinates,
@@ -1300,7 +1308,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeUnits: 'pixels',
                 sizeMaxPixels: 25,
                 getAngle: 90,
-                getColor: fillColor(firstExemplar),
+                getColor: fillColor(conditionGroupKey),
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
@@ -1312,25 +1320,27 @@ function createSidewaysHistogramLayer(): any[] | null {
 }
 
 // Histogram Pins ------------------------------------------------------
-const tempPin = ref<HistogramPin | null>(null);
-const tempLabel = ref<{ text: string; position: [number, number] } | null>(null);
+const hoveredPin = ref<HistogramPin | null>(null);
+const hoveredPinLabel = ref<{ text: string; position: [number, number] } | null>(null);
 const pinnedPins = ref<HistogramPin[]>([]);
 const dragPin = ref<HistogramPin | null>(null);
+
+// Helper function that takes a
 
 // Handle hovering on the histogram hover box. This function now updates the temporary pin (or clears it if the pointer
 // has left the hovered area) and then calls updatePinsLayer() to re-render all pins.
 function handleHistogramHover(
     info: PickingInfo,
     event: any,
-    firstExemplar: ExemplarTrack,
+    conditionGroupKey: ExemplarTrack,
     histogramData: any[]
 ) {
     // When the pointer leaves the polygon (info.index === -1) or no coordinate,
     // clear the temporary pin.
     if (!info.coordinate || info.index === -1) {
-        tempPin.value = null;
-        tempLabel.value = null;
-        updatePinsLayer(firstExemplar);
+        hoveredPin.value = null;
+        hoveredPinLabel.value = null;
+        updatePinsLayer(conditionGroupKey);
         return;
     }
     // Otherwise, compute the pin position based on the mouse coordinate.
@@ -1343,10 +1353,10 @@ function handleHistogramHover(
     const x0 = hGap + 0.25 * histWidth;
 
     // Set the temporary pin: positioned at the hoveredY
-    tempPin.value = {
+    hoveredPin.value = {
         source: [-x0, hoveredY],
         target: [-(x0 + fixedLineLength), hoveredY],
-        exemplar: firstExemplar,
+        exemplar: conditionGroupKey,
         id: 'temp', // a temporary identifier
     };
 
@@ -1356,8 +1366,8 @@ function handleHistogramHover(
     );
 
     if (binIndex === -1) {
-        tempLabel.value = null;
-        updatePinsLayer(firstExemplar);
+        hoveredPinLabel.value = null;
+        updatePinsLayer(conditionGroupKey);
         return;
     }
 
@@ -1370,61 +1380,80 @@ function handleHistogramHover(
     );
 
     // Set the temporary label: positioned 10 pixels left of the pin circle.
-    tempLabel.value = {
+    hoveredPinLabel.value = {
         text: `Count: ${count}\n[${minStr}, ${maxStr}]`,
         position: [-(x0 + fixedLineLength), hoveredY + 10],
     };
 
-    updatePinsLayer(firstExemplar);
+    updatePinsLayer(conditionGroupKey);
 }
 
-// When the histogram hover box is clicked, pin the current temporary pin
+// When the histogram hover box is clicked, create a pinned pin.
 // The current temporary pin is added to the pinnedPins array and temporary pin is cleared
 async function handleHistogramClick(
     info: PickingInfo,
     event: any,
-    firstExemplar: ExemplarTrack,
+    conditionGroupKey: ExemplarTrack,
     histogramData: any[],
     histogramBottomY: number,
     histogramTopY: number
 ) {
+    // If the click has no coordinate
     if (!info.coordinate) return;
-    if (tempPin.value) {
+
+    if (hoveredPin.value) {
+
+        // Create a new pinned pin object with a color and unique ID.
         const newPin = {
-            ...tempPin.value,
+            ...hoveredPin.value,
             id: `pinned-${Date.now()}`,
-            color: fillColor(tempPin.value.exemplar),
+            color: fillColor(hoveredPin.value.exemplar),
         };
         pinnedPins.value.push(newPin);
-        // Clear temporary pin so that hovering will create a new one.
-        tempPin.value = null;
-        updatePinsLayer(firstExemplar);
 
-        // Add the new pin to the exemplarTracks array
+        // For each exemplar group ...
+        // Add a new exemplar track for the p-value (percentile) selected by the clicked pin ---
 
+        // First, get the hoveredY from the info coordinate.
         const hoveredY = info.coordinate[1];
+
         // Find the bin index & count of the hoveredY, using the histogramValues
         const binIndex = histogramData.findIndex(
             (d) => d.y0 <= hoveredY && d.y1 >= hoveredY
         );
-
+        // If the bin index is -1, reset.
         if (binIndex === -1) {
-            tempLabel.value = null;
-            updatePinsLayer(firstExemplar);
+            hoveredPinLabel.value = null;
+            updatePinsLayer(conditionGroupKey);
             return;
         }
-        // Get p-value from histogram,
-        // Get the bin's count and the min/max attribute values
+
+        // Get the bin's information
         const bin = histogramData[binIndex];
-        await exemplarViewStore.getExemplarTracks(
-            false,
-            undefined,
-            bin.minAttr
+
+        // --- Compute p-value (percentile) ---
+        // 1. Get all counts
+        const counts = histogramData.map(d => d.count);
+        const total = counts.reduce((a, b) => a + b, 0);
+        // 2. Cumulative count up to and including this bin
+        const cumulative = counts.slice(0, binIndex + 1).reduce((a, b) => a + b, 0);
+        // 3. Percentile (p-value)
+        const pValue = total > 0 ? cumulative / total : 0;
+
+        console.log(
+            `Pinned pin at Y: ${hoveredY} P-Value: ${pValue}`
         );
 
+        // --- Finally, create new exemplar tracks for the p-value, for each condition group ---
+        await exemplarViewStore.getExemplarViewData(
+            false,
+            [pValue],
+        );
+
+        // Re-load the cell images.
         await loadPixelSources();
 
-        // First ensure that the new exemplar tracks are loaded, then render.
+        // Re-render all deck gl layers.
         renderDeckGL();
     }
 }
@@ -1432,20 +1461,20 @@ async function handleHistogramClick(
 // Helper function to update the pins layer.
 // Combines any pinned pins with the temporary pin (if it exists) and updates
 // deck.gl's layers to include both the base layers and the pin layers.
-function updatePinsLayer(firstExemplar: ExemplarTrack) {
+function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
     const allPins = [...pinnedPins.value];
-    if (tempPin.value) {
-        allPins.push(tempPin.value);
+    if (hoveredPin.value) {
+        allPins.push(hoveredPin.value);
     }
 
-    const pinLayers = createPinLayers(allPins, firstExemplar);
+    const pinLayers = createPinLayers(allPins, conditionGroupKey);
 
-    // If a tempLabel exists, add a TextLayer.
-    if (tempLabel.value) {
+    // If a hoveredPinLabel exists, add a TextLayer.
+    if (hoveredPinLabel.value) {
         pinLayers.push(
             new TextLayer({
-                id: `exemplar-temp-label-${uniqueExemplarKey(firstExemplar)}`,
-                data: [tempLabel.value],
+                id: `exemplar-temp-label-${uniqueExemplarKey(conditionGroupKey)}`,
+                data: [hoveredPinLabel.value],
                 getPosition: (d: {
                     text: string;
                     position: [number, number];
@@ -1470,11 +1499,11 @@ function updatePinsLayer(firstExemplar: ExemplarTrack) {
     });
 }
 
-function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
+function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
     const pinLayers = [];
     pinLayers.push(
         new LineLayer({
-            id: `exemplar-pin-lines-${uniqueExemplarKey(firstExemplar)}`,
+            id: `exemplar-pin-lines-${uniqueExemplarKey(conditionGroupKey)}`,
             data: pins,
             pickable: false,
             getSourcePosition: (d: any) => d.source,
@@ -1506,7 +1535,7 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
     }));
     pinLayers.push(
         new ScatterplotLayer({
-            id: `exemplar-pin-circles-${uniqueExemplarKey(firstExemplar)}`,
+            id: `exemplar-pin-circles-${uniqueExemplarKey(conditionGroupKey)}`,
             data: circleData,
             pickable: true, // enable interaction with the pin circles
             getPosition: (d: any) => d.position,
@@ -1529,11 +1558,11 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
                     : fillColor(d.exemplar),
             // When a pin is clicked, dragged or released, we log a dummy event.
             onDragStart: (info: PickingInfo, event: any) =>
-                handlePinDragStart(info, event, firstExemplar),
+                handlePinDragStart(info, event, conditionGroupKey),
             onDrag: (info: PickingInfo, event: any) =>
-                handlePinDrag(info, event, firstExemplar),
+                handlePinDrag(info, event, conditionGroupKey),
             onDragEnd: (info: PickingInfo, event: any) =>
-                handlePinDragEnd(info, event, firstExemplar),
+                handlePinDragEnd(info, event, conditionGroupKey),
         })
     );
     return pinLayers;
@@ -1542,7 +1571,7 @@ function createPinLayers(pins: any[], firstExemplar: ExemplarTrack) {
 function handlePinDragStart(
     info: PickingInfo,
     event: any,
-    firstExemplar: ExemplarTrack
+    conditionGroupKey: ExemplarTrack
 ) {
     dragPin.value = info.object;
 }
@@ -1550,7 +1579,7 @@ function handlePinDragStart(
 function handlePinDrag(
     info: PickingInfo,
     event: any,
-    firstExemplar: ExemplarTrack
+    conditionGroupKey: ExemplarTrack
 ) {
     if (!info.coordinate) return;
     const hoveredY = info.coordinate[1];
@@ -1565,17 +1594,17 @@ function handlePinDrag(
             source: [-x0, hoveredY],
             target: [-(x0 + fixedLineLength), hoveredY],
         };
-        updatePinsLayer(firstExemplar);
+        updatePinsLayer(conditionGroupKey);
     }
 }
 
 function handlePinDragEnd(
     info: PickingInfo,
     event: any,
-    firstExemplar: ExemplarTrack
+    conditionGroupKey: ExemplarTrack
 ) {
     dragPin.value = null;
-    updatePinsLayer(firstExemplar);
+    updatePinsLayer(conditionGroupKey);
 }
 
 // Cell Image Layers -----------------------------------------------------------------------------------------------------
