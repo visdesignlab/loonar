@@ -24,6 +24,11 @@ export interface ExemplarTrack {
     p: number; // the sample position, e.g. median has p=0.5
     pinned: boolean; // true if this is a user pinned exemplar
     starred: boolean; // true if this is a user starred exemplar
+    aggValue: number; // add aggValue for sorting
+}
+export interface SelectedTrackRequest {
+    binRange: [number, number];
+    conditionGroupKey: Record<string, string>;
 }
 
 export interface Cell {
@@ -220,13 +225,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }
 
     /** This function gets all the data for the exemplar view. */
-    async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[]): Promise<void> {
+    async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[], selectedTrackRequest?: SelectedTrackRequest): Promise<void> {
         exemplarDataLoaded.value = false;
         try {
             await getHistogramData();
 
             console.log('Exemplar tracks generated.');
-            await getExemplarTracks(replace, exemplarPercentiles);
+            await getExemplarTracks(replace, exemplarPercentiles, selectedTrackRequest);
             console.log('Exemplar tracks fetched.');
         } finally {
             exemplarDataLoaded.value = true;
@@ -479,7 +484,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 const matchingExemplars = c1Exemplars.filter(
                     (exemplar) => exemplar.tags.conditionTwo === uniqueSecondCondition
                 );
-                matchingExemplars.sort((a, b) => a.p - b.p);
+                matchingExemplars.sort((a, b) => a.aggValue - b.aggValue); // sort by aggValue
                 if (uniqueFirstCondition && matchingExemplars.length > 0) {
                     if (!sortedExemplarTracks[uniqueFirstCondition]) {
                         sortedExemplarTracks[uniqueFirstCondition] = [];
@@ -496,13 +501,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     /**
      * Return exemplar tracks for every given condition pair, and every percentile / track value for that condition.
      *
-     * @param conditions            Array of [conditionOne, conditionTwo] pairs.
      * @param percentiles?          Optional list of percentiles (e.g. [5, 50, 95]).
      * @returns Promise resolving to an array of ExemplarTrack objects.
      */
     async function getExemplarTracksData(
-        conditions: [string, string][],
         percentiles?: number[],
+        selectedTrackRequest?: SelectedTrackRequest,
     ): Promise<ExemplarTrack[]> {
         const attributeColumn = selectedAttribute.value
         const aggregationColumn = selectedAggregation.value.label
@@ -513,14 +517,84 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggAttr = `${aggregationColumn} ${attributeColumn}`
         const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
+
+        // --- New logic for selectedTrackRequest ---
+        let selectedRank: number | undefined = undefined;
+
+        if (selectedTrackRequest && selectedTrackRequest.binRange && selectedTrackRequest.conditionGroupKey) {
+            // 1. Query all exemplars for this condition group
+            const cond1 = selectedTrackRequest.conditionGroupKey.conditionOne;
+            const cond2 = selectedTrackRequest.conditionGroupKey.conditionTwo;
+            const exemplarQuery = `
+                SELECT
+                    t.tracking_id::INTEGER AS track_id,
+                    t.location::INTEGER AS location,
+                    t."${selectedXTag.value}" AS conditionOne,
+                    t."${selectedYTag.value}" AS conditionTwo,
+                    t."${aggAttr}" AS aggValue
+                FROM "${aggTable}" t
+                WHERE t."${selectedXTag.value}" = '${cond1}'
+                AND t."${selectedYTag.value}" = '${cond2}'
+                ${whereClause}
+            `;
+            const exemplars: any[] = await timedVgQuery('exemplarQuery', exemplarQuery);
+
+            // 2. Find the exemplar whose aggValue is within the bin range
+            const [binMin, binMax] = selectedTrackRequest.binRange;
+            // Find all in range, pick the closest to binMin (or bin center)
+            const inRange = exemplars.filter(e => e.aggValue >= binMin && e.aggValue < binMax);
+            let selectedExemplar;
+            if (inRange.length === 0) {
+                // fallback: pick closest overall
+                let closest = exemplars[0];
+                let minDiff = Math.abs(exemplars[0].aggValue - binMin);
+                for (const e of exemplars) {
+                    const diff = Math.abs(e.aggValue - binMin);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closest = e;
+                    }
+                }
+                selectedExemplar = closest;
+            } else {
+                // pick the closest to binMin in the bin
+                let closest = inRange[0];
+                let minDiff = Math.abs(inRange[0].aggValue - binMin);
+                for (const e of inRange) {
+                    const diff = Math.abs(e.aggValue - binMin);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closest = e;
+                    }
+                }
+                selectedExemplar = closest;
+            }
+
+            // 3. Compute the rank (1-based) of this exemplar in the sorted group
+            const sorted = exemplars.slice().sort((a, b) => a.aggValue - b.aggValue);
+            const idx = sorted.findIndex(e => e.track_id === selectedExemplar.track_id);
+            const targetRank = idx + 1; // 1-based
+
+            // 4. Use this rank directly in the SQL query
+            percentiles = undefined; // Don't use percentiles
+            selectedRank = targetRank;
+        }
+
+
         const pctDecimals = percentiles?.map(p => p / 100) ?? [];
         const pctRanks = pctDecimals
             .map(d => `FLOOR(count*${d}) + 1`)
             .join(', ');
 
+        let selectedRankClause = '';
+        if (typeof selectedRank === 'number') {
+            selectedRankClause = `WHERE rank = ${selectedRank}`;
+        } else if (pctRanks && pctRanks.length > 0) {
+            selectedRankClause = `WHERE rank IN (${pctRanks})`;
+        }
+
         const combinedQuery = `
         WITH
-        -- 1) Rank every track by aggregate attribute, within its (c1, c2) bucket
         ranked AS (
             SELECT
             t.tracking_id::INTEGER       AS track_id,
@@ -542,25 +616,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             FROM "${aggTable}" t
             WHERE 1=1 ${whereClause}
         ),
-
-        -- 2) Find the tracks that match the requested percentile ranks
         selected AS (
             SELECT
             track_id, location,
             conditionOne, conditionTwo,
             birthTime, deathTime,
             minValue, maxValue,
-            -- compute the actual p for each match
-            CASE
-                ${pctDecimals.map(d =>
-            `WHEN rank = FLOOR(count*${d}) + 1 THEN ${d}`
-        ).join('\n        ')}
-            END AS p
+            aggValue, -- add aggValue to selected
+            rank AS selected_rank
             FROM ranked
-            WHERE rank IN (${pctRanks})
+            ${selectedRankClause}
         )
-
-        -- 3) Attach the cell-level data to the selected tracks
         SELECT
         s.track_id,
         s.location,
@@ -570,7 +636,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         s.maxValue,
         s.conditionOne,
         s.conditionTwo,
-        s.p,
+        s.aggValue, -- add aggValue to final select
+        NULL::double precision AS p, -- or remove if not needed
         array_agg(ARRAY[
             n.track_id::TEXT,
             n."${timeCol}"::TEXT,
@@ -591,11 +658,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         s.maxValue,
         s.conditionOne,
         s.conditionTwo,
-        s.p;
+        s.aggValue; -- add aggValue to group by
         `
 
         const finalResult: any[] = await timedVgQuery('combinedExemplarQuery', combinedQuery)
-
 
         // Return query results -------------------------------------------------------------
         // Return Exemplar Track Array[]
@@ -624,7 +690,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 },
                 p: row.p,
                 pinned: false,
-                starred: false
+                starred: false,
+                aggValue: row.aggValue // add aggValue
             };
         });
         return tracks;
@@ -634,25 +701,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     async function getExemplarTracks(
         replace?: boolean,
         percentiles: number[] = exemplarPercentiles.value,
+        selectedTrackRequest?: SelectedTrackRequest
     ): Promise<void> {
-
-        // Collect unique (condition one value, condition two value) pairs
-        const selectedConditionPairs: [string, string][] = [];
-        for (const locMeta of currentExperimentMetadata.value?.locationMetadataList ?? []) {
-            const c1 = locMeta.tags?.[selectedXTag.value];
-            const c2 = locMeta.tags?.[selectedYTag.value];
-            if (c1 && c2 && !selectedConditionPairs.some(([x, y]) => x === c1 && y === c2)) {
-                selectedConditionPairs.push([c1, c2]);
-            }
-        }
 
         let tracks = exemplarTracks.value;
 
         try {
             // fetch all tracks in one call
             tracks = await getExemplarTracksData(
-                selectedConditionPairs,
                 percentiles,
+                selectedTrackRequest
             );
 
             if (replace) {

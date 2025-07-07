@@ -23,6 +23,7 @@ import { storeToRefs } from 'pinia';
 import {
     type Cell,
     type ExemplarTrack,
+    type SelectedTrackRequest,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
@@ -1047,11 +1048,15 @@ function createSidewaysHistogramLayer(): any[] | null {
         viewConfiguration.value;
     hGap = scaleForConstantVisualSize(hGap);
     histWidth = scaleForConstantVisualSize(histWidth);
-    const domains = histogramDomains.value; // { histogramBinRanges, minX, maxX, minY, maxY }
 
+    // { histogramBinRanges, minX, maxX, minY, maxY }
+    const domains = histogramDomains.value;
+
+    // For each group of exemplars, create a sideways histogram layer
     for (const group of groupedExemplars) {
         if (group.length === 0) continue;
 
+        // Get the condition key and conditions for this group
         const conditionGroupKey = group[0];
         const conditionOne = conditionGroupKey.tags.conditionOne;
         const conditionTwo = conditionGroupKey.tags.conditionTwo;
@@ -1077,14 +1082,8 @@ function createSidewaysHistogramLayer(): any[] | null {
         const groupHeight = groupBottom - groupTop;
         const binWidth = groupHeight / histogramDataForGroup.length;
 
-        // ADD HORIZONTAL "TICK" LINES AND VERTICAL CONNECTOR LINES FOR EACH EXEMPLAR
-        //
-        // 1. Compute average mass.
-        // 2. Find which bin it falls into.
-        // 3. Compute y-mid of that bin & x-range of that bin's polygon.
-        // 4. Store line data for LineLayer.
-        // 5. Add a vertical line connecting to the horizon chart.
-        //
+        // Create the histogram pins ----------------------------
+        // Histogram pins (with circles) initialization
         const pinData: {
             source: [number, number];
             target: [number, number];
@@ -1100,57 +1099,64 @@ function createSidewaysHistogramLayer(): any[] | null {
             exemplar: ExemplarTrack;
         }[] = [];
 
+        // For each exemplar in the group, create a corresponding pin in the histogram
         for (const exemplar of group) {
-            const yOffset =
-                exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar))
-                    ?.yOffset ??
-                0 -
-                    viewConfiguration.value.timeBarHeightOuter -
-                    viewConfiguration.value.horizonTimeBarGap;
+            // Log the condition group and the exemplar track ID
+            console.log(`Processing exemplar: ${exemplar.trackId} in condition group: ${conditionGroupKey.trackId}`);
+            // Find the bin index corresponding to the attribute value of the exemplar
             const avgAttr = getAverageAttr(exemplar);
-
-            // Find bin index by checking the histogramDomains bin ranges
             const binIndex = domains.histogramBinRanges.findIndex(
                 (bin) => avgAttr >= bin.min && avgAttr < bin.max
             );
+            // If out of range, skip
             if (binIndex < 0) {
-                // If out of range, skip
                 continue;
             }
-
-            // Compute y-mid of the bin
+            // Console log the range for this bin index
+            const binRange = domains.histogramBinRanges[binIndex];
+            console.log(
+                `Exemplar ${exemplar.trackId} falls into bin index ${binIndex} with range: [${binRange?.min}, ${binRange?.max}]`
+            );
+            // Compute y-mid of the histogram bin
             const y0 = groupTop + binIndex * binWidth;
             const y1 = y0 + binWidth;
             const yMid = (y0 + y1) / 2;
 
-            // Fixed horizontal length: histWidth * 0.75
+            // Horizontal Length of the pin line
             const fixedLineLength = histWidth * 0.75;
             const x0 = hGap + 0.25 * histWidth;
             const x1 = x0 + fixedLineLength;
 
-            // Draw horizontal line from -x0 to -(x0 + fixedLineLength) at yMid
+            // Push the pin line geometry
             pinData.push({
                 source: [-x0, yMid],
                 target: [-(x0 + fixedLineLength), yMid],
                 exemplar,
             });
 
+            // Circle at end of pin line
+            circlePositions.push({
+                position: [-x1, yMid],
+                exemplar,
+            });
             
-            // Draw vertical connector line from end of horizontal line to horizon chart
+            // Connecting line from end of pin to the corresponding horizon chart ----
+            // Find the y position of this exemplar
+            const yOffset =
+                exemplarRenderInfo.value.get(uniqueExemplarKey(exemplar))
+                    ?.yOffset ??
+                0 -
+                    viewConfiguration.value.timeBarHeightOuter -
+                    viewConfiguration.value.horizonTimeBarGap;
+            // Draw the connecting line
             pinToHorizonChartData.push({
                 source: [-x0, yMid],
                 target: [0, yOffset - viewConfiguration.value.horizonTimeBarGap],
                 exemplar,
             });
-
-            // Collect circle position at the left end (-x0, yMid)
-            circlePositions.push({
-                position: [-x1, yMid],
-                exemplar,
-            });
         }
 
-        // Start of Selection
+        // Draw Histograms ------------------------------------------------
         // Draw the base thick line
         layers.push(
             new LineLayer({
@@ -1404,12 +1410,12 @@ async function handleHistogramClick(
     if (hoveredPin.value) {
 
         // Create a new pinned pin object with a color and unique ID.
-        const newPin = {
+        const newPinnedPin = {
             ...hoveredPin.value,
             id: `pinned-${Date.now()}`,
             color: fillColor(hoveredPin.value.exemplar),
         };
-        pinnedPins.value.push(newPin);
+        pinnedPins.value.push(newPinnedPin);
 
         // For each exemplar group ...
         // Add a new exemplar track for the p-value (percentile) selected by the clicked pin ---
@@ -1431,23 +1437,48 @@ async function handleHistogramClick(
         // Get the bin's information
         const bin = histogramData[binIndex];
 
-        // --- Compute p-value (percentile) ---
-        // 1. Get all counts
-        const counts = histogramData.map(d => d.count);
-        const total = counts.reduce((a, b) => a + b, 0);
-        // 2. Cumulative count up to and including this bin
-        const cumulative = counts.slice(0, binIndex + 1).reduce((a, b) => a + b, 0);
-        // 3. Percentile (p-value)
-        const pValue = total > 0 ? cumulative / total : 0;
+        // // --- Compute p-value (percentile) ---
+        // // 1. Get all tracks for this condition group
+        // const tracks = exemplarTracks.value.filter(
+        // t => t.tags.conditionOne === conditionGroupKey.tags.conditionOne &&
+        //     t.tags.conditionTwo === conditionGroupKey.tags.conditionTwo
+        // );
 
-        console.log(
-            `Pinned pin at Y: ${hoveredY} P-Value: ${pValue}`
-        );
+        // // 2. Sort by the attribute value (e.g., average mass)
+        // tracks.sort((a, b) => getAverageAttr(a) - getAverageAttr(b));
 
+        // // 3. Find the track whose value is closest to the bin's lower bound
+        // const targetValue = bin.minAttr; // or use the clicked value if available
+        // let closestIdx = 0;
+        // let minDiff = Infinity;
+        // for (let i = 0; i < tracks.length; i++) {
+        // const diff = Math.abs(getAverageAttr(tracks[i]) - targetValue);
+        // if (diff < minDiff) {
+        //     minDiff = diff;
+        //     closestIdx = i;
+        // }
+        // }
+
+        // // 4. Compute the percentile (rank)
+        // const pValue = ((closestIdx + 1) / tracks.length) * 100;
+
+        // console.log(
+        //     `Pinned pin at Y: ${hoveredY} P-Value: ${pValue}`
+        // );
+
+        const selectedTrackRequest: SelectedTrackRequest = {
+            binRange: [histogramData[binIndex].minAttr, histogramData[binIndex].maxAttr],
+            conditionGroupKey: {
+                conditionOne: String(hoveredPin.value.exemplar.tags.conditionOne),
+                conditionTwo: String(hoveredPin.value.exemplar.tags.conditionTwo)
+            }
+        };
+        console.log('Selected Track Request', selectedTrackRequest);
         // --- Finally, create new exemplar tracks for the p-value, for each condition group ---
         await exemplarViewStore.getExemplarViewData(
             false,
-            [pValue],
+            undefined,
+            selectedTrackRequest
         );
 
         // Re-load the cell images.
@@ -1499,8 +1530,10 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
     });
 }
 
+// Create pin layers for the histogram pins.
 function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
     const pinLayers = [];
+    // Exemplar Pin Lines -------
     pinLayers.push(
         new LineLayer({
             id: `exemplar-pin-lines-${uniqueExemplarKey(conditionGroupKey)}`,
@@ -1528,6 +1561,7 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
             opacity: 0.2,
         })
     );
+    // Exemplar Pin circles at end of lines -------
     const circleData = pins.map((d) => ({
         position: d.target,
         exemplar: d.exemplar,
@@ -1565,6 +1599,7 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
                 handlePinDragEnd(info, event, conditionGroupKey),
         })
     );
+    // Return the lines and circles that comprise pin layers.
     return pinLayers;
 }
 
@@ -1974,6 +2009,7 @@ function constructGeometry(track: ExemplarTrack): number[] {
     return constructGeometryBase(track.data, cellMetaData.timestep);
 }
 
+// TODO: Change to [Aggregate] Attribute not always average.
 function getAverageAttr(exemplar: ExemplarTrack): number {
     if (!exemplar.data || exemplar.data.length === 0) return 0;
     const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
