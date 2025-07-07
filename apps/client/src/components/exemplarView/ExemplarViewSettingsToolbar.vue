@@ -4,7 +4,12 @@ import { useExemplarViewStore } from '@/stores/componentStores/ExemplarViewStore
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { storeToRefs } from 'pinia';
-import { QBtn, QDialog, QCard, QCardSection, QForm, QSelect, QSeparator } from 'quasar';
+import {
+  aggregateFunctions,
+  isStandardAggregateFunction,
+  type AttributeSelection,
+  type AggregateFunction,
+} from '@/components/plotSelector/aggregateFunctions';
 import LBtn from '../custom/LBtn.vue';
 
 const datasetSelectionStore = useDatasetSelectionStore();
@@ -12,41 +17,62 @@ const { experimentDataInitialized, currentExperimentMetadata } = storeToRefs(dat
 
 const allAttributeNames = computed(() => {
   return experimentDataInitialized.value && currentExperimentMetadata.value?.headers?.length
-    ? currentExperimentMetadata.value.headers
+    ? [...currentExperimentMetadata.value.headers, 'Mass Norm', 'Time Norm']
     : [];
 });
 
 const exemplarViewStore = useExemplarViewStore();
 const globalSettings = useGlobalSettings();
 
-const selectedAttribute = ref('Mass (pg)');
-const selectedAggregation = ref({ label: 'Average', value: 'AVG' });
+const selectedAttribute = ref(exemplarViewStore.selectedAttribute);
+const selectedAggregation = ref(exemplarViewStore.selectedAggregation);
 
-const aggregationOptions = [
-  { label: 'Sum',     value: 'SUM' },
-  { label: 'Average', value: 'AVG' },
-  { label: 'Count',   value: 'COUNT' },
-  { label: 'Minimum', value: 'MIN' },
-  { label: 'Maximum', value: 'MAX' },
-  { label: 'Median',  value: 'MEDIAN' },
-];
+const aggModel = ref(selectedAggregation.value?.label ?? null);
+const attr1Model = ref(selectedAttribute.value ?? null);
+const attr2Model = ref<string | null>(null);
+const var1Model = ref<number | string | null>(null);
 
-// dialog control
 const plotDialogOpen = ref(false);
 
+const aggregationOptions = computed(() => {
+  return Object.entries(aggregateFunctions).map((entry) => {
+    return { label: entry[0] };
+  });
+});
+
+const currAgg = computed<AggregateFunction | null>(() =>
+  aggModel.value ? aggregateFunctions[aggModel.value] : null
+);
+
+const currAggSelections = computed(
+  (): Record<string, AttributeSelection> | undefined => {
+    if (!currAgg.value) return;
+    if (!isStandardAggregateFunction(currAgg.value)) {
+      return;
+    }
+    return currAgg.value.selections;
+  }
+);
+
+function onChangeAgg() {
+  var1Model.value = null;
+  attr2Model.value = null;
+  attr1Model.value = null;
+}
+
 function applySelections() {
-  if (selectedAttribute.value && selectedAggregation.value) {
-    exemplarViewStore.selectedAttribute   = selectedAttribute.value;
-    exemplarViewStore.selectedAggregation = selectedAggregation.value;
+  // Only update if both are set
+  if (attr1Model.value && aggModel.value) {
+    exemplarViewStore.selectedAttribute = attr1Model.value;
+    exemplarViewStore.selectedAggregation = {
+      label: aggModel.value,
+      value: aggregateFunctions[aggModel.value].functionName,
+    };
     exemplarViewStore.getHistogramData();
+    plotDialogOpen.value = false;
   } else {
     console.warn('Attribute or Aggregation not selected.');
   }
-}
-
-function onAddClick() {
-  applySelections();
-  plotDialogOpen.value = false;
 }
 </script>
 
@@ -63,32 +89,69 @@ function onAddClick() {
       @click="plotDialogOpen = true"
     />
     <q-dialog v-model="plotDialogOpen">
-      <q-card :dark="globalSettings.darkMode" style="min-width: 300px;">
+      <q-card :dark="globalSettings.darkMode" style="min-width: 300px; max-width: 80vw;">
         <q-card-section>
           <div class="text-h6">Change Exemplar Selection Criteria</div>
         </q-card-section>
-
         <q-separator />
-
         <q-card-section>
           <q-form class="q-gutter-md" :dark="globalSettings.darkMode">
             <q-select
               label="Select Aggregation"
               :options="aggregationOptions"
               option-label="label"
-              option-value="value"
-              v-model="selectedAggregation"
-              map-options
+              option-value="label"
+              v-model="aggModel"
+              :dark="globalSettings.darkMode"
+              emit-value
+              clickable
+              @update:model-value="onChangeAgg"
+            />
+            <div
+              class="text-caption q-mt-sm"
+              v-if="currAgg?.description"
+            >
+              {{ currAgg.description }}
+            </div>
+            <q-select
+              v-if="currAggSelections && currAggSelections.attr1"
+              :label="currAggSelections.attr1.label"
+              :options="allAttributeNames"
+              v-model="attr1Model"
+              :dark="globalSettings.darkMode"
+              clickable
+            />
+            <q-input
+              v-if="
+                currAggSelections &&
+                currAggSelections.var1 &&
+                currAggSelections.var1?.type === 'numerical'
+              "
+              filled
+              type="number"
+              :step="currAggSelections.var1.step"
+              v-model.number="var1Model"
+              :label="currAggSelections.var1.label"
+              lazy-rules
+              :dark="globalSettings.darkMode"
+              :min="currAggSelections.var1.min"
+              :max="currAggSelections.var1.max"
             />
             <q-select
-              label="Select Attribute"
+              v-if="
+                currAggSelections &&
+                currAggSelections.attr2 &&
+                currAggSelections.attr2.type === 'existing_attribute'
+              "
+              :label="currAggSelections.attr2?.label"
               :options="allAttributeNames"
-              v-model="selectedAttribute"
+              v-model="attr2Model"
+              :dark="globalSettings.darkMode"
+              clickable
             />
             <div class="row justify-end q-mt-md">
-              <l-btn label="Add" @click="onAddClick" color="primary" class="q-mr-sm" />
-              <l-btn label="Cancel" flat @click="plotDialogOpen = false" class="q-mr-sm"
-              color="primary"/>
+              <LBtn label="Add" @click="applySelections" color="primary" class="q-mr-sm" />
+              <LBtn label="Cancel" flat @click="plotDialogOpen = false" color="primary"/>
             </div>
           </q-form>
         </q-card-section>

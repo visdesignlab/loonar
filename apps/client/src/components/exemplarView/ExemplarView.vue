@@ -1437,35 +1437,6 @@ async function handleHistogramClick(
         // Get the bin's information
         const bin = histogramData[binIndex];
 
-        // // --- Compute p-value (percentile) ---
-        // // 1. Get all tracks for this condition group
-        // const tracks = exemplarTracks.value.filter(
-        // t => t.tags.conditionOne === conditionGroupKey.tags.conditionOne &&
-        //     t.tags.conditionTwo === conditionGroupKey.tags.conditionTwo
-        // );
-
-        // // 2. Sort by the attribute value (e.g., average mass)
-        // tracks.sort((a, b) => getAverageAttr(a) - getAverageAttr(b));
-
-        // // 3. Find the track whose value is closest to the bin's lower bound
-        // const targetValue = bin.minAttr; // or use the clicked value if available
-        // let closestIdx = 0;
-        // let minDiff = Infinity;
-        // for (let i = 0; i < tracks.length; i++) {
-        // const diff = Math.abs(getAverageAttr(tracks[i]) - targetValue);
-        // if (diff < minDiff) {
-        //     minDiff = diff;
-        //     closestIdx = i;
-        // }
-        // }
-
-        // // 4. Compute the percentile (rank)
-        // const pValue = ((closestIdx + 1) / tracks.length) * 100;
-
-        // console.log(
-        //     `Pinned pin at Y: ${hoveredY} P-Value: ${pValue}`
-        // );
-
         const selectedTrackRequest: SelectedTrackRequest = {
             binRange: [histogramData[binIndex].minAttr, histogramData[binIndex].maxAttr],
             conditionGroupKey: {

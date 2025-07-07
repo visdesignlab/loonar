@@ -106,6 +106,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { dataSelections, dataFilters } = storeToRefs(selectionStore);
 
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
+    const selectedAttr2 = ref<string | null>(null);
+    const selectedVar1 = ref<number | string | null>(null);
     const selectedAggregation = ref<AggregationOption>({
         label: 'Average',
         value: 'AVG',
@@ -242,6 +244,31 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         return aggFilPredString.value;
     });
 
+    // Helper to build the aggregate column name for queries
+    function getAggregateColumnName(): string {
+        const aggLabel = selectedAggregation.value.label;
+        const attr1 = selectedAttribute.value;
+        const attr2 = selectedAttr2.value;
+        const var1 = selectedVar1.value;
+
+        // Check the aggregate function's selections to determine which params to use
+        const aggFunc = aggregateFunctions[aggLabel];
+        if (aggFunc && 'selections' in aggFunc) {
+            const sel = aggFunc.selections;
+            if (sel.attr1 && sel.attr2 && attr2) {
+                return `${aggLabel} ${attr1} ${attr2}`;
+            }
+            if (sel.attr1 && sel.var1 && var1 !== null && var1 !== undefined && var1 !== '') {
+                return `${aggLabel} ${attr1} ${var1}`;
+            }
+            if (sel.attr1) {
+                return `${aggLabel} ${attr1}`;
+            }
+        }
+        // Fallback for custom or basic
+        return `${aggLabel} ${attr1}`;
+    }
+
     /**
      * This function gets the histogram data for the selected attribute and aggregation.
      * It first queries the domain of the attribute, then builds the bin ranges, and then
@@ -260,7 +287,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
 
         const aggTableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata_aggregate`;
-        const aggAttribute = `${selectedAggregation.value.label} ${selectedAttribute.value}`;
+        const aggAttribute = getAggregateColumnName();
         const whereClause = filterWhereClause.value ? `WHERE ${filterWhereClause.value}` : '';
 
         try {
@@ -374,7 +401,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     // Watch both selectedAttribute and selectedAggregation so that if either changes,
     // an aggregate column is added to the aggregate table.
     watch(
-        () => [selectedAttribute.value, selectedAggregation.value],
+        () => [selectedAttribute.value, selectedAggregation.value, selectedAttr2.value, selectedVar1.value],
         async () => {
             // Since selectedAggregation is always an object, we can directly access .value and .label
             const aggLabel = selectedAggregation.value.label;
@@ -388,8 +415,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // Build the aggregate object using the SQL function and proper label.
             const aggObject: AggregateObject = {
                 functionName: aggFunc.functionName,
-                label: `${aggLabel}`, // e.g., "Minimum Mass (pg)"
+                label: `${aggLabel}`,
                 attr1: selectedAttribute.value,
+                attr2: selectedAttr2.value ?? undefined,
+                var1: selectedVar1.value !== null && selectedVar1.value !== undefined ? String(selectedVar1.value) : undefined,
+                customQuery: (aggFunc as any).customQuery,
             };
 
             // Ensure table names are available.
@@ -410,7 +440,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             }
 
             try {
-                const addedColumnName = await addAggregateColumn(
+                await addAggregateColumn(
                     aggTableNameFull,
                     compTableName,
                     aggObject,
@@ -514,7 +544,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggTable = `${experimentName}_composite_experiment_cell_metadata_aggregate`
         const cellTable = `${experimentName}_composite_experiment_cell_metadata`
         const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : ''
-        const aggAttr = `${aggregationColumn} ${attributeColumn}`
+        const aggAttr = getAggregateColumnName();
         const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
 
@@ -743,6 +773,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionGroupHeight,
         selectedAttribute,
         selectedAggregation,
+        selectedAttr2,
+        selectedVar1,
         getTotalExperimentTime,
         getHistogramData,
         getExemplarViewData,
