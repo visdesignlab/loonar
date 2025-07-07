@@ -61,18 +61,31 @@ function onChangeAgg() {
 }
 
 function applySelections() {
-  // Only update if both are set
-  if (attr1Model.value && aggModel.value) {
-    exemplarViewStore.selectedAttribute = attr1Model.value;
-    exemplarViewStore.selectedAggregation = {
-      label: aggModel.value,
-      value: aggregateFunctions[aggModel.value].functionName,
-    };
-    exemplarViewStore.getHistogramData();
-    plotDialogOpen.value = false;
-  } else {
-    console.warn('Attribute or Aggregation not selected.');
+  if (!aggModel.value) {
+    console.warn('Aggregation not selected.');
+    return;
   }
+
+  const aggFunc = aggregateFunctions[aggModel.value];
+  const needsAttr1 = aggFunc && 'selections' in aggFunc && aggFunc.selections?.attr1;
+
+  // Only require attr1 if the aggregation needs it
+  if (needsAttr1 && !attr1Model.value) {
+    console.warn('Attribute not selected for this aggregation.');
+    return;
+  }
+
+  // Set all relevant fields in the store
+  exemplarViewStore.selectedAggregation = {
+    label: aggModel.value,
+    value: aggFunc.functionName,
+  };
+  exemplarViewStore.selectedAttribute = attr1Model.value ?? '';
+  exemplarViewStore.selectedAttr2 = attr2Model.value ?? null;
+  exemplarViewStore.selectedVar1 = var1Model.value ?? null;
+
+  exemplarViewStore.getHistogramData();
+  plotDialogOpen.value = false;
 }
 </script>
 

@@ -1104,9 +1104,9 @@ function createSidewaysHistogramLayer(): any[] | null {
             // Log the condition group and the exemplar track ID
             console.log(`Processing exemplar: ${exemplar.trackId} in condition group: ${conditionGroupKey.trackId}`);
             // Find the bin index corresponding to the attribute value of the exemplar
-            const avgAttr = getAverageAttr(exemplar);
+            const aggValue = exemplar.aggValue
             const binIndex = domains.histogramBinRanges.findIndex(
-                (bin) => avgAttr >= bin.min && avgAttr < bin.max
+                (bin) => aggValue >= bin.min && aggValue < bin.max
             );
             // If out of range, skip
             if (binIndex < 0) {
@@ -1978,13 +1978,6 @@ function createTickMarkLayer(rawData: any): LineLayer {
 
 function constructGeometry(track: ExemplarTrack): number[] {
     return constructGeometryBase(track.data, cellMetaData.timestep);
-}
-
-// TODO: Change to [Aggregate] Attribute not always average.
-function getAverageAttr(exemplar: ExemplarTrack): number {
-    if (!exemplar.data || exemplar.data.length === 0) return 0;
-    const sum = exemplar.data.reduce((acc, d) => acc + d.value, 0);
-    return sum / exemplar.data.length;
 }
 
 function createExemplarImageKeyFrameLayers():
