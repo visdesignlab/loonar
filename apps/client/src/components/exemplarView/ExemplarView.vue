@@ -133,6 +133,9 @@ const {
     exemplarDataLoaded,
     selectedAttribute,
     selectedAggregation,
+    selectedAttr2,
+    selectedVar1,
+    horizonChartSettings
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -193,7 +196,9 @@ watch([deckGlHeight, deckGlWidth], () => {
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-    renderDeckGL();
+    if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
 });
 
 function visualizationWidth(scale?: number): number {
@@ -282,16 +287,18 @@ function handleScroll(delta: number) {
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-    renderDeckGL();
+    if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
 }
 
 
 
 // Fully re-load data & initialize Deck.gl when experiment data is loaded, selected attribute / aggregation, and filters.
 watch(
-  [experimentDataInitialized, selectedAttribute, selectedAggregation, ],
+  [experimentDataInitialized, selectedAttribute, selectedAggregation, selectedAttr2, selectedVar1],
   // 2. destructure all four
-  async ([initialized, tracks, attr]) => {
+  async ([initialized, tracks]) => {
         if (!initialized) {
             // If not initialized, clean up Deck.gl instance
             if (deckgl.value) {
@@ -305,6 +312,7 @@ watch(
             exemplarDataInitialized.value = false;
             return;
         }
+        exemplarDataInitialized.value = false;
         console.log('Experiment data initialized.');
 
         // Load exemplar data -----------------------
@@ -320,7 +328,7 @@ watch(
 
         // Fetch all segmentations
         await getCellSegmentationData();
-
+        horizonChartSettings.default = true;
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
             console.log("Creating Deck GL");
@@ -382,7 +390,9 @@ watch(
                     }
 
                     viewStateMirror.value = viewState as any;
-                    renderDeckGL();
+                    if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
                     return viewState;
                 },
             });
@@ -599,7 +609,9 @@ watch(
         cellSegmentationData.value = [];
         await getCellSegmentationData();
         // repaint
-        renderDeckGL();
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
       }
     }
   );
@@ -705,9 +717,26 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             geometryData = constructGeometry(exemplar);
         }
 
+        // Initialize horizon chart settings if default is true
+        if (horizonChartSettings.value.default) {
+            console.log("Setting horizon chart settings");
+            const modHeight = (exemplarTracksMax - exemplarTracksMin) /
+            (horizonChartScheme.length - 1);
+            const baseline = exemplarTracksMin;
+            horizonChartSettings.value = {
+            default: false,
+            positiveColorScheme: { label: "default", value: hexListToRgba(horizonChartScheme) },
+            negativeColorScheme: { label: "default", value: hexListToRgba(horizonChartScheme) },
+            modHeight,
+            baseline,
+            } as ExemplarHorizonChartSettings;
+        }
+        console.log("Horizon Chart Settings", horizonChartSettings.value);
+
+        const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
         horizonChartLayers.push(
             new HorizonChartLayer({
-                id: `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}`,
+                id: horizonChartCustomId,
                 data: HORIZON_CHART_MOD_OFFSETS,
                 pickable: true,
                 onHover: (info: PickingInfo, event: any) => {
@@ -724,14 +753,11 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     viewConfiguration.value.horizonChartHeight,
                 ], // [bottom, left, width, height]
                 dataXExtent: timeExtent,
-                baseline: exemplarTracksMin,
-                binSize:
-                    (exemplarTracksMax - exemplarTracksMin) /
-                    (horizonChartScheme.length - 1),
-
+                baseline: horizonChartSettings.value.baseline,
+                binSize: horizonChartSettings.value.modHeight,
                 getModOffset: (d: any) => d,
-                positiveColors: hexListToRgba(horizonChartScheme),
-                negativeColors: hexListToRgba(horizonChartScheme),
+                positiveColors: horizonChartSettings.value.positiveColorScheme.value,
+                negativeColors: horizonChartSettings.value.negativeColorScheme.value,
                 updateTriggers: {
                     instanceData: geometryData,
                 },
@@ -844,7 +870,9 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
         hoveredExemplar.value = null;
         hoveredCellsInfo.value = [];
         hoveredOutlineLayer.value = null;
-        renderDeckGL();
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
         return;
     }
     hoveredExemplar.value = exemplar;
@@ -906,7 +934,9 @@ async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
         // clear store selection
         dataPointSelection.selectedTrackId = null;
         dataPointSelection.setCurrentFrameIndex(0);
-        renderDeckGL();
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
         return;
     }
 
@@ -1456,7 +1486,9 @@ async function handleHistogramClick(
         await loadPixelSources();
 
         // Re-render all deck gl layers.
-        renderDeckGL();
+        if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
     }
 }
 
@@ -1718,7 +1750,9 @@ function createCellImageEventsLayer(
 
     // Handle collisions with existing cell images and the hovered cell image --------------
 
-    renderDeckGL();
+    if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
   }
   else if (action === 'click') {
     // see if this exact cell is already selected
@@ -1757,7 +1791,9 @@ function createCellImageEventsLayer(
       dataPointSelection.selectedTrackId = exemplar.trackId;
       dataPointSelection.setCurrentFrameIndex(realTimePoint);
     }
-    renderDeckGL();
+    if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
   }
   return cellImageLayerResult;
 }
@@ -2349,7 +2385,9 @@ function createExemplarImageKeyFramesLayer(
       if (info.coordinate && info.coordinate.length === 2) {
         hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
       }
-      renderDeckGL();
+      if (exemplarDataInitialized.value) {
+            renderDeckGL();
+        }
     },
     contrastLimits,
     channelsVisible: [true],
@@ -2415,6 +2453,20 @@ function createExemplarImageKeyFramesLayer(
 }
 
 // General purpose watchers ---------------------------------------------------------------------------------------------------
+watch(
+  () => [
+    horizonChartSettings.value.modHeight,
+    horizonChartSettings.value.baseline,
+    horizonChartSettings.value.positiveColorScheme,
+    horizonChartSettings.value.negativeColorScheme
+  ],
+  () => {
+    if (exemplarDataInitialized.value) {
+      renderDeckGL();
+    }
+  },
+  { deep: true }
+);
 // Watch for changes in histogramDomains, conditionHistograms, and exemplarTracks
 watch(
     () => [
@@ -2438,6 +2490,26 @@ watch(
         }
     },
     { deep: true }
+);
+watch(
+  () => exemplarViewStore.viewConfiguration.spaceKeyFramesEvenly,
+  () => {
+    // Invalidate keyframe order cache when spacing mode changes
+    if (keyframeOrderLookup.value) keyframeOrderLookup.value.clear();
+    if (exemplarDataInitialized.value) {
+      console.log('Space keyframes evenly changed, re-rendering DeckGL');
+      renderDeckGL();
+    }
+  }
+);
+watch(
+  () => exemplarViewStore.viewConfiguration,
+  () => {
+    if (exemplarDataInitialized.value) {
+      renderDeckGL();
+    }
+  },
+  { deep: true }
 );
 // General purpose helpers --------------------------------------------------------------------------------------------------
 

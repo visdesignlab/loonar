@@ -11,6 +11,12 @@ import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+
+import { schemeReds, schemeBlues } from 'd3-scale-chromatic';
+import { horizonChartScheme } from '@/components/layers/HorizonChartLayer/HorizonChartLayer';
+import { set, update } from 'lodash-es';
+
 
 export interface ExemplarTrack {
     trackId: string;
@@ -85,6 +91,19 @@ interface AggregationOption {
     label: string;
     value: string;
 }
+export interface ExemplarHorizonChartSettings {
+    default: true | false;
+    positiveColorScheme: {
+        label: string;
+        value: any;
+    };
+    negativeColorScheme: {
+        label: string;
+        value: any;
+    };
+    modHeight: number;
+    baseline: number;
+}
 
 // Remove histogramData and replace with conditionHistograms
 const conditionHistograms = ref<conditionHistogram[]>([]);
@@ -104,6 +123,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
     const selectionStore = useSelectionStore();
     const { dataSelections, dataFilters } = storeToRefs(selectionStore);
+    const horizonChartSettings = ref<ExemplarHorizonChartSettings>({
+        default: true,
+        positiveColorScheme: { label: 'Default', value: [] },
+        negativeColorScheme: { label: 'Default', value: [] },
+        modHeight: 1,
+        baseline: 0,
+    });
 
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAttr2 = ref<string | null>(null);
@@ -778,6 +804,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getTotalExperimentTime,
         getHistogramData,
         getExemplarViewData,
+        horizonChartSettings,
         exemplarPercentiles,
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,

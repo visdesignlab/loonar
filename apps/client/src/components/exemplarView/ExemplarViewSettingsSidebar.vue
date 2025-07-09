@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
@@ -21,6 +22,7 @@ const looneageViewStore = useLooneageViewStore();
 const exemplarViewStore = useExemplarViewStore();
 const eventBusStore = useEventBusStore();
 
+const { horizonChartSettings } = storeToRefs(exemplarViewStore);
 const colorSchemeOptions = [
     { label: 'Red', value: schemeReds },
     { label: 'Blue', value: schemeBlues },
@@ -55,36 +57,29 @@ const snippetDisplaySize = computed<number>({
 
             <q-card-section>
                 <div
-                    v-for="(
-                        setting, index
-                    ) in looneageViewStore.horizonChartSettingList"
-                    :key="index"
                     class="row no-wrap justify-center q-mb-lg"
                 >
                     <q-select
-                        label="Attribute"
-                        v-model="setting.attrKey"
-                        :options="cellMetaData.cellNumAttributeHeaderNames"
-                        :dark="globalSettings.darkMode"
-                        class="q-mr-sm min-width-200"
-                    />
-                    <q-select
                         label="Positive Colors"
-                        v-model="setting.positiveColorScheme"
+                        v-model="horizonChartSettings.positiveColorScheme"
                         :options="colorSchemeOptions"
+                        option-label="label"
+                        option-value="label"
                         :dark="globalSettings.darkMode"
                         class="q-mr-sm min-width-130"
                     />
                     <q-select
                         label="Negative Colors"
-                        v-model="setting.negativeColorScheme"
+                        v-model="horizonChartSettings.negativeColorScheme"
                         :options="colorSchemeOptions"
+                        option-label="label"
+                        option-value="label"
                         :dark="globalSettings.darkMode"
                         class="q-mr-sm min-width-130"
                     />
                     <q-input
                         label="Bin Size"
-                        v-model.number="setting.modHeight"
+                        v-model.number="horizonChartSettings.modHeight"
                         type="number"
                         :dark="globalSettings.darkMode"
                         debounce="400"
@@ -92,41 +87,11 @@ const snippetDisplaySize = computed<number>({
                     />
                     <q-input
                         label="Baseline"
-                        v-model.number="setting.baseline"
+                        v-model.number="horizonChartSettings.baseline"
                         type="number"
                         :dark="globalSettings.darkMode"
                         class="q-mr-sm"
                     />
-                    <q-icon
-                        v-if="
-                            looneageViewStore.horizonChartSettingList.length ===
-                            1
-                        "
-                        name="lock"
-                        size="sm"
-                        class="q-mt-md q-mb-md"
-                    />
-                    <q-btn
-                        v-else
-                        icon="delete"
-                        outline
-                        dense
-                        class="q-mt-md q-mb-md"
-                        @click="looneageViewStore.removeHorizonChart(index)"
-                    />
-                </div>
-                <div class="row no-wrap justify-center q-ml-xl q-mr-xl q-mt-md">
-                    <q-btn
-                        outline
-                        icon="add_box"
-                        class="full-width"
-                        @click="
-                            looneageViewStore.addHorizonChart(
-                                colorSchemeOptions
-                            )
-                        "
-                        >Add Attribute</q-btn
-                    >
                 </div>
             </q-card-section>
 
