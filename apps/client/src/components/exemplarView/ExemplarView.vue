@@ -135,7 +135,8 @@ const {
     selectedAggregation,
     selectedAttr2,
     selectedVar1,
-    horizonChartSettings
+    horizonChartSettings,
+    histogramYAxisLabel,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -1321,7 +1322,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             })
         );
 
-        // Text Layer
+        // Condition Text Layer -----------------------------------
         const yOffset = (groupBottom + groupTop) / 2;
 
         const textData: HistogramTextData[] = [
@@ -1348,6 +1349,35 @@ function createSidewaysHistogramLayer(): any[] | null {
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
+            })
+        );
+
+        // Histogram Y-Axis Label Text Layer -------------------
+
+        // Place the histogram Y-axis label at the top of the sideways histogram
+        // (Normal text orientation, not rotated)
+        layers.push(
+            new TextLayer({
+                id: `sideways-histogram-yaxis-label-${uniqueExemplarKey(conditionGroupKey)}`,
+                data: [
+                    {
+                        coordinates: [-hGap - histWidth * 0.6, groupTop - 18],
+                        label: histogramYAxisLabel.value,
+                    },
+                ],
+                getPosition: (d: any) => d.coordinates,
+                getText: (d: any) => d.label,
+                sizeScale: 1.1,
+                sizeUnits: 'pixels',
+                sizeMaxPixels: 12,
+                getAngle: 0,
+                getColor: [0, 0, 0, 255],
+                billboard: true,
+                textAnchor: 'start',
+                alignmentBaseline: 'bottom',
+                background: true,
+                backgroundColor: [255, 255, 255, 200],
+                backgroundPadding: [6, 2],
             })
         );
     }

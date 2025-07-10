@@ -424,6 +424,27 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    const histogramYAxisLabel = computed(() => {
+        const aggLabel = selectedAggregation.value.label;
+        const attr1 = selectedAttribute.value;
+        const attr2 = selectedAttr2.value;
+        const var1 = selectedVar1.value;
+
+        const aggFunc = aggregateFunctions[aggLabel];
+        if (aggFunc && 'selections' in aggFunc) {
+            const sel = aggFunc.selections;
+            if (sel.attr1 && sel.attr2 && attr2) {
+                return `${aggLabel} ${attr1} ${attr2}`;
+            } else if (sel.attr1 && sel.var1 && var1 !== null && var1 !== undefined && var1 !== '') {
+                return `${aggLabel} ${attr1} ${var1}`;
+            } else if (sel.attr1) {
+                return `${aggLabel} ${attr1}`;
+            }
+        }
+        // Fallback for custom or basic
+        return `${aggLabel} ${attr1}`;
+    });
+
     // Watch both selectedAttribute and selectedAggregation so that if either changes,
     // an aggregate column is added to the aggregate table.
     watch(
@@ -804,6 +825,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getTotalExperimentTime,
         getHistogramData,
         getExemplarViewData,
+        histogramYAxisLabel,
         horizonChartSettings,
         exemplarPercentiles,
         conditionHistograms: conditionHistogramsComputed,
