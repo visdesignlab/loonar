@@ -75,16 +75,24 @@ function applySelections() {
     return;
   }
 
-  // Set all relevant fields in the store
+  // Always assign string values, not objects
+  function getString(val: any) {
+    if (val == null) return '';
+    if (typeof val === 'object') {
+      return val.label ?? val.value ?? '';
+    }
+    return String(val);
+  }
+
   exemplarViewStore.selectedAggregation = {
     label: aggModel.value,
-    value: aggFunc.functionName,
+    value: aggregateFunctions[aggModel.value].functionName,
   };
-  exemplarViewStore.selectedAttribute = attr1Model.value ?? '';
-  exemplarViewStore.selectedAttr2 = attr2Model.value ?? null;
-  exemplarViewStore.selectedVar1 = var1Model.value ?? null;
+  console.log("agg1model:", getString(attr1Model.value) );
+  exemplarViewStore.selectedAttribute = getString(attr1Model.value);
+  exemplarViewStore.selectedAttr2 = attr2Model.value ? getString(attr2Model.value) : null;
+  exemplarViewStore.selectedVar1 = var1Model.value != null ? getString(var1Model.value) : null;
 
-  exemplarViewStore.getHistogramData();
   plotDialogOpen.value = false;
 }
 </script>

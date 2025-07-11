@@ -139,8 +139,10 @@ const {
     horizonChartSettings,
     histogramYAxisLabel,
     addAggregateColumnForSelection,
+    getAttributeName,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
+const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
 
 const cellMetaData = useCellMetaData();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
@@ -320,6 +322,9 @@ watch(
 
         // Load exemplar data -----------------------
 
+        if (selectedAttribute.value === ""){
+            selectedAttribute.value = undefined;
+        }
         await exemplarViewStore.addAggregateColumnForSelection(
             selectedAttribute.value,
             selectedAggregation.value,
@@ -375,10 +380,18 @@ watch(
                         hoveredCellsInfo.value && hoveredCellsInfo.value.length > 0
                             ? customNumberFormatter(hoveredCellsInfo.value[0][1].value, '.3f')
                             : '';
+                        // If any of these values are undefined, return null
+                        if (
+                            hoveredExemplar.value == null ||
+                            formattedTime == null ||
+                            formattedValue == null
+                        ) {
+                            return null;
+                        }
                         // Create the tooltip HTML, with the currently hovered exemplar and time.
                         let html = `<h5>Cell: ${hoveredExemplar.value?.trackId}</h5>`;
                         html += `<div>Time: ${formattedTime}</div>`;
-                        html += `<div>${selectedAttribute.value}: ${formattedValue}</div>`;
+                        html += `<div>${selectedAttributeName.value}: ${formattedValue}</div>`;
                         html += `<div>Location: ${hoveredExemplar.value?.locationId}</div>`;
                         return { html };
                     }
@@ -428,7 +441,6 @@ const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
-    console.log("RENDERING DECK GL");
     // Find which exemplar tracks are currently on screen.
     recalculateExemplarYOffsets();
 
@@ -731,7 +743,6 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
         // Initialize horizon chart settings if default is true
         if (horizonChartSettings.value.default) {
-            console.log("Setting horizon chart settings");
             const modHeight = (exemplarTracksMax - exemplarTracksMin) /
             (horizonChartScheme.length - 1);
             const baseline = exemplarTracksMin;
@@ -743,19 +754,12 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             baseline,
             } as ExemplarHorizonChartSettings;
         }
-
         const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
         horizonChartLayers.push(
             new HorizonChartLayer({
                 id: horizonChartCustomId,
                 data: HORIZON_CHART_MOD_OFFSETS,
-                pickable: true,
-                onHover: (info: PickingInfo, event: any) => {
-                    handleHorizonHover(info, exemplar);
-                },
-                onClick: (info: PickingInfo, event: any) => {
-                    handleHorizonClick(info, exemplar)
-                },
+                pickable: false,
                 instanceData: geometryData,
                 destination: [
                     yOffset,
@@ -770,6 +774,49 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 positiveColors: horizonChartSettings.value.positiveColorScheme.value,
                 negativeColors: horizonChartSettings.value.negativeColorScheme.value,
                 updateTriggers: {
+                    instanceData: geometryData,
+                },
+            })
+        );
+
+        // FOR CLICKING AND HOVERING ON THE HORIZON CHART
+        horizonChartLayers.push(
+            new PolygonLayer({
+                id: `exemplar-horizon-chart-clickbox-${uniqueExemplarKey(exemplar)}`,
+                data: [{ exemplar }], // single box per chart
+                pickable: true,
+                getPolygon: () => {
+                    // Use the same destination as the horizon chart
+                    const [yOffset, left, width, height] = [
+                        renderInfo.yOffset -
+                            viewConfiguration.value.timeBarHeightOuter -
+                            viewConfiguration.value.horizonTimeBarGap,
+                        0,
+                        viewConfiguration.value.horizonChartWidth,
+                        viewConfiguration.value.horizonChartHeight,
+                    ];
+                    return [
+                        [left, yOffset],
+                        [left + width, yOffset],
+                        [left + width, yOffset - height],
+                        [left, yOffset - height],
+                        [left, yOffset],
+                    ];
+                },
+                getFillColor: [0, 0, 0, 0], // fully transparent
+                getLineWidth: 0,
+                onHover: (info: PickingInfo, event: any) => {
+                    handleHorizonHover(info, exemplar);
+                },
+                onClick: (info: PickingInfo, event: any) => {
+                    handleHorizonClick(info, exemplar);
+                },
+                updateTriggers: {
+                    getPolygon: [
+                        renderInfo.yOffset,
+                        viewConfiguration.value.horizonChartWidth,
+                        viewConfiguration.value.horizonChartHeight,
+                    ],
                     instanceData: geometryData,
                 },
             })
@@ -848,7 +895,7 @@ function createHoveredHorizonOutlineLayer() {
     },
 });
 
-  const label = `${selectedAttribute.value}`;
+  const label = selectedAttributeName.value;
   const labelData = [
     {
       position: [
@@ -930,9 +977,6 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 }
 
 async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
-    if (!info.index || info.index === -1) {
-        return;
-    }
     // if the same exemplar is clicked again, deselect everything
     if (selectedExemplar.value?.trackId === exemplar.trackId) {
         selectedExemplar.value = null;
@@ -2654,7 +2698,7 @@ const isExemplarViewReady = computed(() => {
         <q-spinner color="primary" size="3em" :thickness="10" />
         <div>
             {{
-                `Loading ${exemplarViewStore.selectedAggregation.value} ${exemplarViewStore.selectedAttribute}`
+                `Loading ${histogramYAxisLabel}`
             }}
         </div>
     </div>

@@ -7,7 +7,7 @@ import { useConditionSelectorStore } from '@/stores/componentStores/conditionSel
 
 // Import the utility function and type for building the aggregate object
 import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
-import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
+import { aggregateFunctions, isCustomAggregateFunction } from '@/components/plotSelector/aggregateFunctions';
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
@@ -280,8 +280,24 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         return aggFilPredString.value;
     });
 
+    function getAttributeName(): string {
+        const aggLabel = selectedAggregation.value.label;
+        const aggFunc = aggregateFunctions[aggLabel];
+        if (isCustomAggregateFunction(aggFunc) || !selectedAttribute.value) {
+            return currentExperimentMetadata.value?.headerTransforms?.mass ?? 'Mass (pg)';
+        }
+        // If selectedAttribute.value is an object, return its label or value
+        if (
+            selectedAttribute.value &&
+            typeof selectedAttribute.value === 'object' &&
+            'label' in selectedAttribute.value
+        ) {
+            return selectedAttribute.value.label ?? selectedAttribute.value.value ?? '';
+        }
+        return selectedAttribute.value ?? '';
+    }
     // Helper to build the aggregate column name for queries
-    function getAggregateColumnName(): string {
+    function getAggregateAttributeName(): string {
         const aggLabel = selectedAggregation.value.label;
         const attr1 = selectedAttribute.value;
         const attr2 = selectedAttr2.value;
@@ -289,6 +305,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
         // Check the aggregate function's selections to determine which params to use
         const aggFunc = aggregateFunctions[aggLabel];
+        if (isCustomAggregateFunction(aggFunc) || !selectedAttribute.value) {
+            return aggLabel;
+        }
         if (aggFunc && 'selections' in aggFunc) {
             const sel = aggFunc.selections;
             if (sel.attr1 && sel.attr2 && attr2) {
@@ -323,7 +342,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
 
         const aggTableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata_aggregate`;
-        const aggAttribute = getAggregateColumnName();
+        const aggAttribute = getAggregateAttributeName();
         const whereClause = filterWhereClause.value ? `WHERE ${filterWhereClause.value}` : '';
 
         try {
@@ -441,6 +460,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const var1 = selectedVar1.value;
 
         const aggFunc = aggregateFunctions[aggLabel];
+        if (isCustomAggregateFunction(aggFunc) || !attr1) {
+            return aggLabel;
+        }
         if (aggFunc && 'selections' in aggFunc) {
             const sel = aggFunc.selections;
             if (sel.attr1 && sel.attr2 && attr2) {
@@ -469,39 +491,43 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         selectedVar1Value: number | string | null
     ): Promise<void> {
         const aggLabel = selectedAggregationValue.label;
-        console.log("Adding aggregate column for:", aggLabel);
         const aggFunc = aggregateFunctions[aggLabel];
         if (!aggFunc) {
             console.error(`Aggregate function "${aggLabel}" not defined.`);
             return;
         }
 
+        let customQuery;
+        const aggFunction = aggregateFunctions[aggLabel];
+        if (isCustomAggregateFunction(aggFunction)) {
+            customQuery = aggFunction.customQuery;
+        }
         const aggObject: AggregateObject = {
             functionName: aggFunc.functionName,
-            label: `${aggLabel}`,
+            label: aggLabel,
             attr1: selectedAttributeValue,
             attr2: selectedAttr2Value ?? undefined,
             var1: selectedVar1Value !== null && selectedVar1Value !== undefined ? String(selectedVar1Value) : undefined,
-            customQuery: (aggFunc as any).customQuery,
+            customQuery: customQuery,
         };
 
         const experimentName = currentExperimentMetadata?.value?.name;
         const aggTableNameFull = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
         const compTableName = `${experimentName}_composite_experiment_cell_metadata`;
-
+        
         if (
             !experimentDataInitialized.value ||
             !currentExperimentMetadata.value ||
             !compTableName ||
             !aggTableNameFull
         ) {
-            console.warn(
+            console.log(
                 'Experiment data, metadata, or table names are not set.'
             );
             return;
         }
-
         try {
+
             await addAggregateColumn(
                 aggTableNameFull,
                 compTableName,
@@ -596,13 +622,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         percentiles?: number[],
         selectedTrackRequest?: SelectedTrackRequest,
     ): Promise<ExemplarTrack[]> {
-        const attributeColumn = selectedAttribute.value
+        const attributeColumn = getAttributeName();
         const aggregationColumn = selectedAggregation.value.label
         const experimentName = currentExperimentMetadata?.value?.name
         const aggTable = `${experimentName}_composite_experiment_cell_metadata_aggregate`
         const cellTable = `${experimentName}_composite_experiment_cell_metadata`
         const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : ''
-        const aggAttr = getAggregateColumnName();
+        const aggAttr = getAggregateAttributeName();
         const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
 
@@ -838,6 +864,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getHistogramData,
         getExemplarViewData,
         addAggregateColumnForSelection,
+        getAttributeName,
         histogramYAxisLabel,
         horizonChartSettings,
         exemplarPercentiles,
