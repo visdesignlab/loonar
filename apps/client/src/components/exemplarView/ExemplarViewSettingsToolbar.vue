@@ -162,6 +162,17 @@ function applySelections() {
               :dark="globalSettings.darkMode"
               clickable
             />
+            <q-separator class="q-my-md" />
+            <q-select
+              label="Exemplar Percentiles"
+              :options="exemplarViewStore.percentileOptions"
+              v-model="exemplarViewStore.exemplarPercentiles"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              :dark="globalSettings.darkMode"
+            />
             <div class="row justify-end q-mt-md">
               <LBtn label="Add" @click="applySelections" color="primary" class="q-mr-sm" />
               <LBtn label="Cancel" flat @click="plotDialogOpen = false" color="primary"/>

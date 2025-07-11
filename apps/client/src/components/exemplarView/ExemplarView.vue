@@ -332,7 +332,7 @@ watch(
 
         
         // Fetch exemplar tracks & histogram data
-        await exemplarViewStore.getExemplarViewData(true);
+        await exemplarViewStore.getExemplarViewData(true, exemplarViewStore.exemplarPercentiles);
         
         // Fetch Images
         await loadPixelSources();
@@ -428,7 +428,7 @@ const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
-
+    console.log("RENDERING DECK GL");
     // Find which exemplar tracks are currently on screen.
     recalculateExemplarYOffsets();
 
@@ -2645,7 +2645,7 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 // Determines if the exemplar view should be shown yet -------------------------
 const isExemplarViewReady = computed(() => {
-    return exemplarDataLoaded.value && exemplarDataInitialized;
+    return exemplarDataLoaded.value && exemplarDataInitialized.value;
 });
 </script>
 

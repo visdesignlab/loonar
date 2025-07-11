@@ -138,7 +138,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         label: 'Average',
         value: 'AVG',
     });
-    const exemplarPercentiles = ref<number[]>([5, 50, 95]); // Default percentiles for exemplar tracks
+    const percentileOptions = [
+        { label: 'Default (5th, Median, 95th)', value: [5, 50, 95] },
+        { label: 'Quartiles (25th, Median, 75th)', value: [25, 50, 75] },
+        { label: 'Min, Max', value: [0, 100] },
+        { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 99] }
+        ];
+    // Defaults to the first option
+    const exemplarPercentiles = ref<number[]>(percentileOptions[0].value);
     // New reactive property to track whether exemplar data is loaded
     const exemplarDataLoaded = ref<boolean>(true);
 
@@ -834,6 +841,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramYAxisLabel,
         horizonChartSettings,
         exemplarPercentiles,
+        percentileOptions,
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
