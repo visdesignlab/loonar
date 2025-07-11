@@ -138,6 +138,7 @@ const {
     selectedVar1,
     horizonChartSettings,
     histogramYAxisLabel,
+    addAggregateColumnForSelection,
 } = storeToRefs(exemplarViewStore);
 const { getHistogramData } = exemplarViewStore;
 
@@ -319,9 +320,17 @@ watch(
 
         // Load exemplar data -----------------------
 
+        await exemplarViewStore.addAggregateColumnForSelection(
+            selectedAttribute.value,
+            selectedAggregation.value,
+            selectedAttr2.value,
+            selectedVar1.value
+        );
+
         // Fetch total experiment time
         totalExperimentTime.value = await exemplarViewStore.getTotalExperimentTime();
 
+        
         // Fetch exemplar tracks & histogram data
         await exemplarViewStore.getExemplarViewData(true);
         
@@ -393,14 +402,15 @@ watch(
 
                     viewStateMirror.value = viewState as any;
                     if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+                        renderDeckGL();
+                    }
                     return viewState;
                 },
             });
             console.log('Deck.gl initialized.');
         }
-
+        await renderDeckGL();
+        await new Promise(resolve => requestAnimationFrame(() => resolve()));
         // 2. Set exemplarDataInitialized to true after data generation
         exemplarDataInitialized.value = true;
     },
@@ -733,7 +743,6 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             baseline,
             } as ExemplarHorizonChartSettings;
         }
-        console.log("Horizon Chart Settings", horizonChartSettings.value);
 
         const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
         horizonChartLayers.push(
@@ -1134,7 +1143,6 @@ function createSidewaysHistogramLayer(): any[] | null {
         // For each exemplar in the group, create a corresponding pin in the histogram
         for (const exemplar of group) {
             // Log the condition group and the exemplar track ID
-            console.log(`Processing exemplar: ${exemplar.trackId} in condition group: ${conditionGroupKey.trackId}`);
             // Find the bin index corresponding to the attribute value of the exemplar
             const aggValue = exemplar.aggValue
             const binIndex = domains.histogramBinRanges.findIndex(
@@ -1146,9 +1154,6 @@ function createSidewaysHistogramLayer(): any[] | null {
             }
             // Console log the range for this bin index
             const binRange = domains.histogramBinRanges[binIndex];
-            console.log(
-                `Exemplar ${exemplar.trackId} falls into bin index ${binIndex} with range: [${binRange?.min}, ${binRange?.max}]`
-            );
             // Compute y-mid of the histogram bin
             const y0 = groupTop + binIndex * binWidth;
             const y1 = y0 + binWidth;
@@ -1505,7 +1510,6 @@ async function handleHistogramClick(
                 conditionTwo: String(hoveredPin.value.exemplar.tags.conditionTwo)
             }
         };
-        console.log('Selected Track Request', selectedTrackRequest);
         // --- Finally, create new exemplar tracks for the p-value, for each condition group ---
         await exemplarViewStore.getExemplarViewData(
             false,
@@ -2518,6 +2522,14 @@ watch(
         }
     },
     { deep: true }
+);
+watch(
+  () => exemplarDataInitialized.value,
+  (initialized) => {
+    if (initialized) {
+      renderDeckGL();
+    }
+  }
 );
 
 watch(

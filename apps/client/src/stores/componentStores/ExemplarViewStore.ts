@@ -448,60 +448,63 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         return `${aggLabel} ${attr1}`;
     });
 
-    // Watch both selectedAttribute and selectedAggregation so that if either changes,
-    // an aggregate column is added to the aggregate table.
-    watch(
-        () => [selectedAttribute.value, selectedAggregation.value, selectedAttr2.value, selectedVar1.value],
-        async () => {
-            // Since selectedAggregation is always an object, we can directly access .value and .label
-            const aggLabel = selectedAggregation.value.label;
-            console.log("Adding aggregate column for:", aggLabel);
-            const aggFunc = aggregateFunctions[aggLabel];
-            if (!aggFunc) {
-                console.error(`Aggregate function "${aggLabel}" not defined.`);
-                return;
-            }
+    /**
+     * Adds an aggregate column to the aggregate table for the given attribute/aggregation selections.
+     * @param selectedAttributeValue
+     * @param selectedAggregationValue
+     * @param selectedAttr2Value
+     * @param selectedVar1Value
+     */
+    async function addAggregateColumnForSelection(
+        selectedAttributeValue: string,
+        selectedAggregationValue: AggregationOption,
+        selectedAttr2Value: string | null,
+        selectedVar1Value: number | string | null
+    ): Promise<void> {
+        const aggLabel = selectedAggregationValue.label;
+        console.log("Adding aggregate column for:", aggLabel);
+        const aggFunc = aggregateFunctions[aggLabel];
+        if (!aggFunc) {
+            console.error(`Aggregate function "${aggLabel}" not defined.`);
+            return;
+        }
 
-            // Build the aggregate object using the SQL function and proper label.
-            const aggObject: AggregateObject = {
-                functionName: aggFunc.functionName,
-                label: `${aggLabel}`,
-                attr1: selectedAttribute.value,
-                attr2: selectedAttr2.value ?? undefined,
-                var1: selectedVar1.value !== null && selectedVar1.value !== undefined ? String(selectedVar1.value) : undefined,
-                customQuery: (aggFunc as any).customQuery,
-            };
+        const aggObject: AggregateObject = {
+            functionName: aggFunc.functionName,
+            label: `${aggLabel}`,
+            attr1: selectedAttributeValue,
+            attr2: selectedAttr2Value ?? undefined,
+            var1: selectedVar1Value !== null && selectedVar1Value !== undefined ? String(selectedVar1Value) : undefined,
+            customQuery: (aggFunc as any).customQuery,
+        };
 
-            // Ensure table names are available.
-            const experimentName = currentExperimentMetadata?.value?.name;
-            const aggTableNameFull = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
-            const compTableName = `${experimentName}_composite_experiment_cell_metadata`;
+        const experimentName = currentExperimentMetadata?.value?.name;
+        const aggTableNameFull = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
+        const compTableName = `${experimentName}_composite_experiment_cell_metadata`;
 
-            if (
-                !experimentDataInitialized.value ||
-                !currentExperimentMetadata.value ||
-                !compTableName ||
-                !aggTableNameFull
-            ) {
-                console.warn(
-                    'Experiment data, metadata, or table names are not set.'
-                );
-                return;
-            }
+        if (
+            !experimentDataInitialized.value ||
+            !currentExperimentMetadata.value ||
+            !compTableName ||
+            !aggTableNameFull
+        ) {
+            console.warn(
+                'Experiment data, metadata, or table names are not set.'
+            );
+            return;
+        }
 
-            try {
-                await addAggregateColumn(
-                    aggTableNameFull,
-                    compTableName,
-                    aggObject,
-                    currentExperimentMetadata.value.headerTransforms
-                );
-            } catch (error) {
-                console.error('Error adding aggregate column:', error);
-            }
-        },
-        { immediate: true }
-    );
+        try {
+            await addAggregateColumn(
+                aggTableNameFull,
+                compTableName,
+                aggObject,
+                currentExperimentMetadata.value.headerTransforms
+            );
+        } catch (error) {
+            console.error('Error adding aggregate column:', error);
+        }
+    }
 
     // helper to time all vg queries
     async function timedVgQuery<T = any>(
@@ -518,8 +521,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     watch(
         [
             () => aggFilPredString.value,
-            () => selectedAggregation.value,
-            () => selectedAttribute.value
         ],
         async () => {
             // guard: only once, only when cond-chart filters are ready, only when aggFilPredString is non-null
@@ -829,6 +830,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getTotalExperimentTime,
         getHistogramData,
         getExemplarViewData,
+        addAggregateColumnForSelection,
         histogramYAxisLabel,
         horizonChartSettings,
         exemplarPercentiles,
