@@ -126,6 +126,7 @@ const looneageViewStore = useLooneageViewStore();
 const exemplarViewStore = useExemplarViewStore();
 const {
     viewConfiguration,
+    snippetZoom,
     exemplarTracks,
     exemplarHeight,
     conditionHistograms,
@@ -1447,7 +1448,7 @@ function handleHistogramHover(
 
     // Set the temporary label: positioned 10 pixels left of the pin circle.
     hoveredPinLabel.value = {
-        text: `Count: ${count}\n[${minStr}, ${maxStr}]`,
+        text: `Cell Count: ${count}\n${histogramYAxisLabel.value} between:\n[${minStr}, ${maxStr}]`,
         position: [-(x0 + fixedLineLength), hoveredY + 10],
     };
 
@@ -1535,6 +1536,10 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
 
     // If a hoveredPinLabel exists, add a TextLayer.
     if (hoveredPinLabel.value) {
+        let { histogramWidth: histWidth } = viewConfiguration.value;
+        histWidth = scaleForConstantVisualSize(histWidth);
+        const fontSize = 22;
+        const maxWidth = histWidth / fontSize;
         pinLayers.push(
             new TextLayer({
                 id: `exemplar-temp-label-${uniqueExemplarKey(conditionGroupKey)}`,
@@ -1544,7 +1549,7 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
                     position: [number, number];
                 }) => d.position,
                 getText: (d: { text: string }) => d.text,
-                sizeScale: 1,
+                sizeScale: 1.1,
                 sizeUnits: 'common',
                 sizeMaxPixels: 20,
                 // Set color as desired (here black) using an accessor function:
@@ -1553,6 +1558,9 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
                 getTextAnchor: (d: any) => 'start', // 'end' aligns text to the right
                 getAlignmentBaseline: (d: any) => 'top', // 'center' is the correct baseline value
                 billboard: true,
+                wordBreak: 'break-word',
+                maxWidth,
+                getSize: () => fontSize,
             })
         );
     }
@@ -1968,7 +1976,7 @@ function createCellImageLayer(
         getCenter: (d: any) => d.center,
         getTranslateOffset: (d: any) => d.offset,
         zoomX: viewStateMirror.value.zoom[0],
-        scale: 1,
+        scale: snippetZoom,
         clipSize: viewConfig.snippetDisplayHeight,
         clip: true,
     });
@@ -1984,7 +1992,7 @@ function createCellImageLayer(
             getFillColor: (d: any) => colors.hovered.rgb,
             opacity: 0.5,
             zoomX: viewStateMirror.value.zoom[0],
-            scale: 1,
+            scale: snippetZoom,
             clipSize: viewConfig.snippetDisplayHeight,
             clip: false,
             filled: true, // Only fill if not showing image
@@ -2451,7 +2459,7 @@ function createExemplarImageKeyFramesLayer(
     getCenter: (d: any) => d.center,
     getTranslateOffset: (d: any) => d.offset,
     zoomX: viewStateMirror.value.zoom[0],
-    scale: 1,
+    scale: snippetZoom,
     clipSize: viewConfig.snippetDisplayHeight, // Make custom for exemplar view
     clip: true,
   });
@@ -2471,7 +2479,7 @@ function createExemplarImageKeyFramesLayer(
                 : unselectedColorWithAlpha,
             opacity: 1, 
             zoomX: viewStateMirror.value.zoom[0],
-            scale: 1,
+            scale: snippetZoom,
             clipSize: viewConfig.snippetDisplayHeight,
             clip: true,
             filled: false, // Only fill if not showing image

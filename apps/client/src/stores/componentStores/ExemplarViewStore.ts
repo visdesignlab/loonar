@@ -163,6 +163,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         spaceKeyFramesEvenly: true,
 
     });
+    const snippetZoom = computed<number>(() => {
+        return viewConfiguration.value.snippetDisplayHeight / viewConfiguration.value.snippetSourceSize;
+    });
 
     const exemplarHeight = computed(() => {
         return (
@@ -452,7 +455,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         async () => {
             // Since selectedAggregation is always an object, we can directly access .value and .label
             const aggLabel = selectedAggregation.value.label;
-
+            console.log("Adding aggregate column for:", aggLabel);
             const aggFunc = aggregateFunctions[aggLabel];
             if (!aggFunc) {
                 console.error(`Aggregate function "${aggLabel}" not defined.`);
@@ -816,6 +819,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getExemplarImageUrls,
         exemplarTracks,
         viewConfiguration,
+        snippetZoom,
         exemplarHeight,
         conditionGroupHeight,
         selectedAttribute,
