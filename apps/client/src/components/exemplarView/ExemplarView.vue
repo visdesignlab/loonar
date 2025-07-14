@@ -117,7 +117,7 @@ const { selectedYTag } = storeToRefs(conditionSelectorStore);
 
 // For dataset selection
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentLocationMetadata } = storeToRefs(
+const { experimentDataInitialized, currentLocationMetadata, currentExperimentFilename} = storeToRefs(
     datasetSelectionStore
 );
 
@@ -2745,7 +2745,7 @@ const isExemplarViewReady = computed(() => {
 </script>
 
 <template>
-    <div v-if="!isExemplarViewReady" class="spinner-container">
+    <div v-if="!isExemplarViewReady && currentLocationMetadata" class="spinner-container">
         <q-spinner color="primary" size="3em" :thickness="10" />
         <div>
             {{
