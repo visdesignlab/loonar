@@ -1497,7 +1497,7 @@ function handleHistogramHover(
 
     // Set the temporary label: positioned 10 pixels left of the pin circle.
     hoveredPinLabel.value = {
-        text: `Cell Count: ${count}\n${histogramYAxisLabel.value} between:\n[${minStr}, ${maxStr}]`,
+        text: `Cell Count: ${count}\n --- \n${histogramYAxisLabel.value} between:\n[${minStr}, ${maxStr}]`,
         position: [-(x0 + fixedLineLength), hoveredY + 10],
     };
 
@@ -2366,6 +2366,12 @@ function createExemplarImageKeyFramesLayer(
 
     // Check if the hovered pointer falls within this destination.
     if (pointInBBox(hoveredCoordinate ?? [-1000, 0], destination)) {
+
+      // Find the previous and next cells in the exemplar data
+      const currentIndex = exemplar.data.findIndex(c => c.frame === cell.frame);
+      const prevCell = currentIndex > 0 ? exemplar.data[currentIndex - 1] : null;
+      const nextCell = currentIndex < exemplar.data.length - 1 ? exemplar.data[currentIndex + 1] : null;
+
       // Compute neighboring destinations.
       const [x1, y1, x2, y2] = destination;
       const prevCellDest: [number, number, number, number] = [
@@ -2389,16 +2395,52 @@ function createExemplarImageKeyFramesLayer(
       ];
 
       // Push selections for previous, current and next locations.
-      selections.push(
-        { c: 0, t: cell.frame - 2, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: prevCellDest }] },
-        { c: 0, t: cell.frame - 1, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: destination }] },
-        { c: 0, t: cell.frame, z: 0, snippets: [{ source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), destination: nextCellDest }] }
-      );
+      const selections_to_add = [];
+        
+      if (prevCell) {
+            selections_to_add.push({ 
+            c: 0, 
+            t: prevCell.frame - 1, 
+            z: 0, 
+            snippets: [{ 
+                source: getBBoxAroundPoint(prevCell.x, prevCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+                destination: prevCellDest 
+            }] 
+            });
+        }
+        
+      selections_to_add.push({ 
+            c: 0, 
+            t: cell.frame - 1, 
+            z: 0, 
+            snippets: [{ 
+            source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+            destination: destination 
+            }] 
+        });
+        
+      if (nextCell) {
+            selections_to_add.push({ 
+            c: 0, 
+            t: nextCell.frame - 1, 
+            z: 0, 
+            snippets: [{ 
+                source: getBBoxAroundPoint(nextCell.x, nextCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+                destination: nextCellDest 
+            }] 
+            });
+        }
+        
+      selections.push(...selections_to_add);
 
-      // Add segmentation for these three destinations.
+      // Add segmentation for these three destinations using correct frames and coordinates.
       addSegmentation(cell.frame, destination, true, cell);
-      addSegmentation(cell.frame - 1, prevCellDest, true, cell);
-      addSegmentation(cell.frame + 1, nextCellDest, true, cell);
+        if (prevCell) {
+            addSegmentation(prevCell.frame, prevCellDest, true, prevCell);
+        }
+        if (nextCell) {
+            addSegmentation(nextCell.frame, nextCellDest, true, nextCell);
+        }
 
       // Compute tick data using the snippet center.
       const tickX = x1 + snippetDestWidth / 2;
