@@ -1406,6 +1406,13 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         // Place the histogram Y-axis label at the top of the sideways histogram
         // (Normal text orientation, not rotated)
+
+        // Text should not be much longer than the histogram width
+        histWidth = scaleForConstantVisualSize(viewConfiguration.value.histogramWidth);
+        const fontSize = 15;
+        const widthBuffer = 5;
+        const maxWidth = histWidth / (fontSize - widthBuffer);
+
         layers.push(
             new TextLayer({
                 id: `sideways-histogram-yaxis-label-${uniqueExemplarKey(conditionGroupKey)}`,
@@ -1417,9 +1424,9 @@ function createSidewaysHistogramLayer(): any[] | null {
                 ],
                 getPosition: (d: any) => d.coordinates,
                 getText: (d: any) => d.label,
-                sizeScale: 1.1,
+                sizeScale: 1,
                 sizeUnits: 'pixels',
-                sizeMaxPixels: 12,
+                sizeMaxPixels: fontSize,
                 getAngle: 0,
                 getColor: [0, 0, 0, 255],
                 billboard: true,
@@ -1428,6 +1435,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                 background: true,
                 backgroundColor: [255, 255, 255, 200],
                 backgroundPadding: [6, 2],
+                wordBreak: 'break-word',
+                maxWidth: maxWidth
             })
         );
     }
