@@ -205,9 +205,7 @@ watch([deckGlHeight, deckGlWidth], () => {
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-    if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+    safeRenderDeckGL();
 });
 
 function visualizationWidth(scale?: number): number {
@@ -296,9 +294,7 @@ function handleScroll(delta: number) {
     deckgl.value.setProps({
         initialViewState: newViewState,
     });
-    if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+    safeRenderDeckGL();
 }
 
 
@@ -476,7 +472,12 @@ async function renderDeckGL(): Promise<void> {
     });
     deckgl.value.redraw();
 }
-
+// Render deck gl layers only when the exemplar data is initialized
+function safeRenderDeckGL() {
+  if (exemplarDataInitialized.value) {
+    renderDeckGL();
+  }
+}
 // Clean up Deck.gl on component unmount
 onBeforeUnmount(() => {
     if (deckgl.value) {
@@ -637,9 +638,7 @@ watch(
         cellSegmentationData.value = [];
         await getCellSegmentationData();
         // repaint
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
       }
     }
   );
@@ -943,9 +942,7 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
         hoveredExemplar.value = null;
         hoveredCellsInfo.value = [];
         hoveredOutlineLayer.value = null;
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
         return;
     }
     hoveredExemplar.value = exemplar;
@@ -1004,9 +1001,7 @@ async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
         // clear store selection
         dataPointSelection.selectedTrackId = null;
         dataPointSelection.setCurrentFrameIndex(0);
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
         return;
     }
 
@@ -1576,9 +1571,7 @@ async function handleHistogramClick(
         await loadPixelSources();
 
         // Re-render all deck gl layers.
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
     }
 }
 
@@ -1839,9 +1832,7 @@ function createCellImageEventsLayer(
 
     // Handle collisions with existing cell images and the hovered cell image --------------
 
-    if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+    safeRenderDeckGL();
   }
   else if (action === 'click') {
     // see if this exact cell is already selected
@@ -1880,9 +1871,7 @@ function createCellImageEventsLayer(
       dataPointSelection.selectedTrackId = exemplar.trackId;
       dataPointSelection.setCurrentFrameIndex(realTimePoint);
     }
-    if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+    safeRenderDeckGL();
   }
   return cellImageLayerResult;
 }
@@ -2578,9 +2567,7 @@ function createExemplarImageKeyFramesLayer(
       if (info.coordinate && info.coordinate.length === 2) {
         hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
       }
-      if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+      safeRenderDeckGL();
     },
     contrastLimits,
     channelsVisible: [true],
@@ -2696,9 +2683,7 @@ watch(
         exemplarTracks.value
     ],
     () => {
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
     },
     { deep: true }
 );
@@ -2760,9 +2745,7 @@ watch(
 watch(
     () => conditionKey.value,
     () => {
-        if (exemplarDataInitialized.value) {
-            renderDeckGL();
-        }
+        safeRenderDeckGL();
     }
 );
 
