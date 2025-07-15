@@ -214,6 +214,8 @@ watch([deckGlHeight, deckGlWidth], () => {
     safeRenderDeckGL();
 });
 
+
+
 function visualizationWidth(scale?: number): number {
     if (scale === undefined) {
         scale = viewStateMirror.value.zoom[0];
@@ -425,6 +427,12 @@ watch(
                     }
                     return viewState;
                 },
+                onClick: (info: PickingInfo) => {
+                    // If nothing was picked (empty space), deselect everything
+                    if (!info.object && !info.layer) {
+                        handleEmptySpaceClick();
+                    }
+                },
             });
         }
         // Finally, render the Deck.gl layers
@@ -491,6 +499,20 @@ onBeforeUnmount(() => {
     // Reset exemplarDataInitialized on unmount
     exemplarDataInitialized.value = false;
 });
+
+// Add a new function to handle deselection when clicking empty space
+function handleEmptySpaceClick() {
+    // Clear all selections
+    selectedExemplar.value = null;
+    selectedOutlineLayer.value = null;
+    selectedCellsInfo.value = [];
+    selectedCellImageLayers.value = [];
+    snippetSegmentationOutlineLayers.value = [];
+    selectedCellImageTickMarkLayers.value = [];
+    dataPointSelection.selectedTrackId = null;
+    dataPointSelection.setCurrentFrameIndex(0);
+    safeRenderDeckGL();
+}
 
 // Exemplar track choices and positioning ---------------------------------------------------------------
 
@@ -1002,26 +1024,26 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
 }
 
 async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
-    // if the same exemplar is clicked again, deselect everything
-    if (selectedExemplar.value?.trackId === exemplar.trackId) {
-        selectedExemplar.value = null;
-        selectedOutlineLayer.value = null;
-        // clear any selected cell images & segmentation layers
-        selectedCellsInfo.value = [];
-        selectedCellImageLayers.value = [];
-        snippetSegmentationOutlineLayers.value = [];
-        selectedCellImageTickMarkLayers.value = [];
-        // clear store selection
-        dataPointSelection.selectedTrackId = null;
-        dataPointSelection.setCurrentFrameIndex(0);
-        safeRenderDeckGL();
-        return;
+    // Remove the deselection logic - always select a new section
+    
+    // Calculate the time from the click coordinate
+    let realTimePoint = null;
+    const X = info.coordinate?.[0];
+    if (X != null) {
+        const { horizonChartWidth } = viewConfiguration.value;
+        const estimatedTime = Math.max(
+            0,
+            exemplar.minTime +
+                (exemplar.maxTime - exemplar.minTime) * (X / horizonChartWidth)
+        );
+        
+        // Compute the real time point from the exemplar data
+        realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
+        console.log("Exemplar selected time:", realTimePoint);
     }
 
-
-
-     // 1) select new exemplar
-     selectedExemplar.value = exemplar;
+    // 1) select new exemplar
+    selectedExemplar.value = exemplar;
     dataPointSelection.selectedTrackId = exemplar.trackId;
 
     createSelectedHorizonOutlineLayer(exemplar);
@@ -1039,9 +1061,14 @@ async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
         await until(() => cellMetaData.selectedTrack != null).toBeTruthy();
     }
 
-    // 3) now read the computed safely
+    // 3) now read the computed safely and set the frame index after everything is loaded
     const track = cellMetaData.selectedTrack!;
     dataPointSelection.selectedLineageId = cellMetaData.getLineageId(track);
+    
+    // Set the current frame index after the cell metadata is fully loaded
+    if (realTimePoint !== null) {
+        dataPointSelection.setCurrentFrameIndex(realTimePoint);
+    }
 }
 
 // Time Window Layer -------------------------------------------------------------------------------------------
