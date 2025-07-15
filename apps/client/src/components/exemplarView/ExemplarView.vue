@@ -322,7 +322,7 @@ watch(
         }
         exemplarDataInitialized.value = false;
 
-        // Reset the horizon chart settings to default
+        // Reset the horizon chart settings to default for numeric recalculation
         horizonChartSettings.value.default = true;
 
         // Load exemplar data -----------------------
@@ -736,19 +736,41 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         }
 
         // Initialize horizon chart settings if default is true
-        if (horizonChartSettings.value.default) {
+         if (horizonChartSettings.value.default || 
+            !horizonChartSettings.value.positiveColorScheme.value || 
+            horizonChartSettings.value.positiveColorScheme.value.length === 0) {
+            
             const modHeight = (exemplarTracksMax - exemplarTracksMin) /
             (horizonChartScheme.length - 1);
             const baseline = exemplarTracksMin;
+            
             horizonChartSettings.value.default = false;
-            horizonChartSettings.value.positiveColorScheme = { 
-                label: "default", 
-                value: horizonChartScheme
-            };
-            horizonChartSettings.value.negativeColorScheme = { 
-                label: "default", 
-                value: horizonChartScheme
-            };
+            
+            // Only set color schemes if they haven't been set before
+            if (!horizonChartSettings.value.positiveColorScheme.value || 
+                horizonChartSettings.value.positiveColorScheme.value.length === 0) {
+                horizonChartSettings.value.positiveColorScheme = { 
+                    label: "Grey (Default)", 
+                    value: horizonChartScheme
+                };
+            }
+            
+            if (!horizonChartSettings.value.negativeColorScheme.value || 
+                horizonChartSettings.value.negativeColorScheme.value.length === 0) {
+                horizonChartSettings.value.negativeColorScheme = { 
+                    label: "Grey (Default)", 
+                    value: horizonChartScheme
+                };
+            }
+            
+            horizonChartSettings.value.modHeight = modHeight;
+            horizonChartSettings.value.baseline = baseline;
+        } else {
+            // Update only the numeric values, preserve color schemes
+            const modHeight = (exemplarTracksMax - exemplarTracksMin) /
+            (horizonChartSettings.value.positiveColorScheme.value.length - 1);
+            const baseline = exemplarTracksMin;
+            
             horizonChartSettings.value.modHeight = modHeight;
             horizonChartSettings.value.baseline = baseline;
         }
