@@ -23,6 +23,7 @@ import {
     type Cell,
     type ExemplarTrack,
     type SelectedTrackRequest,
+    horizonChartScheme,
     useExemplarViewStore,
 } from '@/stores/componentStores/ExemplarViewStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
@@ -677,17 +678,6 @@ function getCellSegmentationPolygon(location: string, trackId: string, frame: st
 }
 
 // Horizon Chart Layer ------------------------------------------------------------------------------------------
-const horizonChartScheme = [
-    '#e6e3e3', // Light Grey 1
-    '#cccccc', // Light Grey 2
-    '#b3b3b3', // Grey 3
-    '#999999', // Grey 4
-    '#808080', // Grey 5
-    '#666666', // Grey 6
-    '#4d4d4d', // Grey 7
-    '#1a1a1a', // Grey 9
-    '#000000', // Black
-];
 
 function createHorizonChartLayer(): HorizonChartLayer[] | null {
     const horizonChartLayers: HorizonChartLayer[] = [];
@@ -751,14 +741,13 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             (horizonChartScheme.length - 1);
             const baseline = exemplarTracksMin;
             horizonChartSettings.value.default = false;
-            // Use the same structure as LooneageView - with 'value' containing the actual color arrays
             horizonChartSettings.value.positiveColorScheme = { 
                 label: "default", 
-                value: schemeBlues  // Use d3 color scheme directly like LooneageView
+                value: horizonChartScheme
             };
             horizonChartSettings.value.negativeColorScheme = { 
                 label: "default", 
-                value: schemeReds   // Use d3 color scheme directly like LooneageView
+                value: horizonChartScheme
             };
             horizonChartSettings.value.modHeight = modHeight;
             horizonChartSettings.value.baseline = baseline;
@@ -782,12 +771,12 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                 binSize: horizonChartSettings.value.modHeight,
                 getModOffset: (d: any) => d,
                 // Use the same approach as LooneageView - access the 6th element of the color scheme
-                positiveColors: hexListToRgba(horizonChartSettings.value.positiveColorScheme.value[6]),
-                negativeColors: hexListToRgba(horizonChartSettings.value.negativeColorScheme.value[6]),
+                positiveColors: hexListToRgba(horizonChartSettings.value.positiveColorScheme.value),
+                negativeColors: hexListToRgba(horizonChartSettings.value.negativeColorScheme.value),
                 updateTriggers: {
                     instanceData: geometryData,
-                    positiveColors: horizonChartSettings.value.positiveColorScheme.value[6],
-                    negativeColors: horizonChartSettings.value.negativeColorScheme.value[6],
+                    positiveColors: hexListToRgba(horizonChartSettings.value.positiveColorScheme.value),
+                    negativeColors: hexListToRgba(horizonChartSettings.value.negativeColorScheme.value),
                 },
             })
         );

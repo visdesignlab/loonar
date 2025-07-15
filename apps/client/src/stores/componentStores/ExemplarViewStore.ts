@@ -11,11 +11,6 @@ import { aggregateFunctions, isCustomAggregateFunction } from '@/components/plot
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
-import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
-
-import { schemeReds, schemeBlues } from 'd3-scale-chromatic';
-import { horizonChartScheme } from '@/components/layers/HorizonChartLayer/HorizonChartLayer';
-import { set, update } from 'lodash-es';
 
 
 export interface ExemplarTrack {
@@ -116,6 +111,17 @@ const histogramDomains = ref<HistogramDomains>({
     maxY: 0,
 });
 
+export const horizonChartScheme = [
+    '#e6e3e3', // Light Grey 1
+    '#cccccc', // Light Grey 2
+    '#b3b3b3', // Grey 3
+    '#999999', // Grey 4
+    '#808080', // Grey 5
+    '#666666', // Grey 6
+    '#4d4d4d', // Grey 7
+    '#1a1a1a', // Grey 9
+    '#000000', // Black
+];
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
     const conditionSelectorStore = useConditionSelectorStore();
@@ -874,5 +880,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
         highlightColor,
+        horizonChartScheme,
     };
 });

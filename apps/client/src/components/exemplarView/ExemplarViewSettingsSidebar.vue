@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
-import { useExemplarViewStore } from '@/stores/componentStores/ExemplarViewStore';
+import { useExemplarViewStore, horizonChartScheme } from '@/stores/componentStores/ExemplarViewStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
 import { clamp } from 'lodash-es';
 
@@ -24,11 +24,12 @@ const eventBusStore = useEventBusStore();
 
 const { horizonChartSettings } = storeToRefs(exemplarViewStore);
 const colorSchemeOptions = [
-    { label: 'Red', value: schemeReds },
-    { label: 'Blue', value: schemeBlues },
-    { label: 'Green', value: schemeGreens },
-    { label: 'Orange', value: schemeOranges },
-    { label: 'Purple', value: schemePurples },
+    { label: 'Grey (Default)', value: horizonChartScheme },
+    { label: 'Red', value: schemeReds[9] },
+    { label: 'Blue', value: schemeBlues[9] }, // Use the 9-color version
+    { label: 'Green', value: schemeGreens[9] }, // Use the 9-color version
+    { label: 'Orange', value: schemeOranges[9] }, // Use the 9-color version
+    { label: 'Purple', value: schemePurples[9] }, // Use the 9-color version
 ];
 
 const horizonSettingsModal = ref(false);

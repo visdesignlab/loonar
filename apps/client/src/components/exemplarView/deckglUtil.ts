@@ -68,37 +68,6 @@ export function hexListToRgba(hexList: readonly string[]): number[] {
     });
 }
 
-const positiveHorizonChartScheme = [
-    '#E0F7FA',
-    '#B3E5FC',
-    '#81D4FA',
-    '#4FC3F7',
-    '#29B6F6',
-    '#03A9F4',
-    '#039BE5',
-    '#0288D1',
-    '#0277BD',
-    '#01579B',
-    '#003366',
-    '#000000',
-    // Add more if needed
-];
-
-const negativeHorizonChartScheme = [
-    '#FFE0E0',
-    '#FFB3B3',
-    '#FF8181',
-    '#FF4F4F',
-    '#FF2929',
-    '#FF0303',
-    '#E50303',
-    '#D10202',
-    '#BD0202',
-    '#9B0202',
-    '#660202',
-    '#330202',
-    // Add more if needed
-];
 
 // Used in exemplarView to catch overlapping.
 export function rectsOverlap(
