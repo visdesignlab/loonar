@@ -60,23 +60,19 @@ const snippetDisplaySize = computed<number>({
                     class="row no-wrap justify-center q-mb-lg"
                 >
                     <q-select
-                        label="Positive Colors"
-                        v-model="horizonChartSettings.positiveColorScheme"
-                        :options="colorSchemeOptions"
-                        option-label="label"
-                        option-value="label"
-                        :dark="globalSettings.darkMode"
-                        class="q-mr-sm min-width-130"
-                    />
-                    <q-select
-                        label="Negative Colors"
-                        v-model="horizonChartSettings.negativeColorScheme"
-                        :options="colorSchemeOptions"
-                        option-label="label"
-                        option-value="label"
-                        :dark="globalSettings.darkMode"
-                        class="q-mr-sm min-width-130"
-                    />
+                    label="Positive Colors"
+                    v-model="horizonChartSettings.positiveColorScheme"
+                    :options="colorSchemeOptions"
+                    :dark="globalSettings.darkMode"
+                    class="q-mr-sm min-width-130"
+                />
+                <q-select
+                    label="Negative Colors"
+                    v-model="horizonChartSettings.negativeColorScheme"
+                    :options="colorSchemeOptions"
+                    :dark="globalSettings.darkMode"
+                    class="q-mr-sm min-width-130"
+                />
                     <q-input
                         label="Bin Size"
                         v-model.number="horizonChartSettings.modHeight"

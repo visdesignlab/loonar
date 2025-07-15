@@ -62,6 +62,13 @@ import { type Selection } from '../layers/CellSnippetsLayer';
 import type { Feature } from 'geojson';
 import { ScrollUpDownController } from './ScrollUpDownController';
 import SnippetSegmentationLayer from '../layers/SnippetSegmentationLayer/SnippetSegmentationLayer';
+import {
+    schemeReds,
+    schemeBlues,
+    schemeGreens,
+    schemeOranges,
+    schemePurples,
+} from 'd3-scale-chromatic';
 
 // The y-position and visibility of each exemplar track.
 interface ExemplarRenderInfo {
@@ -318,7 +325,9 @@ watch(
             return;
         }
         exemplarDataInitialized.value = false;
-        console.log('Experiment data initialized.');
+
+        // Reset the horizon chart settings to default
+        horizonChartSettings.value.default = true;
 
         // Load exemplar data -----------------------
 
@@ -710,7 +719,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
         const yOffset =
             renderInfo.yOffset -
-            viewConfiguration.value.timeBarHeightOuter
+            viewConfiguration.value.timeBarHeightOuter -
             viewConfiguration.value.horizonTimeBarGap;
 
         // TODO: probably skip if not in viewport
@@ -743,18 +752,30 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
         // Initialize horizon chart settings if default is true
         if (horizonChartSettings.value.default) {
+            console.log("DEFAULT HORIZON CHART SETTINGS");
             const modHeight = (exemplarTracksMax - exemplarTracksMin) /
             (horizonChartScheme.length - 1);
+            console.log("modHeight", modHeight);
             const baseline = exemplarTracksMin;
-            horizonChartSettings.value = {
-            default: false,
-            positiveColorScheme: { label: "default", value: hexListToRgba(horizonChartScheme) },
-            negativeColorScheme: { label: "default", value: hexListToRgba(horizonChartScheme) },
-            modHeight,
-            baseline,
-            } as ExemplarHorizonChartSettings;
+            horizonChartSettings.value.default = false;
+            // Use the same structure as LooneageView - with 'value' containing the actual color arrays
+            horizonChartSettings.value.positiveColorScheme = { 
+                label: "default", 
+                value: schemeBlues  // Use d3 color scheme directly like LooneageView
+            };
+            horizonChartSettings.value.negativeColorScheme = { 
+                label: "default", 
+                value: schemeReds   // Use d3 color scheme directly like LooneageView
+            };
+            horizonChartSettings.value.modHeight = modHeight;
+            horizonChartSettings.value.baseline = baseline;
         }
         const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
+
+        // Then in the HorizonChartLayer creation:
+        const paddedPositiveColors = horizonChartSettings.value.positiveColorScheme.value;
+        const paddedNegativeColors = horizonChartSettings.value.negativeColorScheme.value;
+
         horizonChartLayers.push(
             new HorizonChartLayer({
                 id: horizonChartCustomId,
@@ -766,15 +787,18 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
                     0,
                     viewConfiguration.value.horizonChartWidth,
                     viewConfiguration.value.horizonChartHeight,
-                ], // [bottom, left, width, height]
+                ],
                 dataXExtent: timeExtent,
                 baseline: horizonChartSettings.value.baseline,
                 binSize: horizonChartSettings.value.modHeight,
                 getModOffset: (d: any) => d,
-                positiveColors: horizonChartSettings.value.positiveColorScheme.value,
-                negativeColors: horizonChartSettings.value.negativeColorScheme.value,
+                // Use the same approach as LooneageView - access the 6th element of the color scheme
+                positiveColors: hexListToRgba(horizonChartSettings.value.positiveColorScheme.value[6]),
+                negativeColors: hexListToRgba(horizonChartSettings.value.negativeColorScheme.value[6]),
                 updateTriggers: {
                     instanceData: geometryData,
+                    positiveColors: horizonChartSettings.value.positiveColorScheme.value[6],
+                    negativeColors: horizonChartSettings.value.negativeColorScheme.value[6],
                 },
             })
         );
@@ -916,7 +940,7 @@ function createHoveredHorizonOutlineLayer() {
         getColor: [0, 0, 0, 255],
         backgroundPadding: [5, 2],
         background: true,
-        backgroundColor: [255, 255, 255, 160],
+        getBackgroundColor: [255, 255, 255, 160],
     });
 }
 
@@ -1433,7 +1457,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 textAnchor: 'start',
                 alignmentBaseline: 'bottom',
                 background: true,
-                backgroundColor: [255, 255, 255, 200],
+                getBackgroundColor: [255, 255, 255, 200],
                 backgroundPadding: [6, 2],
                 wordBreak: 'break-word',
                 maxWidth: maxWidth
@@ -2481,18 +2505,18 @@ function createExemplarImageKeyFramesLayer(
 
         // Helper function to create a tick mark
         const createTick = (cell: Cell, timelineDest: [number, number, number, number], isMain: boolean = false) => {
-            const [tickDestX1] = timelineDest;
-            const tickX = tickDestX1 + snippetDestWidth / 2;
-            const tickY = isMain ? y1 : y1 + beforeAfterMarginY;
-            
-            return {
-                path: [
-                [tickX, tickY],
-                [tickX, tickY + tickLength]
-                ],
-                hovered: true,
-                selected: cell.isSelected,
-            };
+        const [tickDestX1] = timelineDest;
+        const tickX = tickDestX1 + snippetDestWidth / 2;
+        const tickY = isMain ? y1 : y1 + beforeAfterMarginY;
+        
+        return {
+            path: [
+            [tickX, tickY],
+            [tickX, tickY + tickLength]
+            ],
+            hovered: true,
+            selected: cell.isSelected,
+        };
         };
 
         // Create ticks for all cells (prev, current, next)
@@ -2673,6 +2697,24 @@ function createExemplarImageKeyFramesLayer(
 }
 
 // General purpose watchers ---------------------------------------------------------------------------------------------------
+
+// Add this function to force layer recreation
+function forceLayerRecreation() {
+    // Clear any cached layer data
+    if (deckgl.value) {
+        deckgl.value.setProps({
+            layers: [] // Clear all layers first
+        });
+        // Then re-render with new layers
+        setTimeout(() => {
+            if (exemplarDataInitialized.value) {
+                renderDeckGL();
+            }
+        }, 0);
+    }
+}
+
+// Update the horizon chart settings watcher
 watch(
   () => [
     horizonChartSettings.value.modHeight,
@@ -2680,9 +2722,20 @@ watch(
     horizonChartSettings.value.positiveColorScheme,
     horizonChartSettings.value.negativeColorScheme
   ],
-  () => {
+  (newValues, oldValues) => {
     if (exemplarDataInitialized.value) {
-      renderDeckGL();
+      // Check if color schemes changed (which would change array lengths)
+      const colorSchemeChanged = 
+        newValues[2] !== oldValues?.[2] || 
+        newValues[3] !== oldValues?.[3];
+      
+      if (colorSchemeChanged) {
+        // Force complete layer recreation for color scheme changes
+        forceLayerRecreation();
+      } else {
+        // Normal re-render for other changes
+        renderDeckGL();
+      }
     }
   },
   { deep: true }
