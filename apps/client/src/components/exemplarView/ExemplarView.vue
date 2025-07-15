@@ -47,6 +47,7 @@ import {
     HORIZON_CHART_MOD_OFFSETS,
     rectsOverlap,
     pointInBBox,
+    getExemplarColor,
 } from './deckglUtil';
 import { isEqual, cloneDeep, clamp } from 'lodash';
 import Pool from '@/util/Pool';
@@ -143,6 +144,7 @@ const {
     histogramYAxisLabel,
     addAggregateColumnForSelection,
     getAttributeName,
+    highlightColor,
 } = storeToRefs(exemplarViewStore);
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
 
@@ -857,7 +859,7 @@ function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
     stroked: true,
     filled: false,
     getPolygon: d => d.polygon,
-    getLineColor: [255,165,0],   // orange
+    getLineColor: highlightColor.value,   // orange
     getLineWidth: 4,
     lineWidthUnits: 'pixels'
   });
@@ -1353,14 +1355,13 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
                 getColor: (d: { exemplar: ExemplarTrack }) =>
-                    // 1) selected has top priority
-                    selectedExemplar.value?.trackId === d.exemplar.trackId
-                    ? [255,165,0]
-                    // 2) then hovered
-                    : hoveredExemplar.value?.trackId === d.exemplar.trackId
-                        ? colors.hovered.rgb
-                        // 3) default fill
-                        : fillColor(d.exemplar),
+                    getExemplarColor(
+                        d.exemplar,
+                        selectedExemplar.value,
+                        hoveredExemplar.value,
+                        undefined,
+                        fillColor
+                    ),
                 getWidth: (d: {
                     source: [number, number];
                     target: [number, number];
@@ -1641,17 +1642,13 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
             getSourcePosition: (d: any) => d.source,
             getTargetPosition: (d: any) => d.target,
             getColor: (d: HistogramPin) =>
-                // 1) selected has top priority
-                selectedExemplar.value?.trackId === d.exemplar.trackId
-                ? [255,165,0]
-                // 2) then hovered
-                : hoveredExemplar.value === d.exemplar
-                    ? colors.hovered.rgb
-                    // 3) then its own color if pinned
-                    : d.color
-                    ? d.color
-                    // 4) default fill
-                    : fillColor(d.exemplar),
+                getExemplarColor(
+                        d.exemplar,
+                        selectedExemplar.value,
+                        hoveredExemplar.value,
+                        d.color,
+                        fillColor
+                    ),
             // Adjust the line width based on hover state.
             getWidth: (d: any) =>
                 hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
@@ -1678,17 +1675,13 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
                     ? 6
                     : 3,
             getFillColor: (d: HistogramPin) =>
-                // 1) selected has top priority
-                selectedExemplar.value?.trackId === d.exemplar.trackId
-                ? [255,165,0]
-                // 2) then hovered
-                : hoveredExemplar.value === d.exemplar
-                    ? colors.hovered.rgb
-                    // 3) then its own color if pinned
-                    : d.color
-                    ? d.color
-                    // 4) default fill
-                    : fillColor(d.exemplar),
+                getExemplarColor(
+                        d.exemplar,
+                        selectedExemplar.value,
+                        hoveredExemplar.value,
+                        d.color,
+                        fillColor
+                    ),
             // When a pin is clicked, dragged or released, we log a dummy event.
             onDragStart: (info: PickingInfo, event: any) =>
                 handlePinDragStart(info, event, conditionGroupKey),

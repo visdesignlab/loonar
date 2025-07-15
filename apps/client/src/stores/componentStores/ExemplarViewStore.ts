@@ -104,6 +104,7 @@ export interface ExemplarHorizonChartSettings {
     modHeight: number;
     baseline: number;
 }
+export const highlightColor = ref([255, 165, 0]); // orange
 
 // Remove histogramData and replace with conditionHistograms
 const conditionHistograms = ref<conditionHistogram[]>([]);
@@ -143,7 +144,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { label: 'Quartiles (25th, Median, 75th)', value: [25, 50, 75] },
         { label: 'Min, Max', value: [0, 100] },
         { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 99] }
-        ];
+    ];
     // Defaults to the first option
     const exemplarPercentiles = ref<number[]>(percentileOptions[0].value);
     // New reactive property to track whether exemplar data is loaded
@@ -514,7 +515,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const experimentName = currentExperimentMetadata?.value?.name;
         const aggTableNameFull = `${experimentName}_composite_experiment_cell_metadata_aggregate`;
         const compTableName = `${experimentName}_composite_experiment_cell_metadata`;
-        
+
         if (
             !experimentDataInitialized.value ||
             !currentExperimentMetadata.value ||
@@ -872,5 +873,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
+        highlightColor,
     };
 });

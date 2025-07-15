@@ -1,4 +1,7 @@
+import { type ExemplarTrack, highlightColor } from '@/stores/componentStores/ExemplarViewStore';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
+import colors from '@/util/colors';
+
 
 export const HORIZON_CHART_MOD_OFFSETS = [
     -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -114,4 +117,26 @@ export function pointInBBox(
     const [x, y] = point;
     const [x1, y1, x2, y2] = bbox;
     return x >= x1 && x <= x2 && y <= y1 && y >= y2;
+}
+
+export function getExemplarColor(
+    exemplar: ExemplarTrack,
+    selectedExemplar: ExemplarTrack | null,
+    hoveredExemplar: ExemplarTrack | null,
+    defaultColor?: number[],
+    fillColorFn?: (exemplar: ExemplarTrack) => number[]
+): number[] {
+    if (selectedExemplar?.trackId === exemplar.trackId) {
+        return highlightColor.value; // Use .value to get the actual array
+    }
+
+    if (hoveredExemplar?.trackId === exemplar.trackId) {
+        return colors.hovered.rgb;
+    }
+
+    if (defaultColor) {
+        return defaultColor;
+    }
+
+    return fillColorFn ? fillColorFn(exemplar) : [0, 0, 0];
 }
