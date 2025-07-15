@@ -96,3 +96,22 @@ const negativeHorizonChartScheme = [
     '#330202',
     // Add more if needed
 ];
+
+// Used in exemplarView to catch overlapping.
+export function rectsOverlap(
+    rect1: [number, number, number, number],
+    rect2: [number, number, number, number]
+): boolean {
+    const [x1, y1, x2, y2] = rect1;
+    const [x3, y3, x4, y4] = rect2;
+    return !(x2 <= x3 || x1 >= x4 || y2 >= y3 || y1 <= y4);
+}
+
+export function pointInBBox(
+    point: [number, number],
+    bbox: [number, number, number, number]
+): boolean {
+    const [x, y] = point;
+    const [x1, y1, x2, y2] = bbox;
+    return x >= x1 && x <= x2 && y <= y1 && y >= y2;
+}

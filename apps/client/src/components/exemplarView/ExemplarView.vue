@@ -45,6 +45,8 @@ import {
     constructGeometryBase,
     hexListToRgba,
     HORIZON_CHART_MOD_OFFSETS,
+    rectsOverlap,
+    pointInBBox,
 } from './deckglUtil';
 import { isEqual, cloneDeep, clamp } from 'lodash';
 import Pool from '@/util/Pool';
@@ -63,9 +65,6 @@ import SnippetSegmentationLayer from '../layers/SnippetSegmentationLayer/Snippet
 import {
     schemeReds,
     schemeBlues,
-    schemeGreens,
-    schemeOranges,
-    schemePurples,
 } from 'd3-scale-chromatic';
 
 // The y-position and visibility of each exemplar track.
@@ -1895,15 +1894,6 @@ function createCellImageEventsLayer(
   return cellImageLayerResult;
 }
 
-function rectsOverlap(bbox1: [number, number, number, number], bbox2: [number, number, number, number]): boolean {
-  // They do not overlap if one is left of or above the other
-  return !(
-    bbox1[2] <= bbox2[0] || // bbox1 right is left of bbox2 left
-    bbox1[0] >= bbox2[2] || // bbox1 left is right of bbox2 right
-    bbox1[3] >= bbox2[1] || // bbox1 bottom is above bbox2 top
-    bbox1[1] <= bbox2[3]    // bbox1 top is below bbox2 bottom
-  );
-}
 /**
  * Createel a cell image layer for click/hover events.
  * This function computes the destination coordinates for the snippet
@@ -2274,12 +2264,6 @@ const lruCache = new LRUCache({ max: 500 });
 const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
     []
 );
-
-function pointInBBox(point: [number, number], bbox: [number, number, number, number]): boolean {
-    const [x, y] = point;
-    const [x1, y1, x2, y2] = bbox;
-    return x >= x1 && x <= x2 && y <= y1 && y >= y2;
-}
 
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
