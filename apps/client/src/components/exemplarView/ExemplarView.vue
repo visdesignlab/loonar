@@ -34,6 +34,7 @@ import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/data
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
+import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 
 // Utility functions and external libraries
 import {
@@ -146,6 +147,7 @@ const {
     getAttributeName,
     highlightColor,
 } = storeToRefs(exemplarViewStore);
+const imageViewerStore = useImageViewerStore();
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
 
 const cellMetaData = useCellMetaData();
@@ -1958,7 +1960,7 @@ function createCellImageLayer(
     selections: selections,
     channelsVisible: [true],
     extensions: [colormapExtension],
-    colormap: 'bone',
+    colormap: imageViewerStore.colormap,
     cache: lruCache,
   });
 
@@ -2576,7 +2578,7 @@ function createExemplarImageKeyFramesLayer(
     channelsVisible: [true],
     selections: selections,
     extensions: [colormapExtension],
-    colormap: 'bone',
+    colormap: imageViewerStore.colormap,
     cache: lruCache,
   });
 
@@ -2651,8 +2653,16 @@ function forceLayerRecreation() {
         }, 0);
     }
 }
-
-// Update the horizon chart settings watcher
+// Watch the image viewer store colormap, re-render deck gl.
+watch(
+  () => imageViewerStore.colormap,
+  (newColormap) => {
+    if (exemplarDataInitialized.value && newColormap) {
+      renderDeckGL();
+    }
+  },
+  { deep: true }
+);
 watch(
   () => [
     horizonChartSettings.value.modHeight,
