@@ -879,7 +879,8 @@ function createHoveredHorizonOutlineLayer() {
   if (!renderInfo) return;
   const yOffset =
     renderInfo.yOffset -
-    viewConfiguration.value.timeBarHeightOuter;
+    viewConfiguration.value.timeBarHeightOuter -
+    viewConfiguration.value.horizonTimeBarGap;
 
     hoveredOutlineLayer.value = new PolygonLayer({
     id: `exemplar-hovered-outline-${uniqueExemplarKey(exemplar)}`,
