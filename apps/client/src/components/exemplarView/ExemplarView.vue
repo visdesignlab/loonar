@@ -11,7 +11,6 @@ import {
     LineLayer,
     TextLayer,
 } from '@deck.gl/layers';
-import { nextTick } from 'vue';
 
 // Viv libraries for image loading and extensions
 import { loadOmeTiff } from '@hms-dbmi/viv';
@@ -31,7 +30,6 @@ import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelec
 import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 import { useConfigStore } from '@/stores/misc/configStore';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
-import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
@@ -129,7 +127,6 @@ const { experimentDataInitialized, currentLocationMetadata, currentExperimentFil
 );
 
 // Data Stores
-const looneageViewStore = useLooneageViewStore();
 const exemplarViewStore = useExemplarViewStore();
 const {
     viewConfiguration,
@@ -148,7 +145,6 @@ const {
     addAggregateColumnForSelection,
     getAttributeName,
 } = storeToRefs(exemplarViewStore);
-const { getHistogramData } = exemplarViewStore;
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
 
 const cellMetaData = useCellMetaData();
@@ -442,8 +438,6 @@ watch(
 
 // Main rendering function for DeckGL -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
-const cellSegmentationDataInitialized = ref(false);
-
 
 const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
 
@@ -771,10 +765,6 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             horizonChartSettings.value.baseline = baseline;
         }
         const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
-
-        // Then in the HorizonChartLayer creation:
-        const paddedPositiveColors = horizonChartSettings.value.positiveColorScheme.value;
-        const paddedNegativeColors = horizonChartSettings.value.negativeColorScheme.value;
 
         horizonChartLayers.push(
             new HorizonChartLayer({
@@ -1203,10 +1193,6 @@ function createSidewaysHistogramLayer(): any[] | null {
             target: [number, number];
             exemplar: ExemplarTrack;
         }[] = [];
-        const circlePositions: {
-            position: [number, number];
-            exemplar: ExemplarTrack;
-        }[] = [];
 
         // For each exemplar in the group, create a corresponding pin in the histogram
         for (const exemplar of group) {
@@ -1220,8 +1206,6 @@ function createSidewaysHistogramLayer(): any[] | null {
             if (binIndex < 0) {
                 continue;
             }
-            // Console log the range for this bin index
-            const binRange = domains.histogramBinRanges[binIndex];
             // Compute y-mid of the histogram bin
             const y0 = groupTop + binIndex * binWidth;
             const y1 = y0 + binWidth;
@@ -1236,12 +1220,6 @@ function createSidewaysHistogramLayer(): any[] | null {
             pinData.push({
                 source: [-x0, yMid],
                 target: [-(x0 + fixedLineLength), yMid],
-                exemplar,
-            });
-
-            // Circle at end of pin line
-            circlePositions.push({
-                position: [-x1, yMid],
                 exemplar,
             });
             
