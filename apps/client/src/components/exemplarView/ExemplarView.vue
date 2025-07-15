@@ -2331,9 +2331,9 @@ function createExemplarImageKeyFramesLayer(
     const y1 = destY;
     const y2 = y1 - snippetDestHeight;
     return [x1, y1, x2, y2];
-    }
+  }
 
-  // Add segmentation data given a cell, its destination, and whether it is “selected” (or hovered).
+  // Add segmentation data given a cell, its destination, and whether it is "selected" (or hovered).
   function addSegmentation(frame: number, dest: [number, number, number, number], selected: boolean, cell: Cell) {
     if (frame <= 0) return;
     const segmentationPolygon = getCellSegmentationPolygon(
@@ -2365,7 +2365,7 @@ function createExemplarImageKeyFramesLayer(
   let hoveredFound = ref(false);
 
   // --- Loop 1: Process hovered images (prev, current, next) ---
-  const margin = 2;
+  const margin = 5; // margin for side-by-side positioning
   const keyFrames = getKeyFrameOrder(exemplar);
   for (const { index, nearestDistance } of keyFrames) {
     const cell = exemplar.data[index];
@@ -2381,87 +2381,171 @@ function createExemplarImageKeyFramesLayer(
       const prevCell = currentIndex > 0 ? exemplar.data[currentIndex - 1] : null;
       const nextCell = currentIndex < exemplar.data.length - 1 ? exemplar.data[currentIndex + 1] : null;
 
-      // Compute neighboring destinations.
-      const [x1, y1, x2, y2] = destination;
-      const prevCellDest: [number, number, number, number] = [
-        x1 - snippetDestWidth - margin,
-        y1,
-        x2 - snippetDestWidth - margin,
-        y2
-      ];
-      const nextCellDest: [number, number, number, number] = [
-        x1 + snippetDestWidth + margin,
-        y1,
-        x2 + snippetDestWidth + margin,
-        y2
-      ];
+      // Calculate correct timeline positions for prev and next cells
+      const prevCellTimelineDest: [number, number, number, number] = prevCell 
+        ? computeDestination(prevCell)
+        : destination; // fallback to current if no prev cell
+      
+      const nextCellTimelineDest: [number, number, number, number] = nextCell 
+        ? computeDestination(nextCell)
+        : destination; // fallback to current if no next cell
+
+      // Check for overlaps with the hovered cell destination
+      const prevOverlaps = prevCell && rectsOverlap(destination, prevCellTimelineDest);
+      const nextOverlaps = nextCell && rectsOverlap(destination, nextCellTimelineDest);
+
+      // Calculate display positions (may be different from timeline positions)
+      let prevCellDisplayDest = prevCellTimelineDest;
+      let nextCellDisplayDest = nextCellTimelineDest;
+
+      // If overlapping, position to the left/right of the hovered cell
+      if (prevOverlaps) {
+        const [hoveredX1, hoveredY1, hoveredX2, hoveredY2] = destination;
+        prevCellDisplayDest = [
+          hoveredX1 - snippetDestWidth - margin, // left of hovered cell
+          hoveredY1,
+          hoveredX1 - margin,
+          hoveredY2
+        ];
+      }
+
+      if (nextOverlaps) {
+        const [hoveredX1, hoveredY1, hoveredX2, hoveredY2] = destination;
+        nextCellDisplayDest = [
+          hoveredX2 + margin, // right of hovered cell
+          hoveredY1,
+          hoveredX2 + margin + snippetDestWidth,
+          hoveredY2
+        ];
+      }
 
       hoveredFound.value = true;
       hoveredImagesInfo.value = [
-        [prevCellDest, cell],
-        [nextCellDest, cell],
+        [prevCellDisplayDest, prevCell || cell],
+        [nextCellDisplayDest, nextCell || cell],
         [destination, cell]
       ];
 
-      // Push selections for previous, current and next locations.
+      // Push selections for previous, current and next locations using display positions
       const selections_to_add = [];
         
       if (prevCell) {
-            selections_to_add.push({ 
-            c: 0, 
-            t: prevCell.frame - 1, 
-            z: 0, 
-            snippets: [{ 
-                source: getBBoxAroundPoint(prevCell.x, prevCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
-                destination: prevCellDest 
-            }] 
-            });
-        }
+        selections_to_add.push({ 
+          c: 0, 
+          t: prevCell.frame - 1, 
+          z: 0, 
+          snippets: [{ 
+            source: getBBoxAroundPoint(prevCell.x, prevCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+            destination: prevCellDisplayDest // use display position
+          }] 
+        });
+      }
         
       selections_to_add.push({ 
-            c: 0, 
-            t: cell.frame - 1, 
-            z: 0, 
-            snippets: [{ 
-            source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
-            destination: destination 
-            }] 
-        });
+        c: 0, 
+        t: cell.frame - 1, 
+        z: 0, 
+        snippets: [{ 
+          source: getBBoxAroundPoint(cell.x, cell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+          destination: destination 
+        }] 
+      });
         
       if (nextCell) {
-            selections_to_add.push({ 
-            c: 0, 
-            t: nextCell.frame - 1, 
-            z: 0, 
-            snippets: [{ 
-                source: getBBoxAroundPoint(nextCell.x, nextCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
-                destination: nextCellDest 
-            }] 
-            });
-        }
+        selections_to_add.push({ 
+          c: 0, 
+          t: nextCell.frame - 1, 
+          z: 0, 
+          snippets: [{ 
+            source: getBBoxAroundPoint(nextCell.x, nextCell.y, viewConfig.snippetSourceSize, viewConfig.snippetSourceSize), 
+            destination: nextCellDisplayDest // use display position
+          }] 
+        });
+      }
         
       selections.push(...selections_to_add);
 
-      // Add segmentation for these three destinations using correct frames and coordinates.
+      // Add segmentation using display positions
       addSegmentation(cell.frame, destination, true, cell);
+      if (prevCell) {
+        addSegmentation(prevCell.frame, prevCellDisplayDest, true, prevCell);
+      }
+      if (nextCell) {
+        addSegmentation(nextCell.frame, nextCellDisplayDest, true, nextCell);
+      }
+
+        // Add tick marks ------------------------------------------------
+        const [x1, y1] = destination;
+        const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
+        const beforeAfterMarginY = 4;
+
+        // Helper function to create a tick mark
+        const createTick = (cell: Cell, timelineDest: [number, number, number, number], isMain: boolean = false) => {
+            const [tickDestX1] = timelineDest;
+            const tickX = tickDestX1 + snippetDestWidth / 2;
+            const tickY = isMain ? y1 : y1 + beforeAfterMarginY;
+            
+            return {
+                path: [
+                [tickX, tickY],
+                [tickX, tickY + tickLength]
+                ],
+                hovered: true,
+                selected: cell.isSelected,
+            };
+        };
+
+        // Create ticks for all cells (prev, current, next)
+        tickData.push(createTick(cell, destination, true)); // Main cell tick
         if (prevCell) {
-            addSegmentation(prevCell.frame, prevCellDest, true, prevCell);
+        tickData.push(createTick(prevCell, prevCellTimelineDest));
         }
         if (nextCell) {
-            addSegmentation(nextCell.frame, nextCellDest, true, nextCell);
+        tickData.push(createTick(nextCell, nextCellTimelineDest));
         }
 
-      // Compute tick data using the snippet center.
-      const tickX = x1 + snippetDestWidth / 2;
-      const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
-      tickData.push({
-        path: [
-          [tickX, y1],
-          [tickX, y1 + tickLength]
-        ],
-        hovered: cell.isHovered,
-        selected: cell.isSelected,
-      });
+        // Add horizontal span line connecting all visible images (1, 2, or 3) --------
+        const visibleCells = [];
+        if (prevCell) visibleCells.push({ cell: prevCell, dest: prevCellDisplayDest });
+        visibleCells.push({ cell: cell, dest: destination });
+        if (nextCell) visibleCells.push({ cell: nextCell, dest: nextCellDisplayDest });
+
+        if (visibleCells.length >= 1) {
+        // Calculate the outer bounding box of all visible images
+        const allDisplayDests = visibleCells.map(c => c.dest);
+        
+        // Find the leftmost and rightmost X coordinates of the images
+        const leftmostX = Math.min(...allDisplayDests.map(dest => dest[0]));
+        const rightmostX = Math.max(...allDisplayDests.map(dest => dest[2]));
+        
+        // Position the line at the bottom edge of the images
+        const spanLineY = Math.min(...allDisplayDests.map(dest => dest[1]));
+        
+        const bracketLeft = leftmostX - beforeAfterMarginY;
+        const bracketRight = rightmostX + beforeAfterMarginY;
+        const bracketLineY = spanLineY + 3; // Slight offset below images
+        
+        // Create the bracket shape: left cap, horizontal line, right cap
+        const bracketHeight = 6;
+        const lineThickness = 1.5;
+        
+        // Helper function to create bracket components
+        const createBracketLine = (startPos: [number, number], endPos: [number, number]) => ({
+            path: [startPos, endPos],
+            hovered: true,
+            selected: false,
+        });
+        
+        // Add all bracket components
+        tickData.push(
+            // Main horizontal line
+            createBracketLine([bracketLeft, bracketLineY], [bracketRight, bracketLineY]),
+            // Left vertical cap
+            createBracketLine([bracketLeft, bracketLineY + lineThickness], [bracketLeft, bracketLineY - bracketHeight + lineThickness]),
+            // Right vertical cap
+            createBracketLine([bracketRight, bracketLineY + lineThickness], [bracketRight, bracketLineY - bracketHeight + lineThickness])
+        );
+        }
     }
   }
 
@@ -2537,7 +2621,6 @@ function createExemplarImageKeyFramesLayer(
   const hoveredWithAlpha = colors.hovered.rgba;
   hoveredWithAlpha[3] = 200;
 
-
   // Segmentation Layer Instantiation -------------------------------------------------
   const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = { snippetSegmentationOutlineLayer: null, snippetSegmentationLayer: null };
 
@@ -2559,7 +2642,7 @@ function createExemplarImageKeyFramesLayer(
     getTranslateOffset: (d: any) => d.offset,
     zoomX: viewStateMirror.value.zoom[0],
     scale: snippetZoom,
-    clipSize: viewConfig.snippetDisplayHeight, // Make custom for exemplar view
+    clipSize: viewConfig.snippetDisplayHeight,
     clip: true,
   });
 
