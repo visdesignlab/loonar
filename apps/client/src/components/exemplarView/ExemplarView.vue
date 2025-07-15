@@ -85,6 +85,7 @@ interface FinalCellImageLayer {
   cellImageLayer: CellSnippetsLayer | null;
   segmentationLayer: combinedSnippetSegmentationLayer | null;
   tickMarkLayer: LineLayer | null;
+  imageOutlineLayer?: PolygonLayer | null; // Add this new optional property
 }
 // Interface for the segmentation data of a cell.
 interface LocationSegmentation {
@@ -145,7 +146,6 @@ const {
     histogramYAxisLabel,
     addAggregateColumnForSelection,
     getAttributeName,
-    highlightColor,
 } = storeToRefs(exemplarViewStore);
 const imageViewerStore = useImageViewerStore();
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
@@ -464,8 +464,6 @@ async function renderDeckGL(): Promise<void> {
     // Horizon Charts (Data over time) with text ---------
     deckGLLayers.push(createHorizonChartLayer());
     deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
-    // Time bar for cell lifespan
-    deckGLLayers.push(createTimeWindowLayer());
 
     // Cell Images ------------------
     deckGLLayers.push(...createExemplarImageKeyFrameLayers());
@@ -474,6 +472,9 @@ async function renderDeckGL(): Promise<void> {
     deckGLLayers = deckGLLayers.concat(selectedOutlineLayer.value);
     deckGLLayers = deckGLLayers.concat(snippetSegmentationOutlineLayers.value);
     deckGLLayers = deckGLLayers.concat(selectedCellImageTickMarkLayers.value);
+
+    // Time bar for cell lifespan
+    deckGLLayers.push(createTimeWindowLayer());
 
     // Draw layers --------------------------------------------
     // Filter out null layers
@@ -892,7 +893,7 @@ function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
     stroked: true,
     filled: false,
     getPolygon: d => d.polygon,
-    getLineColor: highlightColor.value,   // orange
+    getLineColor: globalSettings.normalizedSelectedRgb,
     getLineWidth: 4,
     lineWidthUnits: 'pixels'
   });
@@ -1000,6 +1001,10 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
     // Image
     if (viewConfiguration.value.showSnippetImage && cellImageEventsLayer.cellImageLayer) {
       hoveredFinalImageLayers.push(cellImageEventsLayer.cellImageLayer);
+    }
+    // Add the hovered image outline
+    if (cellImageEventsLayer.imageOutlineLayer) {
+      hoveredFinalImageLayers.push(cellImageEventsLayer.imageOutlineLayer);
     }
     // Segmentation front outline
     if (
@@ -2051,6 +2056,9 @@ function createCellImageLayer(
         offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
 
   const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = { snippetSegmentationOutlineLayer: null, snippetSegmentationLayer: null };
+
+  // Determine if this is a selected cell (when clicking) vs hovered cell
+  const isSelectedCell = selectedExemplar.value?.trackId === exemplar.trackId;
   // Create a new segmentation outline layer for these cells.
   combinedSnippetSegmentationLayer.snippetSegmentationOutlineLayer = new SnippetSegmentationOutlineLayer({
         id: `hovered-snippet-segmentation-outline-layer-${exemplar.trackId}-${cell.frame}`,
@@ -2096,15 +2104,37 @@ function createCellImageLayer(
       [tickX, tickY],
       [tickX, tickY + tickLength]
     ],
-    hovered: cell.isHovered,
-    selected: cell.isSelected,
+    hovered: !isSelectedCell,
+    selected: isSelectedCell,
   };
 
+  const hoveredImageOutlineLayer = new PolygonLayer({
+    id: `hovered-cell-image-outline-${cell.frame}-${exemplar.trackId}`,
+    data: [{ polygon: [
+      [imageSnippetDestination[0], imageSnippetDestination[1]],
+      [imageSnippetDestination[2], imageSnippetDestination[1]], 
+      [imageSnippetDestination[2], imageSnippetDestination[3]],
+      [imageSnippetDestination[0], imageSnippetDestination[3]],
+      [imageSnippetDestination[0], imageSnippetDestination[1]]
+    ] }],
+    pickable: false,
+    stroked: true,
+    filled: false,
+    getPolygon: d => d.polygon,
+    getLineColor: colors.hovered.rgb, // Same color as other hovered elements
+    getLineWidth: 4, // Same width as other hovered elements
+    lineWidthUnits: 'pixels'
+  });
     // Create the tick mark layer using the tick data.
     // Use the modified createTickMarkLayer function to ensure unique IDs.
   const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
 
-    return { tickMarkLayer: cellImageTickMarkLayer, cellImageLayer, segmentationLayer: combinedSnippetSegmentationLayer };
+    return { 
+        tickMarkLayer: cellImageTickMarkLayer, 
+        cellImageLayer, 
+        segmentationLayer: combinedSnippetSegmentationLayer,
+        imageOutlineLayer: hoveredImageOutlineLayer // Add this new layer
+    };
 }
 
 // Add this near the top of your <script setup> block:
@@ -2124,8 +2154,8 @@ function createTickMarkLayer(rawData: any): LineLayer {
     getSourcePosition: (d: any) => d.path[0],
     getTargetPosition: (d: any) => d.path[1],
     getColor: (d: any) => {
-      if (d.hovered || d.pinned) {
-        return [130, 145, 170, 200];
+      if (d.pinned) {
+        return globalSettings.normalizedSelectedRgb; // Use the same hovered color as other elements
       } else if (d.drawerLine) {
         return darkMode.value
           ? [195, 217, 250, 200]
@@ -2133,7 +2163,7 @@ function createTickMarkLayer(rawData: any): LineLayer {
       }
       return [130, 145, 170, 150];
     },
-    getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+    getWidth: (d: any) => (d.hovered || d.pinned ? 4 : 1.5),
     widthUnits: 'pixels',
     rounded: false, // deck.gl uses `rounded`, not `capRounded`
   });

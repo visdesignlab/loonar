@@ -99,7 +99,6 @@ export interface ExemplarHorizonChartSettings {
     modHeight: number;
     baseline: number;
 }
-export const highlightColor = ref([255, 165, 0]); // orange
 
 // Remove histogramData and replace with conditionHistograms
 const conditionHistograms = ref<conditionHistogram[]>([]);
@@ -879,7 +878,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         conditionHistograms: conditionHistogramsComputed,
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
-        highlightColor,
         horizonChartScheme,
     };
 });

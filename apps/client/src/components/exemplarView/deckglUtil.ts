@@ -1,6 +1,7 @@
-import { type ExemplarTrack, highlightColor } from '@/stores/componentStores/ExemplarViewStore';
-import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
+import { type ExemplarTrack } from '@/stores/componentStores/ExemplarViewStore';
+import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import colors from '@/util/colors';
+
 
 
 export const HORIZON_CHART_MOD_OFFSETS = [
@@ -95,8 +96,9 @@ export function getExemplarColor(
     defaultColor?: number[],
     fillColorFn?: (exemplar: ExemplarTrack) => number[]
 ): number[] {
+    const globalSettings = useGlobalSettings();
     if (selectedExemplar?.trackId === exemplar.trackId) {
-        return highlightColor.value; // Use .value to get the actual array
+        return globalSettings.normalizedSelectedRgb; // Use .value to get the actual array
     }
 
     if (hoveredExemplar?.trackId === exemplar.trackId) {
