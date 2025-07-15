@@ -1947,7 +1947,7 @@ function createCellImageLayer(
     selections: selections,
     channelsVisible: [true],
     extensions: [colormapExtension],
-    colormap: 'viridis',
+    colormap: 'bone',
     cache: lruCache,
   });
 
@@ -2565,7 +2565,7 @@ function createExemplarImageKeyFramesLayer(
     channelsVisible: [true],
     selections: selections,
     extensions: [colormapExtension],
-    colormap: 'viridis',
+    colormap: 'bone',
     cache: lruCache,
   });
 
