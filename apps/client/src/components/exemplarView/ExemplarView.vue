@@ -74,7 +74,6 @@ interface ExemplarRenderInfo {
     onScreen: boolean;
 }
 
-
 interface combinedSnippetSegmentationLayer {
     snippetSegmentationOutlineLayer: SnippetSegmentationOutlineLayer | null;
     snippetSegmentationLayer: SnippetSegmentationLayer | null;
@@ -156,6 +155,10 @@ const dataPointSelection = useDataPointSelection();
 // Dark mode settings
 const globalSettings = useGlobalSettings();
 const { darkMode } = storeToRefs(globalSettings);
+
+// Create a colormap extension and set contrast limits.
+const colormapExtension = new AdditiveColormapExtension();
+const contrastLimits = [[0, 255]];
 
 // Exemplar data has/hasn't been initialized.
 const exemplarDataInitialized = ref(false);
@@ -309,7 +312,6 @@ watch(
             if (deckgl.value) {
                 deckgl.value.finalize();
                 deckgl.value = null;
-                console.log('Deck.gl instance finalized and removed.');
             }
             totalExperimentTime.value = 0;
 
@@ -349,7 +351,6 @@ watch(
         horizonChartSettings.default = true;
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
-            console.log("Creating Deck GL");
             deckgl.value = new Deck({
                 pickingRadius: 5,
                 canvas: deckGlContainer.value,
@@ -422,11 +423,11 @@ watch(
                     return viewState;
                 },
             });
-            console.log('Deck.gl initialized.');
         }
+        // Finally, render the Deck.gl layers
         await renderDeckGL();
         await new Promise(resolve => requestAnimationFrame(() => resolve()));
-        // 2. Set exemplarDataInitialized to true after data generation
+        // Set exemplarDataInitialized to true after data generation
         exemplarDataInitialized.value = true;
     },
     { immediate: false } // We don't need to run this immediately on mount
@@ -746,10 +747,8 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
 
         // Initialize horizon chart settings if default is true
         if (horizonChartSettings.value.default) {
-            console.log("DEFAULT HORIZON CHART SETTINGS");
             const modHeight = (exemplarTracksMax - exemplarTracksMin) /
             (horizonChartScheme.length - 1);
-            console.log("modHeight", modHeight);
             const baseline = exemplarTracksMin;
             horizonChartSettings.value.default = false;
             // Use the same structure as LooneageView - with 'value' containing the actual color arrays
@@ -1940,10 +1939,6 @@ function createCellImageLayer(
     snippets: [{ source, destination: imageSnippetDestination }],
   });
   
-  // Create a colormap extension and set contrast limits.
-  const colormapExtension = new AdditiveColormapExtension();
-  const contrastLimits = [[0, 255]];
-  
   // Create and return a new CellSnippetsLayer with the computed settings.
   const cellImageLayer = new CellSnippetsLayer({
     loader: pixelSource,
@@ -1979,8 +1974,6 @@ function createCellImageLayer(
         selected: cell.isSelected,
         center: [cell.x, cell.y],
         offset: [x + (snippetDestWidth / 2), y - snippetDestHeight / 2] });
-
-  // TODO: Segmentation Layer creation here
 
   const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = { snippetSegmentationOutlineLayer: null, snippetSegmentationLayer: null };
   // Create a new segmentation outline layer for these cells.
@@ -2559,8 +2552,6 @@ function createExemplarImageKeyFramesLayer(
 
   let cellSnippetsLayerCount = ref(0);
   // --- Create layer instances using the computed data ---
-  const colormapExtension = new AdditiveColormapExtension();
-  const contrastLimits = [[0, 255]];
   const snippetLayer = new CellSnippetsLayer({
     id: `cell-snippets-layer-${exemplar.trackId}-${cellSnippetsLayerCount.value++}`,
     loader: pixelSource,
@@ -2712,7 +2703,6 @@ watch(
     // Invalidate keyframe order cache when spacing mode changes
     if (keyframeOrderLookup.value) keyframeOrderLookup.value.clear();
     if (exemplarDataInitialized.value) {
-      console.log('Space keyframes evenly changed, re-rendering DeckGL');
       renderDeckGL();
     }
   }
@@ -2758,7 +2748,7 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
         !exemplar.tags.conditionTwo ||
         !exemplar.tags.conditionOne
     ) {
-        console.log('Failing validation check with:', {
+        console.warn('Failing validation check with:', {
             exemplarExists: !!exemplar,
             tagsExist: !!exemplar?.tags,
             conditionTwoExists: !!exemplar?.tags?.conditionTwo,
