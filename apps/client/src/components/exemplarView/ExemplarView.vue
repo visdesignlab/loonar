@@ -1938,20 +1938,8 @@ function createCellImageLayer(
     return null;
   }
   
-  const duration = exemplar.maxTime - exemplar.minTime;
-    const percentage =
-    duration > 0
-        ? (cell.time - exemplar.minTime) / duration
-        : 0.5; // If only one frame, center it
-
-    const centerX = viewConfig.horizonChartWidth * percentage;
-    const x1 = centerX - snippetDestWidth / 2;
-    const x2 = x1 + snippetDestWidth;
-  
-  // Define the destination bounding box for the snippet.
-  const y1 = destY;
-  const y2 = y1 - snippetDestHeight;
-  const imageSnippetDestination: BBox = [x1, y1, x2, y2];
+  // Get the BBox coordinates for the cell.
+  const imageSnippetDestination = computeDestination(cell, exemplar, destY);
   
   // Extract the source bounding box around the cell's coordinates.
   const source = getBBoxAroundPoint(
@@ -2048,6 +2036,7 @@ function createCellImageLayer(
         });
   
   // The tick should be placed at the center of the snippet.
+  const [x1, y1, , ]= imageSnippetDestination;
   const tickX = x1 + snippetDestWidth / 2;
   const tickY = y1
   const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
@@ -2265,6 +2254,26 @@ const snippetSegmentationOutlineLayers = ref<SnippetSegmentationOutlineLayer[]>(
     []
 );
 
+
+// --- Helper Function
+// Calculate the destination bbox for a given cell.
+function computeDestination(cell: Cell, exemplar: ExemplarTrack, destY: number): BBox {
+    const duration = exemplar.maxTime - exemplar.minTime;
+    const pct =
+        duration > 0
+        ? (cell.time - exemplar.minTime) / duration
+        : 0.5;
+    const viewConfig = viewConfiguration.value;
+    const cx = viewConfig.horizonChartWidth * pct;
+    const snippetDestWidth = scaleForConstantVisualSize(viewConfig.snippetDisplayWidth);
+    const snippetDestHeight = viewConfig.snippetDisplayHeight;
+    const x1 = cx - snippetDestWidth / 2;
+    const x2 = x1 + snippetDestWidth;
+    const y1 = destY;
+    const y2 = y1 - snippetDestHeight;
+    return [x1, y1, x2, y2];
+}
+
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
 let hoveredCoordinate = <[number, number] | null>null;
@@ -2288,36 +2297,20 @@ function createExemplarImageKeyFramesLayer(
 
   // Calculate destination Y from the yOffset of the current exemplar.
   let destY = viewConfig.horizonChartHeight; // fallback
-  {
-    const key = uniqueExemplarKey(exemplar);
-    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
-    if (yOffset !== undefined && yOffset !== null) {
-      destY =
+  
+  const key = uniqueExemplarKey(exemplar);
+  const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+  if (yOffset !== undefined && yOffset !== null) {
+        destY =
         yOffset -
         viewConfig.timeBarHeightOuter -
         viewConfig.snippetHorizonChartGap -
         viewConfig.horizonChartHeight -
         viewConfig.snippetHorizonChartGap;
-    } else {
+  } else {
       console.error('[createExemplarImageKeyFramesLayer] No yOffset found for key:', key);
-    }
   }
-
-  // --- Helper Functions ---
-  // Calculate the destination bbox for a given cell.
-  function computeDestination(cell: Cell): BBox {
-    const duration = exemplar.maxTime - exemplar.minTime;
-    const pct =
-        duration > 0
-        ? (cell.time - exemplar.minTime) / duration
-        : 0.5;
-    const cx = viewConfig.horizonChartWidth * pct;
-    const x1 = cx - snippetDestWidth / 2;
-    const x2 = x1 + snippetDestWidth;
-    const y1 = destY;
-    const y2 = y1 - snippetDestHeight;
-    return [x1, y1, x2, y2];
-  }
+  
 
   // Add segmentation data given a cell, its destination, and whether it is "selected" (or hovered).
   function addSegmentation(frame: number, dest: [number, number, number, number], selected: boolean, cell: Cell) {
@@ -2357,7 +2350,7 @@ function createExemplarImageKeyFramesLayer(
     const cell = exemplar.data[index];
     const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
     if (nearestDistanceWidth <= snippetDestWidth + 4) break;
-    const destination = computeDestination(cell);
+    const destination = computeDestination(cell, exemplar, destY);
 
     // Check if the hovered pointer falls within this destination.
     if (pointInBBox(hoveredCoordinate ?? [-1000, 0], destination)) {
@@ -2369,11 +2362,11 @@ function createExemplarImageKeyFramesLayer(
 
       // Calculate correct timeline positions for prev and next cells
       const prevCellTimelineDest: [number, number, number, number] = prevCell 
-        ? computeDestination(prevCell)
+        ? computeDestination(prevCell, exemplar, destY)
         : destination; // fallback to current if no prev cell
       
       const nextCellTimelineDest: [number, number, number, number] = nextCell 
-        ? computeDestination(nextCell)
+        ? computeDestination(nextCell, exemplar, destY)
         : destination; // fallback to current if no next cell
 
       // Check for overlaps with the hovered cell destination
@@ -2545,7 +2538,7 @@ function createExemplarImageKeyFramesLayer(
     const cell = exemplar.data[index];
     const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
     if (nearestDistanceWidth <= snippetDestWidth + 4) break;
-    const destination = computeDestination(cell);
+    const destination = computeDestination(cell, exemplar, destY);
 
     // Check for collisions.
     const cellCollisionDetected = interactedCellBBoxes.some(bbox => rectsOverlap(destination, bbox));
