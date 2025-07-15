@@ -878,7 +878,7 @@ function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
   const key = uniqueExemplarKey(exemplar);
   const info = exemplarRenderInfo.value.get(key);
   if (!info) { selectedOutlineLayer.value = null; return; }
-  const y = info.yOffset - viewConfiguration.value.timeBarHeightOuter;
+  const y = info.yOffset - viewConfiguration.value.timeBarHeightOuter - viewConfiguration.value.horizonTimeBarGap;
   selectedOutlineLayer.value = new PolygonLayer({
     id: `exemplar-selected-outline-${key}`,
     data: [{ polygon: [
@@ -1069,8 +1069,12 @@ async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
     if (realTimePoint !== null) {
         dataPointSelection.setCurrentFrameIndex(realTimePoint);
     }
+
+    // 4) Force a complete re-render of all layers to update selected state
+    safeRenderDeckGL();
 }
 
+// Time Window Layer -------------------------------------------------------------------------------------------
 // Time Window Layer -------------------------------------------------------------------------------------------
 function createTimeWindowLayer(): PolygonLayer[] | null {
     // TODO: implement
@@ -1101,9 +1105,22 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [0, yOffset - quarterHeight * 1.5],
                 ];
             },
-            getFillColor: [0, 0, 0, 255],
-            getLineWidth: 0,
-            opacity: 0.05,
+            getFillColor: [128, 128, 128, 255],
+            opacity: 0.5,
+            stroked: (exemplar: ExemplarTrack) => 
+                hoveredExemplar.value?.trackId === exemplar.trackId ||
+                selectedExemplar.value?.trackId === exemplar.trackId,
+            getLineColor: (exemplar: ExemplarTrack) => 
+                getExemplarColor(
+                    exemplar,
+                    selectedExemplar.value,
+                    hoveredExemplar.value,
+                    [128, 128, 128, 255],
+                    fillColor
+                ),
+            getLineWidth: (exemplar: ExemplarTrack) => 
+                hoveredExemplar.value?.trackId === exemplar.trackId ||
+                selectedExemplar.value?.trackId === exemplar.trackId ? 4 : 0,
             lineWidthUnits: 'pixels',
             updateTriggers: {
                 getPolygon: {
@@ -1112,6 +1129,9 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 getFillColor: {
                     selectedAttribute: selectedAttribute.value,
                 },
+                stroked: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
+                getLineColor: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
+                getLineWidth: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
             },
         })
     );
@@ -1152,8 +1172,22 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [cellBirthXValue, yOffset],
                 ];
             },
-
             getFillColor: fillColor,
+            stroked: (exemplar: ExemplarTrack) => 
+                hoveredExemplar.value?.trackId === exemplar.trackId || 
+                selectedExemplar.value?.trackId === exemplar.trackId,
+            getLineColor: (exemplar: ExemplarTrack) => 
+                getExemplarColor(
+                    exemplar,
+                    selectedExemplar.value,
+                    hoveredExemplar.value,
+                    [0, 0, 0, 0],
+                    fillColor
+                ),
+            getLineWidth: (exemplar: ExemplarTrack) => 
+                hoveredExemplar.value?.trackId === exemplar.trackId || 
+                selectedExemplar.value?.trackId === exemplar.trackId ? 4 : 0,
+            lineWidthUnits: 'pixels',
             updateTriggers: {
                 getPolygon: {
                     selectedAttribute: selectedAttribute.value,
@@ -1161,9 +1195,10 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 getFillColor: {
                     selectedAttribute: selectedAttribute.value,
                 },
+                stroked: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
+                getLineColor: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
+                getLineWidth: [hoveredExemplar.value?.trackId, selectedExemplar.value?.trackId],
             },
-            getLineWidth: 0,
-            lineWidthUnits: 'pixels',
         })
     );
 
@@ -2680,6 +2715,16 @@ function forceLayerRecreation() {
         }, 0);
     }
 }
+// Add this watch to ensure layers update when selection changes
+watch(
+  () => selectedExemplar.value?.trackId,
+  (newTrackId, oldTrackId) => {
+    if (newTrackId !== oldTrackId && exemplarDataInitialized.value) {
+      // Force re-render when selected exemplar changes
+      safeRenderDeckGL();
+    }
+  }
+);
 // Watch the image viewer store colormap, re-render deck gl.
 watch(
   () => imageViewerStore.colormap,
