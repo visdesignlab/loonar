@@ -90,6 +90,8 @@ interface AggregationOption {
 }
 export interface ExemplarHorizonChartSettings {
     default: true | false;
+    userModifiedNumeric: boolean;
+    userModifiedColors: boolean;
     positiveColorScheme: {
         label: string;
         value: any;
@@ -133,6 +135,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const { dataSelections, dataFilters } = storeToRefs(selectionStore);
     const horizonChartSettings = ref<ExemplarHorizonChartSettings>({
         default: true,
+        userModifiedNumeric: false, // Initialize as false
+        userModifiedColors: false, // Initialize as false
         positiveColorScheme: { label: 'Default', value: [] },
         negativeColorScheme: { label: 'Default', value: [] },
         modHeight: 1,

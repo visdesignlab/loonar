@@ -761,7 +761,7 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
         }
 
         // Initialize horizon chart settings if default is true
-         if (horizonChartSettings.value.default || 
+        if (horizonChartSettings.value.default || 
             !horizonChartSettings.value.positiveColorScheme.value || 
             horizonChartSettings.value.positiveColorScheme.value.length === 0) {
             
@@ -771,33 +771,33 @@ function createHorizonChartLayer(): HorizonChartLayer[] | null {
             
             horizonChartSettings.value.default = false;
             
-            // Only set color schemes if they haven't been set before
-            if (!horizonChartSettings.value.positiveColorScheme.value || 
-                horizonChartSettings.value.positiveColorScheme.value.length === 0) {
+            // Only set color schemes if user hasn't modified them
+            if (!horizonChartSettings.value.userModifiedColors) {
                 horizonChartSettings.value.positiveColorScheme = { 
                     label: "Grey (Default)", 
                     value: horizonChartScheme
                 };
-            }
-            
-            if (!horizonChartSettings.value.negativeColorScheme.value || 
-                horizonChartSettings.value.negativeColorScheme.value.length === 0) {
                 horizonChartSettings.value.negativeColorScheme = { 
                     label: "Grey (Default)", 
                     value: horizonChartScheme
                 };
             }
             
+            // Always recalculate numeric values when switching aggregation/attribute
             horizonChartSettings.value.modHeight = modHeight;
             horizonChartSettings.value.baseline = baseline;
+            // Reset the numeric modification flag since we're recalculating
+            horizonChartSettings.value.userModifiedNumeric = false;
         } else {
-            // Update only the numeric values, preserve color schemes
-            const modHeight = (exemplarTracksMax - exemplarTracksMin) /
-            (horizonChartSettings.value.positiveColorScheme.value.length - 1);
-            const baseline = exemplarTracksMin;
-            
-            horizonChartSettings.value.modHeight = modHeight;
-            horizonChartSettings.value.baseline = baseline;
+            // Only update numeric values if user hasn't manually modified them
+            if (!horizonChartSettings.value.userModifiedNumeric) {
+                const modHeight = (exemplarTracksMax - exemplarTracksMin) /
+                (horizonChartSettings.value.positiveColorScheme.value.length - 1);
+                const baseline = exemplarTracksMin;
+                
+                horizonChartSettings.value.modHeight = modHeight;
+                horizonChartSettings.value.baseline = baseline;
+            }
         }
         const horizonChartCustomId = `exemplar-horizon-chart-${uniqueExemplarKey(exemplar)}-${horizonChartSettings.value.positiveColorScheme.label}-${horizonChartSettings.value.negativeColorScheme.label}`;
 
@@ -2912,6 +2912,23 @@ watch(
   },
   { immediate: false }
 );
+// Watch for user modifications to bin size and baseline
+watch(() => horizonChartSettings.value.modHeight, () => {
+    horizonChartSettings.value.userModifiedNumeric = true;
+});
+
+watch(() => horizonChartSettings.value.baseline, () => {
+    horizonChartSettings.value.userModifiedNumeric = true;
+});
+
+// Watch for user modifications to color schemes
+watch(() => horizonChartSettings.value.positiveColorScheme, () => {
+    horizonChartSettings.value.userModifiedColors = true;
+}, { deep: true });
+
+watch(() => horizonChartSettings.value.negativeColorScheme, () => {
+    horizonChartSettings.value.userModifiedColors = true;
+}, { deep: true });
 
 // Finds the fill color for the exemplar track based on the selected Y tag.
 const fillColor = (exemplar: ExemplarTrack | undefined) => {
