@@ -1272,7 +1272,6 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         // For each exemplar in the group, create a corresponding pin in the histogram
         for (const exemplar of group) {
-            // Log the condition group and the exemplar track ID
             // Find the bin index corresponding to the attribute value of the exemplar
             const aggValue = exemplar.aggValue
             const binIndex = domains.histogramBinRanges.findIndex(
@@ -1282,20 +1281,27 @@ function createSidewaysHistogramLayer(): any[] | null {
             if (binIndex < 0) {
                 continue;
             }
-            // Compute y-mid of the histogram bin
+            
+            // Get the bin range
+            const binRange = domains.histogramBinRanges[binIndex];
+            
+            // Compute y-position based on where aggValue falls within the bin range
             const y0 = groupTop + binIndex * binWidth;
             const y1 = y0 + binWidth;
-            const yMid = (y0 + y1) / 2;
+            
+            // Interpolate position within the bin based on aggValue
+            const binProgress = (aggValue - binRange.min) / (binRange.max - binRange.min);
+            const yPosition = y0 + (binProgress * binWidth);
 
             // Horizontal Length of the pin line
             const fixedLineLength = histWidth * 0.75;
             const x0 = hGap + 0.25 * histWidth;
             const x1 = x0 + fixedLineLength;
 
-            // Push the pin line geometry
+            // Push the pin line geometry using interpolated position
             pinData.push({
-                source: [-x0, yMid],
-                target: [-(x0 + fixedLineLength), yMid],
+                source: [-x0, yPosition],
+                target: [-(x0 + fixedLineLength), yPosition],
                 exemplar,
             });
             
@@ -1307,9 +1313,9 @@ function createSidewaysHistogramLayer(): any[] | null {
                 0 -
                     viewConfiguration.value.timeBarHeightOuter -
                     viewConfiguration.value.horizonTimeBarGap;
-            // Draw the connecting line
+            // Draw the connecting line using interpolated position
             pinToHorizonChartData.push({
-                source: [-x0, yMid],
+                source: [-x0, yPosition],
                 target: [0, yOffset - viewConfiguration.value.horizonTimeBarGap],
                 exemplar,
             });
