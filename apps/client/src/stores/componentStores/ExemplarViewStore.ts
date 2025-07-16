@@ -701,23 +701,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
 
 
-        const pctDecimals = percentiles?.map(p => p / 100) ?? [];
-        const pctRanks = pctDecimals
-            .map(d => {
-                if (d === 1.0) {
-                    // For 100th percentile, use the maximum rank (count)
-                    return 'count';
-                } else {
-                    // For other percentiles, use the existing formula
-                    return `FLOOR(count*${d}) + 1`;
-                }
-            })
-            .join(', ');
+        // Check if this is a min/max selection (0 and 100 percentiles)
+        const isMinMax = percentiles && percentiles.length === 2 &&
+            percentiles.includes(0) && percentiles.includes(100);
 
         let selectedRankClause = '';
         if (typeof selectedRank === 'number') {
             selectedRankClause = `WHERE rank = ${selectedRank}`;
-        } else if (pctRanks && pctRanks.length > 0) {
+        } else if (isMinMax) {
+            // For true min/max, select tracks with minimum and maximum aggValue per condition group
+            selectedRankClause = `WHERE rank = 1 OR rank = count`;
+        } else if (percentiles && percentiles.length > 0) {
+            // For other percentiles, use the existing formula
+            const pctDecimals = percentiles.map(p => p / 100);
+            const pctRanks = pctDecimals
+                .map(d => {
+                    if (d === 1.0) {
+                        return 'count';
+                    } else {
+                        return `FLOOR(count*${d}) + 1`;
+                    }
+                })
+                .join(', ');
             selectedRankClause = `WHERE rank IN (${pctRanks})`;
         }
 
