@@ -382,35 +382,35 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // Build bin ranges (we store these in histogramDomains).
             const binCount = 70;
             const binSize = (max_attr - min_attr) / binCount;
+
+            // Fix: Make the last bin inclusive of max_attr
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: binCount },
                 (_, i) => ({
                     min: min_attr + binSize * i,
-                    max: min_attr + binSize * (i + 1),
+                    max: i === binCount - 1
+                        ? max_attr + 0.0001  // Make last bin slightly larger to include max_attr
+                        : min_attr + binSize * (i + 1),
                 })
             );
 
-            // Using these bin ranges, we find how many track's aggregated attribute values fit into those aggregated attribute bin ranges.
-            // Return the conditions, the bin index, and the count of tracks in that bin.
             const histogramConditionQuery = `
                 SELECT
                     "${selectedXTag.value}" AS c1,
                     "${selectedYTag.value}" AS c2,
                     CAST(
-                    FLOOR(
-                        ( "${aggAttribute}" - ${min_attr} )
-                        / ${binSize}
-                    )
-                    AS INTEGER
+                        CASE 
+                            WHEN "${aggAttribute}" >= ${max_attr} THEN ${binCount - 1}
+                            ELSE FLOOR(("${aggAttribute}" - ${min_attr}) / ${binSize})
+                        END
+                        AS INTEGER
                     ) AS bin_index,
                     CAST(COUNT(*) AS DOUBLE PRECISION) AS count
                 FROM "${aggTableName}"
                 ${whereClause}
-                    AND "${aggAttribute}" >= ${min_attr}
-                    AND "${aggAttribute}" < ${min_attr + binSize * binCount}
                 GROUP BY c1, c2, bin_index
                 ORDER BY c1, c2, bin_index;
-                `;
+            `;
 
             // Get result of query - bin counts for each condition pair and bin index.
             const histogramBinCounts = await timedVgQuery('histogramConditionQuery', histogramConditionQuery);
@@ -703,7 +703,15 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
         const pctDecimals = percentiles?.map(p => p / 100) ?? [];
         const pctRanks = pctDecimals
-            .map(d => `FLOOR(count*${d}) + 1`)
+            .map(d => {
+                if (d === 1.0) {
+                    // For 100th percentile, use the maximum rank (count)
+                    return 'count';
+                } else {
+                    // For other percentiles, use the existing formula
+                    return `FLOOR(count*${d}) + 1`;
+                }
+            })
             .join(', ');
 
         let selectedRankClause = '';
