@@ -116,12 +116,12 @@ const snippetDisplaySize = computed<number>({
     <q-card-section class="q-pl-none q-pr-none">
         <div class="flex row no-wrap">
             <q-badge outline :color="globalSettings.normalizedBlack"
-                >Height:</q-badge
+                >Horizon Chart Height:</q-badge
             >
             <q-input
                 class="q-pl-md"
                 dense
-                v-model.number="looneageViewStore.rowHeight"
+                v-model.number="exemplarViewStore.viewConfiguration.horizonChartHeight"
                 type="number"
                 :dark="globalSettings.darkMode"
             />
@@ -130,6 +130,27 @@ const snippetDisplaySize = computed<number>({
             v-model="exemplarViewStore.viewConfiguration.horizonChartHeight"
             :min="4"
             :max="240"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Histogram Width:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.histogramWidth"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.histogramWidth"
+            :min="50"
+            :max="800"
             label
             :dark="globalSettings.darkMode"
         />
@@ -167,7 +188,7 @@ const snippetDisplaySize = computed<number>({
             <q-input
                 class="q-pl-md"
                 dense
-                v-model.number="looneageViewStore.snippetDestSize"
+                v-model.number="snippetDisplaySize"
                 type="number"
                 :dark="globalSettings.darkMode"
             />
@@ -176,6 +197,203 @@ const snippetDisplaySize = computed<number>({
             v-model="snippetDisplaySize"
             :min="8"
             :max="320"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Time Bar Height (Outer):</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.timeBarHeightOuter"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.timeBarHeightOuter"
+            :min="2"
+            :max="50"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Snippet-Horizon Gap:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.snippetHorizonChartGap"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.snippetHorizonChartGap"
+            :min="0"
+            :max="50"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Between Exemplar Gap:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.betweenExemplarGap"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.betweenExemplarGap"
+            :min="0"
+            :max="100"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Between Condition Gap:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.betweenConditionGap"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.betweenConditionGap"
+            :min="0"
+            :max="200"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Horizon-Histogram Gap:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.horizonHistogramGap"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.horizonHistogramGap"
+            :min="0"
+            :max="200"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Margin:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.margin"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.margin"
+            :min="0"
+            :max="500"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Margin:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.margin"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.margin"
+            :min="0"
+            :max="500"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Histogram Font Size:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.histogramFontSize"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.histogramFontSize"
+            :min="8"
+            :max="48"
+            label
+            :dark="globalSettings.darkMode"
+        />
+    </q-card-section>
+
+    <q-card-section class="q-pl-none q-pr-none">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Histogram Tooltip Font Size:</q-badge
+            >
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="exemplarViewStore.viewConfiguration.histogramTooltipFontSize"
+                type="number"
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+        <q-slider
+            v-model="exemplarViewStore.viewConfiguration.histogramTooltipFontSize"
+            :min="8"
+            :max="36"
             label
             :dark="globalSettings.darkMode"
         />

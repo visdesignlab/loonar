@@ -62,6 +62,8 @@ export interface ViewConfiguration {
     showSnippetImage: boolean;
     showSnippetOutline: boolean;
     spaceKeyFramesEvenly: boolean;
+    histogramFontSize: number;
+    histogramTooltipFontSize: number;
 }
 
 export interface conditionHistogram {
@@ -174,6 +176,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         showSnippetImage: true,
         showSnippetOutline: true,
         spaceKeyFramesEvenly: true,
+        histogramFontSize: 20,
+        histogramTooltipFontSize: 16,
 
     });
     const snippetZoom = computed<number>(() => {

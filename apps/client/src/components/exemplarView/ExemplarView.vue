@@ -1322,6 +1322,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         }
 
         // Draw Histograms ------------------------------------------------
+        const histogramBaseLineX = -hGap - histWidth * 0.2;
         // Draw the base thick line
         layers.push(
             new LineLayer({
@@ -1329,8 +1330,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                     conditionGroupKey
                 )}`,
                 data: [group],
-                getSourcePosition: () => [-hGap - histWidth * 0.2, groupBottom],
-                getTargetPosition: () => [-hGap - histWidth * 0.2, groupTop],
+                getSourcePosition: () => [histogramBaseLineX, groupBottom],
+                getTargetPosition: () => [histogramBaseLineX, groupTop],
                 getColor: fillColor(conditionGroupKey),
                 // Start of Selection
                 lineWidthUnits: 'common',
@@ -1458,14 +1459,17 @@ function createSidewaysHistogramLayer(): any[] | null {
         // Condition Text Layer -----------------------------------
         const yOffset = (groupBottom + groupTop) / 2;
 
+
+        const conditionFontSize = viewConfiguration.value.histogramFontSize;
+        const maxTextWidth = groupBottom - groupTop;
+        const horizonHistogramGap = viewConfiguration.value.horizonHistogramGap;
         const textData: HistogramTextData[] = [
             {
-                coordinates: [-hGap - 0.1 * histWidth, yOffset],
+                coordinates: [histogramBaseLineX + conditionFontSize + (0.2 * horizonHistogramGap), yOffset],
                 conditionOne,
                 conditionTwo,
             },
         ];
-
         layers.push(
             new TextLayer({
                 id: `exemplar-sideways-histogram-text-${uniqueExemplarKey(
@@ -1476,12 +1480,14 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getText: (d: HistogramTextData) => `${d.conditionOne} ${d.conditionTwo}`,
                 sizeScale: 1,
                 sizeUnits: 'pixels',
-                sizeMaxPixels: 25,
+                sizeMaxPixels: conditionFontSize,
                 getAngle: 90,
                 getColor: fillColor(conditionGroupKey),
                 billboard: true,
                 textAnchor: 'middle',
                 alignmentBaseline: 'middle',
+                wordBreak: 'break-word',
+                maxWidth: maxTextWidth / conditionFontSize,
             })
         );
 
@@ -1492,7 +1498,7 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         // Text should not be much longer than the histogram width
         histWidth = scaleForConstantVisualSize(viewConfiguration.value.histogramWidth);
-        const fontSize = 15;
+        const fontSize = viewConfiguration.value.histogramFontSize * 0.7;
         const widthBuffer = 5;
         const maxWidth = histWidth / (fontSize - widthBuffer);
 
@@ -1674,22 +1680,21 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
 
     // If a hoveredPinLabel exists, add a TextLayer.
     if (hoveredPinLabel.value) {
-        let { histogramWidth: histWidth } = viewConfiguration.value;
-        histWidth = scaleForConstantVisualSize(histWidth);
-        const fontSize = 22;
-        const maxWidth = histWidth / fontSize;
+        let { histogramWidth: histWidth, histogramTooltipFontSize: fontSize} = viewConfiguration.value;
+        histWidth = histWidth;
+        const maxWidth = (histWidth / fontSize) * 0.7;
         pinLayers.push(
             new TextLayer({
-                id: `exemplar-temp-label-${uniqueExemplarKey(conditionGroupKey)}`,
+                id: `histogram-tooltip-text-${uniqueExemplarKey(conditionGroupKey)}`,
                 data: [hoveredPinLabel.value],
                 getPosition: (d: {
                     text: string;
                     position: [number, number];
                 }) => d.position,
                 getText: (d: { text: string }) => d.text,
-                sizeScale: 1.1,
-                sizeUnits: 'common',
-                sizeMaxPixels: 20,
+                sizeScale: 1,
+                sizeUnits: 'pixels',
+                sizeMaxPixels: fontSize,
                 // Set color as desired (here black) using an accessor function:
                 getColor: (d: any) => [0, 0, 0],
                 // Use the proper TextLayer props:
@@ -2867,6 +2872,45 @@ watch(
     () => {
         safeRenderDeckGL();
     }
+);
+watch(
+  () => exemplarViewStore.viewConfiguration.margin,
+  (newMargin, oldMargin) => {
+    if (exemplarDataInitialized.value && newMargin !== oldMargin) {
+      // Margin affects scroll extent and view positioning
+      const newScrollExtent = scrollExtent.value;
+      let targetY = clamp(
+        viewStateMirror.value.target[1],
+        newScrollExtent.min,
+        newScrollExtent.max
+      );
+      
+      // Recalculate zoomX since margin affects visualization width
+      let zoomX = viewStateMirror.value.zoom[0];
+      const solverIterations = 10;
+      if (deckGlWidth.value != 0) {
+        for (let i = 0; i < solverIterations; i++) {
+          zoomX = Math.log2(deckGlWidth.value / visualizationWidth(zoomX));
+        }
+      }
+      
+      const newViewState = {
+        zoom: [zoomX, 0],
+        target: [visualizationCenterX(zoomX), targetY],
+      };
+      
+      viewStateMirror.value = cloneDeep(newViewState);
+      
+      if (deckgl.value) {
+        deckgl.value.setProps({
+          initialViewState: newViewState,
+        });
+      }
+      
+      renderDeckGL();
+    }
+  },
+  { immediate: false }
 );
 
 // Finds the fill color for the exemplar track based on the selected Y tag.
