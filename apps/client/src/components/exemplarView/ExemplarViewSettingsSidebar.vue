@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
-import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useExemplarViewStore, horizonChartScheme } from '@/stores/componentStores/ExemplarViewStore';
-import { useEventBusStore } from '@/stores/misc/eventBusStore';
-import { clamp } from 'lodash-es';
-
 import {
     schemeReds,
     schemeBlues,
@@ -16,24 +11,23 @@ import {
     schemePurples,
 } from 'd3-scale-chromatic';
 
-const cellMetaData = useCellMetaData();
+// Store imports
 const globalSettings = useGlobalSettings();
-const looneageViewStore = useLooneageViewStore();
 const exemplarViewStore = useExemplarViewStore();
-const eventBusStore = useEventBusStore();
-
 const { horizonChartSettings } = storeToRefs(exemplarViewStore);
+
+// Horizon Chart ---------------
+const horizonSettingsModal = ref(false);
 const colorSchemeOptions = [
     { label: 'Grey (Default)', value: horizonChartScheme },
     { label: 'Red', value: schemeReds[9] },
-    { label: 'Blue', value: schemeBlues[9] }, // Use the 9-color version
-    { label: 'Green', value: schemeGreens[9] }, // Use the 9-color version
-    { label: 'Orange', value: schemeOranges[9] }, // Use the 9-color version
-    { label: 'Purple', value: schemePurples[9] }, // Use the 9-color version
+    { label: 'Blue', value: schemeBlues[9] },
+    { label: 'Green', value: schemeGreens[9] },
+    { label: 'Orange', value: schemeOranges[9] },
+    { label: 'Purple', value: schemePurples[9] },
 ];
 
-const horizonSettingsModal = ref(false);
-
+// Snippet Display Size -------------------
 const snippetDisplaySize = computed<number>({
   get: () => exemplarViewStore.viewConfiguration.snippetDisplayHeight,
   set: (val: number) => {
@@ -41,6 +35,43 @@ const snippetDisplaySize = computed<number>({
     exemplarViewStore.viewConfiguration.snippetDisplayWidth  = val
   }
 })
+
+// View Configuration Sliders -------------------
+const sliderMappings = {
+    'Horizon Chart Height': { key: 'horizonChartHeight', min: 4, max: 240 },
+    'Time Bar Height (Outer)': { key: 'timeBarHeightOuter', min: 2, max: 50 },
+    'Snippet Source Size': { key: 'snippetSourceSize', min: 8, max: 320, step: 2 },
+    'Snippet-Horizon Gap': { key: 'snippetHorizonChartGap', min: 0, max: 50 },
+    'Between Exemplar Gap': { key: 'betweenExemplarGap', min: 0, max: 100 },
+    'Between Condition Gap': { key: 'betweenConditionGap', min: 0, max: 200 },
+    'Margin': { key: 'margin', min: 0, max: 500 },
+    'Horizon-Histogram Gap': { key: 'horizonHistogramGap', min: 0, max: 200 },
+    'Histogram Width': { key: 'histogramWidth', min: 50, max: 800 },
+    'Histogram Font Size': { key: 'histogramFontSize', min: 8, max: 48 },
+    'Histogram Tooltip Font Size': { key: 'histogramTooltipFontSize', min: 8, max: 36 }
+};
+
+// Generate slider configs dynamically
+const sliderConfigs = computed(() => [
+    // Special case for snippet display size (controls both height and width)
+    {
+        label: 'Snippet Display Size',
+        model: snippetDisplaySize,
+        min: 8,
+        max: 320
+    },
+    // Generate all other view configuration sliders
+    ...Object.entries(sliderMappings).map(([label, config]) => ({
+        label,
+        model: computed({
+            get: () => exemplarViewStore.viewConfiguration[config.key],
+            set: (val) => exemplarViewStore.viewConfiguration[config.key] = val
+        }),
+        min: config.min,
+        max: config.max,
+        step: config.step
+    }))
+]);
 </script>
 
 <template>
@@ -113,287 +144,30 @@ const snippetDisplaySize = computed<number>({
         v-model="exemplarViewStore.viewConfiguration.spaceKeyFramesEvenly"
         :dark="globalSettings.darkMode"
     />
-    <q-card-section class="q-pl-none q-pr-none">
+    <!-- Dynamic slider sections -->
+    <q-card-section 
+        v-for="config in sliderConfigs" 
+        :key="config.label"
+        class="q-pl-none q-pr-none"
+    >
         <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Horizon Chart Height:</q-badge
-            >
+            <q-badge outline :color="globalSettings.normalizedBlack">
+                {{ config.label }}:
+            </q-badge>
             <q-input
                 class="q-pl-md"
                 dense
-                v-model.number="exemplarViewStore.viewConfiguration.horizonChartHeight"
+                v-model.number="config.model.value"
                 type="number"
+                :step="config.step"
                 :dark="globalSettings.darkMode"
             />
         </div>
         <q-slider
-            v-model="exemplarViewStore.viewConfiguration.horizonChartHeight"
-            :min="4"
-            :max="240"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Histogram Width:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.histogramWidth"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.histogramWidth"
-            :min="50"
-            :max="800"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Snippet Source Size:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.snippetSourceSize"
-                type="number"
-                :step="2"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.snippetSourceSize"
-            :min="8"
-            :max="320"
-            :step="2"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Snippet Display Size:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="snippetDisplaySize"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="snippetDisplaySize"
-            :min="8"
-            :max="320"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Time Bar Height (Outer):</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.timeBarHeightOuter"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.timeBarHeightOuter"
-            :min="2"
-            :max="50"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Snippet-Horizon Gap:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.snippetHorizonChartGap"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.snippetHorizonChartGap"
-            :min="0"
-            :max="50"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Between Exemplar Gap:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.betweenExemplarGap"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.betweenExemplarGap"
-            :min="0"
-            :max="100"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Between Condition Gap:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.betweenConditionGap"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.betweenConditionGap"
-            :min="0"
-            :max="200"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Horizon-Histogram Gap:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.horizonHistogramGap"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.horizonHistogramGap"
-            :min="0"
-            :max="200"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Margin:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.margin"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.margin"
-            :min="0"
-            :max="500"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Margin:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.margin"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.margin"
-            :min="0"
-            :max="500"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Histogram Font Size:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.histogramFontSize"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.histogramFontSize"
-            :min="8"
-            :max="48"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
-
-    <q-card-section class="q-pl-none q-pr-none">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Histogram Tooltip Font Size:</q-badge
-            >
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="exemplarViewStore.viewConfiguration.histogramTooltipFontSize"
-                type="number"
-                :dark="globalSettings.darkMode"
-            />
-        </div>
-        <q-slider
-            v-model="exemplarViewStore.viewConfiguration.histogramTooltipFontSize"
-            :min="8"
-            :max="36"
+            v-model="config.model.value"
+            :min="config.min"
+            :max="config.max"
+            :step="config.step"
             label
             :dark="globalSettings.darkMode"
         />
