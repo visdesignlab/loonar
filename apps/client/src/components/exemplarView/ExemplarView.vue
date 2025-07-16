@@ -463,7 +463,9 @@ async function renderDeckGL(): Promise<void> {
 
     // Horizon Charts (Data over time) with text ---------
     deckGLLayers.push(createHorizonChartLayer());
-    deckGLLayers = deckGLLayers.concat(horizonTextLayer.value);
+    if (horizonTextLayer.value) {
+        deckGLLayers.push(horizonTextLayer.value);
+    }
 
     // Cell Images ------------------
     deckGLLayers.push(...createExemplarImageKeyFrameLayers());
@@ -907,6 +909,7 @@ function createHoveredHorizonOutlineLayer() {
   // Find the exemplar corresponding to the hovered value
   if (!hoveredExemplar.value) {
     hoveredOutlineLayer.value = null;
+    horizonTextLayer.value = null;
     return;
   }
   const exemplar = hoveredExemplar.value;
@@ -978,6 +981,7 @@ function handleHorizonHover(info: PickingInfo, exemplar: ExemplarTrack) {
         hoveredExemplar.value = null;
         hoveredCellsInfo.value = [];
         hoveredOutlineLayer.value = null;
+        horizonTextLayer.value = null;
         safeRenderDeckGL();
         return;
     }
