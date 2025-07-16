@@ -148,7 +148,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         { label: 'Default (5th, Median, 95th)', value: [5, 50, 95] },
         { label: 'Quartiles (25th, Median, 75th)', value: [25, 50, 75] },
         { label: 'Min, Max', value: [0, 100] },
-        { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 99] }
+        { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 100] }
     ];
     // Defaults to the first option
     const exemplarPercentiles = ref<number[]>(percentileOptions[0].value);
@@ -701,29 +701,36 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
 
 
-        // Check if this is a min/max selection (0 and 100 percentiles)
-        const isMinMax = percentiles && percentiles.length === 2 &&
-            percentiles.includes(0) && percentiles.includes(100);
-
         let selectedRankClause = '';
         if (typeof selectedRank === 'number') {
             selectedRankClause = `WHERE rank = ${selectedRank}`;
-        } else if (isMinMax) {
-            // For true min/max, select tracks with minimum and maximum aggValue per condition group
-            selectedRankClause = `WHERE rank = 1 OR rank = count`;
         } else if (percentiles && percentiles.length > 0) {
-            // For other percentiles, use the existing formula
-            const pctDecimals = percentiles.map(p => p / 100);
-            const pctRanks = pctDecimals
-                .map(d => {
-                    if (d === 1.0) {
-                        return 'count';
-                    } else {
-                        return `FLOOR(count*${d}) + 1`;
-                    }
-                })
-                .join(', ');
-            selectedRankClause = `WHERE rank IN (${pctRanks})`;
+            // Handle min/max (0, 100) separately from other percentiles
+            const hasMin = percentiles.includes(0);
+            const hasMax = percentiles.includes(100);
+            const otherPercentiles = percentiles.filter(p => p !== 0 && p !== 100);
+
+            const rankConditions = [];
+
+            // Add min condition
+            if (hasMin) {
+                rankConditions.push('rank = 1');
+            }
+
+            // Add max condition  
+            if (hasMax) {
+                rankConditions.push('rank = count');
+            }
+
+            // Add other percentiles
+            if (otherPercentiles.length > 0) {
+                const pctRanks = otherPercentiles
+                    .map(p => `FLOOR(count*${p / 100}) + 1`)
+                    .join(', ');
+                rankConditions.push(`rank IN (${pctRanks})`);
+            }
+
+            selectedRankClause = `WHERE ${rankConditions.join(' OR ')}`;
         }
 
         const combinedQuery = `
