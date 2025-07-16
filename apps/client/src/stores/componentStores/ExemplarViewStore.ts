@@ -11,6 +11,7 @@ import { aggregateFunctions, isCustomAggregateFunction } from '@/components/plot
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { histogram } from 'd3-array';
 
 
 export interface ExemplarTrack {
@@ -184,6 +185,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramTooltipFontSize: 16,
 
     });
+    const histogramBinCount = ref<number>(70);
     const snippetZoom = computed<number>(() => {
         return viewConfiguration.value.snippetDisplayHeight / viewConfiguration.value.snippetSourceSize;
     });
@@ -388,15 +390,14 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             histogramDomains.value.maxX = max_attr;
 
             // Build bin ranges (we store these in histogramDomains).
-            const binCount = 70;
-            const binSize = (max_attr - min_attr) / binCount;
+            const binSize = (max_attr - min_attr) / histogramBinCount.value;
 
             // Fix: Make the last bin inclusive of max_attr
             histogramDomains.value.histogramBinRanges = Array.from(
-                { length: binCount },
+                { length: histogramBinCount.value },
                 (_, i) => ({
                     min: min_attr + binSize * i,
-                    max: i === binCount - 1
+                    max: i === histogramBinCount.value - 1
                         ? max_attr + 0.0001  // Make last bin slightly larger to include max_attr
                         : min_attr + binSize * (i + 1),
                 })
@@ -408,7 +409,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     "${selectedYTag.value}" AS c2,
                     CAST(
                         CASE 
-                            WHEN "${aggAttribute}" >= ${max_attr} THEN ${binCount - 1}
+                            WHEN "${aggAttribute}" >= ${max_attr} THEN ${histogramBinCount.value - 1}
                             ELSE FLOOR(("${aggAttribute}" - ${min_attr}) / ${binSize})
                         END
                         AS INTEGER
@@ -437,7 +438,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 const conditionKey = `${c1}__${c2}`;
                 // initialize on first sight
                 if (!binCountsMap.has(conditionKey)) {
-                    binCountsMap.set(conditionKey, Array(binCount).fill(0));
+                    binCountsMap.set(conditionKey, Array(histogramBinCount.value).fill(0));
                 }
                 // place the count into its bin index
                 binCountsMap.get(conditionKey)![bin_index] = count;
@@ -575,6 +576,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 await getExemplarViewData(true);
             }
         },
+    );
+    watch(
+        () => histogramBinCount.value,
+        async (newBinCount, oldBinCount) => {
+            // Only trigger if the value actually changed and we have initialized data
+            if (newBinCount !== oldBinCount && experimentDataInitialized.value) {
+                console.log(`Histogram bin count changed from ${oldBinCount} to ${newBinCount}, recalculating data...`);
+                await getExemplarViewData(true);
+            }
+        }
     );
 
     function sortExemplarsByCondition(
@@ -900,6 +911,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         addAggregateColumnForSelection,
         getAttributeName,
         histogramYAxisLabel,
+        histogramBinCount,
         horizonChartSettings,
         exemplarPercentiles,
         percentileOptions,

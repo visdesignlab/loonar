@@ -14,7 +14,7 @@ import {
 // Store imports
 const globalSettings = useGlobalSettings();
 const exemplarViewStore = useExemplarViewStore();
-const { horizonChartSettings } = storeToRefs(exemplarViewStore);
+const { horizonChartSettings, histogramBinCount} = storeToRefs(exemplarViewStore);
 
 // Horizon Chart ---------------
 const horizonSettingsModal = ref(false);
@@ -26,6 +26,9 @@ const colorSchemeOptions = [
     { label: 'Orange', value: schemeOranges[9] },
     { label: 'Purple', value: schemePurples[9] },
 ];
+
+// Histogram Chart ---------------
+const histogramSettingsModal = ref(false);
 
 // Snippet Display Size -------------------
 const snippetDisplaySize = computed<number>({
@@ -78,7 +81,12 @@ const sliderConfigs = computed(() => [
     <q-btn class="q-mb-sm" @click="horizonSettingsModal = true" outline
         >Configure Horizon Charts</q-btn
     >
-
+    <div class="row justify-center q-mb-sm">
+        <q-btn @click="histogramSettingsModal = true" outline>
+            Configure Histograms
+        </q-btn>
+    </div>
+    <!-- Horizon Chart Settings Modal -->
     <q-dialog v-model="horizonSettingsModal">
         <q-card style="min-width: 900px" :dark="globalSettings.darkMode">
             <q-card-section class="row items-center q-pb-none">
@@ -121,6 +129,34 @@ const sliderConfigs = computed(() => [
                         class="q-mr-sm"
                     />
                 </div>
+            </q-card-section>
+
+            <q-card-actions align="right">
+                <q-btn flat label="Done" v-close-popup />
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
+
+    <!-- Histogram Settings Modal -->
+    <q-dialog v-model="histogramSettingsModal">
+        <q-card style="min-width: 400px" :dark="globalSettings.darkMode">
+            <q-card-section class="row items-center q-pb-none">
+                <div class="text-h6">Configure Histograms</div>
+                <q-space />
+                <q-btn icon="close" flat round dense v-close-popup />
+            </q-card-section>
+
+            <q-card-section>
+                <q-input
+                    label="Bin Count"
+                    v-model.number="histogramBinCount"
+                    type="number"
+                    :dark="globalSettings.darkMode"
+                    debounce="400"
+                    min="1"
+                    max="200"
+                    hint="Number of bins for histogram display"
+                />
             </q-card-section>
 
             <q-card-actions align="right">
