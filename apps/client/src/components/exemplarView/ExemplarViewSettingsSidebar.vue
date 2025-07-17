@@ -48,7 +48,7 @@ const sliderMappings = {
     'Between Exemplar Gap': { key: 'betweenExemplarGap', min: 0, max: 100 },
     'Between Condition Gap': { key: 'betweenConditionGap', min: 0, max: 200 },
     'Margin': { key: 'margin', min: 0, max: 500 },
-    'Horizon-Histogram Gap': { key: 'horizonHistogramGap', min: 0, max: 200 },
+    'Horizon-Histogram Gap': { key: 'horizonHistogramGap', min: exemplarViewStore.viewConfiguration.histogramFontSize * 2, max: 200 },
     'Histogram Width': { key: 'histogramWidth', min: 50, max: 800 },
     'Histogram Font Size': { key: 'histogramFontSize', min: 8, max: 48 },
     'Histogram Tooltip Font Size': { key: 'histogramTooltipFontSize', min: 8, max: 36 }

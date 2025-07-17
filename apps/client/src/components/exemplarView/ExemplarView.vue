@@ -1299,7 +1299,7 @@ function createSidewaysHistogramLayer(): any[] | null {
 
             // Horizontal Length of the pin line
             const fixedLineLength = histWidth * 0.75;
-            const x0 = hGap + 0.25 * histWidth;
+            const x0 = hGap;
             const x1 = x0 + fixedLineLength;
 
             // Push the pin line geometry using interpolated position
@@ -1326,7 +1326,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         }
 
         // Draw Histograms ------------------------------------------------
-        const histogramBaseLineX = -hGap - histWidth * 0.2;
+        const histogramBaseLineX = -hGap + viewConfiguration.value.histogramFontSize;
         // Draw the base thick line
         layers.push(
             new LineLayer({
@@ -1348,7 +1348,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             // Compute polygon coordinates for each bin
             const y0 = groupTop + index * binWidth;
             const y1 = y0 + binWidth;
-            const x0 = hGap + 0.25 * histWidth;
+            const x0 = hGap;
             const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
             // Get the corresponding bin range from the histogramDomains
             const binRange = domains.histogramBinRanges[index];
@@ -1467,19 +1467,19 @@ function createSidewaysHistogramLayer(): any[] | null {
         const conditionFontSize = viewConfiguration.value.histogramFontSize;
         const maxTextWidth = groupBottom - groupTop;
         const horizonHistogramGap = viewConfiguration.value.horizonHistogramGap;
-        const textData: HistogramTextData[] = [
+        const conditionGroupTextData: HistogramTextData[] = [
             {
-                coordinates: [histogramBaseLineX + conditionFontSize + (0.2 * horizonHistogramGap), yOffset],
+                coordinates: [histogramBaseLineX + conditionFontSize, yOffset],
                 conditionOne,
                 conditionTwo,
             },
         ];
         layers.push(
             new TextLayer({
-                id: `exemplar-sideways-histogram-text-${uniqueExemplarKey(
+                id: `sideways-conditions-histogram-text-${uniqueExemplarKey(
                     conditionGroupKey
                 )}`,
-                data: textData,
+                data: conditionGroupTextData,
                 getPosition: (d: HistogramTextData) => d.coordinates,
                 getText: (d: HistogramTextData) => `${d.conditionOne} ${d.conditionTwo}`,
                 sizeScale: 1,
@@ -1488,16 +1488,16 @@ function createSidewaysHistogramLayer(): any[] | null {
                 getAngle: 90,
                 getColor: fillColor(conditionGroupKey),
                 billboard: true,
-                textAnchor: 'middle',
-                alignmentBaseline: 'middle',
+                textAnchor: 'bottom',
+                alignmentBaseline: 'bottom',
                 wordBreak: 'break-word',
                 maxWidth: maxTextWidth / conditionFontSize,
             })
         );
 
-        // Histogram Y-Axis Label Text Layer -------------------
+        // Histogram X-Axis Label Text Layer -------------------
 
-        // Place the histogram Y-axis label at the top of the sideways histogram
+        // Place the histogram X-axis label at the top of the sideways histogram
         // (Normal text orientation, not rotated)
 
         // Text should not be much longer than the histogram width
@@ -1508,10 +1508,10 @@ function createSidewaysHistogramLayer(): any[] | null {
 
         layers.push(
             new TextLayer({
-                id: `sideways-histogram-yaxis-label-${uniqueExemplarKey(conditionGroupKey)}`,
+                id: `sideways-histogram-x-axis-label-${uniqueExemplarKey(conditionGroupKey)}`,
                 data: [
                     {
-                        coordinates: [-hGap - histWidth * 0.6, groupTop - 18],
+                        coordinates: [histogramBaseLineX, yOffset],
                         label: histogramYAxisLabel.value,
                     },
                 ],
@@ -1520,14 +1520,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeScale: 1,
                 sizeUnits: 'pixels',
                 sizeMaxPixels: fontSize,
-                getAngle: 0,
-                getColor: [0, 0, 0, 255],
+                getAngle: 90,
+                getColor: [120, 120, 120],
                 billboard: true,
-                textAnchor: 'start',
+                textAnchor: 'middle',
                 alignmentBaseline: 'bottom',
-                background: true,
-                getBackgroundColor: [255, 255, 255, 200],
-                backgroundPadding: [6, 2],
                 wordBreak: 'break-word',
                 maxWidth: maxWidth
             })

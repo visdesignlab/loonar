@@ -175,7 +175,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         timeBarHeightInner: 2,
         betweenExemplarGap: 20,
         betweenConditionGap: 20,
-        horizonHistogramGap: 50,
+        horizonHistogramGap: 150,
         histogramWidth: 250,
         margin: 50,
         showSnippetImage: true,
