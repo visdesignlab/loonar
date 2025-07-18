@@ -1461,7 +1461,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         );
 
         // Condition Text Layer -----------------------------------
-        const yOffset = (groupBottom + groupTop) / 2;
+        const conditionGroupMiddleY = (groupBottom + groupTop) / 2;
 
 
         const conditionFontSize = viewConfiguration.value.histogramFontSize;
@@ -1469,7 +1469,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         const horizonHistogramGap = viewConfiguration.value.horizonHistogramGap;
         const conditionGroupTextData: HistogramTextData[] = [
             {
-                coordinates: [histogramBaseLineX + conditionFontSize, yOffset],
+                coordinates: [histogramBaseLineX + conditionFontSize, conditionGroupMiddleY],
                 conditionOne,
                 conditionTwo,
             },
@@ -1511,7 +1511,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 id: `sideways-histogram-x-axis-label-${uniqueExemplarKey(conditionGroupKey)}`,
                 data: [
                     {
-                        coordinates: [histogramBaseLineX, yOffset],
+                        coordinates: [histogramBaseLineX - viewConfiguration.value.histogramFontSize / 2, groupTop],
                         label: histogramYAxisLabel.value,
                     },
                 ],
@@ -1522,9 +1522,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeMaxPixels: fontSize,
                 getAngle: 90,
                 getColor: [120, 120, 120],
+                background: true,
+                backgroundColor: [255, 255, 255, 200],
                 billboard: true,
-                textAnchor: 'middle',
-                alignmentBaseline: 'bottom',
+                getTextAnchor: 'end',
+                getAlignmentBaseline: 'center',
                 wordBreak: 'break-word',
                 maxWidth: maxWidth
             })
