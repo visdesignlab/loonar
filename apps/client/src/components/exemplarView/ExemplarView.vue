@@ -2170,16 +2170,14 @@ function createTickMarkLayer(rawData: any): LineLayer {
     getSourcePosition: (d: any) => d.path[0],
     getTargetPosition: (d: any) => d.path[1],
     getColor: (d: any) => {
-      if (d.pinned) {
-        return globalSettings.normalizedSelectedRgb; // Use the same hovered color as other elements
-      } else if (d.drawerLine) {
-        return darkMode.value
-          ? [195, 217, 250, 200]
-          : [65, 72, 85, 200];
+      if (d.pinned || d.selected) {
+        return globalSettings.normalizedSelectedRgb;
+      } else if (d.hovered || d.drawerLine) {
+        return colors.hovered.rgb; // Use the same hovered color as other elements
       }
       return [130, 145, 170, 150];
     },
-    getWidth: (d: any) => (d.hovered || d.pinned ? 4 : 1.5),
+    getWidth: (d: any) => (d.hovered || d.pinned || d.selected ? 4 : 1.5),
     widthUnits: 'pixels',
     rounded: false, // deck.gl uses `rounded`, not `capRounded`
   });
