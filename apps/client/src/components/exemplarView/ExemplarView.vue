@@ -2406,9 +2406,8 @@ function createExemplarImageKeyFramesLayer(
       console.error('[createExemplarImageKeyFramesLayer] No yOffset found for key:', key);
   }
   
-
   // Add segmentation data given a cell, its destination, and whether it is "selected" (or hovered).
-  function addSegmentation(frame: number, dest: [number, number, number, number], selected: boolean, cell: Cell) {
+  function addSegmentation(frame: number, dest: [number, number, number, number], hovered: boolean, cell: Cell) {
     if (frame <= 0) return;
     const segmentationPolygon = getCellSegmentationPolygon(
       exemplar.locationId,
@@ -2417,11 +2416,16 @@ function createExemplarImageKeyFramesLayer(
     );
     if (!segmentationPolygon) return;
     const [destX, destY] = [dest[0], dest[1]];
+
+
+  const cellSelected = selectedCellsInfo.value.some(
+    ([, selectedCell]) => selectedCell.frame === cell.frame && selectedCell.time === cell.time
+  );
     exemplarSegmentationData.push({
       // @ts-ignore: coordinates exist on geometry
       polygon: segmentationPolygon.geometry.coordinates,
-      hovered: selected,
-      selected: cell.isSelected,
+      hovered: hovered,
+      selected: cellSelected,
       center: [cell.x, cell.y],
       offset: [destX + snippetDestWidth / 2, destY - snippetDestHeight / 2],
     });
@@ -2659,8 +2663,8 @@ function createExemplarImageKeyFramesLayer(
           [tickX, y1],
           [tickX, y1 + tickLength]
         ],
-        hovered: cell.isHovered,
-        selected: cell.isSelected,
+        hovered: false,
+        selected: false,
       });
     }
   }
