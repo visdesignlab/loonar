@@ -1298,7 +1298,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             const yPosition = y0 + (binProgress * binWidth);
 
             // Horizontal Length of the pin line
-            const fixedLineLength = histWidth * 0.75;
+            const fixedLineLength = histWidth;
             const x0 = hGap;
             const x1 = x0 + fixedLineLength;
 
@@ -1349,7 +1349,7 @@ function createSidewaysHistogramLayer(): any[] | null {
             const y0 = groupTop + index * binWidth;
             const y1 = y0 + binWidth;
             const x0 = hGap;
-            const x1 = x0 + (count / domains.maxY) * (histWidth * 0.75);
+            const x1 = x0 + (count / domains.maxY) * (histWidth);
             // Get the corresponding bin range from the histogramDomains
             const binRange = domains.histogramBinRanges[index];
 
@@ -1398,11 +1398,11 @@ function createSidewaysHistogramLayer(): any[] | null {
                 data: [group],
                 getPolygon: () => {
                     return [
+                        [-hGap, groupBottom],
                         [-hGap - histWidth, groupBottom],
-                        [-hGap - histWidth * 0.2, groupBottom],
-                        [-hGap - histWidth * 0.2, groupTop],
                         [-hGap - histWidth, groupTop],
-                        [-hGap - histWidth, groupBottom],
+                        [-hGap, groupTop],
+                        [-hGap, groupBottom],
                     ];
                 },
                 getFillColor: [0, 0, 0, 0],
@@ -1487,6 +1487,8 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeMaxPixels: conditionFontSize,
                 getAngle: 90,
                 getColor: fillColor(conditionGroupKey),
+                background: true,
+                getBackgroundColor: [255, 255, 255, 160],
                 billboard: true,
                 textAnchor: 'bottom',
                 alignmentBaseline: 'bottom',
@@ -1566,8 +1568,8 @@ function handleHistogramHover(
         viewConfiguration.value;
     hGap = scaleForConstantVisualSize(hGap);
     histWidth = scaleForConstantVisualSize(histWidth);
-    const fixedLineLength = histWidth * 0.75;
-    const x0 = hGap + 0.25 * histWidth;
+    const fixedLineLength = histWidth;
+    const x0 = hGap;
 
     // Set the temporary pin: positioned at the hoveredY
     hoveredPin.value = {
@@ -1698,11 +1700,11 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
                 sizeScale: 1,
                 sizeUnits: 'pixels',
                 sizeMaxPixels: fontSize,
-                // Set color as desired (here black) using an accessor function:
                 getColor: (d: any) => [0, 0, 0],
-                // Use the proper TextLayer props:
-                getTextAnchor: (d: any) => 'start', // 'end' aligns text to the right
-                getAlignmentBaseline: (d: any) => 'top', // 'center' is the correct baseline value
+                getTextAnchor: (d: any) => 'start',
+                getAlignmentBaseline: (d: any) => 'top',
+                background: true,
+                getBackgroundColor: [255, 255, 255, 160],
                 billboard: true,
                 wordBreak: 'break-word',
                 maxWidth,
@@ -1799,8 +1801,8 @@ function handlePinDrag(
     const hoveredY = info.coordinate[1];
     const { horizonHistogramGap: hGap, histogramWidth: histWidth } =
         viewConfiguration.value;
-    const fixedLineLength = histWidth * 0.75;
-    const x0 = hGap + 0.25 * histWidth;
+    const fixedLineLength = histWidth;
+    const x0 = hGap;
     const index = pinnedPins.value.findIndex((p) => p.id === info.object.id);
     if (index >= 0) {
         pinnedPins.value[index] = {
