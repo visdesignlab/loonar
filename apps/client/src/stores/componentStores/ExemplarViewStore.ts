@@ -65,6 +65,7 @@ export interface ViewConfiguration {
     spaceKeyFramesEvenly: boolean;
     histogramFontSize: number;
     histogramTooltipFontSize: number;
+    hoveredLineWidth: number;
 }
 
 export interface conditionHistogram {
@@ -183,7 +184,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         spaceKeyFramesEvenly: true,
         histogramFontSize: 20,
         histogramTooltipFontSize: 16,
-
+        hoveredLineWidth: 3, 
     });
     const histogramBinCount = ref<number>(70);
     const snippetZoom = computed<number>(() => {

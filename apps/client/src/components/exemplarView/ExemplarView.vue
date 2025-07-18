@@ -896,7 +896,7 @@ function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
     filled: false,
     getPolygon: d => d.polygon,
     getLineColor: globalSettings.normalizedSelectedRgb,
-    getLineWidth: 4,
+    getLineWidth: viewConfiguration.value.hoveredLineWidth,
     lineWidthUnits: 'pixels'
   });
 }
@@ -941,7 +941,7 @@ function createHoveredHorizonOutlineLayer() {
     filled: false,
     getPolygon: (d: any) => d.polygon,
     getLineColor: (d: any) => colors.hovered.rgb,
-    getLineWidth: () => 4,
+    getLineWidth: () => viewConfiguration.value.hoveredLineWidth,
     lineWidthUnits: "pixels",
     updateTriggers: {
       hoveredExemplar: hoveredExemplar.value,
@@ -1129,7 +1129,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 ),
             getLineWidth: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId ||
-                selectedExemplar.value?.trackId === exemplar.trackId ? 4 : 0,
+                selectedExemplar.value?.trackId === exemplar.trackId ? viewConfiguration.value.hoveredLineWidth : 0,
             lineWidthUnits: 'pixels',
             updateTriggers: {
                 getPolygon: {
@@ -1195,7 +1195,7 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                 ),
             getLineWidth: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId || 
-                selectedExemplar.value?.trackId === exemplar.trackId ? 4 : 0,
+                selectedExemplar.value?.trackId === exemplar.trackId ? viewConfiguration.value.hoveredLineWidth : 0,
             lineWidthUnits: 'pixels',
             updateTriggers: {
                 getPolygon: {
@@ -1454,7 +1454,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                     exemplar: ExemplarTrack;
                 }) =>
                     hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
-                        ? 4
+                        ? viewConfiguration.value.hoveredLineWidth
                         : 1, // Thinner stroke width
                 opacity: 1,
             })
@@ -1741,7 +1741,7 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
             // Adjust the line width based on hover state.
             getWidth: (d: any) =>
                 hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
-                    ? 4
+                    ? viewConfiguration.value.hoveredLineWidth
                     : 1,
             opacity: 0.2,
         })
@@ -1761,7 +1761,7 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
             radiusUnits: 'pixels',
             getRadius: (d: any) =>
                 hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
-                    ? 6
+                    ? viewConfiguration.value.hoveredLineWidth * 2
                     : 3,
             getFillColor: (d: HistogramPin) =>
                 getExemplarColor(
@@ -2138,7 +2138,7 @@ function createCellImageLayer(
     filled: false,
     getPolygon: d => d.polygon,
     getLineColor: colors.hovered.rgb, // Same color as other hovered elements
-    getLineWidth: 4, // Same width as other hovered elements
+    getLineWidth: viewConfiguration.value.hoveredLineWidth, // Same width as other hovered elements
     lineWidthUnits: 'pixels'
   });
     // Create the tick mark layer using the tick data.
@@ -2177,7 +2177,7 @@ function createTickMarkLayer(rawData: any): LineLayer {
       }
       return [130, 145, 170, 150];
     },
-    getWidth: (d: any) => (d.hovered || d.pinned || d.selected ? 4 : 1.5),
+    getWidth: (d: any) => (d.hovered || d.pinned || d.selected ? viewConfiguration.value.hoveredLineWidth : 1.5),
     widthUnits: 'pixels',
     rounded: false, // deck.gl uses `rounded`, not `capRounded`
   });
@@ -2677,6 +2677,23 @@ function createExemplarImageKeyFramesLayer(
     onHover: (info: PickingInfo) => {
       if (info.coordinate && info.coordinate.length === 2) {
         hoveredCoordinate = [info.coordinate[0], info.coordinate[1]];
+        
+        // Set the hovered exemplar to trigger proper styling
+        if (info.object || info.index !== -1) {
+          hoveredExemplar.value = exemplar;
+          createHoveredHorizonOutlineLayer();
+        } else {
+          // Clear hover state when not hovering over anything
+          hoveredExemplar.value = null;
+          hoveredOutlineLayer.value = null;
+          horizonTextLayer.value = null;
+        }
+      } else {
+        // Clear hover state when coordinate is invalid
+        hoveredCoordinate = null;
+        hoveredExemplar.value = null;
+        hoveredOutlineLayer.value = null;
+        horizonTextLayer.value = null;
       }
       safeRenderDeckGL();
     },
@@ -2704,7 +2721,7 @@ function createExemplarImageKeyFramesLayer(
       if (d.hovered) return hoveredWithAlpha;
       return colors.unselectedBoundary.rgb;
     },
-    getWidth: (d: any) => (d.hovered ? 3 : 1.5),
+    getWidth: (d: any) => (d.hovered ? viewConfiguration.value.hoveredLineWidth : 1.5),
     opacity: 1,
     widthUnits: 'pixels',
     jointRounded: true,
