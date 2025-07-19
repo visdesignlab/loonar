@@ -379,12 +379,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 return;
             }
             const { min_attr, max_attr } = domainResult[0];
-            if (min_attr >= max_attr) {
-                console.error(
-                    `Invalid attribute range: min_attr (${min_attr}) >= max_attr (${max_attr}). Skipping histogram.`
-                );
-                return;
-            }
 
             // Fill in histogramDomains with the global min and max aggregated values.
             histogramDomains.value.minX = min_attr;
