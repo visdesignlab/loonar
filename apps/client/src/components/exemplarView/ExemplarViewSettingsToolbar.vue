@@ -154,6 +154,11 @@ function applySelections() {
               v-model.number="var1Model"
               :label="currAggSelections.var1.label"
               lazy-rules
+              :rules="[
+                val => val !== null && val !== undefined && val !== '' || 'Value is required',
+                val => val >= (currAggSelections.var1.min || 0) || `Value must be at least ${currAggSelections.var1.min || 0}`,
+                val => val <= (currAggSelections.var1.max || 1) || `Value must be at most ${currAggSelections.var1.max || 1}`
+              ]"
               :dark="globalSettings.darkMode"
               :min="currAggSelections.var1.min"
               :max="currAggSelections.var1.max"
