@@ -782,27 +782,27 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             ${selectedRankClause}
         )
         SELECT
-        s.track_id,
-        s.location,
-        s.birthTime,
-        s.deathTime,
-        s.minValue,
-        s.maxValue,
-        s.conditionOne,
-        s.conditionTwo,
-        s.aggValue, -- add aggValue to final select
-        NULL::double precision AS p, -- or remove if not needed
-        array_agg(ARRAY[
-            n.track_id::TEXT,
-            n."${timeCol}"::TEXT,
-            n."Frame ID"::TEXT,
-            n."${attributeColumn}"::TEXT,
-            n.x::TEXT,
-            n.y::TEXT
-        ]) AS cellLevelData
+            s.track_id,
+            CAST(s.location AS DOUBLE PRECISION) AS location,
+            CAST(s.birthTime AS DOUBLE PRECISION) AS birthTime,
+            CAST(s.deathTime AS DOUBLE PRECISION) AS deathTime,
+            CAST(s.minValue AS DOUBLE PRECISION) AS minValue,
+            CAST(s.maxValue AS DOUBLE PRECISION) AS maxValue,
+            s.conditionOne,
+            s.conditionTwo,
+            CAST(s.aggValue AS DOUBLE PRECISION) AS aggValue,
+            CAST(NULL AS DOUBLE PRECISION) AS p,
+            array_agg(ARRAY[
+                CAST(n.track_id AS TEXT),
+                CAST(n."${timeCol}" AS TEXT),
+                CAST(n."Frame ID" AS TEXT),
+                CAST(n."${attributeColumn}" AS TEXT),
+                CAST(n.x AS TEXT),
+                CAST(n.y AS TEXT)
+            ]) AS cellLevelData
         FROM selected s
         JOIN "${cellTable}" n
-        ON n.track_id = s.track_id
+        ON CAST(n.track_id AS TEXT) = s.track_id
         GROUP BY
         s.track_id,
         s.location,
