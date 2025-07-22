@@ -312,20 +312,20 @@ export async function addAdditionalCellColumns(
     ]);
 
     await vg.coordinator().exec([
-        `
-            WITH min_time AS (
-                SELECT 
-                    "${id}" AS tracking_id,
-                    MIN("${time}") AS min_time
-                FROM ${tableName}
-                GROUP BY "${id}"
-            )
-            UPDATE ${tableName} AS orig_comp_table
-            SET "Time Norm" = "${time}" - (
-                SELECT min_time
-                FROM min_time
-                WHERE min_time.tracking_id = orig_comp_table."${id}"
-            )
-        `,
-    ]);
+    `
+        WITH min_time AS (
+            SELECT 
+                "${id}" AS tracking_id,
+                MIN("${time}") AS min_time
+            FROM ${tableName}
+            GROUP BY "${id}"
+        )
+        UPDATE ${tableName} AS orig_comp_table
+        SET "Time Norm" = COALESCE("${time}" - (
+            SELECT min_time
+            FROM min_time
+            WHERE min_time.tracking_id = orig_comp_table."${id}"
+        ), 0)
+    `,
+]);
 }

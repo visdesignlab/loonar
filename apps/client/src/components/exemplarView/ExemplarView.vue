@@ -385,7 +385,9 @@ watch(
                             '.2f'
                         );
                         const formattedValue =
-                        hoveredCellsInfo.value && hoveredCellsInfo.value.length > 0
+                        hoveredCellsInfo.value &&
+                        hoveredCellsInfo.value.length > 0 &&
+                        hoveredCellsInfo.value[0][1].value != null
                             ? customNumberFormatter(hoveredCellsInfo.value[0][1].value, '.3f')
                             : '';
                         // If any of these values are undefined, return null
@@ -1899,10 +1901,10 @@ function createCellImageEventsLayer(
 
   // Find the cell corresponding to the computed time point
   const cell = exemplar.data.find((d) => d.time === realTimePoint);
-  if (!cell || !cell.value) {
+  if (!cell || cell.value == null) {
     console.error('[handleHorizonCellImages] cell or cell.value is undefined');
     return;
-  }
+}
 
   // Retrieve the pixel source for the exemplar's location
   const locationId = exemplar.locationId;
@@ -2011,10 +2013,10 @@ function createCellImageLayer(
   }
   
   // Validate that exemplar and its cell value are present.
-  if (!exemplar || !cell.value) {
+  if (!exemplar || cell.value == null) {
     console.error('[createCellImageEventsLayer] Exemplar or cell is null');
     return null;
-  }
+}
   
   // Get the BBox coordinates for the cell.
   const imageSnippetDestination = computeDestination(cell, exemplar, destY);
