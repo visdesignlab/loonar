@@ -1720,6 +1720,29 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
         controller: true,
     });
 }
+function handleDeletePin(pinId: string, exemplar: ExemplarTrack) {
+  // Remove from pinnedPins
+  const pinIdx = pinnedPins.value.findIndex(p => p.id === pinId);
+  if (pinIdx !== -1) {
+    pinnedPins.value.splice(pinIdx, 1);
+    updatePinsLayer(exemplar);
+  }
+
+  // Remove from selectedExemplar if it matches
+  if (selectedExemplar.value && selectedExemplar.value.trackId === exemplar.trackId) {
+    selectedExemplar.value = null;
+    selectedCellsInfo.value = [];
+    selectedCellImageLayers.value = [];
+    snippetSegmentationOutlineLayers.value = [];
+    selectedCellImageTickMarkLayers.value = [];
+    dataPointSelection.selectedTrackId = null;
+    dataPointSelection.setCurrentFrameIndex(0);
+  }
+  const exIdx = exemplarTracks.value.findIndex(e => e.trackId === exemplar.trackId);
+  if (exIdx !== -1) {
+    exemplarTracks.value.splice(exIdx, 1);
+  }
+}
 
 // Create pin layers for the histogram pins.
 function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
@@ -1782,6 +1805,34 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
                 handlePinDragEnd(info, event, conditionGroupKey),
         })
     );
+
+    const xButtonData = pins
+  .filter(d => selectedExemplar.value && d.exemplar.trackId === selectedExemplar.value.trackId)
+  .map(d => ({
+    position: [d.target[0] - 20, d.target[1]], // 12px left of the circle
+    pinId: d.id,
+    exemplar: d.exemplar,
+  }));
+  console.log("X Button Data:", xButtonData);
+
+if (xButtonData.length > 0) {
+  pinLayers.push(
+    new TextLayer({
+      id: `exemplar-pin-x-button-${uniqueExemplarKey(conditionGroupKey)}`,
+      data: xButtonData,
+      pickable: true,
+      getPosition: d => d.position,
+      getText: () => "x",
+      getSize: 20,
+      getColor: [0, 0, 0, 255],
+      onClick: (info: PickingInfo) => {
+        if (info.object) {
+          handleDeletePin(info.object.pinId, info.object.exemplar);
+        }
+      },
+    })
+  );
+}
     // Return the lines and circles that comprise pin layers.
     return pinLayers;
 }
