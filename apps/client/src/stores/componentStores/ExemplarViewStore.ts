@@ -11,7 +11,6 @@ import { aggregateFunctions, isCustomAggregateFunction } from '@/components/plot
 
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
-import { histogram } from 'd3-array';
 
 
 export interface ExemplarTrack {
@@ -106,7 +105,6 @@ export interface ExemplarHorizonChartSettings {
     baseline: number;
 }
 
-// Remove histogramData and replace with conditionHistograms
 const conditionHistograms = ref<conditionHistogram[]>([]);
 const histogramDomains = ref<HistogramDomains>({
     histogramBinRanges: [],
@@ -454,10 +452,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             histogramDomains.value.maxY = Math.max(
                 ...conditionHistograms.value.flatMap((c) => c.histogramData)
             );
-
             return;
-
-            console.log('Histogram data fetched and processed successfully.');
         } catch (error) {
             console.error('Error fetching histogram data:', error);
         }
@@ -851,7 +846,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         return tracks;
     }
 
-    exemplarTracks.value = [];
     async function getExemplarTracks(
         replace?: boolean,
         percentiles: number[] = exemplarPercentiles.value,
@@ -881,7 +875,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    // Remove histogramData related computed properties
     // const getHistogramDataComputed = computed(() => histogramData.value);
     const conditionHistogramsComputed = computed(
         () => conditionHistograms.value
