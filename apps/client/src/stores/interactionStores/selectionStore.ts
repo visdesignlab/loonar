@@ -4,6 +4,8 @@ import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { ref, computed, watch, type Ref } from 'vue';
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
+import { addAggregateColumn } from '@/util/datasetLoader';
+import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
 
 export type SelectionType = 'cell' | 'track' | 'lineage' | 'conditionChart';
 
@@ -75,6 +77,20 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 addPlot(mass, 'cell');
                 // Add average mass plot.
                 addPlot(`Average ${mass}`, 'track');
+
+                // Ensure track_length column exists in aggregate table
+                const aggTable = `${newExperimentMetadata.name}_composite_experiment_cell_metadata_aggregate`;
+                const compTable = `${newExperimentMetadata.name}_composite_experiment_cell_metadata`;
+                addAggregateColumn(
+                    aggTable,
+                    compTable,
+                    {
+                        functionName: aggregateFunctions['Track Length'].functionName,
+                        label: 'track_length',
+                    },
+                    newExperimentMetadata.headerTransforms
+                );
+                addPlot('track_length', 'track');
             }
         },
         { immediate: true, deep: true }
