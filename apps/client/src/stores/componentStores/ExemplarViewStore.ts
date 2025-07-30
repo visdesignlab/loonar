@@ -1,18 +1,20 @@
 import { ref, watch, computed } from 'vue';
-import { defineStore } from 'pinia';
-import { storeToRefs } from 'pinia';
-import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { defineStore, storeToRefs } from 'pinia';
 import * as vg from '@uwdata/vgplot';
-import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 
-// Import the utility function and type for building the aggregate object
+// Aggregation imports
 import { addAggregateColumn, type AggregateObject } from '@/util/datasetLoader';
 import { aggregateFunctions, isCustomAggregateFunction } from '@/components/plotSelector/aggregateFunctions';
 
+// Store imports
+import { useConditionSelectorStore } from '@/stores/componentStores/conditionSelectorStore';
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
+import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
 
+// Interfaces ------------------------------------------------------------------------
 
+// Tracks ------------
 export interface ExemplarTrack {
     trackId: string;
     locationId: string;
@@ -27,11 +29,6 @@ export interface ExemplarTrack {
     starred: boolean; // true if this is a user starred exemplar
     aggValue: number; // add aggValue for sorting
 }
-export interface SelectedTrackRequest {
-    binRange: [number, number];
-    conditionGroupKey: Record<string, string>;
-}
-
 export interface Cell {
     time: number;
     trackId: string;
@@ -43,6 +40,54 @@ export interface Cell {
     isSelected?: boolean;
 }
 
+// User request for a specific track
+export interface SelectedTrackRequest {
+    binRange: [number, number];
+    conditionGroupKey: Record<string, string>;
+}
+// Track Aggregation Option (Ex: Average Mass)
+interface AggregationOption {
+    label: string;
+    value: string;
+}
+// Histograms -------------------
+// Histogram data for each condition pair
+export interface conditionHistogram {
+    condition: Record<string, string>;
+    histogramData: number[];
+}
+
+// Bin ranges and domains for histograms
+export interface HistogramBin {
+    min: number;
+    max: number;
+}
+export interface HistogramDomains {
+    histogramBinRanges: HistogramBin[];
+    // Global min and max across all histograms
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+// View Configuration - Exemplar View --------------
+export interface ExemplarHorizonChartSettings {
+    default: true | false;
+    userModifiedNumeric: boolean;
+    userModifiedColors: boolean;
+    positiveColorScheme: {
+        label: string;
+        value: any;
+    };
+    negativeColorScheme: {
+        label: string;
+        value: any;
+    };
+    modHeight: number;
+    baseline: number;
+}
+// Main user edited configuration for the Exemplar View
 export interface ViewConfiguration {
     afterStarredGap: number;
     snippetSourceSize: number;
@@ -67,44 +112,8 @@ export interface ViewConfiguration {
     hoveredLineWidth: number;
 }
 
-export interface conditionHistogram {
-    condition: Record<string, string>;
-    histogramData: number[];
-}
-
-export interface HistogramBin {
-    min: number;
-    max: number;
-}
-
-export interface HistogramDomains {
-    histogramBinRanges: HistogramBin[];
-    minX: number;
-    maxX: number;
-    minY: number;
-    maxY: number;
-}
-
-interface AggregationOption {
-    label: string;
-    value: string;
-}
-export interface ExemplarHorizonChartSettings {
-    default: true | false;
-    userModifiedNumeric: boolean;
-    userModifiedColors: boolean;
-    positiveColorScheme: {
-        label: string;
-        value: any;
-    };
-    negativeColorScheme: {
-        label: string;
-        value: any;
-    };
-    modHeight: number;
-    baseline: number;
-}
-
+// Initializations --------------------------------------------------------------------
+// Histograms, and histogram bin ranges
 const conditionHistograms = ref<conditionHistogram[]>([]);
 const histogramDomains = ref<HistogramDomains>({
     histogramBinRanges: [],
@@ -114,6 +123,15 @@ const histogramDomains = ref<HistogramDomains>({
     maxY: 0,
 });
 
+// Exemplar Percentile Options
+const percentileOptions = [
+    { label: 'Default (5th, Median, 95th)', value: [5, 50, 95] },
+    { label: 'Quartiles (25th, Median, 75th)', value: [25, 50, 75] },
+    { label: 'Min, Max', value: [0, 100] },
+    { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 100] }
+];
+
+// Horizon Chart Color Scheme
 export const horizonChartScheme = [
     '#e6e3e3', // Light Grey 1
     '#cccccc', // Light Grey 2
@@ -125,24 +143,27 @@ export const horizonChartScheme = [
     '#1a1a1a', // Grey 9
     '#000000', // Black
 ];
+
+// Store Definition ------------------------------------------------------------------
+/**
+ * Store for exemplar view data and settings
+ */
 export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
+    // Initializations in store -----------------------------------------------------
+    // Store imports
+    const datasetSelectionStore = useDatasetSelectionStore();
     const conditionSelectorStore = useConditionSelectorStore();
     const mosaicSelectionStore = useMosaicSelectionStore();
-    const { aggFilPredString, conditionChartSelectionsInitialized } = storeToRefs(mosaicSelectionStore);
-    const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
-    const selectionStore = useSelectionStore();
-    const { dataSelections, dataFilters } = storeToRefs(selectionStore);
-    const horizonChartSettings = ref<ExemplarHorizonChartSettings>({
-        default: true,
-        userModifiedNumeric: false, // Initialize as false
-        userModifiedColors: false, // Initialize as false
-        positiveColorScheme: { label: 'Default', value: [] },
-        negativeColorScheme: { label: 'Default', value: [] },
-        modHeight: 1,
-        baseline: 0,
-    });
 
+    // Filters, condition filters
+    const { aggFilPredString, conditionChartSelectionsInitialized } = storeToRefs(mosaicSelectionStore);
+    const filterWhereClause = computed(() => {
+        return aggFilPredString.value;
+    });
+    
+    // Selected attributes and aggregations
+    const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
     const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
     const selectedAttr2 = ref<string | null>(null);
     const selectedVar1 = ref<number | string | null>(null);
@@ -150,17 +171,15 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         label: 'Average',
         value: 'AVG',
     });
-    const percentileOptions = [
-        { label: 'Default (5th, Median, 95th)', value: [5, 50, 95] },
-        { label: 'Quartiles (25th, Median, 75th)', value: [25, 50, 75] },
-        { label: 'Min, Max', value: [0, 100] },
-        { label: 'Min, Max, 20th, 80th', value: [0, 20, 80, 100] }
-    ];
-    // Defaults to the first option
-    const exemplarPercentiles = ref<number[]>(percentileOptions[0].value);
-    // New reactive property to track whether exemplar data is loaded
-    const exemplarDataLoaded = ref<boolean>(true);
 
+    // Exemplar Tracks and Percentiles
+    const exemplarTracks = ref<ExemplarTrack[]>([]);
+    const exemplarPercentiles = ref<number[]>(percentileOptions[0].value);
+
+    // Histogram bin count
+    const histogramBinCount = ref<number>(70);
+
+    // View Configuration - Exemplar View -----------
     const viewConfiguration = ref<ViewConfiguration>({
         afterStarredGap: 100,
         snippetSourceSize: 80,
@@ -184,10 +203,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramTooltipFontSize: 16,
         hoveredLineWidth: 3, 
     });
-    const histogramBinCount = ref<number>(70);
-    const snippetZoom = computed<number>(() => {
-        return viewConfiguration.value.snippetDisplayHeight / viewConfiguration.value.snippetSourceSize;
-    });
 
     const exemplarHeight = computed(() => {
         return (
@@ -199,21 +214,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         );
     });
 
-    const conditionGroupHeight = computed(() => {
-        return (
-            exemplarHeight.value * 3 +
-            viewConfiguration.value.betweenExemplarGap * 2
-        );
+    const snippetZoom = computed<number>(() => {
+        return viewConfiguration.value.snippetDisplayHeight / viewConfiguration.value.snippetSourceSize;
     });
 
-    const exemplarTracks = ref<ExemplarTrack[]>([]);
+    const horizonChartSettings = ref<ExemplarHorizonChartSettings>({
+        default: true,
+        userModifiedNumeric: false, // Initialize as false
+        userModifiedColors: false, // Initialize as false
+        positiveColorScheme: { label: 'Default', value: [] },
+        negativeColorScheme: { label: 'Default', value: [] },
+        modHeight: 1,
+        baseline: 0,
+    });
 
-    const datasetSelectionStore = useDatasetSelectionStore();
+    // Data Loading state -------------
+    const exemplarDataLoaded = ref<boolean>(true);
+
     const { experimentDataInitialized, currentExperimentMetadata } =
         storeToRefs(datasetSelectionStore);
 
+    // Functions -------------------------------------------------------------
     /**
-     * 
      * @returns A Map of location IDs to image URLs for the exemplar tracks.
      */
     function getExemplarImageUrls(): Map<string, string> {
@@ -233,6 +255,9 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         return map;
     }
 
+    /**
+     * @returns The total time of the entire experiment
+     */
     async function getTotalExperimentTime(): Promise<number> {
         if (
             !experimentDataInitialized.value ||
@@ -277,24 +302,28 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    /** This function gets all the data for the exemplar view. */
+    /**
+     * 
+     * @param replace True if the exemplar tracks should be replaced, false if they should be appended.
+     * @param exemplarPercentiles What percentiles [0-100] the exemplar tracks are in the histogram
+     * @param selectedTrackRequest Fetch a specific track based on a user request
+     */
     async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[], selectedTrackRequest?: SelectedTrackRequest): Promise<void> {
+        // Not done loading until data fetched.
         exemplarDataLoaded.value = false;
         try {
+            // Histograms
             await getHistogramData();
-
-            console.log('Exemplar tracks generated.');
+            console.log('Histogram data fetched');
+            // Exemplar tracks
             await getExemplarTracks(replace, exemplarPercentiles, selectedTrackRequest);
-            console.log('Exemplar tracks fetched.');
+            console.log('Exemplar tracks fetched');
         } finally {
+            // After fetching, we've finished loading.
             exemplarDataLoaded.value = true;
         }
     }
-
-    const filterWhereClause = computed(() => {
-        return aggFilPredString.value;
-    });
-
+    
     function getAttributeName(): string {
         const aggLabel = selectedAggregation.value.label;
         const aggFunc = aggregateFunctions[aggLabel];
@@ -888,7 +917,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         viewConfiguration,
         snippetZoom,
         exemplarHeight,
-        conditionGroupHeight,
         selectedAttribute,
         selectedAggregation,
         selectedAttr2,
