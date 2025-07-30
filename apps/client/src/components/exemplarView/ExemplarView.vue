@@ -1050,7 +1050,6 @@ async function handleHorizonClick(info: PickingInfo, exemplar: ExemplarTrack) {
         
         // Compute the real time point from the exemplar data
         realTimePoint = computeRealTimePoint(exemplar, estimatedTime);
-        console.log("Exemplar selected time:", realTimePoint);
     }
 
     // 1) select new exemplar
@@ -1813,7 +1812,6 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
     pinId: d.id,
     exemplar: d.exemplar,
   }));
-  console.log("X Button Data:", xButtonData);
 
 if (xButtonData.length > 0) {
   pinLayers.push(
