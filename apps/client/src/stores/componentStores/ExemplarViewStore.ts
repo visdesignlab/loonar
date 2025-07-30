@@ -314,10 +314,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         try {
             // Histograms
             await getHistogramData();
-            console.log('Histogram data fetched');
+
             // Exemplar tracks
             await getExemplarTracks(replace, exemplarPercentiles, selectedTrackRequest);
-            console.log('Exemplar tracks fetched');
+
         } finally {
             // After fetching, we've finished loading.
             exemplarDataLoaded.value = true;
@@ -601,7 +601,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         async (newBinCount, oldBinCount) => {
             // Only trigger if the value actually changed and we have initialized data
             if (newBinCount !== oldBinCount && experimentDataInitialized.value) {
-                console.log(`Histogram bin count changed from ${oldBinCount} to ${newBinCount}, recalculating data...`);
+
                 await getExemplarViewData(true);
             }
         }

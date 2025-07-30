@@ -130,20 +130,16 @@ onMounted(() => {
         },
         // onBeforeRender: (gl: any) => {
         //     console.count('before');
-        //     console.log(gl);
+
         // },
         // onAfterRender: (gl: any) => {
         //     console.count('after');
-        //     console.log(gl);
+
         // },
         // onError: (error: any, _layer: any) => {
         //     console.error('ERROR');
-        //     console.log(error);
+
         // },
-        // onWebGLInitialized: () => console.log('onWebGLInitialized'),
-        // onViewStateChange: () => console.log('onViewStateChange'),
-        // onInteractionStateChange: () => console.log('onInteractionStateChange'),
-        // onLoad: () => console.log('onLoad'),
 
         getTooltip: ({ object }) => {
             if (!object) return null;
@@ -212,7 +208,7 @@ watch(currentLocationMetadata, async () => {
     resetView();
 });
 function createBaseImageLayer(): typeof ImageLayer {
-    // console.log('create base image layer');
+
     return new ImageLayer({
         loader: pixelSource.value,
         id: 'base-image-layer',
@@ -222,8 +218,6 @@ function createBaseImageLayer(): typeof ImageLayer {
         extensions: [colormapExtension],
         // @ts-ignore
         colormap: imageViewerStore.colormap,
-        // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => console.log('image viewport load'),
     });
 }
 
@@ -318,7 +312,7 @@ function onHover(info: PickingInfo): void {
         return;
     }
     const geoJsonFeature = info.object as GeoJsonFeature;
-    // console.log(geoJsonFeature);
+
     dataPointSelectionUntrracked.hoveredTrackId =
         geoJsonFeature.properties.id?.toString();
     dataPointSelectionUntrracked.setHoveredCellIndex(
@@ -334,14 +328,12 @@ function onClick(info: PickingInfo): void {
     dataPointSelection.selectedTrackId =
         geoJsonFeature.properties.id?.toString();
 
-    console.log('onClick', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
-    console.log('Cell meta data on click:', cellMetaData.selectedTrack);
     const lineageId = cellMetaData.getLineageId(cellMetaData.selectedTrack!);
     dataPointSelection.selectedLineageId = lineageId;
 }
 
 const lineageLayout = computed<LineageLayout>(() => {
-    // console.log('computed lineageLineSegments');
+
     const layout: LineageLayout = { points: [], lines: [] };
     for (const lineage of currentLineageArray.value) {
         addSegmentsFromTrack(lineage.founder, layout);
@@ -633,7 +625,7 @@ function resetView() {
     const zoomX = containerWidth.value / imageWidth;
     const zoomY = containerHeight.value / imageHeight;
     const zoomPercent = 0.9 * Math.min(zoomX, zoomY);
-    // console.log('reset');
+
     // ensure the image fills the space
     deckgl.setProps({
         initialViewState: {

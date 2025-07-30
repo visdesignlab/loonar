@@ -156,7 +156,7 @@ async function addTrackPlotFromMenu() {
             customQuery,
         };
 
-        console.log("PLOT SELECTOR PARAMS FOR AWAIT AGGREGATE OBJECT:", aggTableName.value, compTableName.value, aggObject, currentExperimentMetadata.value?.headerTransforms);
+
         const name = await addAggregateColumn(
             aggTableName.value,
             compTableName.value,

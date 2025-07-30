@@ -469,9 +469,9 @@ export const useGridstackLayoutStore = defineStore(
             );
         }
         function deleteLayout(index: number): void {
-            // console.log(currentLayoutId.value);
+
             const removed = userLayoutOptions.value.splice(index, 1)[0];
-            // console.log(currentLayoutId.value);
+
             if (removed.id == currentLayoutId.value) {
                 currentLayoutId.value = defaultId;
             }

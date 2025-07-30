@@ -68,7 +68,7 @@ export async function loadFileIntoDuckDb(
     if (type === 'csv') {
         try {
             await vg.coordinator().exec([vg.loadCSV(tableName, url)]);
-            console.log(`Got DuckDb file: ${url}`);
+
         } catch (error) {
             const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);
@@ -77,7 +77,7 @@ export async function loadFileIntoDuckDb(
     } else if (type === 'parquet') {
         try {
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
-            console.log(`Got DuckDb file: ${url}`);
+
         } catch (error) {
             const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);

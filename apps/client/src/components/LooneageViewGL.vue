@@ -350,17 +350,16 @@ onMounted(() => {
         // debug: true,
         // onBeforeRender: (gl: any) => {
         //     console.count('before');
-        //     console.log(gl);
+
         // },
         // onAfterRender: (gl: any) => {
         //     console.count('after');
-        //     console.log(gl);
+
         // },
         // onError: (error: any, _layer: any) => {
         //     console.error('ERROR');
-        //     console.log(error);
+
         // },
-        // onWebGLInitialized: () => console.log('onWebGLInitialized'),
         onViewStateChange: ({ viewState, oldViewState }) => {
             viewState.zoom[1] = 0;
             if (oldViewState && !isEqual(viewState.zoom, oldViewState.zoom)) {
@@ -401,8 +400,6 @@ onMounted(() => {
                 dataPointSelection.selectedTrackId = null;
             }
         },
-        // onInteractionStateChange: () => console.log('onInteractionStateChange'),
-        // onLoad: () => console.log('onLoad'),
     });
     // renderDeckGL();
 });
@@ -602,14 +599,10 @@ function createHorizonChartLayers(): (
             if (!cellMetaData.trackMap) return;
             let { selectedSnippet, time } = processHorizonPickingInfo(info);
             if (time !== null) {
-                console.log("Looneage selected track time:", time);
                 dataPointSelection.setCurrentFrameIndex(time);
             }
             if (!selectedSnippet) return;
             dataPointSelection.selectedTrackId = selectedSnippet.trackId;
-            console.log(
-                `Selected track looneage: ${selectedSnippet.trackId} at time: ${time}`
-            );
             dataPointSelectionUntrracked.setTriggerRecenter();
             if (!controlDown.value) return;
             if (shiftDown.value) {
@@ -1282,7 +1275,7 @@ function createKeyFrameSnippets(): KeyFrameSnippetsResult | null {
                         matchingPinnedSnippet.extraFrames + 1;
                 }
             }
-            console.log('hover end');
+
             renderDeckGL();
         },
         onClick: (info: PickingInfo) => {
@@ -1584,7 +1577,7 @@ function getKeyFrameOrder(track: Track): KeyframeInfo[] {
 
         // update the nearest distance values
         if (maxIndex === -1) {
-            console.log('MAX INDEX', maxIndex);
+
         }
         const t1 = cellMetaData.getTime(track.cells[maxIndex]);
 

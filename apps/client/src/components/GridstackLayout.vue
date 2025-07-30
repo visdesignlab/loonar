@@ -32,18 +32,14 @@ onMounted(() => {
     });
 
     grid.on('change', (event: any, changeItems: any) => {
-        // console.log('-------------------------------------------------');
-        // console.log('grid.on change');
         if (changeItems == null) return;
         gridstackLayoutStore.$patch(() => {
             for (let changedItem of changeItems) {
                 gridstackLayoutStore.updateItem(changedItem);
             }
         });
-        // console.log({ changeItems });
     });
     // grid.on('dragstart', (event: Event, element: any, ...args: any[]) => {
-    //     // console.log({ event, element, args });
     //     // event.preventDefault();
     // });
     // grid.on('dragstop', function (_event: any, element: any) {

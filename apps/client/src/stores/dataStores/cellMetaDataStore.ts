@@ -156,16 +156,16 @@ export const useCellMetaData = defineStore('cellMetaData', () => {
     }
 
     const selectedTrack = computed<Track | null>(() => {
-        console.log('selectedTrack computed called');
+
         if (!dataInitialized.value) return null;
-        console.log('selectedTrack data initialized');
+
         if (dataPointSelection.selectedTrackId == null) return null;
 
-        console.log('selectedTrack is not null');
-        console.log('Getting:', dataPointSelection.selectedTrackId, typeof dataPointSelection.selectedTrackId);
+
+
         const track = trackMap.value?.get(dataPointSelection.selectedTrackId);
 
-        console.log('selected track track:', track);
+
         return track ?? null;
     });
     function selectTrack(track: Track | null) {
@@ -376,8 +376,8 @@ export const useCellMetaData = defineStore('cellMetaData', () => {
         columnHeaders: string[],
         headerTransforms?: TextTransforms
     ): void {
-        console.log('beginning initialization');
-        console.log(dataInitialized.value);
+
+
         headers.value = columnHeaders;
         initHeaderTransforms(headerTransforms);
         initCells(rawData);
@@ -386,7 +386,7 @@ export const useCellMetaData = defineStore('cellMetaData', () => {
         if (dataPointSelection.selectedLineageId === null) {
             selectLineage(lineageArray?.value?.[0] ?? null);
         }
-        console.log('data initialized');
+
         dataInitialized.value = true;
     }
 

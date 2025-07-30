@@ -37,7 +37,7 @@ function onCreateNew(): void {
     gridstackLayoutStore.$patch(() => {
         gridstackLayoutStore.createNew();
         makeNameEditable(gridstackLayoutStore.currentLayout);
-        console.log(gridstackLayoutStore.currentLayout?.currentItems);
+
     });
 }
 

@@ -88,7 +88,7 @@ function applySelections() {
     label: aggModel.value,
     value: aggregateFunctions[aggModel.value].functionName,
   };
-  console.log("agg1model:", getString(attr1Model.value) );
+
   exemplarViewStore.selectedAttribute = getString(attr1Model.value);
   exemplarViewStore.selectedAttr2 = attr2Model.value ? getString(attr2Model.value) : null;
   exemplarViewStore.selectedVar1 = var1Model.value != null ? getString(var1Model.value) : null;

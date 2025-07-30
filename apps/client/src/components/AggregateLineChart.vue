@@ -246,7 +246,7 @@ onMounted(() => {
         debug: true,
         onError: (error: any, _layer: any) => {
             console.error('ERROR');
-            console.log(error);
+            console.warn(error);
         },
         width: chartWidth.value,
         height: chartHeight.value,
@@ -332,7 +332,7 @@ function createCellSnippetLayer() {
         chartX + halfSize,
         chartY - padding - looneageViewStore.snippetDestSize,
     ];
-    console.log({
+    console.warn({
         source,
         destination,
     });

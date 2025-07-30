@@ -284,7 +284,7 @@ class CellSnippetsLayer extends CompositeLayer {
 
         //get current time in seconds
         // const t = Date.now();
-        // console.log(t);
+
 
         const { id } = this.props;
         return new PolygonLayer({

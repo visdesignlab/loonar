@@ -6,7 +6,7 @@ export class ScrollUpDownController extends OrthographicController {
     }
 
     handleEvent(event: any) {
-        console.log(event.type);
+
         if (event.type === 'wheel') {
             const delta = event.delta;
             this.onScroll(delta);
