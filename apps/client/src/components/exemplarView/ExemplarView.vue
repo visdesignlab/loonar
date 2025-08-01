@@ -3005,6 +3005,31 @@ watch(() => horizonChartSettings.value.negativeColorScheme, () => {
     horizonChartSettings.value.userModifiedColors = true;
 }, { deep: true });
 
+watch(
+  () => imageViewerStore.colormap,
+  (newColormap) => {
+    if (exemplarDataInitialized.value && newColormap) {
+      // Clear and regenerate selected cell image layers
+      selectedCellImageLayers.value = [];
+      selectedCellImageTickMarkLayers.value = [];
+      snippetSegmentationOutlineLayers.value = [];
+      // Recreate layers for selected cells
+      for (const [bbox, cell] of selectedCellsInfo.value) {
+        const exemplar = selectedExemplar.value;
+        if (!exemplar) continue;
+        const pixelSource = pixelSources.value?.[exemplar.locationId];
+        if (!pixelSource) continue;
+        const result = createCellImageLayer(pixelSource, exemplar, cell);
+        if (result?.cellImageLayer) selectedCellImageLayers.value.push(result.cellImageLayer);
+        if (result?.tickMarkLayer) selectedCellImageTickMarkLayers.value.push(result.tickMarkLayer);
+        if (result?.segmentationLayer?.snippetSegmentationOutlineLayer) snippetSegmentationOutlineLayers.value.push(result.segmentationLayer.snippetSegmentationOutlineLayer);
+      }
+      renderDeckGL();
+    }
+  },
+  { deep: true }
+);
+
 // Finds the fill color for the exemplar track based on the selected Y tag.
 const fillColor = (exemplar: ExemplarTrack | undefined) => {
     if (
