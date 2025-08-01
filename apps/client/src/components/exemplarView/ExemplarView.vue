@@ -334,6 +334,8 @@ watch(
         if (selectedAttribute.value === ""){
             selectedAttribute.value = undefined;
         }
+
+        await until(() => selectedAttribute.value !== undefined);
         await exemplarViewStore.addAggregateColumnForSelection(
             selectedAttribute.value,
             selectedAggregation.value,

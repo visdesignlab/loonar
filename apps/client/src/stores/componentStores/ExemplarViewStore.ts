@@ -11,6 +11,7 @@ import { useConditionSelectorStore } from '@/stores/componentStores/conditionSel
 import { useSelectionStore } from '@/stores/interactionStores/selectionStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '@/stores/dataStores/mosaicSelectionStore';
+import { until } from '@vueuse/core';
 
 // Interfaces ------------------------------------------------------------------------
 
@@ -156,6 +157,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const conditionSelectorStore = useConditionSelectorStore();
     const mosaicSelectionStore = useMosaicSelectionStore();
 
+    // Data Loading state -------------
+    const exemplarDataLoaded = ref<boolean>(true);
+
+    const { experimentDataInitialized, currentExperimentMetadata } =
+        storeToRefs(datasetSelectionStore);
+
     // Filters, condition filters
     const { aggFilPredString, conditionChartSelectionsInitialized } = storeToRefs(mosaicSelectionStore);
     const filterWhereClause = computed(() => {
@@ -164,7 +171,30 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     
     // Selected attributes and aggregations
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
-    const selectedAttribute = ref<string>('Mass (pg)'); // Default attribute
+    const selectedAttribute = ref<string | undefined>(undefined);
+    const timeCol = ref<string | undefined>(undefined);
+    const frameCol = ref<string | undefined>(undefined);
+    const xCol = ref<string | undefined>(undefined);
+    const yCol = ref<string | undefined>(undefined);
+
+    watch(
+        [experimentDataInitialized, currentExperimentMetadata],
+        ([isInitialized, metadata]) => {
+            if (
+                isInitialized &&
+                metadata &&
+                metadata.headerTransforms &&
+                metadata.headerTransforms.mass
+            ) {
+                selectedAttribute.value = metadata.headerTransforms.mass;
+                timeCol.value = metadata.headerTransforms.time;
+                frameCol.value = metadata.headerTransforms.frame;
+                xCol.value = metadata.headerTransforms.x;
+                yCol.value = metadata.headerTransforms.y;
+            }
+        },
+        { immediate: true }
+    );
     const selectedAttr2 = ref<string | null>(null);
     const selectedVar1 = ref<number | string | null>(null);
     const selectedAggregation = ref<AggregationOption>({
@@ -228,12 +258,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         baseline: 0,
     });
 
-    // Data Loading state -------------
-    const exemplarDataLoaded = ref<boolean>(true);
-
-    const { experimentDataInitialized, currentExperimentMetadata } =
-        storeToRefs(datasetSelectionStore);
-
     // Functions -------------------------------------------------------------
     /**
      * @returns A Map of location IDs to image URLs for the exemplar tracks.
@@ -266,19 +290,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             return 0;
         }
 
-        // Assume the time column is specified in headerTransforms
-        const timeColumn =
-            currentExperimentMetadata.value.headerTransforms?.time;
-
-        if (!timeColumn) {
-            console.error('Time column not defined in headerTransforms.');
-            return 0;
-        }
-
         const tableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata`;
 
         const query = `
-            SELECT MAX("${timeColumn}") as max_time, MIN("${timeColumn}") as min_time
+            SELECT MAX("${timeCol.value}") as max_time, MIN("${timeCol.value}") as min_time
             FROM "${tableName}"
         `;
 
@@ -309,6 +324,10 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
      * @param selectedTrackRequest Fetch a specific track based on a user request
      */
     async function getExemplarViewData(replace?: boolean, exemplarPercentiles?: number[], selectedTrackRequest?: SelectedTrackRequest): Promise<void> {
+        // Wait for selectedAttribute and time column to be set
+        await until(() => selectedAttribute.value !== undefined);
+        await until(() => currentExperimentMetadata.value?.headerTransforms?.time !== undefined);
+
         // Not done loading until data fetched.
         exemplarDataLoaded.value = false;
         try {
@@ -328,7 +347,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggLabel = selectedAggregation.value.label;
         const aggFunc = aggregateFunctions[aggLabel];
         if (isCustomAggregateFunction(aggFunc) || !selectedAttribute.value) {
-            return currentExperimentMetadata.value?.headerTransforms?.mass ?? 'Mass (pg)';
+            return currentExperimentMetadata.value?.headerTransforms?.mass;
         }
         // If selectedAttribute.value is an object, return its label or value
         if (
@@ -399,6 +418,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 ${whereClause}
                 `;
             const domainResult = await timedVgQuery('domainQuery', domainQuery);
+            console.log('domainResult:', domainResult);
 
 
             if (!domainResult || domainResult.length === 0) {
@@ -408,8 +428,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const { min_attr, max_attr } = domainResult[0];
 
             // Fill in histogramDomains with the global min and max aggregated values.
-            histogramDomains.value.minX = min_attr;
-            histogramDomains.value.maxX = max_attr;
+            const minX = typeof min_attr === 'bigint' ? Number(min_attr) : min_attr;
+            const maxX = typeof max_attr === 'bigint' ? Number(max_attr) : max_attr;
+
+            histogramDomains.value.minX = minX;
+            histogramDomains.value.maxX = maxX;
 
             // Build bin ranges (we store these in histogramDomains).
             const binSize = (max_attr - min_attr) / histogramBinCount.value;
@@ -446,7 +469,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             // Get result of query - bin counts for each condition pair and bin index.
             const histogramBinCounts = await timedVgQuery('histogramConditionQuery', histogramConditionQuery);
 
-
             if (!histogramBinCounts || histogramBinCounts.length === 0) {
                 console.warn('No histogram counts found.');
                 conditionHistograms.value = [];
@@ -462,8 +484,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 if (!binCountsMap.has(conditionKey)) {
                     binCountsMap.set(conditionKey, Array(histogramBinCount.value).fill(0));
                 }
+                // Convert BigInt to Number if needed
+                const safeBinIndex = typeof bin_index === 'bigint' ? Number(bin_index) : bin_index;
+                const safeCount = typeof count === 'bigint' ? Number(count) : count;
                 // place the count into its bin index
-                binCountsMap.get(conditionKey)![bin_index] = count;
+                binCountsMap.get(conditionKey)![safeBinIndex] = safeCount;
             }
 
             // 5) Convert Map -> Ref<{condition, histogramData}[]>
@@ -582,6 +607,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const start = performance.now();
         const result = await vg.coordinator().query(query, opts);
         const elapsed = performance.now() - start;
+        console.log(result);
         return result;
     }
 
@@ -673,7 +699,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const cellTable = `${experimentName}_composite_experiment_cell_metadata`
         const whereClause = filterWhereClause.value ? `AND ${filterWhereClause.value}` : ''
         const aggAttr = getAggregateAttributeName();
-        const timeCol = "Time (h)" // hardcoded time column name, should be defined in headerTransforms
 
 
         // --- New logic for selectedTrackRequest ---
@@ -779,8 +804,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             t.location::INTEGER          AS location,
             t."${selectedXTag.value}"    AS conditionOne,
             t."${selectedYTag.value}"    AS conditionTwo,
-            t."Minimum ${timeCol}"         AS birthTime,
-            t."Maximum ${timeCol}"         AS deathTime,
+            t."Minimum ${timeCol.value}"         AS birthTime,
+            t."Maximum ${timeCol.value}"         AS deathTime,
             t."Minimum ${attributeColumn}" AS minValue,
             t."Maximum ${attributeColumn}" AS maxValue,
             t."${aggAttr}"               AS aggValue,
@@ -818,11 +843,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             CAST(NULL AS DOUBLE PRECISION) AS p,
             array_agg(ARRAY[
                 CAST(n.track_id AS TEXT),
-                CAST(n."${timeCol}" AS TEXT),
-                CAST(n."Frame ID" AS TEXT),
+                CAST(n."${timeCol.value}" AS TEXT),
+                CAST(n."${frameCol.value}" AS TEXT),
                 CAST(n."${attributeColumn}" AS TEXT),
-                CAST(n.x AS TEXT),
-                CAST(n.y AS TEXT)
+                CAST(n.${xCol} AS TEXT),
+                CAST(n.${yCol} AS TEXT)
             ]) AS cellLevelData
         FROM selected s
         JOIN "${cellTable}" n

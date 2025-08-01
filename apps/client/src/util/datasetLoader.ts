@@ -192,6 +192,8 @@ export async function addAggregateColumn(
             functionCall = `${functionCall}(*)`;
         }
 
+
+        console.log("Function Name:", functionCall);
         await vg.coordinator().exec([
             `
                 UPDATE ${aggTable} as t1
