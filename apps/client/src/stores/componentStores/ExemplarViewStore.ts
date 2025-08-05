@@ -329,7 +329,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         // Wait for selectedAttribute and time column to be set
         await until(() => selectedAttribute.value !== undefined);
         await until(() => currentExperimentMetadata.value?.headerTransforms?.time !== undefined);
-
         // Not done loading until data fetched.
         exemplarDataLoaded.value = false;
         try {
@@ -712,12 +711,12 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 SELECT
                     t.tracking_id::TEXT AS track_id,
                     t.location::INTEGER AS location,
-                    t."${selectedXTag.value}" AS conditionOne,
-                    t."${selectedYTag.value}" AS conditionTwo,
-                    t."${aggAttr}" AS aggValue
+                    CAST(t."${selectedXTag.value}" AS TEXT) AS conditionOne,
+                    CAST(t."${selectedYTag.value}" AS TEXT) AS conditionTwo,
+                    CAST(t."${aggAttr}" AS DOUBLE PRECISION) AS aggValue,
                 FROM "${aggTable}" t
-                WHERE t."${selectedXTag.value}" = '${cond1}'
-                AND t."${selectedYTag.value}" = '${cond2}'
+                WHERE CAST(t."${selectedXTag.value}" AS TEXT) = '${cond1}'
+                AND CAST(t."${selectedYTag.value}" AS TEXT) = '${cond2}'
                 ${whereClause}
             `;
             const exemplars: any[] = await timedVgQuery('exemplarQuery', exemplarQuery);
@@ -795,36 +794,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             selectedRankClause = `WHERE ${rankConditions.join(' OR ')}`;
         }
-        // TESTING _________________
-
-
-
-        const testColumns = [
-            { label: 'track_id', sql: 'tracking_id::TEXT AS track_id' },
-            { label: 'location', sql: 'location::INTEGER AS location' },
-            { label: 'conditionOne', sql: `CAST("${selectedXTag.value}" AS TEXT) AS conditionOne` },
-            { label: 'conditionTwo', sql: `CAST("${selectedYTag.value}" AS TEXT) AS conditionTwo` },
-            { label: 'birthTime', sql: `CAST("Minimum ${timeCol.value}" AS DOUBLE PRECISION) AS birthTime` },
-            { label: 'deathTime', sql: `CAST("Maximum ${timeCol.value}" AS DOUBLE PRECISION) AS deathTime` },
-            { label: 'minValue', sql: `CAST("Minimum ${attributeColumn}" AS DOUBLE PRECISION) AS minValue` },
-            { label: 'maxValue', sql: `CAST("Maximum ${attributeColumn}" AS DOUBLE PRECISION) AS maxValue` },
-            { label: 'aggValue', sql: `CAST("${aggAttr}" AS DOUBLE PRECISION) AS aggValue` }
-        ];
-        
-        for (const col of testColumns) {
-            const query = `
-                SELECT ${col.sql}
-                FROM "${aggTable}"
-                LIMIT 5
-            `;
-            try {
-                const result = await timedVgQuery(`test_${col.label}`, query);
-            } catch (error) {
-                console.error(`Error for ${col.label}:`, error);
-            }
-        }
-
-
 
         // ---------------------
 
