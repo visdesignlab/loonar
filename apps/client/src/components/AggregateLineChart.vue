@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import {
     useAggregateLineChartStore,
     type AggDataPoint,
-    type AggLineData,
 } from '@/stores/componentStores/aggregateLineChartStore';
 import { scaleLinear } from 'd3-scale';
 import { extent, max, min } from 'd3-array';
@@ -18,18 +17,12 @@ import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/data
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
-import type { Selection } from './layers/CellSnippetsLayer';
 import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
-    GeoJsonLayer,
-    LineLayer,
-    PathLayer,
-    PolygonLayer,
     ScatterplotLayer,
-    TextLayer,
 } from '@deck.gl/layers/typed';
 import type { PixelData, PixelSource } from '@vivjs/types';
 import Pool from '../util/Pool';
@@ -56,11 +49,25 @@ const datasetSelectionStore = useDatasetSelectionStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+let {
+    customXRangeMin,
+    customXRangeMax,
+    customYRangeMin,
+    customYRangeMax,
+    defaultXRangeMax,
+    defaultXRangeMin,
+    defaultYRangeMax,
+    defaultYRangeMin,
+} = storeToRefs(aggregateLineChartStore);
 
 const aggLineChartContainer = ref(null);
+const deckGlContainer = ref(null);
 const { width: containerWidth, height: outerContainerHeight } = useElementSize(
     aggLineChartContainer
 );
+
+// Add a reactive flag to track mouse position
+const isMouseInside = ref(false);
 
 // container height must be less than the outer container height in order for
 // height to shrink when the outer container is reduced in height. Without
@@ -76,44 +83,34 @@ const chartHeight = computed(
     () => containerHeight.value - margin.value.top - margin.value.bottom
 );
 
+// Scale X set to custom x axis range (default is data extent)
 const scaleX = computed(() => {
-    let domain = extent(cellMetaData.timeList) as [number, number];
-    if (
-        aggregateLineChartStore.aggLineDataList &&
-        aggregateLineChartStore.aggLineDataList.length > 0
-    ) {
-        const timeMin = min(
-            aggregateLineChartStore.aggLineDataList,
-            (agglineData) => {
-                return min(
-                    agglineData.data,
-                    (aggPoint: AggDataPoint) => aggPoint.time
-                );
-            }
-        );
-
-        const timeMax = max(
-            aggregateLineChartStore.aggLineDataList,
-            (agglineData) => {
-                return max(
-                    agglineData.data,
-                    (aggPoint: AggDataPoint) => aggPoint.time
-                );
-            }
-        );
-        if (timeMin != null && timeMax != null) {
-            domain = [timeMin, timeMax];
-        }
-    }
+    let xMin = customXRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMin === '') xMin = null;
+    let xMax = customXRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (xMax === '') xMax = null;
+    const domain: [number, number] = [
+        xMin ?? defaultXRangeMin.value ?? 0,
+        xMax ?? defaultXRangeMax.value ?? 0,
+    ];
     return scaleLinear().domain(domain).range([0, chartWidth.value]);
 });
 
+// Scale Y set to custom y axis range (default is data extent)
 const scaleY = computed(() => {
-    return scaleLinear()
-        .domain(
-            aggregateLineChartStore.aggLineDataListExtent as [number, number]
-        )
-        .range([chartHeight.value, 0]);
+    let yMin = customYRangeMin.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMin === '') yMin = null;
+    let yMax = customYRangeMax.value;
+    // @ts-expect-error: vue typing is wrong. empty number inputs will be "" :(
+    if (yMax === '') yMax = null;
+    const domain: [number, number] = [
+        yMin ?? defaultYRangeMin.value ?? 0,
+        yMax ?? defaultYRangeMax.value ?? 0,
+    ];
+    return scaleLinear().domain(domain).range([chartHeight.value, 0]);
 });
 
 const temp = ref(0);
@@ -220,8 +217,6 @@ function onMouseMove(event: MouseEvent) {
     dataPointSelectionUntrracked.hoveredTime = time;
 }
 
-const deckGlContainer = ref(null);
-
 // TODO: share cache with looneage view?
 const lruCache = new LRUCache({
     max: 250,
@@ -283,9 +278,10 @@ watch(currentLocationMetadata, async () => {
     imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
     imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
     imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
+    imageViewerStoreUntrracked.sizeC = loader.value.metadata.Pixels.SizeC;
 
     testRaster.value = await loader.value.data[0].getRaster({
-        selection: { c: 0, t: 0, z: 0 },
+        selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     if (testRaster.value == null) return;
     const copy = testRaster.value.data.slice();
@@ -345,7 +341,7 @@ function createCellSnippetLayer() {
             contrastLimits: contrastLimit.value,
             selections: [
                 {
-                    c: 0,
+                    c: imageViewerStore.selectedChannel,
                     t: dataPointSelectionUntrracked.hoveredFrameIndex,
                     z: 0,
                     snippets: [
@@ -486,10 +482,12 @@ const otherUnmuted = computed(() => {
     <div v-if="cellMetaData.dataInitialized" class="d-flex flex-column h-100">
         <div ref="aggLineChartContainer" class="h-100">
             <svg
+                id="aggLineChartSvg"
                 :width="containerWidth"
                 :height="containerHeight"
                 @mousemove="onMouseMove"
-                @mouseleave="dataPointSelectionUntrracked.hoveredTime = null"
+                @mouseenter="isMouseInside = true"
+                @mouseleave="() => { dataPointSelectionUntrracked.hoveredTime = null; isMouseInside = false; }"
                 @click="onSvgClick"
             >
                 <g

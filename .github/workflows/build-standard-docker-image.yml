@@ -1,33 +1,33 @@
 name: Build Standard Docker Image
 on:
   pull_request:
-    branches: [dev]
+    branches: [main]
     types: [closed]
 jobs:
-    build:
-      name: push docker image to docker hub
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v3
-        - name: login to docker hub
-          id: docker-hub
-          env:
-            username: ${{secrets.DOCKERHUB_USERNAME}}
-            password: ${{secrets.DOCKERHUB_PASSWORD}}
-          run: |
-            docker login -u $username -p $password 
-        - name: build the docker image
-          id: build-docker-image
-          run: |
-            ls -la 
-            docker build -f ./.build-files/Dockerfile.loon.minio -t loon:latest .
-        - name: tag the docker image
-          id: tag-docker-images
-          run: |
-            docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:${{ github.event.pull_request.title }}
-            docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:latest
-        - name: push the docker image
-          id: push-docker-image
-          run: |
-            docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:${{ github.event.pull_request.title }}
-            docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:latest
+  build:
+    name: push docker image to docker hub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: login to docker hub
+        id: docker-hub
+        env:
+          username: ${{secrets.DOCKERHUB_USERNAME}}
+          password: ${{secrets.DOCKERHUB_PASSWORD}}
+        run: |
+          docker login -u $username -p $password
+      - name: build the docker image
+        id: build-docker-image
+        run: |
+          ls -la 
+          docker build -f ./.build-files/Dockerfile.loon.minio -t loon:latest .
+      - name: tag the docker image
+        id: tag-docker-images
+        run: |
+          docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:${{ github.event.pull_request.title }}
+          docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:latest
+      - name: push the docker image
+        id: push-docker-image
+        run: |
+          docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:${{ github.event.pull_request.title }}
+          docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:latest

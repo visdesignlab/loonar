@@ -12,7 +12,7 @@ const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const globalSettings = useGlobalSettings();
 const eventBusStore = useEventBusStore();
-const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
+const { sizeT, sizeC } = storeToRefs(imageViewerStoreUntrracked);
 const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 
 watch(
@@ -72,6 +72,46 @@ watch(
             :dark="globalSettings.darkMode"
         />
     </div>
+    <template v-if="sizeC > 1">
+        <div class="flex row no-wrap">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Channel:</q-badge
+            >
+            <span class="text-caption q-ml-sm"
+                >{{ imageViewerStore.selectedChannel }} / {{ sizeC - 1 }}</span
+            >
+        </div>
+        <div class="flex row no-wrap q-mt-sm q-mb-sm">
+            <q-btn-group outline rounded class="q-mr-md">
+                <q-btn
+                    @click="imageViewerStore.stepChannelBackwards"
+                    size="sm"
+                    outline
+                    round
+                    title="previous frame"
+                    icon="arrow_left"
+                />
+                <q-btn
+                    @click="
+                        () => imageViewerStore.stepChannelForwards(sizeC - 1)
+                    "
+                    size="sm"
+                    outline
+                    round
+                    title="next frame"
+                    icon="arrow_right"
+                />
+            </q-btn-group>
+            <q-slider
+                class="force-repeat"
+                v-model="imageViewerStore.selectedChannel"
+                :min="0"
+                :max="sizeC - 1"
+                label
+                :dark="globalSettings.darkMode"
+            />
+        </div>
+    </template>
     <q-btn
         @click="eventBusStore.emitter.emit('resetImageView')"
         icon="center_focus_strong"

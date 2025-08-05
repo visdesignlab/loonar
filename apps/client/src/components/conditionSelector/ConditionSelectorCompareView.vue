@@ -7,6 +7,7 @@ import { useConditionSelectorStore } from '@/stores/componentStores/conditionSel
 import * as vg from '@uwdata/vgplot';
 import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { getChartColor } from './chartColorUtils';
 
 const props = defineProps<{
     xAxisName: string;
@@ -16,12 +17,16 @@ const props = defineProps<{
 }>();
 
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, compTableName } = storeToRefs(
+const { experimentDataInitialized, compTableName, currentExperimentMetadata } = storeToRefs(
     datasetSelectionStore
 );
 const { conditionChartSelections, $conditionChartYAxisDomain } =
     useMosaicSelectionStore();
 const conditionSelectorStore = useConditionSelectorStore();
+
+
+const frameColumn =
+   currentExperimentMetadata.value?.headerTransforms?.frame || 'Frame ID';
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -84,7 +89,7 @@ watch(
         }
         const res = await vg.coordinator().query(
             `SELECT MIN(max_frame) as final_frame FROM (
-                        SELECT MAX("${props.xAxisName}") as max_frame
+                        SELECT CAST(MAX("${props.xAxisName}") AS int) AS max_frame
                         FROM ${compTableName.value}
                         GROUP BY "${selectedXTag.value}", "${selectedYTag.value}"
                     )`,
@@ -132,6 +137,13 @@ function createChart(xAxisName: string, yAxisName: string) {
     const lines: any[] = [];
     xLabels.value.forEach((xLabel, idx) => {
         yLabels.value.forEach((yLabel, idy) => {
+            const color = getChartColor(
+                idx,
+                idy,
+                xLabels.value,
+                yLabels.value,
+                conditionSelectorStore.chartColorScheme
+            );
             const tempSource = `${selectedXTag.value}-${xLabel}_${selectedYTag.value}-${yLabel}`;
 
             const tempLine = vg.lineY(
@@ -143,7 +155,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 {
                     x: xAxisName,
                     y: vg.avg(yAxisName),
-                    stroke: vg.sql`'${yLabel}'`,
+                    stroke: color ?? vg.sql`'${yLabel}'`,
                     strokeWidth,
                     curve: 'linear',
                     opacity: 1,
@@ -158,7 +170,7 @@ function createChart(xAxisName: string, yAxisName: string) {
                 {
                     x: xAxisName,
                     y: vg.avg(yAxisName),
-                    stroke: vg.sql`'${yLabel}'`,
+                    stroke: color ?? vg.sql`'${yLabel}'`,
                     strokeWidth,
                     curve: 'linear',
                     opacity: 0.3,
@@ -166,7 +178,7 @@ function createChart(xAxisName: string, yAxisName: string) {
             );
             lines.push(tempLine);
             lines.push(tempBaseLine);
-
+            const filterCondition = vg.sql`"${frameColumn}" % ${finalFrame.value} = 0`;            
             const tempText = vg.textX(
                 vg.from(compTableName.value, {
                     filterBy:
@@ -178,8 +190,8 @@ function createChart(xAxisName: string, yAxisName: string) {
                     y: vg.avg(yAxisName),
                     text: vg.sql`CONCAT("${selectedXTag.value}", ' - ', "${selectedYTag.value}")`,
                     textAnchor: 'start',
-                    filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
-                    fill: vg.sql`'${yLabel}'`,
+                    filter: filterCondition,
+                    fill: color ?? vg.sql`'${yLabel}'`,
                     dx: 10,
                 }
             );
@@ -195,9 +207,9 @@ function createChart(xAxisName: string, yAxisName: string) {
                     y: vg.avg(yAxisName),
                     r: 3,
                     // stroke:'black',
-                    // filter: vg.sql`"Frame ID" = (SELECT MAX("Frame ID") FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
-                    filter: vg.sql`"Frame ID" % ${finalFrame.value} = 0`,
-                    fill: vg.sql`'${yLabel}'`,
+                    // filter: vg.sql`${frameColumn} = (SELECT MAX(${frameColumn}) FROM ${compTableName.value} GROUP BY "${selectedXTag.value}", "${selectedYTag.value}")`,
+                    filter: filterCondition,
+                    fill: color ?? vg.sql`'${yLabel}'`,
                 }
             );
             lines.push(tempCircle);

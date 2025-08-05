@@ -1,0 +1,28 @@
+{
+    "generalSettings": {
+        "useHttp": false,
+        "environment": "production",
+        "baseUrl": "loonsw.sci.utah.edu"
+    },
+    "mySqlSettings": {
+        "databaseName": "loon",
+        "databaseUser": "user",
+        "databasePassword": "user_pass",
+        "databaseRootPassword": "root_pass"
+    },
+    "minioSettings": {
+        "minioStorageAccessKey": "admin",
+        "minioStorageSecretKey": "minioadmin",
+        "sourceVolumeLocation": "/loonar-data/minio-data",
+        "volumeType": "nfs",
+        "nfsVersion": 3,
+        "ipAddress": "155.98.58.123",
+        "userGroupPermissions": "50097:606"
+    },
+    "nginxSettings": {
+        "sourceVolumeLocation": "/etc/letsencrypt/archive/loonsw.sci.utah.edu",
+        "targetVolumeLocation": "/etc/letsencrypt/archive/loonsw.sci.utah.edu",
+        "certFileLocation": "fullchain1.pem",
+        "keyFileLocation": "privkey1.pem"
+    }
+}

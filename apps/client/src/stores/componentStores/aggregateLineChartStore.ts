@@ -9,7 +9,16 @@ import { useSkipTrackingMap } from '@/stores/misc/skipTrackingMapStore';
 import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelectionTrrackedStore';
 import { useLooneageViewStore } from './looneageViewStore';
 
-import { min, max, mean, sum, median, quantile, deviation } from 'd3-array';
+import {
+    min,
+    max,
+    mean,
+    sum,
+    median,
+    quantile,
+    deviation,
+    extent,
+} from 'd3-array';
 import { useDataPointSelectionUntrracked } from '../interactionStores/dataPointSelectionUntrrackedStore';
 import { useMosaicSelectionStore } from '../dataStores/mosaicSelectionStore';
 import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
@@ -330,9 +339,6 @@ function storeSetup() {
 
     const selectedLineData = computed<{ data: AggLineData; trackId: string }>(
         () => {
-            if (targetKey.value !== 'selected lineage') {
-                return { data: [], trackId: '' };
-            }
             const trackId = dataPointSelection.selectedTrackId;
             if (trackId === null) {
                 return { data: [], trackId: '' };
@@ -484,21 +490,40 @@ function storeSetup() {
         return [];
     });
 
-    const aggLineDataListExtent = computed(() => {
-        const minVal = min(aggLineDataList.value, (aggLineData) => {
-            return min(aggLineData.data, (point) => {
-                if (point.variance) return point.variance[0];
-                return point.value;
-            });
-        });
-        const maxVal = max(aggLineDataList.value, (aggLineData) => {
-            return max(aggLineData.data, (point) => {
-                if (point.variance) return point.variance[1];
-                return point.value;
-            });
-        });
-        return [minVal, maxVal] as const;
-    });
+    // Reactive refs for custom axis ranges
+    const customYRangeMin = ref<number | null>(null);
+    const customYRangeMax = ref<number | null>(null);
+    const customXRangeMin = ref<number | null>(null);
+    const customXRangeMax = ref<number | null>(null);
+
+    // Fix defaultXRangeMin computed property
+    const defaultXRangeMin = computed(() =>
+        aggLineDataList.value?.length
+            ? min(aggLineDataList.value, (d) => min(d.data, (p) => p.time))
+            : null
+    );
+
+    const defaultXRangeMax = computed(() =>
+        aggLineDataList.value?.length
+            ? max(aggLineDataList.value, (d) => max(d.data, (p) => p.time))
+            : null
+    );
+
+    const defaultYRangeMin = computed(() =>
+        aggLineDataList.value?.length
+            ? min(aggLineDataList.value, (d) =>
+                  min(d.data, (p) => p.variance?.[0] ?? p.value)
+              )
+            : null
+    );
+
+    const defaultYRangeMax = computed(() =>
+        aggLineDataList.value?.length
+            ? max(aggLineDataList.value, (d) =>
+                  max(d.data, (p) => p.variance?.[1] ?? p.value)
+              )
+            : null
+    );
 
     function medianFilterSmooth(points: AggDataPoint[]): AggDataPoint[] {
         if (smoothWindow.value <= 0) return points;
@@ -559,7 +584,14 @@ function storeSetup() {
         smoothWindowComputed,
         onSmoothWindowChange,
         aggLineDataList,
-        aggLineDataListExtent,
+        customYRangeMin,
+        customYRangeMax,
+        customXRangeMin,
+        customXRangeMax,
+        defaultYRangeMin,
+        defaultYRangeMax,
+        defaultXRangeMin,
+        defaultXRangeMax,
         hoveredLineData,
         selectedLineData,
         selectedLineLineageConnections,

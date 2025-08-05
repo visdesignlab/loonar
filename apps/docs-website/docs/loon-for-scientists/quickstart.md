@@ -8,7 +8,7 @@ We store our official releases of Loon in Docker Hub. In order to have access to
 
 ## Step 2: Find and Pull The Latest `local-loon` Image
 
-Once you have a Docker account, you will be able to access the images in Docker Hub. In the serach bar at the top of the UI, search for `bbollen23/local-loon`. Click the "Pull" button that is shown when clicking on the image. Once pulled, the image will appear in the set of "images" that can be accessed through the left-side navigation drawer.
+Once you have a Docker account, you will be able to access the images in Docker Hub. In the serach bar at the top of the UI, search for `visdesignlab/local-loon`. Click the "Pull" button that is shown when clicking on the image. Once pulled, the image will appear in the set of "images" that can be accessed through the left-side navigation drawer.
 
 ## Step 3: Run The Image
 

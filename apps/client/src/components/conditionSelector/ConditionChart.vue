@@ -17,6 +17,7 @@ const props = defineProps<{
     selected: boolean;
     chartLineWidth: number;
     height: number;
+    color?: string;
 }>();
 
 const $height = vg.Param.value(props.height);
@@ -35,7 +36,7 @@ const { experimentDataInitialized, compTableName } = storeToRefs(
 const { conditionChartSelections, $conditionChartYAxisDomain } =
     useMosaicSelectionStore();
 const conditionSelectorStore = useConditionSelectorStore();
-const { selectedIndividualYAxis } = storeToRefs(conditionSelectorStore);
+const { selectedIndividualYAxis, chartColorScheme } = storeToRefs(conditionSelectorStore);
 
 // Container for chart.
 const chartContainer = ref<HTMLElement | null>(null);
@@ -69,7 +70,6 @@ const lineColor = computed(() => {
         'no value detected';
     return color;
 });
-
 const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
 

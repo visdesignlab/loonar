@@ -38,11 +38,11 @@ Loon comes with a robust logging system that will help you debug in the case of 
 
 To run this image, you will need to specify the location of your Docker socket to mount, the path where your data is currently located, and an additional environment variable.
 
-Image Name in Docker Hub: bbollen23/local-loon
+Image Name in Docker Hub: visdesignlab/local-loon
 
-Image source: https://hub.docker.com/r/bbollen23/local-loon
+Image source: https://hub.docker.com/r/visdesignlab/local-loon
 
-All Versions: https://hub.docker.com/r/bbollen23/local-loon/tags
+All Versions: https://hub.docker.com/r/visdesignlab/local-loon/tags
 
 #### Volumes
 
@@ -61,11 +61,11 @@ All Versions: https://hub.docker.com/r/bbollen23/local-loon/tags
 
 To run this image, you will need to specify the location of your Docker socket to mount, the path where you would like your data to be uploaded, and an additional environment variable.
 
-Image Name in Docker Hub: bbollen23/loon
+Image Name in Docker Hub: visdesignlab/loon
 
-Image source: https://hub.docker.com/r/bbollen23/loon
+Image source: https://hub.docker.com/r/visdesignlab/loon
 
-All Versions: https://hub.docker.com/r/bbollen23/loon/tags
+All Versions: https://hub.docker.com/r/visdesignlab/loon/tags
 
 #### Volumes
 
@@ -79,3 +79,10 @@ All Versions: https://hub.docker.com/r/bbollen23/loon/tags
 | Environment Variable | Key                                | Value                      | Details                                                 |
 | -------------------- | ---------------------------------- | -------------------------- | ------------------------------------------------------- |
 | MinIO Data Volume    | MINIOSETTINGS_SOURCEVOLUMELOCATION | Absolute path to your data | This will be identical to your Data Volume source path. |
+| MinIO Access Key   | MINIOSETTINGS_MINIOSTORAGEACCESSKEY | Username for MinIO storage | This will be used as the access key when accessing the MinIO bucket via AWS CLI and will be used as the username when using the web UI. Must be longer than 3 characters in length. |
+| MinIO Secret Key   | MINIOSETTINGS_MINIOSTORAGESECRETKEY | Password for MinIO storage | This will be used as the secret access key when accessing the MinIO bucket via AWS CLI and will be used as the password when using the web UI. Must be longer than 7 characters in length.|
+
+
+:::warning
+By default, the access and secret access keys will be set to "admin" and "minioadmin", respectively. We _highly_ suggest adding these environment variables in order to override these defaults when deploying on a server. If you're just using MinIO in a local deployment, changing these defaults may not be necessary and can be left out when running the image.
+:::
