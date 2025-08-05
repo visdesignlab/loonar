@@ -4,7 +4,6 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "Loon",
-  tagline: "Cell Microscopy Data Visualization",
   favicon: "img/logos/favicon.svg",
 
   // Set the production url of your site here
@@ -56,14 +55,12 @@ const config: Config = {
         srcDark: "img/logos/loon-logo-dark.svg",
       },
       items: [
-        { to: "/community", label: "Community", position: "left" },
         {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
           label: "Documentation",
         },
-        { to: "/about", label: "About", position: "left" },
         {
           href: "https://github.com/visdesignlab/loonar",
           label: "GitHub",
@@ -87,21 +84,13 @@ const config: Config = {
           title: "Community",
           items: [
             {
-              label: "Stack Overflow",
-              href: "https://stackoverflow.com/questions/tagged/docusaurus",
-            },
-            {
-              label: "Discord",
-              href: "https://discordapp.com/invite/docusaurus",
-            },
-            {
-              label: "Twitter",
-              href: "https://twitter.com/docusaurus",
+              label: "GitHub",
+              href: "https://github.com/visdesignlab/loonar",
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab, All content on this website is licensed under the Creative Commons Attribution license (CC BY). Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

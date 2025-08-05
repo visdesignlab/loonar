@@ -1,17 +1,17 @@
-import clsx from 'clsx';
-import React from 'react';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import Layout from '@theme/Layout';
-import HomepageFeatures from '../components/HomepageFeatures';
+import clsx from "clsx";
+import React from "react";
+import Link from "@docusaurus/Link";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import Layout from "@theme/Layout";
+import HomepageFeatures from "../components/HomepageFeatures";
 
-import styles from './index.module.css';
-import ImageSwitcher from '../components/ImageSwitcher';
-import Banner from '../components/Banner/Banner';
+import styles from "./index.module.css";
+import ImageSwitcher from "../components/ImageSwitcher";
+import Banner from "../components/Banner/Banner";
 
 function HomepageHeader() {
   return (
-    <header className={clsx('hero hero--secondary', styles.heroBanner)}>
+    <header className={clsx("hero hero--secondary", styles.heroBanner)}>
       <div className="container">
         <div className={styles.titleContainer}>
           <ImageSwitcher
@@ -24,24 +24,15 @@ function HomepageHeader() {
             darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
             className={clsx(styles.smallItem, styles.homepageLogo)}
           />
-          <div className={clsx('hero__title', styles.description)}>
-            Cell Microscopy Data Visualization
+          <div className={clsx("hero__title", styles.description)}>
+            Live Cell Microscopy Data Visualization
           </div>
         </div>
-        {/* <img src="img/logos/revisitLogoLong.svg" style={{width:'60%'}}/> */}
-        {/* <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p> */}
-        <div className={styles.buttons} style={{ marginTop: '50px' }}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/about">
-            About Loon
-          </Link>
+        <div className={styles.buttons}>
           <Link
             className="button button--primary button--lg"
-            to="/docs/introduction">
+            to="/docs/introduction"
+          >
             Get Started
           </Link>
         </div>
@@ -53,11 +44,18 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout
-      description={`${siteConfig.tagline}`}>
-      {/* <Banner /> */}
+    <Layout>
       <HomepageHeader />
       <main>
+        <div>
+          Loon is a visualization analysis tool for live cell microscopy data.
+          The techniques in the software are from multiple award winning
+          publications. Loon: Using Exemplars to Visualize Large-Scale
+          Microscopy Data and Aardvark: Composite Visualizations of Trees,
+          Time-Series, and Images what are five cool things. live cell imaging
+          with linked roi data, lineage view, exemplar view, two screenshots of
+          the tools.
+        </div>
         <HomepageFeatures />
       </main>
     </Layout>
