@@ -174,6 +174,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const selectedAttribute = ref<string | undefined>(undefined);
     const timeCol = ref<string | undefined>(undefined);
     const frameCol = ref<string | undefined>(undefined);
+    const idCol = ref<string | undefined>(undefined);
     const xCol = ref<string | undefined>(undefined);
     const yCol = ref<string | undefined>(undefined);
 
@@ -189,6 +190,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 selectedAttribute.value = metadata.headerTransforms.mass;
                 timeCol.value = metadata.headerTransforms.time;
                 frameCol.value = metadata.headerTransforms.frame;
+                idCol.value = metadata.headerTransforms.id;
                 xCol.value = metadata.headerTransforms.x;
                 yCol.value = metadata.headerTransforms.y;
             }
@@ -402,14 +404,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             );
             return;
         }
-
-
+    
         const aggTableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata_aggregate`;
         const aggAttribute = getAggregateAttributeName();
         const whereClause = filterWhereClause.value ? `WHERE ${filterWhereClause.value}` : '';
-
+    
         try {
-            // 1) Get global min and max value of the aggregated attribute. (Example: min average mass: 2, max average mass: 1000)
+            // 1) Get global min and max value of the aggregated attribute.
             const domainQuery = `
                 SELECT
                     CAST(MIN("${aggAttribute}") AS DOUBLE PRECISION) AS min_attr,
@@ -417,41 +418,43 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 FROM "${aggTableName}"
                 ${whereClause}
                 `;
-            const domainResult = await timedVgQuery('domainQuery', domainQuery);
-            console.log('domainResult:', domainResult);
-
-
+            let domainResult;
+            try {
+                domainResult = await timedVgQuery('domainQuery', domainQuery);
+            } catch (error) {
+                console.error('Error during domainQuery:', error);
+                throw error;
+            }
+    
             if (!domainResult || domainResult.length === 0) {
                 console.warn('No results returned from domainQuery.');
                 return;
             }
             const { min_attr, max_attr } = domainResult[0];
-
+    
             // Fill in histogramDomains with the global min and max aggregated values.
             const minX = typeof min_attr === 'bigint' ? Number(min_attr) : min_attr;
             const maxX = typeof max_attr === 'bigint' ? Number(max_attr) : max_attr;
-
+    
             histogramDomains.value.minX = minX;
             histogramDomains.value.maxX = maxX;
-
+    
             // Build bin ranges (we store these in histogramDomains).
             const binSize = (max_attr - min_attr) / histogramBinCount.value;
-
-            // Fix: Make the last bin inclusive of max_attr
+    
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: histogramBinCount.value },
                 (_, i) => ({
                     min: min_attr + binSize * i,
                     max: i === histogramBinCount.value - 1
-                        ? max_attr + 0.0001  // Make last bin slightly larger to include max_attr
+                        ? max_attr + 0.0001
                         : min_attr + binSize * (i + 1),
                 })
             );
-
             const histogramConditionQuery = `
                 SELECT
-                    "${selectedXTag.value}" AS c1,
-                    "${selectedYTag.value}" AS c2,
+                    CAST("${selectedXTag.value}" AS TEXT) AS c1,
+                    CAST("${selectedYTag.value}" AS TEXT) AS c2,
                     CAST(
                         CASE 
                             WHEN "${aggAttribute}" >= ${max_attr} THEN ${histogramBinCount.value - 1}
@@ -465,33 +468,34 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 GROUP BY c1, c2, bin_index
                 ORDER BY c1, c2, bin_index;
             `;
-
-            // Get result of query - bin counts for each condition pair and bin index.
-            const histogramBinCounts = await timedVgQuery('histogramConditionQuery', histogramConditionQuery);
-
+    
+            let histogramBinCounts;
+            try {
+                histogramBinCounts = await timedVgQuery('histogramConditionQuery', histogramConditionQuery);
+            } catch (error) {
+                console.error('Error during histogramConditionQuery:', error);
+                throw error;
+            }
+    
             if (!histogramBinCounts || histogramBinCounts.length === 0) {
                 console.warn('No histogram counts found.');
                 conditionHistograms.value = [];
                 return;
             }
-
+    
             // 4) Build a Map from "conditionKey" -> counts array
             const binCountsMap = new Map<string, number[]>();
-
+    
             for (const { c1, c2, bin_index, count } of histogramBinCounts) {
                 const conditionKey = `${c1}__${c2}`;
-                // initialize on first sight
                 if (!binCountsMap.has(conditionKey)) {
                     binCountsMap.set(conditionKey, Array(histogramBinCount.value).fill(0));
                 }
-                // Convert BigInt to Number if needed
                 const safeBinIndex = typeof bin_index === 'bigint' ? Number(bin_index) : bin_index;
                 const safeCount = typeof count === 'bigint' ? Number(count) : count;
-                // place the count into its bin index
                 binCountsMap.get(conditionKey)![safeBinIndex] = safeCount;
             }
-
-            // 5) Convert Map -> Ref<{condition, histogramData}[]>
+    
             conditionHistograms.value = Array.from(binCountsMap.entries()).map(
                 ([key, counts]) => {
                     const [conditionOne, conditionTwo] = key.split('__');
@@ -501,14 +505,13 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                     };
                 }
             );
-            // 5) Optionally set histogramDomains for the Y range
             histogramDomains.value.minY = 0;
             histogramDomains.value.maxY = Math.max(
                 ...conditionHistograms.value.flatMap((c) => c.histogramData)
             );
             return;
         } catch (error) {
-            console.error('Error fetching histogram data:', error);
+            console.error('Error fetching histogram data (outer catch):', error);
         }
     }
 
@@ -580,9 +583,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             !compTableName ||
             !aggTableNameFull
         ) {
-            console.log(
-                'Experiment data, metadata, or table names are not set.'
-            );
             return;
         }
         try {
@@ -599,6 +599,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     }
 
     // helper to time all vg queries
+    // helper to time all vg queries
     async function timedVgQuery<T = any>(
         label: string,
         query: string,
@@ -607,7 +608,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const start = performance.now();
         const result = await vg.coordinator().query(query, opts);
         const elapsed = performance.now() - start;
-        console.log(result);
         return result;
     }
 
@@ -710,7 +710,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const cond2 = selectedTrackRequest.conditionGroupKey.conditionTwo;
             const exemplarQuery = `
                 SELECT
-                    t.tracking_id::INTEGER AS track_id,
+                    t.tracking_id::TEXT AS track_id,
                     t.location::INTEGER AS location,
                     t."${selectedXTag.value}" AS conditionOne,
                     t."${selectedYTag.value}" AS conditionTwo,
@@ -795,20 +795,52 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             selectedRankClause = `WHERE ${rankConditions.join(' OR ')}`;
         }
+        // TESTING _________________
+
+
+
+        const testColumns = [
+            { label: 'track_id', sql: 'tracking_id::TEXT AS track_id' },
+            { label: 'location', sql: 'location::INTEGER AS location' },
+            { label: 'conditionOne', sql: `CAST("${selectedXTag.value}" AS TEXT) AS conditionOne` },
+            { label: 'conditionTwo', sql: `CAST("${selectedYTag.value}" AS TEXT) AS conditionTwo` },
+            { label: 'birthTime', sql: `CAST("Minimum ${timeCol.value}" AS DOUBLE PRECISION) AS birthTime` },
+            { label: 'deathTime', sql: `CAST("Maximum ${timeCol.value}" AS DOUBLE PRECISION) AS deathTime` },
+            { label: 'minValue', sql: `CAST("Minimum ${attributeColumn}" AS DOUBLE PRECISION) AS minValue` },
+            { label: 'maxValue', sql: `CAST("Maximum ${attributeColumn}" AS DOUBLE PRECISION) AS maxValue` },
+            { label: 'aggValue', sql: `CAST("${aggAttr}" AS DOUBLE PRECISION) AS aggValue` }
+        ];
+        
+        for (const col of testColumns) {
+            const query = `
+                SELECT ${col.sql}
+                FROM "${aggTable}"
+                LIMIT 5
+            `;
+            try {
+                const result = await timedVgQuery(`test_${col.label}`, query);
+            } catch (error) {
+                console.error(`Error for ${col.label}:`, error);
+            }
+        }
+
+
+
+        // ---------------------
 
         const combinedQuery = `
         WITH
         ranked AS (
             SELECT
-            t.tracking_id::INTEGER       AS track_id,
+            t.tracking_id::TEXT       AS track_id,
             t.location::INTEGER          AS location,
-            t."${selectedXTag.value}"    AS conditionOne,
-            t."${selectedYTag.value}"    AS conditionTwo,
-            t."Minimum ${timeCol.value}"         AS birthTime,
-            t."Maximum ${timeCol.value}"         AS deathTime,
-            t."Minimum ${attributeColumn}" AS minValue,
-            t."Maximum ${attributeColumn}" AS maxValue,
-            t."${aggAttr}"               AS aggValue,
+            CAST(t."${selectedXTag.value}" AS TEXT)   AS conditionOne,
+            CAST(t."${selectedYTag.value}" AS TEXT)   AS conditionTwo,
+            CAST(t."Minimum ${timeCol.value}" AS DOUBLE PRECISION)         AS birthTime,
+            CAST(t."Maximum ${timeCol.value}" AS DOUBLE PRECISION)         AS deathTime,
+            CAST(t."Minimum ${attributeColumn}" AS DOUBLE PRECISION) AS minValue,
+            CAST(t."Maximum ${attributeColumn}" AS DOUBLE PRECISION) AS maxValue,
+            CAST(t."${aggAttr}" AS DOUBLE PRECISION)               AS aggValue,
             ROW_NUMBER() OVER (
                 PARTITION BY t."${selectedXTag.value}", t."${selectedYTag.value}"
                 ORDER BY t."${aggAttr}"
@@ -842,16 +874,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             CAST(s.aggValue AS DOUBLE PRECISION) AS aggValue,
             CAST(NULL AS DOUBLE PRECISION) AS p,
             array_agg(ARRAY[
-                CAST(n.track_id AS TEXT),
+                CAST(n."${idCol.value}" AS TEXT),
                 CAST(n."${timeCol.value}" AS TEXT),
                 CAST(n."${frameCol.value}" AS TEXT),
                 CAST(n."${attributeColumn}" AS TEXT),
-                CAST(n.${xCol} AS TEXT),
-                CAST(n.${yCol} AS TEXT)
+                CAST(n."${xCol.value}" AS TEXT),
+                CAST(n."${yCol.value}" AS TEXT)
             ]) AS cellLevelData
         FROM selected s
         JOIN "${cellTable}" n
-        ON CAST(n.track_id AS TEXT) = s.track_id
+        ON CAST(n."${idCol.value}" AS TEXT) = s.track_id
         GROUP BY
         s.track_id,
         s.location,
