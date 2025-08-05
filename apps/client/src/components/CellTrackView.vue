@@ -125,20 +125,13 @@ onMounted(() => {
         // debug: true,
         // onBeforeRender: (gl: any) => {
         //     console.count('before');
-        //     console.log(gl);
         // },
         // onAfterRender: (gl: any) => {
         //     console.count('after');
-        //     console.log(gl);
         // },
         // onError: (error: any, _layer: any) => {
         //     console.error('ERROR');
-        //     console.log(error);
         // },
-        // onWebGLInitialized: () => console.log('onWebGLInitialized'),
-        // onViewStateChange: () => console.log('onViewStateChange'),
-        // onInteractionStateChange: () => console.log('onInteractionStateChange'),
-        // onLoad: () => console.log('onLoad'),
     });
     // renderDeckGL();
 });
@@ -260,7 +253,6 @@ const selections = computed<
     let xOffset = 0;
     const padding = 6;
     const maxHeight = getMaxHeight(segmentationData.value);
-    // console.log({ maxHeight });
     for (let feature of segmentationData.value) {
         if (!feature) continue;
         if (!feature?.properties?.frame) continue;
@@ -286,7 +278,6 @@ function createTrackLayer(): CellSnippetsLayer | null {
     if (!segmentationData.value) return null;
     if (!selections.value || selections.value.length == 0) return null;
 
-    // console.log('create cell track layer');
     return new CellSnippetsLayer({
         loader: pixelSource.value,
         id: 'track-view-gl-test-snippet-layer',
@@ -312,7 +303,6 @@ function renderDeckGL(): void {
         layers,
         controller: true,
     });
-    // console.log('done: render test deckgl');
 }
 watch(dataPointSelection.$state, renderDeckGL);
 watch(imageViewerStore.$state, renderDeckGL);

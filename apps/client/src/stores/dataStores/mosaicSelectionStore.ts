@@ -804,6 +804,10 @@ export const useMosaicSelectionStore = defineStore('cellLevelSelection', () => {
         $conditionChartYAxisDomain,
         highlightedCellIds,
         unfilteredTrackIds,
+        compSelPredString,
+        aggSelPredString,
+        compFilPredString,
+        aggFilPredString,
         resetState,
     };
 });

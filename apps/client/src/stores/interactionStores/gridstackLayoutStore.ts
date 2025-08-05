@@ -13,6 +13,7 @@ export interface LayoutItem {
     h: number;
     id: string;
     noPadding?: boolean;
+    hideOverflow?: boolean;
     icon?: string;
     sidebar?: string;
     toolbar?: string;
@@ -25,6 +26,7 @@ export interface Item {
     displayName: string;
     id: string;
     noPadding?: boolean;
+    hideOverflow?: boolean;
     icon?: string;
     sidebar?: string;
     toolbar?: string;
@@ -291,19 +293,23 @@ export const useGridstackLayoutStore = defineStore(
                 icon: 'apps',
                 noPadding: true,
             },
-            // {
-            //     component: 'ExemplarView',
-            //     displayName: 'Exemplar View',
-            //     id: 'ExemplarView',
-            //     icon: 'table_chart',
-            //     noPadding: true,
-            // },
+            {
+                component: 'ExemplarView',
+                displayName: 'Exemplar View',
+                id: 'ExemplarView',
+                icon: 'location_on',
+                noPadding: true,
+                hideOverflow: true,
+                sidebar: 'ExemplarViewSettingsSidebar',
+                toolbar: 'ExemplarViewSettingsToolbar',
+            },
             {
                 component: 'LooneageViewGL',
                 displayName: 'Looneage',
                 id: 'LooneageViewGL',
                 icon: 'account_tree',
                 noPadding: true,
+                hideOverflow: true,
                 sidebar: 'LooneageViewSettingsSidebar',
                 toolbar: 'LooneageViewSettingsToolbar',
             },
@@ -331,6 +337,7 @@ export const useGridstackLayoutStore = defineStore(
                 displayName: 'Images',
                 id: 'ImageViewer',
                 noPadding: true,
+                hideOverflow: true,
                 icon: 'image',
                 sidebar: 'ImageViewerSettingsSidebar',
                 toolbar: 'ImageViewerSettingsToolbar',
@@ -462,9 +469,9 @@ export const useGridstackLayoutStore = defineStore(
             );
         }
         function deleteLayout(index: number): void {
-            // console.log(currentLayoutId.value);
+
             const removed = userLayoutOptions.value.splice(index, 1)[0];
-            // console.log(currentLayoutId.value);
+
             if (removed.id == currentLayoutId.value) {
                 currentLayoutId.value = defaultId;
             }

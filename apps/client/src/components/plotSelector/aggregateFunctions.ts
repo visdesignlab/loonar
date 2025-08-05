@@ -135,20 +135,29 @@ export const aggregateFunctions: Record<string, AggregateFunction> = {
             'The adjusted initial mass determined by linear regression.',
         customQuery: `
             SELECT 
-                MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept as init_mass,
+                CASE 
+                    WHEN COUNT(*) = 1 THEN MIN(t1."{massColumn}")
+                    ELSE MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept
+                END as init_mass,
                 t1."{idColumn}" as tracking_id
             FROM {compTable} as t1
             LEFT JOIN (
                 SELECT 
-                    regr_slope("{massColumn}", "{timeColumn}") as slope,
-                    regr_intercept("{massColumn}", "{timeColumn}") as intercept,
+                    CASE 
+                        WHEN COUNT(*) > 1 THEN regr_slope("{massColumn}", "{timeColumn}")
+                        ELSE NULL
+                    END as slope,
+                    CASE 
+                        WHEN COUNT(*) > 1 THEN regr_intercept("{massColumn}", "{timeColumn}")
+                        ELSE NULL
+                    END as intercept,
                     "{idColumn}" as tracking_id
                 FROM {compTable}
                 GROUP BY "{idColumn}"
             ) as regr_line
             ON t1."{idColumn}" = regr_line.tracking_id
             GROUP BY t1."{idColumn}", regr_line.slope, regr_line.intercept
-    `,
+        `,
     },
     'Exponential Growth Rate Constant': {
         functionName: 'exp_growth_rate_constant',
@@ -156,20 +165,29 @@ export const aggregateFunctions: Record<string, AggregateFunction> = {
             'The slope of the linear regression line divided by the initial mass.',
         customQuery: `
             SELECT 
-                regr_line.slope/(MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept) as exp_growth_rate_constant,
+                CASE 
+                    WHEN COUNT(*) = 1 THEN 0
+                    ELSE regr_line.slope/(MIN(t1."{timeColumn}")*regr_line.slope + regr_line.intercept)
+                END as exp_growth_rate_constant,
                 t1."{idColumn}" as tracking_id
             FROM {compTable} as t1
             LEFT JOIN (
                 SELECT 
-                    regr_slope("{massColumn}", "{timeColumn}") as slope,
-                    regr_intercept("{massColumn}", "{timeColumn}") as intercept,
+                    CASE 
+                        WHEN COUNT(*) > 1 THEN regr_slope("{massColumn}", "{timeColumn}")
+                        ELSE NULL
+                    END as slope,
+                    CASE 
+                        WHEN COUNT(*) > 1 THEN regr_intercept("{massColumn}", "{timeColumn}")
+                        ELSE NULL
+                    END as intercept,
                     "{idColumn}" as tracking_id
                 FROM {compTable}
                 GROUP BY "{idColumn}"
             ) as regr_line
             ON t1."{idColumn}" = regr_line.tracking_id
             GROUP BY t1."{idColumn}", regr_line.slope, regr_line.intercept
-    `,
+        `,
     },
     'Growth Rate': {
         functionName: 'growth_rate',

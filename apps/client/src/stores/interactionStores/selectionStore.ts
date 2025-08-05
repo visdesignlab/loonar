@@ -4,6 +4,8 @@ import mitt from 'mitt';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
 import { ref, computed, watch, type Ref } from 'vue';
 import { useConditionSelectorStore } from '../componentStores/conditionSelectorStore';
+import { addAggregateColumn } from '@/util/datasetLoader';
+import { aggregateFunctions } from '@/components/plotSelector/aggregateFunctions';
 
 export type SelectionType = 'cell' | 'track' | 'lineage' | 'conditionChart';
 
@@ -75,10 +77,47 @@ export const useSelectionStore = defineStore('selectionStore', () => {
                 addPlot(mass, 'cell');
                 // Add average mass plot.
                 addPlot(`Average ${mass}`, 'track');
+                // Use helper for track_length plot and filter
+                addTrackLengthPlotAndFilter(newExperimentMetadata);
             }
         },
         { immediate: true, deep: true }
     );
+    // Helper function to add track_length plot and filter above 50th percentile
+    async function addTrackLengthPlotAndFilter(newExperimentMetadata: any) {
+        const aggTable = `${newExperimentMetadata.name}_composite_experiment_cell_metadata_aggregate`;
+        const compTable = `${newExperimentMetadata.name}_composite_experiment_cell_metadata`;
+        // Add track_length plot
+        await addAggregateColumn(
+            aggTable,
+            compTable,
+            {
+                functionName: aggregateFunctions['Track Length'].functionName,
+                label: 'track_length',
+            },
+            newExperimentMetadata.headerTransforms
+        );
+        await addPlot('track_length', 'track');
+
+        // Compute 50th percentile for track_length
+        const percentileQuery = `
+            SELECT
+                approx_quantile(track_length, 0.50) AS p50,
+                MAX(track_length) AS max_val
+            FROM ${aggTable}
+            WHERE track_length > 1
+        `;
+        const result = await vg.coordinator().query(percentileQuery, { type: 'json' });
+        const p50 = Number(result[0].p50);
+        const maxVal = Number(result[0].max_val);
+
+        // Add filter for track_length >= 50th percentile
+        addFilter({
+            plotName: 'track_length',
+            type: 'track',
+            range: [p50, maxVal],
+        });
+    }
 
     // Private
     async function _getInitialMaxRange(

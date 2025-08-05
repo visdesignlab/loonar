@@ -130,20 +130,16 @@ onMounted(() => {
         },
         // onBeforeRender: (gl: any) => {
         //     console.count('before');
-        //     console.log(gl);
+
         // },
         // onAfterRender: (gl: any) => {
         //     console.count('after');
-        //     console.log(gl);
+
         // },
         // onError: (error: any, _layer: any) => {
         //     console.error('ERROR');
-        //     console.log(error);
+
         // },
-        // onWebGLInitialized: () => console.log('onWebGLInitialized'),
-        // onViewStateChange: () => console.log('onViewStateChange'),
-        // onInteractionStateChange: () => console.log('onInteractionStateChange'),
-        // onLoad: () => console.log('onLoad'),
 
         getTooltip: ({ object }) => {
             if (!object) return null;
@@ -358,7 +354,7 @@ function onHover(info: PickingInfo): void {
         return;
     }
     const geoJsonFeature = info.object as GeoJsonFeature;
-    // console.log(geoJsonFeature);
+
     dataPointSelectionUntrracked.hoveredTrackId =
         geoJsonFeature.properties.id?.toString();
     dataPointSelectionUntrracked.setHoveredCellIndex(
@@ -379,7 +375,7 @@ function onClick(info: PickingInfo): void {
 }
 
 const lineageLayout = computed<LineageLayout>(() => {
-    // console.log('computed lineageLineSegments');
+
     const layout: LineageLayout = { points: [], lines: [] };
     for (const lineage of currentLineageArray.value) {
         addSegmentsFromTrack(lineage.founder, layout);
@@ -682,7 +678,7 @@ function resetView() {
     const zoomX = containerWidth.value / imageWidth;
     const zoomY = containerHeight.value / imageHeight;
     const zoomPercent = 0.9 * Math.min(zoomX, zoomY);
-    // console.log('reset');
+
     // ensure the image fills the space
     deckgl.setProps({
         initialViewState: {

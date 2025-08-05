@@ -34,8 +34,8 @@ uniform vec4 destination; // [bottom, left, width, height]
 uniform vec2 dataXExtent;
 uniform float baseline;
 uniform float binSize;
-uniform vec4 positiveColors[6];
-uniform vec4 negativeColors[6];
+uniform vec4 positiveColors[9];
+uniform vec4 negativeColors[9];
 
 uniform float placeholderThreshold;
 uniform float placeholderSize;

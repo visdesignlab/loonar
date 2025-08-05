@@ -68,7 +68,7 @@ export async function loadFileIntoDuckDb(
     if (type === 'csv') {
         try {
             await vg.coordinator().exec([vg.loadCSV(tableName, url)]);
-            console.log(`Got DuckDb file: ${url}`);
+
         } catch (error) {
             const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);
@@ -77,7 +77,7 @@ export async function loadFileIntoDuckDb(
     } else if (type === 'parquet') {
         try {
             await vg.coordinator().exec([vg.loadParquet(tableName, url)]);
-            console.log(`Got DuckDb file: ${url}`);
+
         } catch (error) {
             const message = `Unexpected error when loading ${url} into DuckDb with file type ${type}.`;
             console.error(message);
@@ -192,6 +192,7 @@ export async function addAggregateColumn(
             functionCall = `${functionCall}(*)`;
         }
 
+
         await vg.coordinator().exec([
             `
                 UPDATE ${aggTable} as t1
@@ -211,7 +212,8 @@ export async function addAggregateColumn(
 export async function createAggregateTable(
     tableName: string,
     headers: string[],
-    headerTransforms: ExperimentMetadata['headerTransforms']
+    headerTransforms: ExperimentMetadata['headerTransforms'],
+    allTagNames: string[]
 ) {
     if (!headers || !headerTransforms) return;
 
@@ -234,6 +236,8 @@ export async function createAggregateTable(
         MAX("Time Norm") AS "Maximum Time Norm",
         MIN("Time Norm") AS "Minimum Time Norm",
     `;
+    // Join allTagNames into a comma-separated string
+    const tagsSelection = allTagNames.map((tag) => `"${tag}"`).join(', ');
 
     try {
         try {
@@ -251,9 +255,10 @@ export async function createAggregateTable(
                     SELECT 
                         ${selectString}
                         "${id}" as tracking_id,
-                        location
+                        location,
+                        ${tagsSelection}    
                     FROM ${tableName}
-                    GROUP BY "${id}", location
+                    GROUP BY "${id}", location, ${tagsSelection}
             `,
         ]);
     } catch (error) {
@@ -308,20 +313,20 @@ export async function addAdditionalCellColumns(
     ]);
 
     await vg.coordinator().exec([
-        `
-            WITH min_time AS (
-                SELECT 
-                    "${id}" AS tracking_id,
-                    MIN("${time}") AS min_time
-                FROM ${tableName}
-                GROUP BY "${id}"
-            )
-            UPDATE ${tableName} AS orig_comp_table
-            SET "Time Norm" = "${time}" - (
-                SELECT min_time
-                FROM min_time
-                WHERE min_time.tracking_id = orig_comp_table."${id}"
-            )
-        `,
-    ]);
+    `
+        WITH min_time AS (
+            SELECT 
+                "${id}" AS tracking_id,
+                MIN("${time}") AS min_time
+            FROM ${tableName}
+            GROUP BY "${id}"
+        )
+        UPDATE ${tableName} AS orig_comp_table
+        SET "Time Norm" = COALESCE("${time}" - (
+            SELECT min_time
+            FROM min_time
+            WHERE min_time.tracking_id = orig_comp_table."${id}"
+        ), 0)
+    `,
+]);
 }

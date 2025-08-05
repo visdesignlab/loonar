@@ -60,12 +60,16 @@ watch(
     },
     { deep: true }
 );
-const lineColor = computed(() =>
-    props.color ??
-    conditionSelectorStore.chartColorScheme[
-        props.yIndex % conditionSelectorStore.chartColorScheme.length
-    ]
-);
+
+const yValue = computed(() => props.tags[1][1]);
+
+// Styles
+const lineColor = computed(() => {
+    const color =
+        conditionSelectorStore.conditionColorMap[yValue.value] ||
+        'no value detected';
+    return color;
+});
 const strokeWidth = props.chartLineWidth / 2;
 const strokeWidthSelected = props.chartLineWidth;
 

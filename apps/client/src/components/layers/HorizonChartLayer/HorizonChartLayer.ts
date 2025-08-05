@@ -59,7 +59,7 @@ type _HorizonChartLayerProps<DataT> = {
      * Center position accessor.
      */
     getPosition?: Accessor<DataT, Position>;
-    destination: [number, number, number, number];
+    destination: [number, number, number, number]; // [bottom, left, width, height]
     dataXExtent: [number, number];
     baseline: number;
     binSize: number;
@@ -100,7 +100,7 @@ export default class HorizonChartLayer<
     }
 
     initializeState() {
-        // console.log('initialize custom HorizonChart layer state');
+
         this.getAttributeManager()!.addInstanced({
             instanceModOffsets: {
                 size: 1,
@@ -109,20 +109,20 @@ export default class HorizonChartLayer<
                 defaultValue: 0,
             },
         });
-        // console.log('end initialize custom HorizonChart layer state');
+
     }
 
     updateState(params: UpdateParameters<any>) {
-        // console.log('update state custom HorizonChart layer');
+
         super.updateState(params);
-        // console.log(params);
+
 
         if (
             params.changeFlags.extensionsChanged ||
             (params.changeFlags.updateTriggersChanged &&
                 params.changeFlags.updateTriggersChanged.instanceData)
         ) {
-            // console.log('===-=-=-=-=---=- UPDATE STATE -==-=-=-=-=---=-');
+
             // TODO: check if instance geometry has changed
             // this.state.model?.destroy();
             this.state.model = this._getModel();
@@ -131,9 +131,9 @@ export default class HorizonChartLayer<
     }
 
     draw({ uniforms }: { uniforms: any }) {
-        // console.log('draw custom HorizonChart layer');
+
         const {
-            destination,
+            destination, // [bottom, left, width, height]
             dataXExtent,
             baseline,
             binSize,
@@ -144,7 +144,7 @@ export default class HorizonChartLayer<
 
         model.setUniforms(uniforms);
         model.setUniforms({
-            destination,
+            destination, // [bottom, left, width, height]
             dataXExtent,
             baseline,
             binSize,
@@ -155,7 +155,7 @@ export default class HorizonChartLayer<
     }
 
     protected _getModel() {
-        // console.log('get model custom HorizonChart layer');
+
         const positions = this.props.instanceData;
 
         const geometryPositions = new Float32Array(positions);
@@ -171,7 +171,27 @@ export default class HorizonChartLayer<
             geometry,
             isInstanced: true,
         });
-        // console.log('end get model custom HorizonChart layer');
+
         return model;
     }
 }
+
+export const horizonChartScheme = [
+    '#E0F7FA',
+    '#B3E5FC',
+    '#81D4FA',
+    '#4FC3F7',
+    '#29B6F6',
+    '#03A9F4',
+    '#039BE5',
+    '#0288D1',
+    '#0277BD',
+    '#01579B',
+    '#003366',
+    '#000000',
+    '#000033',
+    '#000066',
+    '#000099',
+    '#0000CC',
+    '#0000FF',
+];

@@ -48,7 +48,6 @@ function getLegendLabel(val: number): string {
 
 const svgContainer = ref<SVGElement | null>(null);
 function exportSvg(): void {
-    console.log('exportSVg called');
     if (svgContainer.value === null) return;
     const svgString =
         '<?xml version="1.0" standalone="no"?>\r\n' +

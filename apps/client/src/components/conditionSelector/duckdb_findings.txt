@@ -27,7 +27,7 @@ DuckDB Findings
             ORDER BY ABS("Dry Mass (pg)" - cte.quantile_5)
             LIMIT 1;`,
         {'type':'json'})
-        console.log(res);
+
 
 
 

@@ -32,18 +32,14 @@ onMounted(() => {
     });
 
     grid.on('change', (event: any, changeItems: any) => {
-        // console.log('-------------------------------------------------');
-        // console.log('grid.on change');
         if (changeItems == null) return;
         gridstackLayoutStore.$patch(() => {
             for (let changedItem of changeItems) {
                 gridstackLayoutStore.updateItem(changedItem);
             }
         });
-        // console.log({ changeItems });
     });
     // grid.on('dragstart', (event: Event, element: any, ...args: any[]) => {
-    //     // console.log({ event, element, args });
     //     // event.preventDefault();
     // });
     // grid.on('dragstop', function (_event: any, element: any) {
@@ -119,9 +115,9 @@ async function toggleFullscreen(elementId: string) {
                 </q-toolbar>
 
                 <q-card-section
-                    :class="`${
-                        w.noPadding ? 'q-pa-none' : ''
-                    } scroll-y h-100 position-relative`"
+                    :class="`${w.noPadding ? 'q-pa-none' : ''} ${
+                        w.hideOverflow ? 'no-scroll' : 'scroll-y'
+                    } h-100 position-relative`"
                 >
                     <component :is="w.component" v-bind="w.props"></component>
                 </q-card-section>
@@ -136,6 +132,10 @@ async function toggleFullscreen(elementId: string) {
 
 .scroll-y {
     overflow-y: auto;
+}
+
+.no-scroll {
+    overflow: hidden;
 }
 
 .show-on-hover {

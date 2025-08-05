@@ -156,6 +156,7 @@ async function addTrackPlotFromMenu() {
             customQuery,
         };
 
+
         const name = await addAggregateColumn(
             aggTableName.value,
             compTableName.value,

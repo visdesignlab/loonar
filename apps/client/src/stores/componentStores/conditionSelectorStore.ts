@@ -369,6 +369,22 @@ export const useConditionSelectorStore = defineStore(
             throw new Error('Invalid type');
         }
 
+        // Add conditionColorMap
+        const conditionColorMap = computed<Record<string, string>>(() => {
+            const map: Record<string, string> = {};
+
+            // Guard clause to ensure yLabels.value is defined
+            if (yLabels.value && Array.isArray(yLabels.value)) {
+                yLabels.value.forEach((label, index) => {
+                    map[label] =
+                        chartColorScheme[index % chartColorScheme.length];
+                });
+            } else {
+                console.warn('yLabels.value is undefined or not an array.');
+            }
+            return map;
+        });
+
         return {
             selectedXTag,
             selectedYTag,
@@ -388,6 +404,7 @@ export const useConditionSelectorStore = defineStore(
             axesOptions,
             selectedIndividualYAxis,
             resetState,
+            conditionColorMap,
         };
     }
 );

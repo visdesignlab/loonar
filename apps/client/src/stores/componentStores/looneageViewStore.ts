@@ -49,7 +49,7 @@ export const useLooneageViewStore = defineStore(storeId, () => {
         ) {
             return;
         }
-        console.log('not all matched');
+
 
         skipTrackingMap.map.set(storeId, true);
 
