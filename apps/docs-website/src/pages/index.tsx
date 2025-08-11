@@ -7,7 +7,6 @@ import HomepageFeatures from "../components/HomepageFeatures";
 
 import styles from "./index.module.css";
 import ImageSwitcher from "../components/ImageSwitcher";
-import Banner from "../components/Banner/Banner";
 
 function HomepageHeader() {
   return (
@@ -24,16 +23,23 @@ function HomepageHeader() {
             darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
             className={clsx(styles.smallItem, styles.homepageLogo)}
           />
-          <div className={clsx("hero__title", styles.description)}>
-            Live Cell Microscopy Data Visualization
+          <div className={clsx("hero__title", styles.headline)}>
+            <span className={styles.headlineLine}>Live Cell Microscopy</span>
+            <span className={styles.headlineLine}>Data Visualization</span>
           </div>
         </div>
-        <div className={styles.buttons}>
+        <div className={styles.buttonRow}>
           <Link
             className="button button--primary button--lg"
             to="/docs/introduction"
           >
-            Get Started
+            Get Started <span className={styles.arrow} aria-hidden="true">↗</span>
+          </Link>
+          <Link
+            className="button button--primary button--lg"
+            to="https://loonsw.sci.utah.edu/"
+          >
+            Demo <span className={styles.arrow} aria-hidden="true">↗</span>
           </Link>
         </div>
       </div>

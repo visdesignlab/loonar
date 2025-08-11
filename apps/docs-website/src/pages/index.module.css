@@ -19,11 +19,25 @@
   display:none;
 }
 
+.headline {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+  margin-top: 0.5rem;
+}
+
+.headlineLine {
+  display: block;
+}
+
 .titleContainer{
   display:flex;
   flex-direction:row;
-  justify-content:center; /* changed from space-between to center */
+  justify-content:center;
   align-items:center;
+  gap: 2rem; /* added gap between logo and headline */
 }
 
 .titleContainer .description{
@@ -44,6 +58,33 @@
   margin-left:10px;
 }
 
+.buttonRow {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.arrow {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.85em;
+  transition: transform 0.3s;
+}
+
+/* Replace bounce animation with simple hover raise */
+.arrow {
+  transition: transform 0.25s ease;
+}
+
+.buttonRow :global(.button:hover) .arrow {
+  transform: translateY(-4px);
+}
+
+.buttonRow :global(.button:hover) .arrow {
+  animation: arrowBounce 0.6s ease;
+}
 
 @media screen and (max-width: 996px) {
   .heroBanner {
