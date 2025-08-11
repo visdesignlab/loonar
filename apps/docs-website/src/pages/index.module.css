@@ -22,7 +22,7 @@
 .titleContainer{
   display:flex;
   flex-direction:row;
-  justify-content:space-between;
+  justify-content:center; /* changed from space-between to center */
   align-items:center;
 }
 
