@@ -11,7 +11,7 @@ import ImageSwitcher from "../components/ImageSwitcher";
 function HomepageHeader() {
   return (
     <header className={clsx("hero hero--secondary", styles.heroBanner)}>
-  <div className={styles.heroContent}>
+    <div className={styles.heroContent}>
         <div className={styles.titleContainer}>
           <div className={clsx("hero__title", styles.headline)}>
             <span className={styles.headlineLine}>Live Cell Microscopy</span>
@@ -41,19 +41,19 @@ export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout>
-      <HomepageHeader />
-      <hr />
-      <main>
-        <div>
-          Loon is a visualization analysis tool for live cell microscopy data.
-          The techniques in the software are from multiple award winning
-          publications. Loon: Using Exemplars to Visualize Large-Scale
-          Microscopy Data and Aardvark: Composite Visualizations of Trees,
-          Time-Series, and Images what are five cool things. live cell imaging
-          with linked roi data, lineage view, exemplar view, two screenshots of
-          the tools.
+      <div className={styles.pageWrapper}>
+        <HomepageHeader />
+        <div className={styles.bottomSection}>
+          <div className={styles.bottomInner}>
+            <hr className={styles.divider} />
+            <main className={styles.bottomMain}>
+              <div className={styles.bottomContent}>
+                Loon is a visualization analysis tool for live cell microscopy data. The techniques in the software are from multiple award winning publications. Loon: Using Exemplars to Visualize Large-Scale Microscopy Data and Aardvark: Composite Visualizations of Trees, Time-Series, and Images what are five cool things. live cell imaging with linked roi data, lineage view, exemplar view, two screenshots of the tools.
+              </div>
+            </main>
+          </div>
         </div>
-      </main>
+      </div>
     </Layout>
   );
 }

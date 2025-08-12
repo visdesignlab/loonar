@@ -1,25 +1,26 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
  .heroBanner {
   padding: 4rem 0;
   position: relative;
   overflow: hidden;
+  --hero-indent: 2.25rem;
 }
 
-/* Centering container for hero inner content */
+@media (max-height: 820px) { .heroBanner { padding: 3.5rem 0 2.75rem; } }
+@media (max-height: 760px) { .heroBanner { padding: 3rem 0 2.25rem; } }
+@media (max-height: 700px) { .heroBanner { padding: 2.75rem 0 2rem; } }
+@media (max-height: 640px) { .heroBanner { padding: 2.5rem 0 1.75rem; } .divider { margin-bottom: 1.25rem; } }
+@media (max-height: 580px) { .heroBanner { padding: 2.25rem 0 1.5rem; } .divider { margin-bottom: 1rem; } }
+@media (max-height: 520px) { .heroBanner { padding: 2rem 0 1.25rem; } .divider { margin-bottom: 0.85rem; } }
+
 .heroContent {
   width: 100%;
-  max-width: 1600px; /* almost full width but prevents ultra-wide line length */
-  margin: 0 auto;    /* center horizontally */
-  padding: 0 3vw;    /* responsive side breathing room */
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 1vw;
   box-sizing: border-box;
 }
 
 .homepageLogo{
-  /* width:60%; */
   height: 250px;
 }
 
@@ -36,15 +37,20 @@
   margin-top: 0.5rem;
 }
 
+/* Individual headline lines: make slightly bolder than default */
+.headlineLine {
+  font-weight: 600;
+}
+
 .titleContainer{
   display:flex;
   flex-direction:row;
   justify-content:flex-start;
   align-items:flex-start;
   gap: 2rem;
-  max-width: 900px; /* retain readable line length */
-  margin: 0; /* anchor to left */
-  padding: 0; /* remove inner shift */
+  max-width: 900px;
+  margin: 0;
+  padding: 0;
 }
 
 .titleContainer .description{
@@ -65,19 +71,85 @@
   margin-left:10px;
 }
 
+.pageWrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bottomSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+
+.bottomInner {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  --bottom-offset: clamp(3rem, 10vh, 10rem);
+  padding: 0 1vw var(--bottom-offset);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.divider {
+  width: 100%;
+  margin: 0 0 1.75rem 0;
+}
+
+.bottomMain { width: 100%; }
+
+.bottomContent {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 .buttonRow {
   display: flex;
   gap: 0.75rem;
-  justify-content: flex-start; /* was center to align with headline */
-  margin-top: 2.5rem;          /* a bit more space below title */
+  justify-content: flex-start;
+  margin-top: 0rem;
   flex-wrap: wrap;
-  max-width: 900px;            /* match titleContainer width */
-  margin: 2.5rem 0 0 0;        /* no auto-centering */
-  padding: 0;                  /* no extra left padding */
+  max-width: 900px;
+  margin: 1.5rem 0 0 0;
+  padding: 0;
 }
 .buttonRow :global(.button) {
-  padding: 0.55rem 1rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 3px;
+  font-size: 1.1rem;
+}
+
+.buttonRow :global(.button.button--primary) {
+  --btn-gray: #5a5a5a;
+  background: var(--btn-gray);
+  border-color: var(--btn-gray);
+  color: #fff;
+  box-shadow: none;
+}
+
+.buttonRow :global(.button.button--primary:hover),
+.buttonRow :global(.button.button--primary:focus) {
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.buttonRow :global(.button.button--primary:active) {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
 }
 
 .arrow {
@@ -87,7 +159,6 @@
   transition: transform 0.3s;
 }
 
-/* Replace bounce animation with simple hover raise */
 .arrow {
   transition: transform 0.25s ease;
 }
@@ -107,7 +178,7 @@
 
   .titleContainer{
     flex-direction: column;
-  align-items: flex-start; /* keep left alignment on narrow screens */
+  align-items: flex-start;
 
   }
 
@@ -129,6 +200,7 @@
     margin-top:30px;
     text-align: center !important;
   }
+  .bottomContent { margin-left: 0; }
 }
 
 @media screen and (max-width: 620px){
@@ -151,5 +223,6 @@
     margin-left:0px;
     margin-top:15px;
   }
+  .bottomContent { margin-left: 0; }
 }
 
