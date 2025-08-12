@@ -70,26 +70,6 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      links: [
-        {
-          title: "Docs",
-          items: [
-            {
-              label: "Documentation",
-              to: "/docs/introduction",
-            },
-          ],
-        },
-        {
-          title: "Community",
-          items: [
-            {
-              label: "GitHub",
-              href: "https://github.com/visdesignlab/loonar",
-            },
-          ],
-        },
-      ],
       copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab, All content on this website is licensed under the Creative Commons Attribution license (CC BY). Built with Docusaurus.`,
     },
     prism: {
