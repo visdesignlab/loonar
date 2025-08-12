@@ -28,16 +28,24 @@
   margin-top: 0.5rem;
 }
 
-.headlineLine {
-  display: block;
+.headline {
+  text-align: left;         
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   
+  line-height: 1.15;
+  margin-top: 0.5rem;
 }
 
 .titleContainer{
   display:flex;
   flex-direction:row;
-  justify-content:center;
-  align-items:center;
-  gap: 2rem; /* added gap between logo and headline */
+  justify-content:flex-start;
+  align-items:flex-start;
+  gap: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  padding-left: 1rem;
 }
 
 .titleContainer .description{
@@ -61,9 +69,17 @@
 .buttonRow {
   display: flex;
   gap: 0.75rem;
-  justify-content: center;
-  margin-top: 1rem;
+  justify-content: flex-start; /* was center to align with headline */
+  margin-top: 2.5rem;          /* a bit more space below title */
   flex-wrap: wrap;
+  max-width: 900px;            /* match titleContainer width */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;          /* align with title's left padding */
+}
+.buttonRow :global(.button) {
+  padding: 0.55rem 1rem;
+  border-radius: 3px;
 }
 
 .arrow {

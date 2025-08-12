@@ -13,16 +13,6 @@ function HomepageHeader() {
     <header className={clsx("hero hero--secondary", styles.heroBanner)}>
       <div className="container">
         <div className={styles.titleContainer}>
-          <ImageSwitcher
-            lightImageSrc={"img/logos/loon-logo-bordered-light.svg"}
-            darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
-            className={clsx(styles.largeItem, styles.homepageLogo)}
-          />
-          <ImageSwitcher
-            lightImageSrc={"img/logos/loon-logo-bordered-light.svg"}
-            darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
-            className={clsx(styles.smallItem, styles.homepageLogo)}
-          />
           <div className={clsx("hero__title", styles.headline)}>
             <span className={styles.headlineLine}>Live Cell Microscopy</span>
             <span className={styles.headlineLine}>Data Visualization</span>
@@ -52,8 +42,9 @@ export default function Home(): JSX.Element {
   return (
     <Layout>
       <HomepageHeader />
+      <hr />
       <main>
-        <div>
+        <div className="container">
           Loon is a visualization analysis tool for live cell microscopy data.
           The techniques in the software are from multiple award winning
           publications. Loon: Using Exemplars to Visualize Large-Scale
@@ -62,7 +53,6 @@ export default function Home(): JSX.Element {
           with linked roi data, lineage view, exemplar view, two screenshots of
           the tools.
         </div>
-        <HomepageFeatures />
       </main>
     </Layout>
   );
