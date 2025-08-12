@@ -11,7 +11,7 @@ import ImageSwitcher from "../components/ImageSwitcher";
 function HomepageHeader() {
   return (
     <header className={clsx("hero hero--secondary", styles.heroBanner)}>
-      <div className="container">
+  <div className={styles.heroContent}>
         <div className={styles.titleContainer}>
           <div className={clsx("hero__title", styles.headline)}>
             <span className={styles.headlineLine}>Live Cell Microscopy</span>
@@ -44,7 +44,7 @@ export default function Home(): JSX.Element {
       <HomepageHeader />
       <hr />
       <main>
-        <div className="container">
+        <div>
           Loon is a visualization analysis tool for live cell microscopy data.
           The techniques in the software are from multiple award winning
           publications. Loon: Using Exemplars to Visualize Large-Scale

@@ -5,9 +5,17 @@
 
  .heroBanner {
   padding: 4rem 0;
-  text-align: center;
   position: relative;
   overflow: hidden;
+}
+
+/* Centering container for hero inner content */
+.heroContent {
+  width: 100%;
+  max-width: 1600px; /* almost full width but prevents ultra-wide line length */
+  margin: 0 auto;    /* center horizontally */
+  padding: 0 3vw;    /* responsive side breathing room */
+  box-sizing: border-box;
 }
 
 .homepageLogo{
@@ -17,15 +25,6 @@
 
 .smallItem{
   display:none;
-}
-
-.headline {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1.15;
-  margin-top: 0.5rem;
 }
 
 .headline {
@@ -43,9 +42,9 @@
   justify-content:flex-start;
   align-items:flex-start;
   gap: 2rem;
-  max-width: 900px;
-  margin: 0 auto;
-  padding-left: 1rem;
+  max-width: 900px; /* retain readable line length */
+  margin: 0; /* anchor to left */
+  padding: 0; /* remove inner shift */
 }
 
 .titleContainer .description{
@@ -73,9 +72,8 @@
   margin-top: 2.5rem;          /* a bit more space below title */
   flex-wrap: wrap;
   max-width: 900px;            /* match titleContainer width */
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;          /* align with title's left padding */
+  margin: 2.5rem 0 0 0;        /* no auto-centering */
+  padding: 0;                  /* no extra left padding */
 }
 .buttonRow :global(.button) {
   padding: 0.55rem 1rem;
@@ -109,6 +107,7 @@
 
   .titleContainer{
     flex-direction: column;
+  align-items: flex-start; /* keep left alignment on narrow screens */
 
   }
 
