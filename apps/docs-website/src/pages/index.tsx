@@ -11,7 +11,19 @@ import ImageSwitcher from "../components/ImageSwitcher";
 function HomepageHeader() {
   return (
     <header className={clsx("hero hero--secondary", styles.heroBanner)}>
-    <div className={styles.heroContent}>
+      <video
+        className={styles.heroVideo}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+      >
+        <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
+        {/* Fallback text */}
+        Your browser does not support the video tag.
+      </video>
+      <div className={styles.heroContent}>
         <div className={styles.titleContainer}>
           <div className={clsx("hero__title", styles.headline)}>
             <span className={styles.headlineLine}>Live Cell Microscopy</span>
@@ -43,16 +55,6 @@ export default function Home(): JSX.Element {
     <Layout>
       <div className={styles.pageWrapper}>
         <HomepageHeader />
-        <div className={styles.bottomSection}>
-          <div className={styles.bottomInner}>
-            <hr className={styles.divider} />
-            <main className={styles.bottomMain}>
-              <div className={styles.bottomContent}>
-                Loon is a visualization analysis tool for live cell microscopy data. The techniques in the software are from multiple award winning publications. Loon: Using Exemplars to Visualize Large-Scale Microscopy Data and Aardvark: Composite Visualizations of Trees, Time-Series, and Images what are five cool things. live cell imaging with linked roi data, lineage view, exemplar view, two screenshots of the tools.
-              </div>
-            </main>
-          </div>
-        </div>
       </div>
     </Layout>
   );
