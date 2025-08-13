@@ -3,10 +3,9 @@ import React from "react";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
-import HomepageFeatures from "../components/HomepageFeatures";
 
 import styles from "./index.module.css";
-import ImageSwitcher from "../components/ImageSwitcher";
+import { demoURL } from "./demourl";
 
 function HomepageHeader() {
   return (
@@ -26,8 +25,8 @@ function HomepageHeader() {
       <div className={styles.heroContent}>
         <div className={styles.titleContainer}>
           <div className={clsx("hero__title", styles.headline)}>
-            <span className={styles.headlineLine}>Live Cell Microscopy</span>
             <span className={styles.headlineLine}>Data Visualization</span>
+            <span className={styles.headlineLine}>for Live Cell Microscopy</span>
           </div>
         </div>
         <div className={styles.buttonRow}>
@@ -39,7 +38,7 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--primary button--lg"
-            to="https://loonsw.sci.utah.edu/"
+            to={demoURL}
           >
             Demo <span className={styles.arrow} aria-hidden="true">↗</span>
           </Link>
