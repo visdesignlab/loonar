@@ -27,8 +27,8 @@
   margin: 0;
   box-sizing: border-box;
   background: white;
-  padding: 0 1.5rem 1rem 0;
-  border-radius: 4px;
+  padding: 0 0.5rem 0.5rem 0;
+  border-radius: 30px;
   isolation: isolate; /* ensure blur layer stays behind */
 }
 
@@ -40,7 +40,7 @@
   border-radius: inherit;
   background: white;
   z-index: -1;
-  filter: blur(75px);
+  filter: blur(15px);
   transform: scale(1.5); /* slight grow so only edges feather */
   pointer-events: none;
 }
@@ -75,6 +75,7 @@
   align-items: flex-start;
   line-height: 1.15;
   margin-top: 0;
+  font-size: 3.5rem;
 }
 
 .headlineLine {
@@ -179,6 +180,9 @@
 }
 
 @media screen and (max-width: 996px) {
+  .headline {
+    font-size: 2.2rem;
+  }
   .heroBanner {
     padding: 2rem;
   }
@@ -210,7 +214,9 @@
 }
 
 @media screen and (max-width: 620px){
-
+  .headline {
+      font-size: 1.5rem;
+  }
   .homepageLogo{
     height: 150px;
   }
@@ -219,8 +225,6 @@
     font-size: 1.1rem;
     margin-top:20px;
   }
-
-
   .buttons{
     flex-direction: column;
   }
