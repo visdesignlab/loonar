@@ -5,7 +5,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 
 import styles from "./index.module.css";
-import { demoURL } from "./demourl";
+import { demoURL } from "./demoUrl";
 
 function HomepageHeader() {
   return (
