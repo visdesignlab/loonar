@@ -26,7 +26,7 @@ aws_secret_access_key = theMinioSecretAccessKey
 ```
 
 :::info
-If the deployment of Loon is using it's default credentials, the `aws_access_key_id` and `aws_secret_access_key` will be "admin" and "minioadmin". You administrator might have provisioned a separate account for you, in which case you should use the access key (username) and secret access key (password) that they provide for you. If you're deploying Loon yourself, check out the MinIO settings configuration [here](../loon-for-developers/building-loon.md#minio-settings).
+If the deployment of Loon is using it's default credentials, the `aws_access_key_id` and `aws_secret_access_key` will be "admin" and "minioadmin". You administrator might have provisioned a separate account for you, in which case you should use the access key (username) and secret access key (password) that they provide for you. If you're deploying Loon yourself, check out the MinIO settings configuration [here](../help-develop-loon/building-loon.md#minio-settings).
 :::
 
 

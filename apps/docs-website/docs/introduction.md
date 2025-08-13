@@ -18,4 +18,4 @@ One of the downfalls of standard Loon, however, is that processing these files c
 
 Both versions are shipped as a single docker image which you can read more about [here](./running-loon/loon-wrappers.md). If you're looking to get started working with Loon, we suggest that you look into the [quickstart tutorial for scientists](./running-loon/quickstart.md).
 
-If you are a developer or working on deploying Loon to a central server, we suggest checking out the [quickstart tutorial for developers](./loon-for-developers/quickstart.md). This section will also give you more information about building Loon from source so that you can customize its configuration.
+If you are a developer or working on deploying Loon to a central server, we suggest checking out the [quickstart tutorial for developers](./help-develop-loon/quickstart.md). This section will also give you more information about building Loon from source so that you can customize its configuration.

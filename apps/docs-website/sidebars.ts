@@ -56,14 +56,14 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "category",
-      label: "Loon For Developers",
+      label: "Help Develop Loon",
       link: {
         type: "doc",
-        id: "loon-for-developers/index",
+        id: "help-develop-loon/index",
       },
       items: [
-        "loon-for-developers/quickstart",
-        "loon-for-developers/building-loon",
+        "help-develop-loon/quickstart",
+        "help-develop-loon/building-loon",
       ],
     },
   ],
