@@ -1,4 +1,4 @@
-# Working With MinIO
+# Working with MinIO
 
 When using MinIO, you have several different ways to upload and view data in your storage engine. The main way to upload data is using Loon's upload feature in the dashboard. With this, you can upload the raw image, segmentations, and tabular data file coming from a LiveCyte workflow without the need to pre-process the data yourself.
 
