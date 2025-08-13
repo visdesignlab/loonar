@@ -11,8 +11,10 @@ import { demoURL } from "./demoUrl";
 export default function Home(): JSX.Element {
   return (
     <Layout>
+      {/** Homepage wrapper - height, width etc.*/}
       <div className={styles.pageWrapper}>
         <section className={clsx(styles.heroSection)}>
+          {/** Background video */}
           <div className={styles.heroVideoWrapper}>
             <video
               className={styles.heroVideo}
@@ -28,6 +30,7 @@ export default function Home(): JSX.Element {
             </video>
           </div>
           <div className={styles.heroContent}>
+            {/** Header Text */}
             <header className={styles.heroHeader}>
               <h1 className={styles.headline}>
                 <span className={styles.headlineLine}>Data Visualization</span>
@@ -35,12 +38,14 @@ export default function Home(): JSX.Element {
               </h1>
             </header>
             <div className={styles.buttonRow}>
+              {/** Get Started Button */}
               <Link
                 className="button button--primary button--lg"
                 to="/docs/introduction"
               >
                 Get Started <span className={styles.arrow} aria-hidden="true">↗</span>
               </Link>
+              {/** Demo Button */}
               <Link
                 className="button button--primary button--lg"
                 to={demoURL}
