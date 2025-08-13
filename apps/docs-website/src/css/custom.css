@@ -4,6 +4,30 @@
  * work well for content-centric websites.
  */
 
+.footer {
+  background: transparent !important;
+  min-height: 40px;
+  padding: 15px 0 15px 0 !important;
+  font-size: 1rem;
+  border-top: 1px solid #ccc;
+  box-shadow: none;
+  display: flex;
+  align-items: center; /* Vertically center content */
+  justify-content: center; /* Horizontally center content */
+}
+
+.footer,
+.footer__links,
+.footer__copyright,
+.footer__link-item {
+  color: #222 !important;
+}
+
+.footer__link-item:hover {
+  color: #555 !important;
+  opacity: 1;
+}
+
  .footer-wrapper {
   display:flex;
   flex-direction:row;
