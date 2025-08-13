@@ -3,16 +3,13 @@ import React from "react";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
-
 import styles from "./index.module.css";
 import { demoURL } from "./demoUrl";
 
 /**
- * 
  * @returns Homepage component
  */
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout>
       <div className={styles.pageWrapper}>
