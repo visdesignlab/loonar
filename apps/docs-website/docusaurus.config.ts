@@ -70,7 +70,7 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab, All content on this website is licensed under the Creative Commons Attribution license (CC BY). Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab. Content licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Built with Docusaurus.`
     },
     prism: {
       theme: prismThemes.github,
