@@ -1,5 +1,14 @@
-/* --- Hero Banner Section --- */
-.heroBanner {
+/* --- Page Wrapper --- */
+.pageWrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* --- Hero Section --- */
+.heroSection {
   --box-margin: 4rem;
   margin: var(--box-margin);
   position: relative;
@@ -10,21 +19,26 @@
   width: calc(100% - (var(--box-margin) * 2));
 }
 
-/* Responsive min-height for heroBanner */
+/* Responsive min-height for heroSection */
 @media (max-height: 820px), (max-height: 760px), (max-height: 700px), (max-height: 640px), (max-height: 580px), (max-height: 520px) {
-  .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); }
+  .heroSection { min-height: calc(100vh - (var(--box-margin) * 2)); }
 }
 
 /* --- Hero Video --- */
-.heroVideo {
+.heroVideoWrapper {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
   z-index: 0;
   background: #000;
+  pointer-events: none;
+}
+.heroVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   -webkit-user-select: none;
   user-select: none;
   pointer-events: none;
@@ -42,8 +56,6 @@
   border-radius: 30px;
   isolation: isolate;
 }
-
-/* Soft blurry edge for heroContent */
 .heroContent::before {
   content: "";
   position: absolute;
@@ -56,30 +68,24 @@
   pointer-events: none;
 }
 
-/* --- Headline Section --- */
+/* --- Hero Header & Headline --- */
+.heroHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 0;
+}
 .headline {
   text-align: left;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.15;
-  margin-top: 0;
   font-size: 3.5rem;
+  margin: 0;
 }
 .headlineLine {
   font-weight: 600;
-}
-
-/* --- Title Container --- */
-.titleContainer {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 2rem;
-  max-width: 900px;
-  margin: 0;
-  padding: 0;
 }
 
 /* --- Button Row --- */
@@ -127,20 +133,11 @@
   animation: arrowBounce 0.6s ease;
 }
 
-/* --- Page Wrapper --- */
-.pageWrapper {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
 /* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
   .headline { font-size: 2.2rem; }
-  .heroBanner { padding: 2rem; }
-  .titleContainer { flex-direction: column; align-items: flex-start; }
+  .heroSection { padding: 2rem; }
+  .heroHeader { flex-direction: column; align-items: flex-start; }
 }
 
 @media screen and (max-width: 620px) {
