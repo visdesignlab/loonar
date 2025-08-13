@@ -62,6 +62,11 @@ const config: Config = {
           label: "Documentation",
         },
         {
+          href: "mailto:devinscottlange@gmail.com",
+          label: "Contact",
+          position: "right",
+        },
+        {
           href: "https://github.com/visdesignlab/loonar",
           label: "GitHub",
           position: "right",
