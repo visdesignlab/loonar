@@ -135,16 +135,16 @@
   padding: 0;
 }
 .buttonRow :global(.button) {
-  padding: 0.3rem 0.6rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 3px;
   font-size: 1.1rem;
 }
 
 .buttonRow :global(.button.button--primary) {
   --btn-gray: #5a5a5a;
-  background: var(--btn-gray);
-  border-color: var(--btn-gray);
-  color: #fff;
+  background: transparent;
+  border: 3px solid var(--btn-gray);
+  color: var(--btn-gray);
   box-shadow: none;
 }
 
@@ -159,7 +159,6 @@
   background: var(--ifm-color-primary-dark);
   border-color: var(--ifm-color-primary-dark);
 }
-
 .arrow {
   display: inline-block;
   margin-left: 0.35rem;
