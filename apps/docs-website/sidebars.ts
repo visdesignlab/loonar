@@ -41,17 +41,17 @@ const sidebars: SidebarsConfig = {
     // },
     {
       type: "category",
-      label: "Loon For Scientists",
+      label: "Running Loon",
       link: {
         type: "doc",
-        id: "loon-for-scientists/index",
+        id: "running-loon/index",
       },
       items: [
-        "loon-for-scientists/quickstart",
-        "loon-for-scientists/data",
-        "loon-for-scientists/loon-wrappers",
-        "loon-for-scientists/working-with-minio",
-        "loon-for-scientists/trackmate-data",
+        "running-loon/quickstart",
+        "running-loon/data",
+        "running-loon/loon-wrappers",
+        "running-loon/working-with-minio",
+        "running-loon/trackmate-data",
       ],
     },
     {
