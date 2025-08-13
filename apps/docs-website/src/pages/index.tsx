@@ -34,7 +34,9 @@ export default function Home(): JSX.Element {
             <header className={styles.heroHeader}>
               <h1 className={styles.headline}>
                 <span className={styles.headlineLine}>Data Visualization</span>
-                <span className={styles.headlineLine}>for Live Cell Microscopy</span>
+                <span className={styles.headlineLine}>
+                  <span className={styles.smallerFont}>for</span> Live Cell Microscopy
+                </span>
               </h1>
             </header>
             <div className={styles.buttonRow}>

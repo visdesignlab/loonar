@@ -84,10 +84,12 @@
   font-size: 3.5rem;
   margin: 0;
 }
+.headline .smallerFont {
+  font-size: 2.8rem;
+}
 .headlineLine {
   font-weight: 600;
 }
-
 /* --- Button Row --- */
 .buttonRow {
   display: flex;
