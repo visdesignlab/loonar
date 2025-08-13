@@ -103,8 +103,8 @@ html[data-theme='dark'] .light-theme-display-component {
   --ifm-color-primary-lightest: #a6ceff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
-
 .navbar__logo img {
-  height: 160%;
-  margin-top: -10px;
+  height: 240%;
+  margin-top: -21px;
+  margin-left: -10px;
 }
