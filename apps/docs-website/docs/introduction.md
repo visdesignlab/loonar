@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# What Is Loon
+# What is Loon
 
 _Description of loon at a high level_
 

@@ -1,4 +1,4 @@
-# Building and Getting Started with Loon From Source
+# Building and Getting Started with Loon from Source
 
 The official Github repository for Loon has everything that is required to build any of the above docker images. Instead of building a single image, however, you can also use Docker Compose to build our multi-container application. Building the multi-container application instead of the single Docker image provides more insight when attempting to debug and allows for much more configuration. This is done through a build script with an accompanying JSON file.
 
