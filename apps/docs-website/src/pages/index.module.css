@@ -1,5 +1,5 @@
+/* --- Hero Banner Section --- */
 .heroBanner {
-  /* Full-width/height box minus uniform margin */
   --box-margin: 4rem;
   margin: var(--box-margin);
   position: relative;
@@ -10,41 +10,12 @@
   width: calc(100% - (var(--box-margin) * 2));
 }
 
-@media (max-height: 820px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } }
-@media (max-height: 760px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } }
-@media (max-height: 700px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } }
-@media (max-height: 640px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } .divider { margin-bottom: 1.25rem; } }
-@media (max-height: 580px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } .divider { margin-bottom: 1rem; } }
-@media (max-height: 520px) { .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); } .divider { margin-bottom: 0.85rem; } }
-
-.heroContent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  width: auto;
-  max-width: 1600px;
-  margin: 0;
-  box-sizing: border-box;
-  background: white;
-  padding: 0 0.5rem 0.5rem 0;
-  border-radius: 30px;
-  isolation: isolate; /* ensure blur layer stays behind */
+/* Responsive min-height for heroBanner */
+@media (max-height: 820px), (max-height: 760px), (max-height: 700px), (max-height: 640px), (max-height: 580px), (max-height: 520px) {
+  .heroBanner { min-height: calc(100vh - (var(--box-margin) * 2)); }
 }
 
-/* Soft blurry edge (not glass) */
-.heroContent::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: white;
-  z-index: -1;
-  filter: blur(15px);
-  transform: scale(1.5); /* slight grow so only edges feather */
-  pointer-events: none;
-}
-
+/* --- Hero Video --- */
 .heroVideo {
   position: absolute;
   inset: 0;
@@ -59,17 +30,35 @@
   pointer-events: none;
 }
 
-
-.homepageLogo{
-  height: 250px;
+/* --- Hero Content Overlay --- */
+.heroContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  max-width: 1600px;
+  background: white;
+  padding: 0 0.5rem 0.5rem 0;
+  border-radius: 30px;
+  isolation: isolate;
 }
 
-.smallItem{
-  display:none;
+/* Soft blurry edge for heroContent */
+.heroContent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: white;
+  z-index: -1;
+  filter: blur(15px);
+  transform: scale(1.5);
+  pointer-events: none;
 }
 
+/* --- Headline Section --- */
 .headline {
-  text-align: left;         
+  text-align: left;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -77,58 +66,27 @@
   margin-top: 0;
   font-size: 3.5rem;
 }
-
 .headlineLine {
   font-weight: 600;
 }
 
-.titleContainer{
-  display:flex;
-  flex-direction:row;
-  justify-content:flex-start;
-  align-items:flex-start;
+/* --- Title Container --- */
+.titleContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 2rem;
   max-width: 900px;
   margin: 0;
   padding: 0;
 }
 
-.titleContainer .description{
-  text-align: right;
-  margin-left:30px;
-  font-weight: bold;
-  line-height: 105%;
-}
-
-
-.buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.buttons a:not(:first-child) {
-  margin-left:10px;
-}
-
-.pageWrapper {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.divider {
-  width: 100%;
-  margin: 0 0 1.75rem 0;
-}
-
+/* --- Button Row --- */
 .buttonRow {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-start;
-  margin-top: 0rem;
   flex-wrap: wrap;
   max-width: 900px;
   margin: 1.5rem 0 0 0;
@@ -139,7 +97,6 @@
   border-radius: 3px;
   font-size: 1.1rem;
 }
-
 .buttonRow :global(.button.button--primary) {
   --btn-gray: #5a5a5a;
   background: transparent;
@@ -147,90 +104,45 @@
   color: var(--btn-gray);
   box-shadow: none;
 }
-
 .buttonRow :global(.button.button--primary:hover),
 .buttonRow :global(.button.button--primary:focus) {
   background: var(--ifm-color-primary);
   border-color: var(--ifm-color-primary);
   color: #fff;
 }
-
 .buttonRow :global(.button.button--primary:active) {
   background: var(--ifm-color-primary-dark);
   border-color: var(--ifm-color-primary-dark);
 }
+
+/* --- Arrow Animation --- */
 .arrow {
   display: inline-block;
   margin-left: 0.35rem;
   font-size: 0.85em;
-  transition: transform 0.3s;
-}
-
-.arrow {
   transition: transform 0.25s ease;
 }
-
 .buttonRow :global(.button:hover) .arrow {
   transform: translateY(-4px);
-}
-
-.buttonRow :global(.button:hover) .arrow {
   animation: arrowBounce 0.6s ease;
 }
 
+/* --- Page Wrapper --- */
+.pageWrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
-  .headline {
-    font-size: 2.2rem;
-  }
-  .heroBanner {
-    padding: 2rem;
-  }
-
-  .titleContainer{
-    flex-direction: column;
-  align-items: flex-start;
-
-  }
-
-  .homepageLogo{
-    height: 200px;
-  }
-
-  .largeItem{
-    display:none;
-  }
-
-  .smallItem{
-    display:block;
-  }
-
-  .description{
-    font-size: 2rem;
-    margin-left: 0px !important;;
-    margin-top:30px;
-    text-align: center !important;
-  }
+  .headline { font-size: 2.2rem; }
+  .heroBanner { padding: 2rem; }
+  .titleContainer { flex-direction: column; align-items: flex-start; }
 }
 
-@media screen and (max-width: 620px){
-  .headline {
-      font-size: 1.5rem;
-  }
-  .homepageLogo{
-    height: 150px;
-  }
-
-  .description{
-    font-size: 1.1rem;
-    margin-top:20px;
-  }
-  .buttons{
-    flex-direction: column;
-  }
-  
-  .buttons a:not(:first-child) {
-    margin-left:0px;
-    margin-top:15px;
-  }
+@media screen and (max-width: 620px) {
+  .headline { font-size: 1.5rem; }
 }
-
