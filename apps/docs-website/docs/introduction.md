@@ -16,6 +16,6 @@ The standard Loon application comes with everything you need to upload, store, p
 
 One of the downfalls of standard Loon, however, is that processing these files can take some time -- especially since the segmentations and images can be so numerous. If you are using Loon in a more "CI/CD" pipeline in order to correct your own segmentation development or view many experiments quickly, it may be more appropriate to use Local Loon. In this version, you are responsible for your own data management and to ensure that the data you place in your data store is in the expected format.
 
-Both versions are shipped as a single docker image which you can read more about [here](./running-loon/loon-wrappers.md). If you're looking to get started working with Loon, we suggest that you look into the [quickstart tutorial for scientists](./running-loon/quickstart.md).
+Both versions are shipped as a single docker image which you can read more about [here](./how-to-use-loon/loon-wrappers.md). If you're looking to get started working with Loon, we suggest that you look into the [quickstart tutorial for scientists](./how-to-use-loon/quickstart.md).
 
 If you are a developer or working on deploying Loon to a central server, we suggest checking out the [quickstart tutorial for developers](./help-develop-loon/quickstart.md). This section will also give you more information about building Loon from source so that you can customize its configuration.

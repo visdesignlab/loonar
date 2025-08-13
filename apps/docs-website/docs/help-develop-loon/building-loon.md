@@ -1,4 +1,4 @@
-# Building and Running Loon From Source
+# Building and How To Use Loon From Source
 
 The official Github repository for Loon has everything that is required to build any of the above docker images. Instead of building a single image, however, you can also use Docker Compose to build our multi-container application. Building the multi-container application instead of the single Docker image provides more insight when attempting to debug and allows for much more configuration. This is done through a build script with an accompanying JSON file.
 
@@ -143,7 +143,7 @@ When `generalSettings.environment` is set to `local`, the `minioSettings` key sh
 
 The MinIO settings are used to configure your MinIO storage backend. You do _not_ need to install or set-up MinIO prior to launching the container -- the docker application will handle the set up for you. 
 
-The basic settings are the `minioStorageAccessKey`, the `minioStorageSecretKey`, and the volume location (i.e. where the data should be located). The `minioStorageAccessKey` and `minioStorageSecretKey` serve as the username and password for your MinIO storage, respectively. See [here](../running-loon/working-with-minio.md) for more information on working with MinIO as a storage engine.
+The basic settings are the `minioStorageAccessKey`, the `minioStorageSecretKey`, and the volume location (i.e. where the data should be located). The `minioStorageAccessKey` and `minioStorageSecretKey` serve as the username and password for your MinIO storage, respectively. See [here](../how-to-use-loon/working-with-minio.md) for more information on working with MinIO as a storage engine.
 
 If you're deploying this application on a remote server where you'd like your data to be stored on an NFS volume, you must also specify that it is an NFS mount using `volumeType`, specify the nfs version using `nfsVersion`, the ip address of the volume using `ipAddress` and the user and group permissions that MinIO will need to write to this directory using `userGroupPermissions`
 

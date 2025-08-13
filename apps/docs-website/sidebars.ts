@@ -41,17 +41,17 @@ const sidebars: SidebarsConfig = {
     // },
     {
       type: "category",
-      label: "Running Loon",
+      label: "How To Use Loon",
       link: {
         type: "doc",
-        id: "running-loon/index",
+        id: "how-to-use-loon/index",
       },
       items: [
-        "running-loon/quickstart",
-        "running-loon/data",
-        "running-loon/loon-wrappers",
-        "running-loon/working-with-minio",
-        "running-loon/trackmate-data",
+        "how-to-use-loon/quickstart",
+        "how-to-use-loon/data",
+        "how-to-use-loon/loon-wrappers",
+        "how-to-use-loon/working-with-minio",
+        "how-to-use-loon/trackmate-data",
       ],
     },
     {
