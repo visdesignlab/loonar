@@ -135,6 +135,27 @@
   animation: arrowBounce 0.6s ease;
 }
 
+/* --- Bottom Description --- */
+.descriptionSection {
+  --box-margin: 4rem;
+  margin: 0 var(--box-margin) var(--box-margin) var(--box-margin); /* No top margin */
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0;
+  width: calc(100% - (var(--box-margin) * 2));
+}
+
+.descriptionContent {
+  z-index: 2;
+  max-width: 1600px;
+  background: white;
+  padding: 0 0.5rem 0.5rem 0;
+  border-radius: 30px;
+  isolation: isolate;
+  font-size: 1.25rem;
+}
+
 /* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
   .headline { font-size: 2.2rem; }

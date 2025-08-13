@@ -57,6 +57,27 @@ export default function Home(): JSX.Element {
             </div>
           </div>
         </section>
+        {/* Loon Description Section */}
+        <section className={styles.descriptionSection}>
+          <div className={styles.descriptionContent}>
+            <p>
+                <strong>Loon</strong> is a visualization analysis tool for live cell microscopy data.<br />
+                Award-winning publications:
+              <ul>
+                <li>
+                  <Link href="https://loon.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
+                  Loon: Using Exemplars to Visualize Large-Scale Microscopy Data
+                  </Link>
+                </li>
+                <li>
+                  <Link href="https://vdl.sci.utah.edu/publications/2024_vis_aardvark/" target="_blank" rel="noopener noreferrer">
+                  Aardvark: Composite Visualizations of Trees, Time-Series, and Images
+                  </Link>
+                </li>
+              </ul>
+            </p>
+          </div>
+        </section>
       </div>
     </Layout>
   );
