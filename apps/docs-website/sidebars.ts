@@ -41,17 +41,17 @@ const sidebars: SidebarsConfig = {
     // },
     {
       type: "category",
-      label: "How To Use Loon",
+      label: "Getting Started with Loon",
       link: {
         type: "doc",
-        id: "how-to-use-loon/index",
+        id: "getting-started-with-loon/index",
       },
       items: [
-        "how-to-use-loon/quickstart",
-        "how-to-use-loon/data",
-        "how-to-use-loon/loon-wrappers",
-        "how-to-use-loon/working-with-minio",
-        "how-to-use-loon/trackmate-data",
+        "getting-started-with-loon/quickstart",
+        "getting-started-with-loon/data",
+        "getting-started-with-loon/loon-wrappers",
+        "getting-started-with-loon/working-with-minio",
+        "getting-started-with-loon/trackmate-data",
       ],
     },
     {
