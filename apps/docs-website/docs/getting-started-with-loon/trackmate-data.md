@@ -1,6 +1,6 @@
 # Optional: Use Data from TrackMate
 
-- #### [TrackMate](https://imagej.net/plugins/trackmate/) is a popular FIJI (Image Analysis) plugin for:
+#### [TrackMate](https://imagej.net/plugins/trackmate/) is a popular FIJI (Image Analysis) plugin for:
   - Robust tracking of cells and other objects in microscopy time-lapse images
   - Various detection and tracking algorithms
   - Visualization and analysis tools
