@@ -1,4 +1,4 @@
-# Loon Data
+# Prepare Your Microscopy Data
 
 At a high level the data expects feature tables as CSV, images as TIFF files, and cell segmentation boundaries as GeoJSON files. All of these files are explicitly linked together with JSON files.
 

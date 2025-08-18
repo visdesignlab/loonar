@@ -1,4 +1,4 @@
-# Local Loon Quick Start Guide
+# Deploy Loon
 
 To get started, you'll need to first get Docker installed. You can visit the [official Docker website](https://www.docker.com/) for information on how to get Docker installed and ready-to-use.
 

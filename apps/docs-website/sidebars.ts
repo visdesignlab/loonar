@@ -47,11 +47,14 @@ const sidebars: SidebarsConfig = {
         id: "getting-started-with-loon/index",
       },
       items: [
-        "getting-started-with-loon/quickstart",
-        "getting-started-with-loon/data",
-        "getting-started-with-loon/loon-wrappers",
-        "getting-started-with-loon/working-with-minio",
-        "getting-started-with-loon/trackmate-data",
+        {type: "category", label: "Prepare Your Data", link: {type: "doc", id: "getting-started-with-loon/data",}, items: [
+        "getting-started-with-loon/trackmate-data",]},
+        {type: "category", label: "Deploy Loon", link: {type: "doc", id: 
+        "getting-started-with-loon/quickstart",}, items: [
+        "getting-started-with-loon/loon-wrappers",]},
+        {type: "category", label: "Help", link: {type: "doc", id: 
+        "getting-started-with-loon/quickstart",}, items: [
+        "getting-started-with-loon/working-with-minio",]},
       ],
     },
     {
