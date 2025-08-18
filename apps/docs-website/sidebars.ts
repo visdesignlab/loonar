@@ -52,9 +52,14 @@ const sidebars: SidebarsConfig = {
         {type: "category", label: "Deploy Loon", link: {type: "doc", id: 
         "getting-started-with-loon/quickstart",}, items: [
         "getting-started-with-loon/loon-wrappers",]},
-        {type: "category", label: "Help", link: {type: "doc", id: 
-        "getting-started-with-loon/quickstart",}, items: [
-        "getting-started-with-loon/working-with-minio",]},
+        { 
+          type: "category", 
+          label: "Extra Resources", 
+          link: { type: "generated-index" }, // <-- strictly a folder
+          items: [
+            "getting-started-with-loon/working-with-minio",
+          ],
+        },
       ],
     },
     {
