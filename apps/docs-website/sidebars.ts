@@ -55,7 +55,7 @@ const sidebars: SidebarsConfig = {
         { 
           type: "category", 
           label: "Extra Resources", 
-          link: { type: "generated-index" }, // <-- strictly a folder
+          link: { type: "generated-index" },
           items: [
             "getting-started-with-loon/working-with-minio",
           ],
