@@ -5,12 +5,11 @@ sidebar_position: 1
 # What is Loon
 
 ## Data Visualization Software for Live Cell Microscopy
+Loon is a tool for scientists to **analyze** cell data, **identify** data processing mistakes, and **communicate** their findings.
 
-Loon is a tool for scientists to **analyze** cell data, **identify** data processing mistakes, and **communicate** their findings. 
-
-Loon is designed to visualize cell data **already generated** from other microscopy software _(E.g. [LiveCyte](https://www.phasefocus.com/livecyte), [TrackMate](https://imagej.net/plugins/trackmate/))_.
-
-> Loon **does not** create cell segmentation outlines itself, or derive metadata _(e.g. Mass, Time, Segmentations)_ from images.  
+>Loon is designed to visualize cell data **already generated** from other microscopy software _(E.g. [LiveCyte](https://www.phasefocus.com/livecyte), [TrackMate](https://imagej.net/plugins/trackmate/))_.
+>
+> Loon **does not** create cell segmentation outlines itself, or derive metadata _(e.g. mass, time, segmentations)_ from images.  
 > Instead, Loon is made to visualize cell images and metadata as [input](./getting-started-with-loon/index.md).
 
 ## Why
