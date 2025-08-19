@@ -29,8 +29,8 @@
 > ### Download our <a href="/convert_trackmate.py" download="convert_trackmate.py">conversion script &#8595;</a>
 > ### Run the script:
 > 1. Open your terminal:
->    - **Mac:** Press `Cmd + Space`, type `Terminal`, and hit `Enter`
->    - **Windows:** Press `Win + R`, type `cmd`, and hit `Enter`
+>    - **Mac:** Press `Cmd + Space`, type `Terminal`, and press `Enter`
+>    - **Windows:** Press `Win + R`, type `cmd`, and press `Enter`
 > 2. Change to the directory where you saved `convert_trackmate.py`:
 >    - **Mac:** `cd ~/Downloads`
 >    - **Windows:** `cd %USERPROFILE%\Downloads`
