@@ -6,12 +6,12 @@ import TabItem from '@theme/TabItem';
 > #### To use Loon, you must format your microscopy data according to Loon's requirements before uploading it.
 
 
-## Learn: Expected Loon Data Format
+## Learn: Expected Data Format
 ![Overview Figure of data structure](img/overview.png)
 
-> ### Data format Loon expects you to upload:
+> ### Loon expects you to upload:
 > - [**Index**](#define-your-experiments-aa_indexjson) `aa_index.json`: Define your cell imaging experiments _(E.g. Exp. 1, Exp. 2)_
-> - [**Datasets**](#experiment-metadata-file) `.json`: Metadata about this experiment _(name of experiment, cell info names like `time`, `mass`)_
+> - [**Datasets**](#experiment-metadata-file) `.json`: Metadata about this experiment _(name of experiment, cell attribute names like `time`, `mass`)_
 >   - **Imaging Location** folders each containing:
 >     - Cell **Images** as a folder of `.tiff` files
 >     - Cell [**Segmentations**](#segmentations-folder) (boundaries outlining each cell) as a folder of as `GeoJSON` files
@@ -59,6 +59,13 @@ When uploading data, the Loon software **will prompt you** to:
 If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare your microscopy data yourself.
 :::
 ---
+## Loon Data Specification
+
+**Optional Read**: If you'd like to learn more, we specify each data component below.  
+
+> If using [**Local Loon**](./index.md), you will **need to read** these specifications.  
+> Make sure to format your data file structure correctly [(see above)](#loon-expects-you-to-upload)
+
 <Tabs>
   <TabItem value="index" label="Index">
 
