@@ -10,12 +10,12 @@ import TabItem from '@theme/TabItem';
 ![Overview Figure of data structure](img/overview.png)
 
 > ### Loon expects you to upload:
-> - [**Index**](#define-your-experiments-aa_indexjson) `aa_index.json`: Define your cell imaging experiments _(E.g. Exp. 1, Exp. 2)_
-> - [**Datasets**](#experiment-metadata-file) `.json`: Metadata about this experiment _(name of experiment, cell attribute names like `time`, `mass`)_
->   - **Imaging Location** folders each containing:
->     - Cell **Images** as a folder of `.tiff` files
->     - Cell [**Segmentations**](#segmentations-folder) (boundaries outlining each cell) as a folder of as `GeoJSON` files
->     - Cell **Metadata** as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
+> - Experiment [**Index**](#define-your-experiments-aa_indexjson) `aa_index.json`: Define your cell imaging experiments _(E.g. Exp. 1, Exp. 2)_
+> - Experiment [**Datasets**](#define-your-experiments-aa_indexjson) `.json`: Metadata about this experiment _(experiment name, cell attribute names e.g. `time`, `mass`)_
+>   - [**Imaging Location**](#define-your-experiments-aa_indexjson) folders each containing:
+>     - Cell [**Images**](#define-your-experiments-aa_indexjson) as a folder of `.tiff` files
+>     - Cell [**Segmentations**](#define-your-experiments-aa_indexjson) (boundaries outlining each cell) as a folder of as `GeoJSON` files
+>     - Cell [**Metadata**](#define-your-experiments-aa_indexjson) as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
 > <details>
 >   <summary>Example file structure</summary>
 > 
@@ -65,7 +65,6 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 
 > If using [**Local Loon**](./index.md), you will **need to read** these specifications.  
 > Make sure to format your data file structure correctly [(see above)](#loon-expects-you-to-upload)
-
 <Tabs>
   <TabItem value="index" label="Index">
 
@@ -96,6 +95,7 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 
   </TabItem>
   <TabItem value="datasets" label="Datasets">
+  
 ## Datasets: Experiment Metadata File
 
 > Each experiment metadata file is stored as a JSON file. This defines some metadata aspects of the experiment and points to the other data files.
@@ -245,7 +245,23 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 > Here, the empty spaces denote empty strings.
 
 </TabItem>
-<TabItem value="segmentations" label="Segmentations">
+<TabItem value="imaging_locations" label="Imaging Locations">
+
+An **Imaging Location** is simply a folder containing a distinct imaging dataset of your choosing.  
+Created at a distinct location, time, or for a specific purpose.
+
+Imaging Location folders each contain:
+  - Cell **Images** as a folder of `.tiff` files
+  - Cell [**Segmentations**](#segmentations-folder) (boundaries outlining each cell) as a folder of as `GeoJSON` files
+  - Cell **Metadata** as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
+</TabItem>
+<TabItem value="cell_images" label="Cell Images">
+
+**Cell Images** is a folder of `.tiff` _(image)_ files **or** `.ome.tiff` _(microscopy image)_ files.
+
+> We reccommend using the [ome-tiff](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) library for your cell images.
+</TabItem>
+<TabItem value="segmentations" label="Cell Segmentations">
 
 ## Segmentations Folder
 
@@ -263,4 +279,26 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 > [Here](https://github.com/visdesignlab/aardvark-util/blob/main/roi_to_geojson.py) is a Python script which can convert `.roi` to GeoJSON from one of our accompanying repositories.
 > :::
 </TabItem>
+
+<TabItem value="cell_metadata" label="Cell Metadata">
+
+**Cell Metadata** is a `.csv` file of your choice containing:
+  - **Rows**: A cell at a certain time point
+  - **Columns**: Metadata about that cell
+
+**Example contents**:
+> `example_metadata_table.csv`
+>
+> | CELL_ID | LOCATION   | PARENT_CELL | TIME | FRAME | MASS | POSITION_X | POSITION_Y | ... |
+> |---------|------------|-------------|------|-------|------|------------|------------|-----|
+> | 101     | location_A | -           | 0    | 1     | 12.5 | 150        | 320        | ... |
+> | 102     | location_A | 101         | 5    | 2     | 13.1 | 155        | 325        | ... |
+> | 103     | location_B | -           | 0    | 1     | 11.8 | 140        | 310        | ... |
+> | ...     | ...        | ...         | ...  | ...   | ...  | ...        | ...        | ... |
+>
+> > **Loon requires** these columns: `frame`, `time`, `id`, `parent`, `mass`, `x`, `y`  
+> > Those required columns can be **named however you'd like** in your file, in any order (see [header transforms](#header-transforms)).  
+> > You can add any other metadata columns you would like.  
+</TabItem>
+
 </Tabs>
