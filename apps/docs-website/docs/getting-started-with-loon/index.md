@@ -1,18 +1,4 @@
 # Getting Started with Loon
-> **Two Loon versions** to choose from:
-> 1. **Loon** 
->    - In this version, you upload microscopy data onto a server that Loon hosts on your computer.
->    - You can optionally run a central server where users can upload and access their data over the internet.
->    - 🟩 Easier to prepare data for use in Loon, sharable
->    - 🟥 Slower upload
-> 2. **Local Loon**  
->    - In this version, your data is not uploaded to a server. 
->    - Instead, you link your data file (local to your computer).
->    - 🟩 Faster upload
->    - 🟥 Harder to prepare data for use in Loon
-> 
-> We recommend using the standard **Loon**.  
-> If you iterate your data frequently, without sharing data, we recommend using **Local Loon**.
 ## Step 1: [Prepare Your Microscopy Data ↗](./data.md)
 >
 > #### In short, Loon expects this input:

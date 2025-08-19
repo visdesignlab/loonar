@@ -1,5 +1,22 @@
 # Deploy Loon
 
+**Two Loon versions** to choose from:
+> 1. **Loon** 
+>    - In this version, you upload microscopy data onto a **server** that Loon hosts on your computer.
+>    - You can optionally run a central server where users can upload and access their data over the internet.
+>    - 🟩 Easier to prepare data for use in Loon, **data is sharable**
+>    - 🟥 Slower upload
+> 2. **Local Loon**  
+>    - In this version, your data is not uploaded to a server. 
+>    - Instead, you link your data file (local to your computer).
+>    - 🟩 **Faster** upload and iteration
+>    - 🟥 Harder to prepare data for use in Loon
+>  
+**In short:**
+> We recommend using the standard **Loon**.  
+> If you iterate on your microscopy data frequently, and don't need to share it right away, we recommend using **Local Loon**.
+
+--- 
 To get started, you'll need to first get Docker installed. You can visit the [official Docker website](https://www.docker.com/) for information on how to get Docker installed and ready-to-use.
 
 ## Step 1: Create a Docker Hub Account
