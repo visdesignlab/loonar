@@ -1,3 +1,6 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Prepare Your Microscopy Data
 
 > #### To use Loon, you must format your microscopy data according to Loon's requirements before uploading it.
@@ -56,6 +59,9 @@ When uploading data, the Loon software **will prompt you** to:
 If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare your microscopy data yourself.
 :::
 ---
+<Tabs>
+  <TabItem value="index" label="Index">
+
 ## Define Your Experiments: `aa_index.json`
 
 > This file contains a list of your experiment metadata files.  
@@ -81,6 +87,8 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 > }
 > ```
 
+  </TabItem>
+  <TabItem value="datasets" label="Datasets">
 ## Datasets: Experiment Metadata File
 
 > Each experiment metadata file is stored as a JSON file. This defines some metadata aspects of the experiment and points to the other data files.
@@ -229,12 +237,23 @@ If using [**Local Loon**](./index.md), Loon will not guide you. You must prepare
 >
 > Here, the empty spaces denote empty strings.
 
-
+</TabItem>
+<TabItem value="segmentations" label="Segmentations">
 
 ## Segmentations Folder
 
-Each imaging location should have a corresponding folder that contains all of the segmentation files. The names of the files must correspond to the imaging frame. That is `1.json` will contain all of the cell segmentations for the first frame., `2.json` will contain the second frame, and so on. Each json file must follow the GeoJSON specification. In addition to the standard geometry attribute, the `bbox` attribute must be defined. To link the segmentations with the corresponding metadata the cell `id` defined in the feature table must be included as an `ID` in the GeoJSON properties object.
-
-:::info
-Often, segmentations are instead generated as `*.roi` files. When uploading using MinIO, Loon will automatically convert the `.roi` files to proper GeoJSON format. If you are instead using Loon without MinIO (i.e. using Local Loon), you will have to convert the `.roi` files to GeoJSON yourself. [Here](https://github.com/visdesignlab/aardvark-util/blob/main/roi_to_geojson.py) is a Python script which can convert `.roi` to GeoJSON from on of our accompanying repositories.
-:::
+> Each imaging location should have a corresponding folder that contains all of the segmentation files.  
+> The names of the files must correspond to the imaging frame.  
+> That is, `1.json` will contain all of the cell segmentations for the first frame, `2.json` will contain the second frame, and so on.  
+> Each JSON file must follow the GeoJSON specification.  
+> In addition to the standard geometry attribute, the `bbox` attribute must be defined.  
+> To link the segmentations with the corresponding metadata, the cell `id` defined in the feature table must be included as an `ID` in the GeoJSON properties object.
+>
+> :::info
+> Often, segmentations are instead generated as `*.roi` files.  
+> When uploading using MinIO, Loon will automatically convert the `.roi` files to proper GeoJSON format.  
+> If you are instead using Loon without MinIO (i.e. using Local Loon), you will have to convert the `.roi` files to GeoJSON yourself.  
+> [Here](https://github.com/visdesignlab/aardvark-util/blob/main/roi_to_geojson.py) is a Python script which can convert `.roi` to GeoJSON from one of our accompanying repositories.
+> :::
+</TabItem>
+</Tabs>
