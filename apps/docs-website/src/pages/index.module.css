@@ -7,7 +7,6 @@
   justify-content: space-between;
 }
 
-/* --- Hero Section --- */
 .heroSection {
   --box-margin: 4rem;
   margin: var(--box-margin);
@@ -17,6 +16,7 @@
   padding: 0;
   min-height: calc(100vh - (var(--box-margin) * 2));
   width: calc(100% - (var(--box-margin) * 2));
+  margin-bottom: 0.5rem; /* Reduce space below the video */
 }
 
 /* Responsive min-height for heroSection */
@@ -50,12 +50,13 @@
   top: 0;
   left: 0;
   z-index: 2;
-  max-width: 1600px;
+  max-width: 800px;
   background: white;
-  padding: 0 0.5rem 0.5rem 0;
+  padding: 0 0rem 2rem 0;
   border-radius: 30px;
   isolation: isolate;
 }
+
 .heroContent::before {
   content: "";
   position: absolute;
@@ -76,7 +77,7 @@
   margin-top: 0;
 }
 .headline {
-  text-align: left;
+  text-align: right;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -138,7 +139,7 @@
 /* --- Bottom Description --- */
 .descriptionSection {
   --box-margin: 4rem;
-  margin: 0 var(--box-margin) var(--box-margin) var(--box-margin); /* No top margin */
+  margin: 1rem var(--box-margin) 1rem var(--box-margin); /* Smaller vertical margins */
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -148,9 +149,8 @@
 
 .descriptionContent {
   z-index: 2;
-  max-width: 1600px;
   background: white;
-  padding: 0 0.5rem 0.5rem 0;
+  padding: 1rem; /* Add padding for better readability */
   border-radius: 30px;
   isolation: isolate;
   font-size: 1.25rem;

@@ -61,20 +61,16 @@ export default function Home(): JSX.Element {
         <section className={styles.descriptionSection}>
           <div className={styles.descriptionContent}>
             <p>
-                <strong>Loon</strong> is a visualization analysis tool for live cell microscopy data.<br />
-                Award-winning publications:
-              <ul>
-                <li>
-                  <Link href="https://loon.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
-                  Loon: Using Exemplars to Visualize Large-Scale Microscopy Data
-                  </Link>
-                </li>
-                <li>
-                  <Link href="https://vdl.sci.utah.edu/publications/2024_vis_aardvark/" target="_blank" rel="noopener noreferrer">
-                  Aardvark: Composite Visualizations of Trees, Time-Series, and Images
-                  </Link>
-                </li>
-              </ul>
+                <strong>Loon</strong> is a free, open-source <strong>visualization tool</strong> for live cell microscopy data. <br /> <br />
+                &nbsp;&nbsp;&nbsp;&nbsp;Loon is designed for scientists to <strong>analyze</strong> their cell data, <strong>identify</strong> data processing mistakes, and <strong> communicate</strong> their findings.<br />
+                <br />
+                <Link href="https://vdl.sci.utah.edu/publications/2024_vis_aardvark/" target="_blank" rel="noopener noreferrer">
+                Aardvark: Composite Visualizations of Trees, Time-Series, and Images (Best Paper Award, IEEE VIS 2024)
+                </Link>
+                <br />
+                <Link href="https://loon.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
+                Loon: Using Exemplars to Visualize Large-Scale Microscopy Data (Honorable Mention Award, IEEE VIS, 2021)
+                </Link>
             </p>
           </div>
         </section>
