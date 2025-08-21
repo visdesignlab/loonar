@@ -18,30 +18,9 @@ const sidebars: SidebarsConfig = {
 
   tutorialSidebar: [
     "introduction",
-    // {
-    //   type: "category",
-    //   label: "Getting Started",
-    //   link: {
-    //     type: "doc",
-    //     id: "getting-started/index",
-    //   },
-    //   items: [
-    //     "getting-started/loon-wrappers",
-    //     "getting-started/building-loon",
-    //     "getting-started/data",
-    //   ],
-    // },
-    // {
-    //   type: "category",
-    //   label: "How-To-Guides",
-    //   link: {
-    //     type: "generated-index",
-    //   },
-    //   items: ["how-to-guides/working-with-minio"],
-    // },
     {
       type: "category",
-      label: "Getting Started with Loon",
+      label: "Getting Started",
       link: {
         type: "doc",
         id: "getting-started-with-loon/index",
@@ -62,6 +41,12 @@ const sidebars: SidebarsConfig = {
         },
       ],
     },
+    "navigating-loon",
+    {
+      type: "html",
+      value: '<hr style="border: 0.5px solid #ddd; margin: 0.5rem 0;" />',
+    },
+    "version-log",
     {
       type: "category",
       label: "Help Develop Loon",

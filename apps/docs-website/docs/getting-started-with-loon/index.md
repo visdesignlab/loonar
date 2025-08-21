@@ -1,4 +1,4 @@
-# Getting Started with Loon
+# Getting Started
 ## Step 1: [Prepare Your Microscopy Data ↗](./data.md)
 >
 > #### In short, Loon expects this input:
