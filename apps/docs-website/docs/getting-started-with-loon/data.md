@@ -40,7 +40,7 @@ This removes the time burden of uploading to your server, however!
 >     - Cell [**Segmentations**](#define-your-experiments-aa_indexjson) (boundaries outlining each cell) as a folder of as `GeoJSON` files
 >     - Cell [**Metadata**](#define-your-experiments-aa_indexjson) as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
 > <details>
->   <summary>**Example file structure**</summary>
+>   <summary>**Recommended example file structure**</summary>
 > 
 > ```
 > your-microscopy-data/            # Your data file, choose any name
@@ -276,7 +276,7 @@ Imaging Location folders each contain:
 
 **Cell Images** is a folder of `.tiff` _(image)_ files **or** `.ome.tiff` _(microscopy image)_ files.
 
-> We reccommend using the [ome-tiff](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) library for your cell images.
+> We ahdere to the [ome-tiff](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) library for cell images.
 </TabItem>
 <TabItem value="segmentations" label="Cell Segmentations">
 

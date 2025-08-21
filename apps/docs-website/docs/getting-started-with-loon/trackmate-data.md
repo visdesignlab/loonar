@@ -25,8 +25,39 @@
 > - Export ImageJ ROIs: This is an important step to get the segmented regions of cells themselves. This can be done in ImageJ after using TrackMate to generate the ROIs, and typically involves saving the ROI Manager contents as a .zip file.
 
 ## 2:&nbsp;&nbsp;&nbsp;Convert TrackMate Data into [Loon Format](./data.md)
+> We currently use [our conversion script on github](https://github.com/visdesignlab/aardvark-util/blob/main/ingest_trackmate.py). Click the Download button at the top-right of the script.
+> ### Conversion Script Info:
+>> **Inputs:**
+>> - A `.csv` file from TrackMate  
+>>   - Must currently include ``LABEL``, ``FRAME``, ``POSITION_X``, ``POSITION_Y`` columns  
+>> - A folder containing `.roi` files from TrackMate
+>> 
+>> **What the script does:**  
+>> - Reads your `.csv` file, removes unnecessary rows / columns, sorts by frame  
+>> - Infers / Adds a `parent` column to the `.csv` file, which includes the parents of each track  
+>> - Outputs that corrected `.csv`  
+>> - Converts that corrected `.csv` to a `.parquet` file  
+>> - Converts `.roi` files to `GeoJSON` format, creating a folder structure based on frames  
+>> 
+>> **Outputs:**  
+>> - A `metadata.csv` file with metadata for Loon  
+>> - A `metadata.parquet` file with metadata for Loon  
+>> - A segmentations folder with `GeoJSON` files for each frame  
+>>
+> ### Run the script:
+> 1. Open your terminal:
+>    - **Mac:** Press `Cmd + Space`, type `Terminal`, and press `Enter`
+>    - **Windows:** Press `Win + R`, type `cmd`, and press `Enter`
+> 2. Change to the directory where you saved `ingest_trackmate.py`:
+>    - **Mac:** `cd ~/Downloads`
+>    - **Windows:** `cd %USERPROFILE%\Downloads`
+> 3. Run the script:
+>    - Type `ingest_trackmate.py "/path/to/your/input.csv" "/path/to/your/roi_files" "/path/to/your/output"` and press `Enter`
 >
-> ### Download our <a href="/convert_trackmate.py" download="convert_trackmate.py">conversion script &#8595;</a>
+> <details>
+>
+> <summary>**Optional:** New Conversion Script with User Interface</summary>
+> ### Download our <a href="/convert_trackmate.py" download="convert_trackmate.py">new conversion script &#8595;</a>
 > ### Run the script:
 > 1. Open your terminal:
 >    - **Mac:** Press `Cmd + Space`, type `Terminal`, and press `Enter`
@@ -37,8 +68,12 @@
 > 3. Run the script:
 >    - Type `python convert_trackmate.py` and press `Enter`
 > 4. Follow the on-screen instructions to convert your TrackMate data to Loon format
+> </details>
+
 
 ## 3:&nbsp;&nbsp;&nbsp;Upload Formatted Data to Loon
 
 > ### Option 1: [Local Loon Upload](/.quickstart.md)
 > ### Option 2: [Server Upload](/.loon-wrappers.md)
+
+
