@@ -138,22 +138,45 @@
 
 /* --- Bottom Description --- */
 .descriptionSection {
-  --box-margin: 4rem;
-  margin: 1rem var(--box-margin) 1rem var(--box-margin); /* Smaller vertical margins */
-  position: relative;
-  overflow: hidden;
+  --box-margin: 0; /* Remove horizontal margins */
+  margin: 1rem 0 0 0; /* Only keep vertical margins */
+  position: relative; /* Ensure stacking context */
+  overflow: visible; /* Allow the blur to extend beyond the section */
   box-sizing: border-box;
   padding: 0;
-  width: calc(100% - (var(--box-margin) * 2));
+  width: 100%; /* Make the section span the full width of the screen */
+  z-index: 2; /* Place it above the hero section */
 }
 
 .descriptionContent {
-  z-index: 2;
+  z-index: 3; /* Ensure it is above the ::before pseudo-element */
+  position: relative;
   background: white;
   padding: 1rem; /* Add padding for better readability */
-  border-radius: 30px;
-  isolation: isolate;
+  border-radius: 0; /* Remove border radius to match full width */
+  isolation: isolate; /* Create a new stacking context */
   font-size: 1.25rem;
+  text-align: center; /* Center-align all text */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center-align content horizontally */
+  justify-content: center; /* Center-align content vertically */
+  line-height: 2; /* Increase vertical spacing between sentences */
+}
+
+.descriptionContent::before {
+  content: "";
+  position: absolute;
+  top: -50%; /* Extend the blur effect above the section */
+  left: 0;
+  right: 0;
+  height: 50%; /* Only cover the top portion */
+  border-radius: inherit;
+  background: white;
+  z-index: -1; /* Place it behind the content but above the hero section */
+  filter: blur(15px);
+  transform: scale(1.25); /* Extend the blur effect */
+  pointer-events: none;
 }
 
 /* --- Responsive Styles --- */
