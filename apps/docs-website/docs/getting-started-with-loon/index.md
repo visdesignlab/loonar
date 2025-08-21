@@ -12,4 +12,4 @@
 > _As an initial step in your workflow, we recommend using software such as [LiveCyte](https://www.phasefocus.com/livecyte) and/or [TrackMate](https://imagej.net/plugins/trackmate/) to generate cell metadata ... so that Loon can visualize it!_
 
 
-## Step 2: [Deploy Loon To Visualize It ↗](./quickstart.md)
+## Step 2: [Deploy Loon To Visualize Data ↗](./quickstart.md)
