@@ -2,4 +2,4 @@
 
 ## Contribute on [GitHub ↗](https://github.com/visdesignlab/loonar)
 
-## [Contact Us](../../introduction.md)
+## [Contact Us](../introduction.md)

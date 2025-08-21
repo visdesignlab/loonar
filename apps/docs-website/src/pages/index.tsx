@@ -3,7 +3,7 @@ import React from "react";
 import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import styles from "./index.module.css";
-import { demoURL } from "./demoUrl";
+import { demoURL } from "../constants/demoUrl";
 
 /**
  * @returns Homepage component
@@ -35,7 +35,8 @@ export default function Home(): JSX.Element {
               <h1 className={styles.headline}>
                 <span className={styles.headlineLine}>Data Visualization</span>
                 <span className={styles.headlineLine}>
-                  <span className={styles.smallerFont}>for</span> Live Cell Microscopy
+                  <span className={styles.smallerFont}>for</span> Live Cell
+                  Microscopy
                 </span>
               </h1>
             </header>
@@ -45,14 +46,17 @@ export default function Home(): JSX.Element {
                 className="button button--primary button--lg"
                 to="/docs/introduction"
               >
-                Get Started <span className={styles.arrow} aria-hidden="true">↗</span>
+                Get Started{" "}
+                <span className={styles.arrow} aria-hidden="true">
+                  ↗
+                </span>
               </Link>
               {/** Demo Button */}
-              <Link
-                className="button button--primary button--lg"
-                to={demoURL}
-              >
-                Demo <span className={styles.arrow} aria-hidden="true">↗</span>
+              <Link className="button button--primary button--lg" to={demoURL}>
+                Demo{" "}
+                <span className={styles.arrow} aria-hidden="true">
+                  ↗
+                </span>
               </Link>
             </div>
           </div>
@@ -61,22 +65,29 @@ export default function Home(): JSX.Element {
         <section className={styles.descriptionSection}>
           <div className={styles.descriptionContent}>
             <p>
-                <strong>Loon</strong> is a free, open-source <strong>visualization tool</strong> for live cell microscopy data.&nbsp;&nbsp;<strong>Analyze</strong> your cell data, <strong>identify</strong> data processing mistakes, and <strong>communicate</strong> your findings.<br />
-                <Link
+              <strong>Loon</strong> is a free, open-source{" "}
+              <strong>visualization tool</strong> for live cell microscopy
+              data.&nbsp;&nbsp;<strong>Analyze</strong> your cell data,{" "}
+              <strong>identify</strong> data processing mistakes, and{" "}
+              <strong>communicate</strong> your findings.
+              <br />
+              <Link
                 href="https://vdl.sci.utah.edu/publications/2024_vis_aardvark/"
                 target="_blank"
                 rel="noopener noreferrer"
-                >
-                <span style={{ fontSize: "0.8em" }}>🏆</span>&nbsp;&nbsp;&nbsp;Best Paper Award: IEEE VIS 2024
-                </Link>
-                <span style={{ margin: "0 15px", color: "grey" }}>|</span>
-                <Link
+              >
+                <span style={{ fontSize: "0.8em" }}>🏆</span>
+                &nbsp;&nbsp;&nbsp;Best Paper Award: IEEE VIS 2024
+              </Link>
+              <span style={{ margin: "0 15px", color: "grey" }}>|</span>
+              <Link
                 href="https://loon.sci.utah.edu/"
                 target="_blank"
                 rel="noopener noreferrer"
-                >
-                <span style={{ fontSize: "0.8em" }}>🏆</span>&nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
-                </Link>
+              >
+                <span style={{ fontSize: "0.8em" }}>🏆</span>
+                &nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
+              </Link>
             </p>
           </div>
         </section>
