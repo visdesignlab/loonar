@@ -40,7 +40,7 @@ This removes the time burden of uploading to your server, however!
 >     - Cell [**Segmentations**](#define-your-experiments-aa_indexjson) (boundaries outlining each cell) as a folder of as `GeoJSON` files
 >     - Cell [**Metadata**](#define-your-experiments-aa_indexjson) as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
 > <details>
->   <summary>Example file structure</summary>
+>   <summary>**Example file structure**</summary>
 > 
 > ```
 > your-microscopy-data/            # Your data file, choose any name
@@ -94,7 +94,7 @@ This removes the time burden of uploading to your server, however!
 >     "experiment_4.json",
 >     "experiment_5.json",
 >     "experiment_6.json",
->     "experiment_7.json"
+>     "experiment_7.json",
 >   ]
 > }
 > ```
@@ -102,11 +102,11 @@ This removes the time burden of uploading to your server, however!
   </TabItem>
   <TabItem value="datasets" label="Datasets">
   
-## Datasets: Experiment Metadata File
-
-> Each experiment metadata file is stored as a JSON file. This defines some metadata aspects of the experiment and points to the other data files.
+## Datasets: Explain Each Experiment
+> **Each of your imaging experiments** require an **experiment metadata file** as a `.json` file.  
+> This describes the experiment for Loon.
 >
-> At the top level it expects the following attributes:
+> In short, **experiment metadata `.json` files** require:
 >
 > | Attribute              | Definition                                                                                                                                                                                                                                                                                                              |
 > | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -115,31 +115,8 @@ This removes the time burden of uploading to your server, however!
 > | `headerTransforms`     | Defines the name of certain special columns (`time`, `frame`, `id`, `parent`, `mass`, `x`, `y`). This is optional if the name already exactly matches in headers. See [the table below](#header-transforms) for information about these special columns. |
 > | `locationMetadataList` | A list of imaging location metadata. Each imaging location will include an `id`, `tabularDataFilename`, `imageDataFilename`, and `segmentationsFolder`. See [the table below](#location-metadata-list) for more information on each of these.             |
 > | `compositeTabularDataFilename` | Specifies the path to the combined tabular data file. See the [section below](#composite-tabular-data-file) for  more information. |
->
-> ### Header Transforms
->
-> | Attribute | Definition                                                                                                                                                                         |
-> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | `frame`   | The frame number indicates which number image the data row comes from in a sequence of images.                                                                                     |
-> | `time`    | The time when the image was recorded. Often this is relative to the start of the experiment. If this is not explicitly recorded, then the the frame number can be used as a proxy. |
-> | `id`      | The unique ID for a particular tracked cell. This should be the same across frames for that cell's lifetime.                                                                       |
-> | `parent`  | The `id` of the parent cell. If this is not tracked at all for an experiment, then map this column to the same one as the `id` column.                                             |
-> | `mass`    | The mass of the cell.                                                                                                                                                              |
-> | `x`       | The X coordinate for the cell's center position in pixel space. (It does not matter what definition of center is used.)                                                            |
-> | `y`       | Same, but for the Y coordinate.                                                                                                                                                    |
->
-> ### Location Metadata List
->
-> | Attribute | Definition                                                                                                                                                                         |
-> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | `id`                  | A unique name for this location. Can be anything, but will be displayed in the interface, so a more descriptive name is better. |
-> | `tabularDataFilename` | The location of the CSV file feature table for this experiment. |
-> | `imageDataFilename`   | The location of the OME TIFF image file. This should be a `*.companion.ome` file. |
-> | `segmentationsFolder` | This folder contains all of the segmentation files for a given location. See the [section on segmentations](#segmentations-folder) for more details. |
-> | `tags`                | A JSON object containing key-value pairs that capture metadata about the particular location. See the [tags section](#tags) for more information and some examples. |
->
-> So, altogether a single experiment metadata file should look something like the following:
->
+> <details> 
+> <summary>**Example:** Experiment Metadata `.json` File</summary>
 > ```
 > {
 >   "name":"ExperimentOne",
@@ -199,8 +176,39 @@ This removes the time burden of uploading to your server, however!
 >   ]
 > }
 > ```
+> </details>
+> <br/>
+> ### Experiment Metadata File Specifications
+> <Tabs>
+> <TabItem value="header-transforms" label="Header Transforms">
+> ### Header Transforms
 >
-> ### Tags
+> | Attribute | Definition                                                                                                                                                                         |
+> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | `frame`   | The frame number indicates which number image the data row comes from in a sequence of images.                                                                                     |
+> | `time`    | The time when the image was recorded. Often this is relative to the start of the experiment. If this is not explicitly recorded, then the the frame number can be used as a proxy. |
+> | `id`      | The unique ID for a particular tracked cell. This should be the same across frames for that cell's lifetime.                                                                       |
+> | `parent`  | The `id` of the parent cell. If this is not tracked at all for an experiment, then map this column to the same one as the `id` column.                                             |
+> | `mass`    | The mass of the cell.                                                                                                                                                              |
+> | `x`       | The X coordinate for the cell's center position in pixel space. (It does not matter what definition of center is used.)                                                            |
+> | `y`       | Same, but for the Y coordinate.                                                                                                                                                    |
+> 
+> </TabItem>
+> <TabItem value="location-metadata-list" label="Location Metadata List">
+> ### Location Metadata List
+>
+> | Attribute | Definition                                                                                                                                                                         |
+> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | `id`                  | A unique name for this location. Can be anything, but will be displayed in the interface, so a more descriptive name is better. |
+> | `tabularDataFilename` | The location of the CSV file feature table for this experiment. |
+> | `imageDataFilename`   | The location of the OME TIFF image file. This should be a `*.companion.ome` file. |
+> | `segmentationsFolder` | This folder contains all of the segmentation files for a given location. See the [section on segmentations](#segmentations-folder) for more details. |
+> | `tags`                | A JSON object containing key-value pairs that capture metadata about the particular location. See the [tags section](#tags) for more information and some examples. |
+>
+>
+> </TabItem>
+> <TabItem value="tags" label="Tags (optional)">
+> ### Tags (optional)
 >
 > Tags are used to define metadata about an individual location. This is used in the Loon UI to specify specific conditions corresponding to the location. The tags object has no restrictions. For example, locations have have completely different sets of tags, locations may have no tags, and locations can overlap on one more tags.
 >
@@ -230,8 +238,9 @@ This removes the time burden of uploading to your server, however!
 >   }
 > ]
 > ```
->
-> ### Composite Tabular Data File
+> </TabItem>
+> <TabItem value="composite-tabular-data-file" label="Composite Tabular Data File (optional)">
+> ### Composite Tabular Data File (optional)
 >
 > This key specifies the location (relative to the root of the current experiment directory) of a "combined metadata table" as a parquet file.
 >
@@ -249,7 +258,9 @@ This removes the time burden of uploading to your server, however!
 > | location_3 | . . . | drug_3 |  |
 >
 > Here, the empty spaces denote empty strings.
-
+> </TabItem>
+> </Tabs>
+>
 </TabItem>
 <TabItem value="imaging_locations" label="Imaging Locations">
 
