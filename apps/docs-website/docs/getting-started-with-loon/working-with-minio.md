@@ -1,4 +1,4 @@
-# Working With MinIO
+# Working with MinIO
 
 When using MinIO, you have several different ways to upload and view data in your storage engine. The main way to upload data is using Loon's upload feature in the dashboard. With this, you can upload the raw image, segmentations, and tabular data file coming from a LiveCyte workflow without the need to pre-process the data yourself.
 
@@ -26,7 +26,7 @@ aws_secret_access_key = theMinioSecretAccessKey
 ```
 
 :::info
-If the deployment of Loon is using it's default credentials, the `aws_access_key_id` and `aws_secret_access_key` will be "admin" and "minioadmin". You administrator might have provisioned a separate account for you, in which case you should use the access key (username) and secret access key (password) that they provide for you. If you're deploying Loon yourself, check out the MinIO settings configuration [here](../loon-for-developers/building-loon.md#minio-settings).
+If the deployment of Loon is using it's default credentials, the `aws_access_key_id` and `aws_secret_access_key` will be "admin" and "minioadmin". You administrator might have provisioned a separate account for you, in which case you should use the access key (username) and secret access key (password) that they provide for you. If you're deploying Loon yourself, check out the MinIO settings configuration [here](../help-develop-loon/building-loon.md#minio-settings).
 :::
 
 

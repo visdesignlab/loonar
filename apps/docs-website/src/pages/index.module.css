@@ -1,99 +1,191 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
+/* --- Page Wrapper --- */
+.pageWrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 
- .heroBanner {
-  padding: 4rem 0;
-  text-align: center;
+.heroSection {
+  --box-margin: 4rem;
+  margin: var(--box-margin);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  padding: 0;
+  min-height: calc(100vh - (var(--box-margin) * 2));
+  width: calc(100% - (var(--box-margin) * 2));
+  margin-bottom: 0.5rem; /* Reduce space below the video */
 }
 
-.homepageLogo{
-  /* width:60%; */
-  height: 250px;
+/* Responsive min-height for heroSection */
+@media (max-height: 820px), (max-height: 760px), (max-height: 700px), (max-height: 640px), (max-height: 580px), (max-height: 520px) {
+  .heroSection { min-height: calc(100vh - (var(--box-margin) * 2)); }
 }
 
-.smallItem{
-  display:none;
+/* --- Hero Video --- */
+.heroVideoWrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: #000;
+  pointer-events: none;
+}
+.heroVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
 }
 
-.titleContainer{
-  display:flex;
-  flex-direction:row;
-  justify-content:space-between;
-  align-items:center;
+/* --- Hero Content Overlay --- */
+.heroContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  max-width: 800px;
+  background: white;
+  padding: 0 0rem 2rem 0;
+  border-radius: 30px;
+  isolation: isolate;
 }
 
-.titleContainer .description{
-  text-align: right;
-  margin-left:30px;
-  font-weight: bold;
-  line-height: 105%;
+.heroContent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: white;
+  z-index: -1;
+  filter: blur(15px);
+  transform: scale(1.5);
+  pointer-events: none;
 }
 
-
-.buttons {
+/* --- Hero Header & Headline --- */
+.heroHeader {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 0;
+}
+.headline {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  font-size: 3.5rem;
+  margin: 0;
+}
+.headline .smallerFont {
+  font-size: 2.8rem;
+}
+.headlineLine {
+  font-weight: 600;
+}
+/* --- Button Row --- */
+.buttonRow {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 1.5rem 0 0 0;
+  padding: 0;
+}
+.buttonRow :global(.button) {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 1.1rem;
+}
+.buttonRow :global(.button.button--primary) {
+  --btn-gray: #5a5a5a;
+  background: transparent;
+  border: 3px solid var(--btn-gray);
+  color: var(--btn-gray);
+  box-shadow: none;
+}
+.buttonRow :global(.button.button--primary:hover),
+.buttonRow :global(.button.button--primary:focus) {
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: #fff;
+}
+.buttonRow :global(.button.button--primary:active) {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
 }
 
-.buttons a:not(:first-child) {
-  margin-left:10px;
+/* --- Arrow Animation --- */
+.arrow {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.85em;
+  transition: transform 0.25s ease;
+}
+.buttonRow :global(.button:hover) .arrow {
+  transform: translateY(-4px);
+  animation: arrowBounce 0.6s ease;
 }
 
+/* --- Bottom Description --- */
+.descriptionSection {
+  --box-margin: 0; /* Remove horizontal margins */
+  margin: 1rem 0 0 0; /* Only keep vertical margins */
+  position: relative; /* Ensure stacking context */
+  overflow: visible; /* Allow the blur to extend beyond the section */
+  box-sizing: border-box;
+  padding: 0;
+  width: 100%; /* Make the section span the full width of the screen */
+  z-index: 2; /* Place it above the hero section */
+}
 
+.descriptionContent {
+  z-index: 3; /* Ensure it is above the ::before pseudo-element */
+  position: relative;
+  background: white;
+  padding: 1rem; /* Add padding for better readability */
+  border-radius: 0; /* Remove border radius to match full width */
+  isolation: isolate; /* Create a new stacking context */
+  font-size: 1.25rem;
+  text-align: center; /* Center-align all text */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center-align content horizontally */
+  justify-content: center; /* Center-align content vertically */
+  line-height: 2; /* Increase vertical spacing between sentences */
+}
+
+.descriptionContent::before {
+  content: "";
+  position: absolute;
+  top: -50%; /* Extend the blur effect above the section */
+  left: 0;
+  right: 0;
+  height: 50%; /* Only cover the top portion */
+  border-radius: inherit;
+  background: white;
+  z-index: -1; /* Place it behind the content but above the hero section */
+  filter: blur(15px);
+  transform: scale(1.25); /* Extend the blur effect */
+  pointer-events: none;
+}
+
+/* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
-
-  .titleContainer{
-    flex-direction: column;
-
-  }
-
-  .homepageLogo{
-    height: 200px;
-  }
-
-  .largeItem{
-    display:none;
-  }
-
-  .smallItem{
-    display:block;
-  }
-
-  .description{
-    font-size: 2rem;
-    margin-left: 0px !important;;
-    margin-top:30px;
-    text-align: center !important;
-  }
+  .headline { font-size: 2.2rem; }
+  .heroSection { padding: 2rem; }
+  .heroHeader { flex-direction: column; align-items: flex-start; }
 }
 
-@media screen and (max-width: 620px){
-
-  .homepageLogo{
-    height: 150px;
-  }
-
-  .description{
-    font-size: 1.1rem;
-    margin-top:20px;
-  }
-
-
-  .buttons{
-    flex-direction: column;
-  }
-  
-  .buttons a:not(:first-child) {
-    margin-left:0px;
-    margin-top:15px;
-  }
+@media screen and (max-width: 620px) {
+  .headline { font-size: 1.5rem; }
 }
-

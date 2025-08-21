@@ -4,6 +4,30 @@
  * work well for content-centric websites.
  */
 
+.footer {
+  background: transparent !important;
+  min-height: 40px;
+  padding: 15px 0 15px 0 !important;
+  font-size: 1rem;
+  border-top: 1px solid #ccc;
+  box-shadow: none;
+  display: flex;
+  align-items: center; /* Vertically center content */
+  justify-content: center; /* Horizontally center content */
+}
+
+.footer,
+.footer__links,
+.footer__copyright,
+.footer__link-item {
+  color: #222 !important;
+}
+
+.footer__link-item:hover {
+  color: #555 !important;
+  opacity: 1;
+}
+
  .footer-wrapper {
   display:flex;
   flex-direction:row;
@@ -57,31 +81,30 @@ html[data-theme='dark'] .light-theme-display-component {
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #f05a30;
-  --ifm-color-primary-dark: #d8512b;
-  --ifm-color-primary-darker: #c04826;
-  --ifm-color-primary-darkest: #a83e21;
-  --ifm-color-primary-light: #f16a44;
-  --ifm-color-primary-lighter: #f37a59;
-  --ifm-color-primary-lightest: #f48b6e;
+  --ifm-color-primary: #0d62b5;
+  --ifm-color-primary-dark: #0c579f;
+  --ifm-color-primary-darker: #0a4c89;
+  --ifm-color-primary-darkest: #083d6b;
+  --ifm-color-primary-light: #2675bd;
+  --ifm-color-primary-lighter: #3f87c5;
+  --ifm-color-primary-lightest: #5a9ad0;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
   --ifm-navbar-height: 70px;
 }
-
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* ...existing code... */
 [data-theme='dark'] {
-  --ifm-color-primary: #f05a30;
-  --ifm-color-primary-dark: #d8512b;
-  --ifm-color-primary-darker: #c04826;
-  --ifm-color-primary-darkest: #a83e21;
-  --ifm-color-primary-light: #f16a44;
-  --ifm-color-primary-lighter: #f37a59;
-  --ifm-color-primary-lightest: #f48b6e;
+  --ifm-color-primary: #4da3ff;
+  --ifm-color-primary-dark: #378fe8;
+  --ifm-color-primary-darker: #2f7ac3;
+  --ifm-color-primary-darkest: #245a8a;
+  --ifm-color-primary-light: #66afff;
+  --ifm-color-primary-lighter: #80bbff;
+  --ifm-color-primary-lightest: #a6ceff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
-
 .navbar__logo img {
-  height: 160%;
-  margin-top: -10px;
+  height: 240%;
+  margin-top: -21px;
+  margin-left: -10px;
 }

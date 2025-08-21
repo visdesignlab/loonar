@@ -1,65 +1,86 @@
-import clsx from 'clsx';
-import React from 'react';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import Layout from '@theme/Layout';
-import HomepageFeatures from '../components/HomepageFeatures';
+import clsx from "clsx";
+import React from "react";
+import Link from "@docusaurus/Link";
+import Layout from "@theme/Layout";
+import styles from "./index.module.css";
+import { demoURL } from "./demoUrl";
 
-import styles from './index.module.css';
-import ImageSwitcher from '../components/ImageSwitcher';
-import Banner from '../components/Banner/Banner';
-
-function HomepageHeader() {
-  return (
-    <header className={clsx('hero hero--secondary', styles.heroBanner)}>
-      <div className="container">
-        <div className={styles.titleContainer}>
-          <ImageSwitcher
-            lightImageSrc={"img/logos/loon-logo-bordered-light.svg"}
-            darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
-            className={clsx(styles.largeItem, styles.homepageLogo)}
-          />
-          <ImageSwitcher
-            lightImageSrc={"img/logos/loon-logo-bordered-light.svg"}
-            darkImageSrc={"img/logos/loon-logo-bordered-dark.svg"}
-            className={clsx(styles.smallItem, styles.homepageLogo)}
-          />
-          <div className={clsx('hero__title', styles.description)}>
-            Cell Microscopy Data Visualization
-          </div>
-        </div>
-        {/* <img src="img/logos/revisitLogoLong.svg" style={{width:'60%'}}/> */}
-        {/* <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p> */}
-        <div className={styles.buttons} style={{ marginTop: '50px' }}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/about">
-            About Loon
-          </Link>
-          <Link
-            className="button button--primary button--lg"
-            to="/docs/introduction">
-            Get Started
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
+/**
+ * @returns Homepage component
+ */
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout
-      description={`${siteConfig.tagline}`}>
-      {/* <Banner /> */}
-      <HomepageHeader />
-      <main>
-        <HomepageFeatures />
-      </main>
+    <Layout>
+      {/** Homepage wrapper - height, width etc.*/}
+      <div className={styles.pageWrapper}>
+        <section className={clsx(styles.heroSection)}>
+          {/** Background video */}
+          <div className={styles.heroVideoWrapper}>
+            <video
+              className={styles.heroVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+            >
+              <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
+              {/* Fallback text */}
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <div className={styles.heroContent}>
+            {/** Header Text */}
+            <header className={styles.heroHeader}>
+              <h1 className={styles.headline}>
+                <span className={styles.headlineLine}>Data Visualization</span>
+                <span className={styles.headlineLine}>
+                  <span className={styles.smallerFont}>for</span> Live Cell Microscopy
+                </span>
+              </h1>
+            </header>
+            <div className={styles.buttonRow}>
+              {/** Get Started Button */}
+              <Link
+                className="button button--primary button--lg"
+                to="/docs/introduction"
+              >
+                Get Started <span className={styles.arrow} aria-hidden="true">↗</span>
+              </Link>
+              {/** Demo Button */}
+              <Link
+                className="button button--primary button--lg"
+                to={demoURL}
+              >
+                Demo <span className={styles.arrow} aria-hidden="true">↗</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+        {/* Loon Description Section */}
+        <section className={styles.descriptionSection}>
+          <div className={styles.descriptionContent}>
+            <p>
+                <strong>Loon</strong> is a free, open-source <strong>visualization tool</strong> for live cell microscopy data.&nbsp;&nbsp;<strong>Analyze</strong> your cell data, <strong>identify</strong> data processing mistakes, and <strong>communicate</strong> your findings.<br />
+                <Link
+                href="https://vdl.sci.utah.edu/publications/2024_vis_aardvark/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >
+                <span style={{ fontSize: "0.8em" }}>🏆</span>&nbsp;&nbsp;&nbsp;Best Paper Award: IEEE VIS 2024
+                </Link>
+                <span style={{ margin: "0 15px", color: "grey" }}>|</span>
+                <Link
+                href="https://loon.sci.utah.edu/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >
+                <span style={{ fontSize: "0.8em" }}>🏆</span>&nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
+                </Link>
+            </p>
+          </div>
+        </section>
+      </div>
     </Layout>
   );
 }

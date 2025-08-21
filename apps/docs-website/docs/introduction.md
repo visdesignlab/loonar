@@ -2,20 +2,51 @@
 sidebar_position: 1
 ---
 
-# What Is Loon
+# What is Loon
 
-_Description of loon at a high level_
+### A Data Visualization Software for Live Cell Microscopy
+**Loon** is designed to help scientists **analyze** their cell data, **identify** data processing mistakes, and **communicate** their findings.
 
-## Variations and using Loon
 
-We deploy Loon in two separate versions: one that is meant to be used locally called **Local Loon** and one that ships with a user-friendly object storage and upload process which we just call **Loon** or **Standard Loon**.
+<details>
+<summary>***Note:** Loon is strictly a visualization tool. Your cell data must be pre-generated using other software (e.g. [LiveCyte](https://www.phasefocus.com/livecyte)).*</summary>
 
-## Which Version Is Best For You?
+*Loon does not:*
+- *Produce cell segmentation outlines itself*
+- *Derive metadata (e.g. mass, time, segmentations) from images.*
 
-The standard Loon application comes with everything you need to upload, store, process, and interact with your cell microscopy data. One of the large advantages to using standard Loon is that you do not need to handle any data management or conversions -- data is uploaded using the UI in with zip files. We process the data in these zip files to convert them to a data structure that Loon expects. For example, data coming from the common Livecyte uses `.roi` files for their segmentations. Standard Loon will convert each of these `.roi` files to GeoJSON files automatically. If you'd like to deploy Loon to a central server where users can upload and access their data over the internet, this would be the version for you.
+*Loon is designed to **visualize** your cell images and metadata as [input](./getting-started-with-loon/index.md).*  
+*Loon **does not alter** your original microscopy data.*  
 
-One of the downfalls of standard Loon, however, is that processing these files can take some time -- especially since the segmentations and images can be so numerous. If you are using Loon in a more "CI/CD" pipeline in order to correct your own segmentation development or view many experiments quickly, it may be more appropriate to use Local Loon. In this version, you are responsible for your own data management and to ensure that the data you place in your data store is in the expected format.
+</details>
 
-Both versions are shipped as a single docker image which you can read more about [here](./loon-for-scientists/loon-wrappers.md). If you're looking to get started working with Loon, we suggest that you look into the [quickstart tutorial for scientists](./loon-for-scientists/quickstart.md).
+---
+## Contact
 
-If you are a developer or working on deploying Loon to a central server, we suggest checking out the [quickstart tutorial for developers](./loon-for-developers/quickstart.md). This section will also give you more information about building Loon from source so that you can customize its configuration.
+**[Contact us](mailto:devinscottlange@gmail.com)** if you have any questions!
+
+### Research Labs
+
+Loon is developed by multiple research labs, spanning visualization experts & cell biology experts.
+
+- **[Zangle Lab](https://zanglelab.che.utah.edu/)**  &nbsp;-&nbsp;  _Department of Chemical Engineering, University of Utah_
+- **[Judsen-Torres Lab](https://www.judsontorreslab.org/)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
+- **[Visualization Design Lab](https://www.visdesignlab.net/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
+
+### Development Team
+
+- **[Devin Lange, Ph.D.](https://www.devinlange.com/)**  &nbsp;-&nbsp;  _Department of Biomedical Informatics, Harvard Medical School_
+- **[Luke Schreiber](https://www.linkedin.com/in/luke-schreiber-11ab671b7/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
+
+### Research Team
+
+- **[Devin Lange, Ph.D.](https://www.devinlange.com/)**  &nbsp;-&nbsp;  _Department of Biomedical Informatics, Harvard Medical School_
+- **[Alexander Lex, Ph.D.](https://vdl.sci.utah.edu/team/lex/)**  &nbsp;-&nbsp;  _Institute of Human-Centered Computing, Graz University of Technology_
+- **[Thomas Zangle, Ph.D.](https://zanglelab.che.utah.edu/)**  &nbsp;-&nbsp;  _Department of Chemical Engineering, University of Utah_
+- **[Robert Judson-Torres, Ph.D.](https://www.judsontorreslab.org/)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
+- **[Rebecca Zitnay. Ph.D.](https://www.judsontorreslab.org/rebecca-zitnay)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
+
+### Former Members
+- **[Brian Bollen, Ph.D.](https://www.briancbollen.com/about)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
+- **[Jack Wilburn](https://vdl.sci.utah.edu/team/wilburn/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
+- **[Edward Polanco, Ph.D.](https://www.linkedin.com/in/eddiethebiochemicalengineer/es?trk=people-guest_people_search-card)**  &nbsp;-&nbsp;  _Department of Chemical Engineering, University of Utah_

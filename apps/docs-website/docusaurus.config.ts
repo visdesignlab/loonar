@@ -4,7 +4,6 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "Loon",
-  tagline: "Cell Microscopy Data Visualization",
   favicon: "img/logos/favicon.svg",
 
   // Set the production url of your site here
@@ -56,14 +55,17 @@ const config: Config = {
         srcDark: "img/logos/loon-logo-dark.svg",
       },
       items: [
-        { to: "/community", label: "Community", position: "left" },
         {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
           label: "Documentation",
         },
-        { to: "/about", label: "About", position: "left" },
+        {
+          href: "mailto:devinscottlange@gmail.com",
+          label: "Contact",
+          position: "right",
+        },
         {
           href: "https://github.com/visdesignlab/loonar",
           label: "GitHub",
@@ -73,35 +75,7 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      links: [
-        {
-          title: "Docs",
-          items: [
-            {
-              label: "Documentation",
-              to: "/docs/introduction",
-            },
-          ],
-        },
-        {
-          title: "Community",
-          items: [
-            {
-              label: "Stack Overflow",
-              href: "https://stackoverflow.com/questions/tagged/docusaurus",
-            },
-            {
-              label: "Discord",
-              href: "https://discordapp.com/invite/docusaurus",
-            },
-            {
-              label: "Twitter",
-              href: "https://twitter.com/docusaurus",
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab. Content licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Built with Docusaurus.`
     },
     prism: {
       theme: prismThemes.github,

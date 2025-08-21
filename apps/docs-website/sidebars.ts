@@ -18,53 +18,34 @@ const sidebars: SidebarsConfig = {
 
   tutorialSidebar: [
     "introduction",
-    // {
-    //   type: "category",
-    //   label: "Getting Started",
-    //   link: {
-    //     type: "doc",
-    //     id: "getting-started/index",
-    //   },
-    //   items: [
-    //     "getting-started/loon-wrappers",
-    //     "getting-started/building-loon",
-    //     "getting-started/data",
-    //   ],
-    // },
-    // {
-    //   type: "category",
-    //   label: "How-To-Guides",
-    //   link: {
-    //     type: "generated-index",
-    //   },
-    //   items: ["how-to-guides/working-with-minio"],
-    // },
     {
       type: "category",
-      label: "Loon For Scientists",
+      label: "Getting Started",
       link: {
         type: "doc",
-        id: "loon-for-scientists/index",
+        id: "getting-started-with-loon/index",
       },
       items: [
-        "loon-for-scientists/quickstart",
-        "loon-for-scientists/data",
-        "loon-for-scientists/loon-wrappers",
-        "loon-for-scientists/working-with-minio"
+        {type: "category", label: "Prepare Your Data", link: {type: "doc", id: "getting-started-with-loon/data",}, items: [
+        "getting-started-with-loon/trackmate-data",]},
+        "getting-started-with-loon/quickstart",
+        { 
+          type: "category", 
+          label: "Extra Resources", 
+          link: { type: "generated-index" },
+          items: [
+            "troubleshooting-docker",
+            "getting-started-with-loon/working-with-minio",
+          ],
+        },
       ],
     },
     {
-      type: "category",
-      label: "Loon For Developers",
-      link: {
-        type: "doc",
-        id: "loon-for-developers/index",
-      },
-      items: [
-        "loon-for-developers/quickstart",
-        "loon-for-developers/building-loon",
-      ],
+      type: "html",
+      value: '<hr style="border: 0.5px solid #ddd; margin: 0.5rem 0;" />',
     },
+    "version-log",
+    "help-develop-loon/index",
   ],
 };
 
