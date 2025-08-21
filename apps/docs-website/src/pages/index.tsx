@@ -24,7 +24,7 @@ export default function Home(): JSX.Element {
               playsInline
               preload="auto"
             >
-              <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
+              <source src="./videos/loon_demo_video_1.mp4" type="video/mp4" />
               {/* Fallback text */}
               Your browser does not support the video tag.
             </video>
