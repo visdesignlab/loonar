@@ -34,7 +34,7 @@ Loon is developed by multiple research labs, spanning visualization experts & ce
 - **[Judsen-Torres Lab](https://www.judsontorreslab.org/)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
 
 
-### Development Team
+### Engineering Team
 
 - **[Devin Lange, Ph.D.](https://www.devinlange.com/)**  &nbsp;-&nbsp;  _Department of Biomedical Informatics, Harvard Medical School_
 - **[Luke Schreiber](https://www.linkedin.com/in/luke-schreiber-11ab671b7/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
