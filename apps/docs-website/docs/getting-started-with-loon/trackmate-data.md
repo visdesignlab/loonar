@@ -28,7 +28,7 @@
 
 ## 2:&nbsp;&nbsp;&nbsp;Convert TrackMate Data into [Loon Format](./data.md)
 
-> We currently use [our conversion script on github](https://github.com/visdesignlab/aardvark-util/blob/main/ingest_trackmate.py). Click the Download button at the top-right of the script.
+> We currently use [our conversion script on github](https://github.com/visdesignlab/aardvark-util/blob/main/ingest_trackmate.py). On GitHub, click the download button at the top-right of the script.
 >
 > ### Conversion Script Info:
 >
