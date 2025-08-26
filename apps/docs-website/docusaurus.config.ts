@@ -63,7 +63,7 @@ const config: Config = {
         },
         {
           href: "mailto:devinscottlange@gmail.com",
-          label: "Contact",
+          label: "Contact Us",
           position: "right",
         },
         {
