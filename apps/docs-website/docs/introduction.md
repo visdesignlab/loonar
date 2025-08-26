@@ -29,9 +29,10 @@ sidebar_position: 1
 
 Loon is developed by multiple research labs, spanning visualization experts & cell biology experts.
 
+- **[Visualization Design Lab](https://www.visdesignlab.net/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
 - **[Zangle Lab](https://zanglelab.che.utah.edu/)**  &nbsp;-&nbsp;  _Department of Chemical Engineering, University of Utah_
 - **[Judsen-Torres Lab](https://www.judsontorreslab.org/)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
-- **[Visualization Design Lab](https://www.visdesignlab.net/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
+
 
 ### Development Team
 
