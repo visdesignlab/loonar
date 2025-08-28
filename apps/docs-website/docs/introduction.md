@@ -21,14 +21,16 @@ sidebar_position: 1
 </details>
 
 ## Key Features
-### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
-> <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
->   Your browser does not support the video tag.
-> </video>
+
 ### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
 >   <source src="/videos/loon-docs-looneage-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
+> <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
