@@ -58,6 +58,8 @@ sidebar_position: 1
 >   Your browser does not support the video tag.
 > </video>
 
+---
+
 ## [Contact Us ↗](mailto:devinscottlange@gmail.com)
 
 ### Research Labs
