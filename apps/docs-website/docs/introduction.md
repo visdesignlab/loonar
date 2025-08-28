@@ -20,10 +20,43 @@ sidebar_position: 1
 
 </details>
 
----
-## Contact
+## Key Features
+### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
+> <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-looneage-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
 
-**[Contact us](mailto:devinscottlange@gmail.com)** if you have any questions!
+### Handle <u>Large-Scale</u> and <u>Multimodal Data</u> by Finding Exemplar Cells
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-exemplar-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+### Observe <u>Cell Metadata</u> Evolve Over Time
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-line-chart-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+<!-- ### Quickly <u>Filter Data</u> Based on <u>Cell Attributes</u>
+> <video controls width={720} style={{ maxWidth: '100%' }}>
+>   <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video> -->
+
+### Explore <u>Differences</u> Between <u>Experimental Conditions</u>
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-condition-selector-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+## [Contact Us ↗](mailto:devinscottlange@gmail.com)
 
 ### Research Labs
 
