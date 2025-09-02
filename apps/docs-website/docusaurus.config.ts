@@ -7,10 +7,10 @@ const config: Config = {
   favicon: "img/logos/favicon.svg",
 
   // Set the production url of your site here
-  url: "https://loonsw.sci.utah.edu",
+  url: "https://vdl.sci.utah.edu",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/loonar/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -75,7 +75,7 @@ const config: Config = {
     },
     footer: {
       style: "dark",
-      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab. Content licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Built with Docusaurus.`
+      copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab. Content licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

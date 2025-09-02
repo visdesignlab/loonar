@@ -2,6 +2,9 @@
 sidebar_position: 1
 ---
 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+
 # What is Loon
 
 ### A Data Visualization Software for Live Cell Microscopy
@@ -24,25 +27,25 @@ sidebar_position: 1
 
 ### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-looneage-view.mp4" type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon-docs-looneage-view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
 > <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon-docs-images-view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Handle <u>Large-Scale</u> and <u>Multimodal Data</u> by Finding Exemplar Cells
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-exemplar-view.mp4" type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon-docs-exemplar-view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Observe <u>Cell Metadata</u> Evolve Over Time
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-line-chart-view.mp4" type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon-docs-line-chart-view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
@@ -54,7 +57,7 @@ sidebar_position: 1
 
 ### Explore <u>Differences</u> Between <u>Experimental Conditions</u>
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-condition-selector-view.mp4" type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon-docs-condition-selector-view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
