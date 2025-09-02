@@ -10,25 +10,37 @@
 
 ## 1:&nbsp;&nbsp;&nbsp;Export Data from [TrackMate](https://imagej.net/plugins/trackmate/)
 
-> ### 1.1:&nbsp;&nbsp;Rename tracks in Trackmate for lineage tracking
+
+<!-- from Becca -->
+### 1.1: Configure your experiment timelapse
+> Open and set properties for a timelapse of interest (Image > Properties; update Channels, Slices, Frames, and Pixel dimensions as desired, these are carried over to TrackMate output and ultimately the Loon output.
+
+### 1.2: Run Tracking
+> Run tracking using TrackMate user interface with optimized tracking parameters for your specific dataset. After tracking is complete, and you are in the "Display Options" menu, manually correct tracks using TrackScheme as necessary.
 >
-> - After a cell division, identify the parent track and the two daughter tracks.
-> - Rename the daughter tracks by appending "a" or "b" to the parent track's name. For example, if the parent track is named "Track_0", the daughters should be named "Track_0a" and "Track_0b".
+> ![TrackMate settings screenshot](img/trackmate/trackmate-settings.png)
+
+### 1.3: Define Cell Lineages
+> After tracks have been manually corrected, click "next" (bottom right) to navigate to the final menu titled "Select an action", scroll down to select "Spot auto-naming", and select "Append 'a', 'b' for each branch. For each cell, each 'a' and 'b' cell are children.
 >
-> ### 1.2:&nbsp;&nbsp;Manually correct tracks if possible
+> ![Spot naming settings](img/trackmate/spot-naming.png)
 >
-> - Visually inspect generated tracks to ensure accuracy.
-> - Correct any errors in the tracking of the small ROIs (Regions of Interest). This likely involves manually adjusting spot positions or linking/unlinking spots to fix tracking mistakes. The exact method for manual correction will depend on the TrackMate interface, but typically involves using tools to "Add Spot," "Remove Spot," "Link Spots," or "Split Track."
+> The names should appear like this.
+> 
+> ![TrackMate Names Result](img/trackmate/track-names.png)
+
+### 1.4: Export `.roi` Segmentations
+> In the same "Select an action" menu, select "Export spots to IJ ROIS". This will save a .zip folder of ROIs that will be the segmentations into Loon. Click "Execute" (bottom right). Select "All spots" if you would like to export all ROIs to Loon.
 >
-> ### 1.3:&nbsp;&nbsp;Export data from TrackMate
->
-> - Once the tracks are finalized and corrected, export the data:
-> - Export the "Spots" feature table: In the TrackMate interface, navigate to the export options and find the command to export the spot features. This will generate a CSV file containing information about each spot, such as its position, size, and other measurements.
-> - Export ImageJ ROIs: This is an important step to get the segmented regions of cells themselves. This can be done in ImageJ after using TrackMate to generate the ROIs, and typically involves saving the ROI Manager contents as a .zip file.
+> ![TrackMate settings screenshot](img/trackmate/export-spots.png)
+
+
+### 1.5: Export Cell Metadata `.csv`
+> Once all tracks have been manually corrected, Click “Spots” on the bottom left of the “Display Options” menu. This will bring up the “All Spots Table”. Click “Export to CSV” (Top right) and save the file.
 
 ## 2:&nbsp;&nbsp;&nbsp;Convert TrackMate Data into [Loon Format](./data.md)
 
-> We currently use [our conversion script on github](https://github.com/visdesignlab/aardvark-util/blob/main/ingest_trackmate.py). Click the Download button at the top-right of the script.
+> We currently use [our conversion script on github](https://github.com/visdesignlab/aardvark-util/blob/main/ingest_trackmate.py). On GitHub, click the download button at the top-right of the script.
 >
 > ### Conversion Script Info:
 >

@@ -20,20 +20,58 @@ sidebar_position: 1
 
 </details>
 
----
-## Contact
+## Key Features
 
-**[Contact us](mailto:devinscottlange@gmail.com)** if you have any questions!
+### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-looneage-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
+> <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+### Handle <u>Large-Scale</u> and <u>Multimodal Data</u> by Finding Exemplar Cells
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-exemplar-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+### Observe <u>Cell Metadata</u> Evolve Over Time
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-line-chart-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+<!-- ### Quickly <u>Filter Data</u> Based on <u>Cell Attributes</u>
+> <video controls width={720} style={{ maxWidth: '100%' }}>
+>   <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video> -->
+
+### Explore <u>Differences</u> Between <u>Experimental Conditions</u>
+> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src="/videos/loon-docs-condition-selector-view.mp4" type="video/mp4" />
+>   Your browser does not support the video tag.
+> </video>
+
+---
+
+## [Contact Us ↗](mailto:devinscottlange@gmail.com)
 
 ### Research Labs
 
 Loon is developed by multiple research labs, spanning visualization experts & cell biology experts.
 
+- **[Visualization Design Lab](https://www.visdesignlab.net/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
 - **[Zangle Lab](https://zanglelab.che.utah.edu/)**  &nbsp;-&nbsp;  _Department of Chemical Engineering, University of Utah_
 - **[Judsen-Torres Lab](https://www.judsontorreslab.org/)**  &nbsp;-&nbsp;  _Huntsman Cancer Institute, University of Utah_
-- **[Visualization Design Lab](https://www.visdesignlab.net/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
 
-### Development Team
+
+### Engineering Team
 
 - **[Devin Lange, Ph.D.](https://www.devinlange.com/)**  &nbsp;-&nbsp;  _Department of Biomedical Informatics, Harvard Medical School_
 - **[Luke Schreiber](https://www.linkedin.com/in/luke-schreiber-11ab671b7/)**  &nbsp;-&nbsp;  _Scientific Computing and Imaging Institute, University of Utah_
