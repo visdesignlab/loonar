@@ -17,32 +17,32 @@ sidebar_position: 1
 
 *Loon is designed to **visualize** your cell images and metadata as [input](./getting-started-with-loon/index.md).*  
 *Loon **does not alter** your original microscopy data.*  
-
 </details>
 
+<!--
 ## Key Features
 
 ### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-looneage-view.mp4" type="video/mp4" />
+>   <source src="./videos/loon-docs-looneage-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
 > <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-images-view.mp4" type="video/mp4" />
+>   <source src="./videos/loon-docs-images-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Handle <u>Large-Scale</u> and <u>Multimodal Data</u> by Finding Exemplar Cells
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-exemplar-view.mp4" type="video/mp4" />
+>   <source src="../static/videos/loon-docs-exemplar-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
 ### Observe <u>Cell Metadata</u> Evolve Over Time
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-line-chart-view.mp4" type="video/mp4" />
+>   <source src="./videos/loon-docs-line-chart-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
@@ -51,12 +51,13 @@ sidebar_position: 1
 >   <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video> -->
-
+<!--
 ### Explore <u>Differences</u> Between <u>Experimental Conditions</u>
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src="/videos/loon-docs-condition-selector-view.mp4" type="video/mp4" />
+>   <source src="./videos/loon-docs-condition-selector-view.mp4" type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
+-->
 
 ---
 
