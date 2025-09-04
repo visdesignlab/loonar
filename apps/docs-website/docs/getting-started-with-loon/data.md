@@ -1,11 +1,14 @@
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+---
+toc_max_heading_level: 5
+---
 
 # Prepare Your Microscopy Data
 
-> #### To use Loon, you must format your microscopy data according to Loon's requirements before uploading it.
-
 ## Loon Will Guide You
+To use Loon, you must format your microscopy data according to Loon's requirements before uploading it.
+
+**Loon will handle** creating the full [expected data format below](#expected-data-format) for you.
+
 When uploading data, the Loon software **will prompt you** to:
 > 1. **Create New Experiment**  
 > 2. **Select Files**  
@@ -20,9 +23,6 @@ When uploading data, the Loon software **will prompt you** to:
 > 5. **Upload**
 
 <br />
-
-**Loon will handle** creating the full [expected data format below](#expected-data-format) for you.
-
 :::note
 If using [**Local Loon**](./index.md) instead, Loon will **not guide you**. You must prepare your data into the expected data format **yourself.**   
 This removes the time burden of uploading to your server, however!
@@ -30,11 +30,11 @@ This removes the time burden of uploading to your server, however!
 ---
 
 ## Expected Data Format
-![Overview Figure of data structure](img/overview.png)
+![Overview Figure of data structure](img/loon_data_structure.png)
 
 > ### Loon expects:
 > - Experiment [**Index**](#define-your-experiments-aa_indexjson) `aa_index.json`: Define your cell imaging experiments _(E.g. Exp. 1, Exp. 2)_
-> - Experiment [**Datasets**](#define-your-experiments-aa_indexjson) `.json`: Metadata about this experiment _(experiment name, cell attribute names e.g. `time`, `mass`)_
+> - [**Experiments**](#define-your-experiments-aa_indexjson) `.json`: Metadata about this experiment _(experiment name, cell attribute names e.g. `time`, `mass`)_
 >   - [**Imaging Location**](#define-your-experiments-aa_indexjson) folders each containing:
 >     - Cell [**Images**](#define-your-experiments-aa_indexjson) as a folder of `.tiff` files
 >     - Cell [**Segmentations**](#define-your-experiments-aa_indexjson) (boundaries outlining each cell) as a folder of as `GeoJSON` files
@@ -71,10 +71,8 @@ This removes the time burden of uploading to your server, however!
 
 > If using [**Local Loon**](./index.md), you will **need to read** these specifications.  
 > Make sure to format your data file structure correctly [(see above)](#loon-expects-you-to-upload)
-<Tabs>
-  <TabItem value="index" label="Index">
 
-## Define Your Experiments: `aa_index.json`
+### `aa_index.json`: Define Your Experiments
 
 > This file contains a list of your experiment metadata files.  
 > **Required:**
@@ -98,11 +96,8 @@ This removes the time burden of uploading to your server, however!
 >   ]
 > }
 > ```
-
-  </TabItem>
-  <TabItem value="datasets" label="Datasets">
   
-## Datasets: Explain Each Experiment
+#### Experiments
 > **Each of your imaging experiments** require an **experiment metadata file** as a `.json` file.  
 > This describes the experiment for Loon.
 >
@@ -178,109 +173,100 @@ This removes the time burden of uploading to your server, however!
 > ```
 > </details>
 > <br/>
-> ### Experiment Metadata File Specifications
-> <Tabs>
-> <TabItem value="header-transforms" label="Header Transforms">
-> ### Header Transforms
->
-> | Attribute | Definition                                                                                                                                                                         |
-> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | `frame`   | The frame number indicates which number image the data row comes from in a sequence of images.                                                                                     |
-> | `time`    | The time when the image was recorded. Often this is relative to the start of the experiment. If this is not explicitly recorded, then the the frame number can be used as a proxy. |
-> | `id`      | The unique ID for a particular tracked cell. This should be the same across frames for that cell's lifetime.                                                                       |
-> | `parent`  | The `id` of the parent cell. If this is not tracked at all for an experiment, then map this column to the same one as the `id` column.                                             |
-> | `mass`    | The mass of the cell.                                                                                                                                                              |
-> | `x`       | The X coordinate for the cell's center position in pixel space. (It does not matter what definition of center is used.)                                                            |
-> | `y`       | Same, but for the Y coordinate.                                                                                                                                                    |
-> 
-> </TabItem>
-> <TabItem value="location-metadata-list" label="Location Metadata List">
-> ### Location Metadata List
->
-> | Attribute | Definition                                                                                                                                                                         |
-> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | `id`                  | A unique name for this location. Can be anything, but will be displayed in the interface, so a more descriptive name is better. |
-> | `tabularDataFilename` | The location of the CSV file feature table for this experiment. |
-> | `imageDataFilename`   | The location of the OME TIFF image file. This should be a `*.companion.ome` file. |
-> | `segmentationsFolder` | This folder contains all of the segmentation files for a given location. See the [section on segmentations](#segmentations-folder) for more details. |
-> | `tags`                | A JSON object containing key-value pairs that capture metadata about the particular location. See the [tags section](#tags) for more information and some examples. |
->
->
-> </TabItem>
-> <TabItem value="tags" label="Tags (optional)">
-> ### Tags (optional)
->
-> Tags are used to define metadata about an individual location. This is used in the Loon UI to specify specific conditions corresponding to the location. The tags object has no restrictions. For example, locations have have completely different sets of tags, locations may have no tags, and locations can overlap on one more tags.
->
-> For example, suppose we have three locations. Your tags may look like this:
->
-> ```json
-> [
->   {
->     "id": "location_1",
->     ...
->     "tags": {
->       "drug": "drug_1",
->       "concentration":"0.1"
->     }
->   },
->   {
->     "id": "location_2",
->     ...
->     "tags": {}
->   },
->   {
->     "id": "location_3",
->     ...
->     "tags": {
->       "drug": "drug_3"
->     }
->   }
-> ]
-> ```
-> </TabItem>
-> <TabItem value="composite-tabular-data-file" label="Composite Tabular Data File (optional)">
-> ### Composite Tabular Data File (optional)
->
-> This key specifies the location (relative to the root of the current experiment directory) of a "combined metadata table" as a parquet file.
->
-> This table must be the union of each of the individual location metadata csv files with an additional location column and the union of all tags separated as columns as well.
->
-> For example, suppose we use the example from [tags section](#tags). Then, a sample of 6 rows of our parquet file would be something like this:
->
-> | location | \{rest_of_headers\} | drug | concentration |
-> |----------|-------------------|------|----------------|
-> | location_1 | . . . | drug_1 | 0.1 |
-> | location_1 | . . . | drug_1 | 0.1 |
-> | location_2 | . . . |  |  |
-> | location_2 | . . . |  |  |
-> | location_3 | . . . | drug_3 |  |
-> | location_3 | . . . | drug_3 |  |
->
-> Here, the empty spaces denote empty strings.
-> </TabItem>
-> </Tabs>
->
-</TabItem>
-<TabItem value="imaging_locations" label="Imaging Locations">
+> #### Experiment Metadata File Specifications
+> ##### `name`
+>>The name of the experiment as it should appear in the Loon dashboard.
+> ##### `headers`
+>> The list of column names in your cell metadata `csv` file
+> ##### `headerTransforms`
+>>
+>> | Attribute | Definition                                                                                                                                                                         |
+>> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+>> | `frame`   | The frame number indicates which number image the data row comes from in a sequence of images.                                                                                     |
+>> | `time`    | The time when the image was recorded. Often this is relative to the start of the experiment. If this is not explicitly recorded, then the the frame number can be used as a proxy. |
+>> | `id`      | The unique ID for a particular tracked cell. This should be the same across frames for that cell's lifetime.                                                                       |
+>> | `parent`  | The `id` of the parent cell. If this is not tracked at all for an experiment, then map this column to the same one as the `id` column.                                             |
+>> | `mass`    | The mass of the cell.                                                                                                                                                              |
+>> | `x`       | The X coordinate for the cell's center position in pixel space. (It does not matter what definition of center is used.)                                                            |
+>> | `y`       | Same, but for the Y coordinate.                                                                                                                                                    |
+>> 
+> ##### `locationMetadataList`
+>>
+>> | Attribute | Definition                                                                                                                                                                         |
+>> | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+>> | `id`                  | A unique name for this location. Can be anything, but will be displayed in the interface, so a more descriptive name is better. |
+>> | `tabularDataFilename` | The location of the CSV file feature table for this experiment. |
+>> | `imageDataFilename`   | The location of the OME TIFF image file. This should be a `*.companion.ome` file. |
+>> | `segmentationsFolder` | This folder contains all of the segmentation files for a given location. See the [section on segmentations](#segmentations-folder) for more details. |
+>> | `tags`                | A JSON object containing key-value pairs that capture metadata about the particular location. See the [tags section](#tags) for more information and some examples. |
+>>
+>>
+> ##### `tags` (optional)
+>>
+>> Tags are used to define metadata (such as conditions) about an individual location. This is used in the Loon UI to specify specific conditions corresponding to the location. The tags object has no restrictions. For example, locations have have completely different sets of tags, locations may have no tags, and locations can overlap on one more tags.
+>>
+>> For example, suppose we have three locations. Your tags may look like this:
+>>
+>> ```json
+>> [
+>>   {
+>>     "id": "location_1",
+>>     ...
+>>     "tags": {
+>>       "drug": "drug_1",
+>>       "concentration":"0.1"
+>>     }
+>>   },
+>>   {
+>>     "id": "location_2",
+>>     ...
+>>     "tags": {}
+>>   },
+>>   {
+>>     "id": "location_3",
+>>     ...
+>>     "tags": {
+>>       "drug": "drug_3"
+>>     }
+>>   }
+>> ]
+>> ```
+> ##### `compositeTabularDataFile` (optional)
+>>
+>> This key specifies the location (relative to the root of the current experiment directory) of a "combined metadata table" as a parquet file.
+>>
+>> This table must be the union of each of the individual location metadata csv files with an additional location column and the union of all tags separated as columns as well.
+>>
+>> For example, suppose we use the example from [tags section](#tags). Then, a sample of 6 rows of our parquet file would be something like this:
+>>
+>> | location | \{rest_of_headers\} | drug | concentration |
+>> |----------|-------------------|------|----------------|
+>> | location_1 | . . . | drug_1 | 0.1 |
+>> | location_1 | . . . | drug_1 | 0.1 |
+>> | location_2 | . . . |  |  |
+>> | location_2 | . . . |  |  |
+>> | location_3 | . . . | drug_3 |  |
+>> | location_3 | . . . | drug_3 |  |
+>>
+>> Here, the empty spaces denote empty strings.
+>>
 
-An **Imaging Location** is simply a folder containing a distinct imaging dataset of your choosing.  
-Created at a distinct location, time, or for a specific purpose.
+### Imaging Location Folders
 
-Imaging Location folders each contain:
-  - Cell **Images** as a folder of `.tiff` files
-  - Cell [**Segmentations**](#segmentations-folder) (boundaries outlining each cell) as a folder of as `GeoJSON` files
-  - Cell **Metadata** as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
-</TabItem>
-<TabItem value="cell_images" label="Cell Images">
+> An **Imaging Location** is simply a folder containing a distinct imaging dataset of your choosing.  
+> Created at a distinct location, time, or for a specific purpose.
+>
+> Imaging Location folders each contain:
+>   - Cell **Images** as a folder of `.tiff` files
+>   - Cell [**Segmentations**](#segmentations-folder) (boundaries outlining each cell) as a folder of as `GeoJSON` files
+>   - Cell **Metadata** as a `.csv` file _(cell's `id`, `mass`, `x`, `y` etc. over `time`)_
 
-**Cell Images** is a folder of `.tiff` _(image)_ files **or** `.ome.tiff` _(microscopy image)_ files.
+### Cell Images
+> **Cell Images** is a folder of `.tiff` _(image)_ files **or** `.ome.tiff` _(microscopy image)_ files.
+>
+> We adhere to the [ome-tiff](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) library for cell images.
 
-> We ahdere to the [ome-tiff](https://docs.openmicroscopy.org/ome-model/5.6.3/ome-tiff/) library for cell images.
-</TabItem>
-<TabItem value="segmentations" label="Cell Segmentations">
-
-## Segmentations Folder
+### Segmentations Folder
 
 > Each imaging location should have a corresponding folder that contains all of the segmentation files.  
 > The names of the files must correspond to the imaging frame.  
@@ -295,15 +281,13 @@ Imaging Location folders each contain:
 > If you are instead using Loon without MinIO (i.e. using Local Loon), you will have to convert the `.roi` files to GeoJSON yourself.  
 > [Here](https://github.com/visdesignlab/aardvark-util/blob/main/roi_to_geojson.py) is a Python script which can convert `.roi` to GeoJSON from one of our accompanying repositories.
 > :::
-</TabItem>
 
-<TabItem value="cell_metadata" label="Cell Metadata">
-
-**Cell Metadata** is a `.csv` file of your choice containing:
-  - **Rows**: A cell at a certain time point
-  - **Columns**: Metadata about that cell
-
-**Example contents**:
+### Cell Metadata `.csv` 
+> **Cell Metadata** is a `.csv` file of your choice containing:
+>   - **Rows**: A cell at a certain time point
+>  - **Columns**: Metadata about that cell
+>
+> **Example contents**:
 > `example_metadata_table.csv`
 >
 > | CELL_ID | LOCATION   | PARENT_CELL | TIME | FRAME | MASS | POSITION_X | POSITION_Y | ... |
@@ -315,7 +299,4 @@ Imaging Location folders each contain:
 >
 > > **Loon requires** these columns: `frame`, `time`, `id`, `parent`, `mass`, `x`, `y`  
 > > Those required columns can be **named however you'd like** in your file, in any order (see [header transforms](#header-transforms)).  
-> > You can add any other metadata columns you would like.  
-</TabItem>
-</Tabs>
-
+> > You can add any other metadata columns you would like.
