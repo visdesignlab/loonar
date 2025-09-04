@@ -91,15 +91,44 @@ export default function Home(): JSX.Element {
             </p>
           </div>
         </section>
-        {/* VDL Logo Centered at Bottom */}
-        <div className={styles.logoContainer}>
-          <Link href="https://vdl.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
-            <img
-              src="./img/vdl_logo_transparent.png"
-              alt="VDL Logo"
-              className={styles.logoImg}
-            />
-          </Link>
+        {/* Logos Centered at Bottom in a Row */}
+        <div className={styles.logoRow}>
+          <div className={styles.logoItem}>
+            <Link href="https://vdl.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/vdl_logo_transparent.png"
+                alt="VDL Logo"
+                className={styles.logoImgVDL}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://www.judsontorreslab.org/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/judson-logo.png"
+                alt="Judson Logo"
+                className={styles.logoImgJudson}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://www.nih.gov/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/nih_logo.svg"
+                alt="NIH Logo"
+                className={styles.logoImgNIH}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://zanglelab.che.utah.edu/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/zangle-logo.png"
+                alt="Zangle Logo"
+                className={styles.logoImgZangle}
+              />
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>

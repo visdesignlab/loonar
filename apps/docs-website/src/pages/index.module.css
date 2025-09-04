@@ -178,21 +178,42 @@
   pointer-events: none;
 }
 
-.logoContainer {
+.logoRow {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 3rem;
   width: 100%;
-  margin-top: 0rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.logoImg {
-  height: 60px;
+.logoItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logoImgVDL {
+  height: 52px;
   width: auto;
-  margin: 0 0 1.5rem 0; 
   opacity: 0.85;
 }
-
+.logoImgJudson {
+  height: 44px;
+  width: auto;
+  opacity: 0.85;
+}
+.logoImgNIH {
+  height: 40px;
+  width: auto;
+  opacity: 0.85;
+}
+.logoImgZangle {
+  height: 38px;
+  width: auto;
+  opacity: 0.85;
+}
 /* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
   .headline { font-size: 2.2rem; }
