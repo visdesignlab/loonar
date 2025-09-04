@@ -93,11 +93,13 @@ export default function Home(): JSX.Element {
         </section>
         {/* VDL Logo Centered at Bottom */}
         <div className={styles.logoContainer}>
-          <img
-            src="./img/vdl_logo_transparent.png"
-            alt="VDL Logo"
-            className={styles.logoImg}
-          />
+          <Link href="https://vdl.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
+            <img
+              src="./img/vdl_logo_transparent.png"
+              alt="VDL Logo"
+              className={styles.logoImg}
+            />
+          </Link>
         </div>
       </div>
     </Layout>
