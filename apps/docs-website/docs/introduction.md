@@ -8,7 +8,10 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 # What is Loon
 
 ## A Data Visualization Software for Live Cell Microscopy
-**Loon** is designed to help scientists **analyze** their cell data, **identify** data processing mistakes, and **communicate** their findings.
+**Loon** is designed to help scientists 
+- **Analyze** their cell data
+- **Identify** data processing mistakes
+- **Communicate** their findings
 
 
 <details>
