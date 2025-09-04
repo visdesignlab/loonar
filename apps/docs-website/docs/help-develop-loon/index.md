@@ -1,6 +1,6 @@
 # Help Develop Loon
 
-- ## [Contact Us ↗](/docs/introduction#contact-us-)
+- ## [Contact Us ↗](/docs/contact-us)
 
 - ## Contribute on [GitHub ↗](https://github.com/visdesignlab/loonar)
 

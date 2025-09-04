@@ -62,7 +62,7 @@ const config: Config = {
           label: "Documentation",
         },
         {
-          href: "/docs/introduction#contact-us-",
+          href: "/docs/contact-us",
           label: "Contact Us",
           position: "right",
         },
