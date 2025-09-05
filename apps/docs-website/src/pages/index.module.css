@@ -326,15 +326,8 @@
     border-color: var(--ifm-color-primary-dark);
   }
 }
-[data-theme='dark'] .footer {
-  background: #1e1e1e !important; /* Dark background */
+html[data-theme='dark'] .footer,
+html[data-theme='dark'] .footer__copyright,
+html[data-theme='dark'] .footer a {
   color: #f5f5f5 !important; /* Light text color */
-}
-
-[data-theme='dark'] .footer a {
-  color: #9ecbff !important; /* Adjust link color for better contrast */
-}
-
-[data-theme='dark'] .footer a:hover {
-  color: #cce7ff !important; /* Slightly lighter hover color */
 }
