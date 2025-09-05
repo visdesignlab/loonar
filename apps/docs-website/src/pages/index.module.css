@@ -228,6 +228,55 @@
 @media screen and (max-width: 620px) {
   .headline { font-size: 1.5rem; }
 }
+
+/* Light Mode Styles */
+[data-theme='light'] .descriptionContent {
+  background: white; /* Light background color */
+  color: black; /* Dark text color for light mode */
+}
+
+[data-theme='light'] .descriptionContent a {
+  color: #007acc; /* Adjust link color for better contrast in light mode */
+}
+
+[data-theme='light'] .descriptionContent::before {
+  background: white; /* Match the light background color */
+}
+
+[data-theme='light'] .logoRow {
+  background: white; /* Match the light mode background color of descriptionContent */
+}
+
+[data-theme='light'] .pageWrapper {
+  background: white; /* Light background color */
+}
+[data-theme='light'] .heroContent {
+  background: white; /* Light background color */
+  color: black; /* Dark text color for light mode */
+}
+
+[data-theme='light'] .heroContent::before {
+  background: white; /* Match the light background color */
+}
+
+[data-theme='light'] .buttonRow :global(.button.button--primary) {
+  background: transparent;
+  border: 3px solid #5a5a5a; /* Gray border for light mode */
+  color: #5a5a5a; /* Gray text color for light mode */
+}
+
+[data-theme='light'] .buttonRow :global(.button.button--primary:hover),
+[data-theme='light'] .buttonRow :global(.button.button--primary:focus) {
+  background: var(--ifm-color-primary); /* Primary color on hover */
+  border-color: var(--ifm-color-primary);
+  color: #fff; /* White text on hover */
+}
+
+[data-theme='light'] .buttonRow :global(.button.button--primary:active) {
+  background: var(--ifm-color-primary-dark); /* Darker primary color on active */
+  border-color: var(--ifm-color-primary-dark);
+}
+
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
   .descriptionContent {
@@ -249,5 +298,31 @@
 
   .pageWrapper {
     background: #1e1e1e; /* Ensure the background behind the logoRow matches */
+  }
+  .heroContent {
+    background: #1e1e1e; /* Dark background color */
+    color: #f5f5f5; /* Light text color for dark mode */
+  }
+
+  .heroContent::before {
+    background: #1e1e1e; /* Match the dark background color */
+  }
+
+  .buttonRow :global(.button.button--primary) {
+    background: transparent;
+    border: 3px solid #f5f5f5; /* Light border for dark mode */
+    color: #f5f5f5; /* Light text color for dark mode */
+  }
+
+  .buttonRow :global(.button.button--primary:hover),
+  .buttonRow :global(.button.button--primary:focus) {
+    background: var(--ifm-color-primary); /* Primary color on hover */
+    border-color: var(--ifm-color-primary);
+    color: #000; /* Dark text on hover */
+  }
+
+  .buttonRow :global(.button.button--primary:active) {
+    background: var(--ifm-color-primary-dark); /* Darker primary color on active */
+    border-color: var(--ifm-color-primary-dark);
   }
 }
