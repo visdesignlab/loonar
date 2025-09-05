@@ -76,18 +76,23 @@ export default function Home(): JSX.Element {
                 target="_blank"
                 rel="noopener noreferrer"
               >
+
+              <em>
                 <span style={{ fontSize: "0.8em" }}>🏆</span>
                 &nbsp;&nbsp;&nbsp;Best Paper Award: IEEE VIS 2024
+              </em>
               </Link>
               <span style={{ margin: "0 15px", color: "grey" }}>|</span>
-              <Link
+                <Link
                 href="https://loon.sci.utah.edu/"
                 target="_blank"
                 rel="noopener noreferrer"
-              >
-                <span style={{ fontSize: "0.8em" }}>🏆</span>
-                &nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
-              </Link>
+                >
+                <em>
+                  <span style={{ fontSize: "0.8em" }}>🏆</span>
+                  &nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
+                </em>
+                </Link>
             </p>
           </div>
         </section>
