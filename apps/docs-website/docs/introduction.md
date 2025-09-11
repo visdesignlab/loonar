@@ -42,7 +42,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 ### Handle <u>Large-Scale</u> and <u>Multimodal Data</u> by Finding Exemplar Cells
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src={useBaseUrl("/videos/loon-docs-exemplar-view.mp4")} type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon_docs_exemplar_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
@@ -51,7 +51,6 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 >   <source src={useBaseUrl("/videos/loon_docs_line_chart_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
-
 <!-- ### Quickly <u>Filter Data</u> Based on <u>Cell Attributes</u>
 > <video controls width={720} style={{ maxWidth: '100%' }}>
 >   <source src="/videos/loon_demo_video_1.mp4" type="video/mp4" />
