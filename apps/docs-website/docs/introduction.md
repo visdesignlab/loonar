@@ -28,9 +28,10 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 ## Key Features
 
+
 ### Visualize <u>Images</u>, <u>Time-Series Data</u>, and <u>Cell Lineages</u> Together
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src={useBaseUrl("/videos/loon-docs-looneage-view.mp4")} type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon_docs_looneage_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
