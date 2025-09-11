@@ -36,7 +36,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 ### Analyze <u>Images</u> with Linked <u>Cell Metadata</u>
 > <video controls width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src={useBaseUrl("/videos/loon-docs-images-view.mp4")} type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon_docs_images_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
