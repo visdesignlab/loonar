@@ -48,7 +48,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 ### Observe <u>Cell Metadata</u> Evolve Over Time
 > <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src={useBaseUrl("/videos/loon-docs-line-chart-view.mp4")} type="video/mp4" />
+>   <source src={useBaseUrl("/videos/loon_docs_line_chart_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
 
