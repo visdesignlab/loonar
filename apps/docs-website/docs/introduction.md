@@ -59,7 +59,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 > </video> -->
 
 ### Explore <u>Differences</u> Between <u>Experimental Conditions</u>
-> <video controls autoplay width={720} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
->   <source src={useBaseUrl("/videos/loon-docs-condition-selector-view.mp4")} type="video/mp4" />
+> <video controls autoplay width={520} style={{ maxWidth: '100%' }} autoPlay muted playsInline loop preload="auto">
+>   <source src={useBaseUrl("/videos/loon_docs_condition_selector_view.mp4")} type="video/mp4" />
 >   Your browser does not support the video tag.
 > </video>
