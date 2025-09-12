@@ -37,7 +37,7 @@ import {
     TextLayer,
 } from '@deck.gl/layers/typed';
 // @ts-ignore
-import { TripsLayer } from '@deck.gl/geo-layers';
+import { TripsLayer } from '@deck.gl/geo-layers/typed';
 import { format } from 'd3-format';
 import colors from '@/util/colors';
 import { useConfigStore } from '@/stores/misc/configStore';
@@ -577,23 +577,18 @@ const currentCellMap = computed<Map<string, Cell>>(() => {
 
 function createTrajectoryGhostLayer(): TripsLayer {
     return new TripsLayer({
-        id: 'trips-layer',
-        widthUnits: 'pixels',
-        data: currentTrackArray.value,
-        pickable: false,
-        getWidth: 3,
-        getPath: (d: Track) =>
-            d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
-        // deduct start timestamp from each data point to avoid overflow
-        getTimestamps: (d: Track) =>
-            d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
-        getColor: [152, 78, 163],
-        opacity: 0.6,
-        // widthMinPixels: 5,
-        rounded: true,
-        fadeTrail: true,
-        trailLength: imageViewerStore.effectiveTrailLength,
-        currentTime: imageViewerStore.frameNumber,
+    id: 'trips-layer',
+    data: currentTrackArray.value,
+    pickable: false,
+    getWidth: 3,
+    getPath: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
+    getTimestamps: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
+    getColor: [152, 78, 163],
+    opacity: 0.6,
+    rounded: true,
+    fadeTrail: true,
+    trailLength: imageViewerStore.effectiveTrailLength,
+    currentTime: imageViewerStore.frameNumber,
     });
 }
 
