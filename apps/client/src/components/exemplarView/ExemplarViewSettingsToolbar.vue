@@ -54,6 +54,11 @@ const currAggSelections = computed(
   }
 );
 
+const var1Min = computed<number>(() => currAggSelections.value?.var1?.min ?? 0);
+const var1Max = computed<number>(() => currAggSelections.value?.var1?.max ?? 1);
+const var1Step = computed<number>(() => currAggSelections.value?.var1?.step ?? 1);
+const var1Label = computed<string>(() => currAggSelections.value?.var1?.label ?? '');
+
 function onChangeAgg() {
   var1Model.value = null;
   attr2Model.value = null;
@@ -150,18 +155,18 @@ function applySelections() {
               "
               filled
               type="number"
-              :step="currAggSelections.var1.step"
+              :step="var1Step"
               v-model.number="var1Model"
-              :label="currAggSelections.var1.label"
+              :label="var1Label"
               lazy-rules
               :rules="[
                 val => val !== null && val !== undefined && val !== '' || 'Value is required',
-                val => val >= (currAggSelections.var1.min || 0) || `Value must be at least ${currAggSelections.var1.min || 0}`,
-                val => val <= (currAggSelections.var1.max || 1) || `Value must be at most ${currAggSelections.var1.max || 1}`
+                val => val >= var1Min || `Value must be at least ${var1Min}`,
+                val => val <= var1Max || `Value must be at most ${var1Max}`
               ]"
               :dark="globalSettings.darkMode"
-              :min="currAggSelections.var1.min"
-              :max="currAggSelections.var1.max"
+              :min="var1Min"
+              :max="var1Max"
             />
             <q-select
               v-if="
