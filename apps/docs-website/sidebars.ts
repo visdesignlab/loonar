@@ -46,6 +46,7 @@ const sidebars: SidebarsConfig = {
     },
     "version-log",
     "help-develop-loon/index",
+    "contact-us",
   ],
 };
 

@@ -76,21 +76,65 @@ export default function Home(): JSX.Element {
                 target="_blank"
                 rel="noopener noreferrer"
               >
+
+              <em>
                 <span style={{ fontSize: "0.8em" }}>🏆</span>
                 &nbsp;&nbsp;&nbsp;Best Paper Award: IEEE VIS 2024
+              </em>
               </Link>
               <span style={{ margin: "0 15px", color: "grey" }}>|</span>
-              <Link
+                <Link
                 href="https://loon.sci.utah.edu/"
                 target="_blank"
                 rel="noopener noreferrer"
-              >
-                <span style={{ fontSize: "0.8em" }}>🏆</span>
-                &nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
-              </Link>
+                >
+                <em>
+                  <span style={{ fontSize: "0.8em" }}>🏆</span>
+                  &nbsp;&nbsp;&nbsp;Honorable Mention Award: IEEE VIS 2021
+                </em>
+                </Link>
             </p>
           </div>
         </section>
+        {/* Logos Centered at Bottom in a Row */}
+        <div className={styles.logoRow}>
+          <div className={styles.logoItem}>
+            <Link href="https://vdl.sci.utah.edu/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/vdl_logo_transparent.png"
+                alt="VDL Logo"
+                className={styles.logoImgVDL}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://www.judsontorreslab.org/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/judson-logo.png"
+                alt="Judson Logo"
+                className={styles.logoImgJudson}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://www.nih.gov/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/nih_logo.svg"
+                alt="NIH Logo"
+                className={styles.logoImgNIH}
+              />
+            </Link>
+          </div>
+          <div className={styles.logoItem}>
+            <Link href="https://zanglelab.che.utah.edu/" target="_blank" rel="noopener noreferrer">
+              <img
+                src="./img/zangle-logo.png"
+                alt="Zangle Logo"
+                className={styles.logoImgZangle}
+              />
+            </Link>
+          </div>
+        </div>
       </div>
     </Layout>
   );

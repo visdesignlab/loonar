@@ -16,13 +16,6 @@
   justify-content: center; /* Horizontally center content */
 }
 
-.footer,
-.footer__links,
-.footer__copyright,
-.footer__link-item {
-  color: #222 !important;
-}
-
 .footer__link-item:hover {
   color: #555 !important;
   opacity: 1;

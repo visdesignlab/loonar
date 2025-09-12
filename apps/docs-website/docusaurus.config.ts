@@ -62,7 +62,7 @@ const config: Config = {
           label: "Documentation",
         },
         {
-          href: "/docs/introduction#contact-us-",
+          href: "/docs/contact-us",
           label: "Contact Us",
           position: "right",
         },
@@ -74,7 +74,6 @@ const config: Config = {
       ],
     },
     footer: {
-      style: "dark",
       copyright: `Copyright © ${new Date().getFullYear()} The Visualization Design Lab. Content licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Built with Docusaurus.`,
     },
     prism: {
