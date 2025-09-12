@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 // Vue and core libraries
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { until, useElementSize } from '@vueuse/core';
@@ -10,7 +11,7 @@ import {
     PolygonLayer,
     LineLayer,
     TextLayer,
-} from '@deck.gl/layers';
+} from '@deck.gl/layers/typed';
 
 // Viv libraries for image loading and extensions
 import { loadOmeTiff } from '@hms-dbmi/viv';
@@ -61,7 +62,7 @@ import colors from '@/util/colors';
 import HorizonChartLayer from '../layers/HorizonChartLayer/HorizonChartLayer';
 import SnippetSegmentationOutlineLayer from '../layers/SnippetSegmentationOutlineLayer/SnippetSegmentationOutlineLayer';
 import CellSnippetsLayer from '../layers/CellSnippetsLayer';
-import { type Selection } from '../layers/CellSnippetsLayer';
+import type { Selection } from '../layers/CellSnippetsLayer';
 import type { Feature } from 'geojson';
 import { ScrollUpDownController } from './ScrollUpDownController';
 import SnippetSegmentationLayer from '../layers/SnippetSegmentationLayer/SnippetSegmentationLayer';
@@ -124,7 +125,7 @@ const { selectedYTag } = storeToRefs(conditionSelectorStore);
 
 // For dataset selection
 const datasetSelectionStore = useDatasetSelectionStore();
-const { experimentDataInitialized, currentLocationMetadata, currentExperimentFilename} = storeToRefs(
+const { experimentDataInitialized, currentLocationMetadata} = storeToRefs(
     datasetSelectionStore
 );
 
@@ -144,8 +145,6 @@ const {
     selectedVar1,
     horizonChartSettings,
     histogramYAxisLabel,
-    addAggregateColumnForSelection,
-    getAttributeName,
 } = storeToRefs(exemplarViewStore);
 const imageViewerStore = useImageViewerStore();
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
@@ -336,8 +335,9 @@ watch(
         }
 
         await until(() => selectedAttribute.value !== undefined);
+        const attrName = exemplarViewStore.getAttributeName();
         await exemplarViewStore.addAggregateColumnForSelection(
-            selectedAttribute.value,
+            attrName,
             selectedAggregation.value,
             selectedAttr2.value,
             selectedVar1.value
@@ -355,7 +355,7 @@ watch(
 
         // Fetch all segmentations
         await getCellSegmentationData();
-        horizonChartSettings.default = true;
+        horizonChartSettings.value.default = true;
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
             deckgl.value = new Deck({
@@ -365,10 +365,10 @@ watch(
                     id: 'exemplarController',
                     controller: true,
                 }),
-                controller: {
+                controller: ({
                     type: ScrollUpDownController,
                     onScroll: handleScroll,
-                },
+                } as unknown) as any,
                 layers: [],
                 getTooltip: (info: PickingInfo) => {
                     // If the layer is a horizon chart, show the cell index and time.
@@ -441,7 +441,7 @@ watch(
         }
         // Finally, render the Deck.gl layers
         await renderDeckGL();
-        await new Promise(resolve => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         // Set exemplarDataInitialized to true after data generation
         exemplarDataInitialized.value = true;
     },
@@ -452,7 +452,7 @@ watch(
 // Main rendering function for DeckGL -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
 
-const selectedCellImageTickMarkLayers = ref<LineLayer[]>([]);
+const selectedCellImageTickMarkLayers = ref<any[]>([]);
 
 // Function to render Deck.gl layers
 async function renderDeckGL(): Promise<void> {
@@ -710,8 +710,8 @@ function getCellSegmentationPolygon(location: string, trackId: string, frame: st
 
 // Horizon Chart Layer ------------------------------------------------------------------------------------------
 
-function createHorizonChartLayer(): HorizonChartLayer[] | null {
-    const horizonChartLayers: HorizonChartLayer[] = [];
+function createHorizonChartLayer(): (HorizonChartLayer | PolygonLayer)[] | null {
+    const horizonChartLayers: (HorizonChartLayer | PolygonLayer)[] = [];
 
     // Get the global min and max values for every exemplar, for color scaling.
     const tracks = exemplarViewStore.exemplarTracks;
@@ -898,16 +898,16 @@ function createSelectedHorizonOutlineLayer(exemplar: ExemplarTrack) {
     pickable: false,
     stroked: true,
     filled: false,
-    getPolygon: d => d.polygon,
+    getPolygon: (d: any) => d.polygon,
     getLineColor: globalSettings.normalizedSelectedRgb,
     getLineWidth: viewConfiguration.value.hoveredLineWidth,
     lineWidthUnits: 'pixels'
-  });
+  }) as any;
 }
 
 // Create a reactive reference for the hovered outline layer.
-const hoveredOutlineLayer = ref<PolygonLayer | null>(null);
-const horizonTextLayer = ref<TextLayer | null>(null);
+const hoveredOutlineLayer = ref<any | null>(null);
+const horizonTextLayer = ref<any | null>(null);
 
 function createHoveredHorizonOutlineLayer() {
   // Find the exemplar corresponding to the hovered value
@@ -950,7 +950,7 @@ function createHoveredHorizonOutlineLayer() {
     updateTriggers: {
       hoveredExemplar: hoveredExemplar.value,
     },
-});
+}) as any;
 
   const label = selectedAttributeName.value;
   const labelData = [
@@ -1119,17 +1119,17 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
             },
             getFillColor: [128, 128, 128, 255],
             opacity: 0.5,
-            stroked: (exemplar: ExemplarTrack) => 
+            getStroked: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId ||
                 selectedExemplar.value?.trackId === exemplar.trackId,
-            getLineColor: (exemplar: ExemplarTrack) => 
+            getLineColor: ((exemplar: ExemplarTrack) => 
                 getExemplarColor(
                     exemplar,
                     selectedExemplar.value,
                     hoveredExemplar.value,
                     [128, 128, 128, 255],
                     fillColor
-                ),
+                )) as any,
             getLineWidth: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId ||
                 selectedExemplar.value?.trackId === exemplar.trackId ? viewConfiguration.value.hoveredLineWidth : 0,
@@ -1184,18 +1184,18 @@ function createTimeWindowLayer(): PolygonLayer[] | null {
                     [cellBirthXValue, yOffset],
                 ];
             },
-            getFillColor: fillColor,
-            stroked: (exemplar: ExemplarTrack) => 
+            getFillColor: ((exemplar: ExemplarTrack) => fillColor(exemplar)) as any,
+            getStroked: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId || 
                 selectedExemplar.value?.trackId === exemplar.trackId,
-            getLineColor: (exemplar: ExemplarTrack) => 
+            getLineColor: ((exemplar: ExemplarTrack) => 
                 getExemplarColor(
                     exemplar,
                     selectedExemplar.value,
                     hoveredExemplar.value,
                     [0, 0, 0, 0],
                     fillColor
-                ),
+                )) as any,
             getLineWidth: (exemplar: ExemplarTrack) => 
                 hoveredExemplar.value?.trackId === exemplar.trackId || 
                 selectedExemplar.value?.trackId === exemplar.trackId ? viewConfiguration.value.hoveredLineWidth : 0,
@@ -1339,7 +1339,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 data: [group],
                 getSourcePosition: () => [histogramBaseLineX, groupBottom],
                 getTargetPosition: () => [histogramBaseLineX, groupTop],
-                getColor: fillColor(conditionGroupKey),
+                getColor: (() => fillColor(conditionGroupKey)) as any,
                 // Start of Selection
                 lineWidthUnits: 'common',
                 lineWidth: 7, // Adjust thickness as needed
@@ -1417,15 +1417,16 @@ function createSidewaysHistogramLayer(): any[] | null {
                         conditionGroupKey,
                         histogramValues
                     ),
-                onClick: (info: PickingInfo, event: any) =>
-                    handleHistogramClick(
+                onClick: (info: PickingInfo, event: any) => {
+                    void handleHistogramClick(
                         info,
                         event,
                         conditionGroupKey,
                         histogramValues,
                         groupBottom,
                         groupTop
-                    ),
+                    );
+                },
             })
         );
 
@@ -1443,14 +1444,14 @@ function createSidewaysHistogramLayer(): any[] | null {
                 pickable: false,
                 getSourcePosition: (d: any) => d.source,
                 getTargetPosition: (d: any) => d.target,
-                getColor: (d: { exemplar: ExemplarTrack }) =>
+                getColor: ((d: { exemplar: ExemplarTrack }) =>
                     getExemplarColor(
                         d.exemplar,
                         selectedExemplar.value,
                         hoveredExemplar.value,
                         undefined,
                         fillColor
-                    ),
+                    )) as any,
                 getWidth: (d: {
                     source: [number, number];
                     target: [number, number];
@@ -1489,7 +1490,7 @@ function createSidewaysHistogramLayer(): any[] | null {
                 sizeUnits: 'pixels',
                 sizeMaxPixels: conditionFontSize,
                 getAngle: 90,
-                getColor: fillColor(conditionGroupKey),
+                getColor: (() => fillColor(conditionGroupKey)) as any,
                 background: true,
                 getBackgroundColor: [255, 255, 255, 160],
                 billboard: true,
@@ -1747,7 +1748,19 @@ function handleDeletePin(pinId: string, exemplar: ExemplarTrack) {
 
 // Create pin layers for the histogram pins.
 function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
-    const pinLayers = [];
+    // make the array explicitly accept LineLayer, ScatterplotLayer, or TextLayer instances
+    const pinLayers: Array<LineLayer | ScatterplotLayer | TextLayer> = [];
+
+    // helper accessor that returns a plain color array and can be cast for Deck.gl
+    const pinGetColor = (d: any) =>
+        getExemplarColor(
+            d.exemplar,
+            selectedExemplar.value,
+            hoveredExemplar.value,
+            d.color,
+            fillColor
+        );
+
     // Exemplar Pin Lines -------
     pinLayers.push(
         new LineLayer({
@@ -1756,22 +1769,15 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
             pickable: false,
             getSourcePosition: (d: any) => d.source,
             getTargetPosition: (d: any) => d.target,
-            getColor: (d: HistogramPin) =>
-                getExemplarColor(
-                        d.exemplar,
-                        selectedExemplar.value,
-                        hoveredExemplar.value,
-                        d.color,
-                        fillColor
-                    ),
-            // Adjust the line width based on hover state.
+            getColor: pinGetColor as any,
             getWidth: (d: any) =>
-                hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
+                (hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar)
                     ? viewConfiguration.value.hoveredLineWidth
                     : 1,
             opacity: 0.2,
         })
     );
+
     // Exemplar Pin circles at end of lines -------
     const circleData = pins.map((d) => ({
         position: d.target,
@@ -1782,22 +1788,14 @@ function createPinLayers(pins: any[], conditionGroupKey: ExemplarTrack) {
         new ScatterplotLayer({
             id: `exemplar-pin-circles-${uniqueExemplarKey(conditionGroupKey)}`,
             data: circleData,
-            pickable: true, // enable interaction with the pin circles
+            pickable: true,
             getPosition: (d: any) => d.position,
             radiusUnits: 'pixels',
             getRadius: (d: any) =>
-                hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar
+                (hoveredExemplar.value === d.exemplar || selectedExemplar.value === d.exemplar)
                     ? viewConfiguration.value.hoveredLineWidth * 2
                     : 3,
-            getFillColor: (d: HistogramPin) =>
-                getExemplarColor(
-                        d.exemplar,
-                        selectedExemplar.value,
-                        hoveredExemplar.value,
-                        d.color,
-                        fillColor
-                    ),
-            // When a pin is clicked, dragged or released, we log a dummy event.
+            getFillColor: ((d: any) => pinGetColor(d)) as any,
             onDragStart: (info: PickingInfo, event: any) =>
                 handlePinDragStart(info, event, conditionGroupKey),
             onDrag: (info: PickingInfo, event: any) =>
@@ -1821,7 +1819,7 @@ if (xButtonData.length > 0) {
       id: `exemplar-pin-x-button-${uniqueExemplarKey(conditionGroupKey)}`,
       data: xButtonData,
       pickable: true,
-      getPosition: d => d.position,
+      getPosition: (d: any) => d.position,
       getText: () => "x",
       getSize: 20,
       getColor: [0, 0, 0, 255],
@@ -2014,7 +2012,7 @@ function createCellImageEventsLayer(
       }
       if (cellImageLayerResult.tickMarkLayer) {
         selectedCellImageTickMarkLayers.value.push(
-          cellImageLayerResult.tickMarkLayer
+          cellImageLayerResult.tickMarkLayer as any
         );
       }
       dataPointSelection.selectedTrackId = exemplar.trackId;
@@ -2141,7 +2139,7 @@ function createCellImageLayer(
         getCenter: (d: any) => d.center,
         getTranslateOffset: (d: any) => d.offset,
         zoomX: viewStateMirror.value.zoom[0],
-        scale: snippetZoom,
+        scale: snippetZoom.value,
         clipSize: viewConfig.snippetDisplayHeight,
         clip: true,
     });
@@ -2157,7 +2155,7 @@ function createCellImageLayer(
             getFillColor: (d: any) => colors.hovered.rgb,
             opacity: 0.5,
             zoomX: viewStateMirror.value.zoom[0],
-            scale: snippetZoom,
+            scale: snippetZoom.value,
             clipSize: viewConfig.snippetDisplayHeight,
             clip: false,
             filled: true, // Only fill if not showing image
@@ -2189,7 +2187,7 @@ function createCellImageLayer(
     pickable: false,
     stroked: true,
     filled: false,
-    getPolygon: d => d.polygon,
+    getPolygon: (d: any) => d.polygon,
     getLineColor: colors.hovered.rgb, // Same color as other hovered elements
     getLineWidth: viewConfiguration.value.hoveredLineWidth, // Same width as other hovered elements
     lineWidthUnits: 'pixels'
@@ -2785,7 +2783,7 @@ function createExemplarImageKeyFramesLayer(
     getCenter: (d: any) => d.center,
     getTranslateOffset: (d: any) => d.offset,
     zoomX: viewStateMirror.value.zoom[0],
-    scale: snippetZoom,
+    scale: snippetZoom.value,
     clipSize: viewConfig.snippetDisplayHeight,
     clip: true,
   });
@@ -2805,7 +2803,7 @@ function createExemplarImageKeyFramesLayer(
                 : unselectedColorWithAlpha,
             opacity: 1, 
             zoomX: viewStateMirror.value.zoom[0],
-            scale: snippetZoom,
+            scale: snippetZoom.value,
             clipSize: viewConfig.snippetDisplayHeight,
             clip: true,
             filled: false, // Only fill if not showing image

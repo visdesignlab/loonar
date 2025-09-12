@@ -1,4 +1,4 @@
-import { type ExemplarTrack } from '@/stores/componentStores/ExemplarViewStore';
+import type { ExemplarTrack } from '@/stores/componentStores/ExemplarViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
 import colors from '@/util/colors';
 

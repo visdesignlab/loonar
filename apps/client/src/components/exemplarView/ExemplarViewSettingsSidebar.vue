@@ -39,8 +39,15 @@ const snippetDisplaySize = computed<number>({
   }
 })
 
+interface SliderMapping {
+    key: string;
+    min: number;
+    max: number;
+    step?: number;
+}
+
 // View Configuration Sliders -------------------
-const sliderMappings = {
+const sliderMappings: Record<string, SliderMapping> = {
     'Horizon Chart Height': { key: 'horizonChartHeight', min: 4, max: 240 },
     'Time Bar Height (Outer)': { key: 'timeBarHeightOuter', min: 2, max: 50 },
     'Snippet Source Size': { key: 'snippetSourceSize', min: 8, max: 320, step: 2 },
@@ -55,25 +62,32 @@ const sliderMappings = {
 };
 
 // Generate slider configs dynamically
-const sliderConfigs = computed(() => [
-    // Special case for snippet display size (controls both height and width)
-    {
-        label: 'Snippet Display Size',
-        model: snippetDisplaySize,
-        min: 8,
-        max: 320
-    },
-    // Generate all other view configuration sliders
-    ...Object.entries(sliderMappings).map(([label, config]) => ({
-        label,
-        model: computed({
-            get: () => exemplarViewStore.viewConfiguration[config.key],
-            set: (val) => exemplarViewStore.viewConfiguration[config.key] = val
-        }),
-        min: config.min,
-        max: config.max,
-        step: config.step
-    }))
+const sliderConfigs = computed((): {
+  label: string;
+  model: any;
+  min: number;
+  max: number;
+  step: number;
+}[] => [
+     // Special case for snippet display size (controls both height and width)
+     {
+         label: 'Snippet Display Size',
+         model: snippetDisplaySize,
+         min: 8,
+         max: 320,
+         step: 1
+     },
+     // Generate all other view configuration sliders
+     ...Object.entries(sliderMappings).map(([label, config]) => ({
+         label,
+         model: computed({
+             get: () => (exemplarViewStore.viewConfiguration as any)[config.key],
+             set: (val) => { (exemplarViewStore.viewConfiguration as any)[config.key] = val; }
+         }),
+         min: config.min,
+         max: config.max,
+         step: config.step ?? 1
+     }))
 ]);
 </script>
 

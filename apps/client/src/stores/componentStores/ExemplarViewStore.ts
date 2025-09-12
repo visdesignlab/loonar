@@ -171,7 +171,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     
     // Selected attributes and aggregations
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
-    const selectedAttribute = ref<string | undefined>(undefined);
+    type AttrOption = string | { label?: string; value?: string };
+    const selectedAttribute = ref<AttrOption | undefined>(undefined);
     const timeCol = ref<string | undefined>(undefined);
     const frameCol = ref<string | undefined>(undefined);
     const idCol = ref<string | undefined>(undefined);
@@ -348,7 +349,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         const aggLabel = selectedAggregation.value.label;
         const aggFunc = aggregateFunctions[aggLabel];
         if (isCustomAggregateFunction(aggFunc) || !selectedAttribute.value) {
-            return currentExperimentMetadata.value?.headerTransforms?.mass;
+            return currentExperimentMetadata.value?.headerTransforms?.mass ?? '';
         }
         // If selectedAttribute.value is an object, return its label or value
         if (
@@ -356,9 +357,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             typeof selectedAttribute.value === 'object' &&
             'label' in selectedAttribute.value
         ) {
-            return selectedAttribute.value.label ?? selectedAttribute.value.value ?? '';
+            const attrObj = selectedAttribute.value as { label?: string; value?: string };
+            return attrObj.label ?? attrObj.value ?? '';
         }
-        return selectedAttribute.value ?? '';
+        // Ensure we only return a string here
+        return typeof selectedAttribute.value === 'string' ? selectedAttribute.value : '';
     }
     // Helper to build the aggregate column name for queries
     function getAggregateAttributeName(): string {
@@ -702,6 +705,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
         // --- New logic for selectedTrackRequest ---
         let selectedRank: number | undefined = undefined;
+        let selectedExemplar: { track_id?: string; aggValue?: number } | undefined = undefined;
 
         if (selectedTrackRequest && selectedTrackRequest.binRange && selectedTrackRequest.conditionGroupKey) {
             // 1. Query all exemplars for this condition group
@@ -725,7 +729,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             const [binMin, binMax] = selectedTrackRequest.binRange;
             // Find all in range, pick the closest to binMin (or bin center)
             const inRange = exemplars.filter(e => e.aggValue >= binMin && e.aggValue < binMax);
-            let selectedExemplar;
+            selectedExemplar = undefined;
             if (inRange.length === 0) {
                 // fallback: pick closest overall
                 let closest = exemplars[0];
@@ -754,7 +758,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
 
             // 3. Compute the rank (1-based) of this exemplar in the sorted group
             const sorted = exemplars.slice().sort((a, b) => a.aggValue - b.aggValue);
-            const idx = sorted.findIndex(e => e.track_id === selectedExemplar.track_id);
+            const idx = selectedExemplar ? sorted.findIndex(e => e.track_id === selectedExemplar!.track_id) : -1;
             const targetRank = idx + 1; // 1-based
 
             // 4. Use this rank directly in the SQL query

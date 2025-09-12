@@ -69,7 +69,7 @@ export function createLoonAxiosInstance(
             file,
             'api.LoonUpload.blob'
         );
-        return fieldValue.value;
+        return fieldValue;
     };
 
     Proto.process = async function (
