@@ -111,6 +111,7 @@ export interface ViewConfiguration {
     histogramFontSize: number;
     histogramTooltipFontSize: number;
     hoveredLineWidth: number;
+    histogramConditionLabelWrapFactor: number;
 }
 
 // Initializations --------------------------------------------------------------------
@@ -225,16 +226,17 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         timeBarHeightOuter: 12,
         timeBarHeightInner: 2,
         betweenExemplarGap: 20,
-        betweenConditionGap: 20,
+        betweenConditionGap: 60,
         horizonHistogramGap: 150,
-        histogramWidth: 250,
+        histogramWidth: 80,
         margin: 50,
         showSnippetImage: true,
         showSnippetOutline: true,
         spaceKeyFramesEvenly: true,
         histogramFontSize: 20,
         histogramTooltipFontSize: 16,
-        hoveredLineWidth: 3, 
+        hoveredLineWidth: 3,
+        histogramConditionLabelWrapFactor: 3,
     });
 
     const exemplarHeight = computed(() => {

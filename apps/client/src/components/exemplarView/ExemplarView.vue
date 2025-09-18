@@ -1510,7 +1510,8 @@ function createSidewaysHistogramLayer(): any[] | null {
         histWidth = scaleForConstantVisualSize(viewConfiguration.value.histogramWidth);
         const fontSize = viewConfiguration.value.histogramFontSize * 0.7;
         const widthBuffer = 5;
-        const maxWidth = histWidth / (fontSize - widthBuffer);
+        const maxWidth = histWidth / (fontSize - widthBuffer) *
+                    (viewConfiguration.value.histogramConditionLabelWrapFactor || 1);
 
         layers.push(
             new TextLayer({
@@ -2165,7 +2166,7 @@ function createCellImageLayer(
   const [x1, y1, , ]= imageSnippetDestination;
   const tickX = x1 + snippetDestWidth / 2;
   const tickY = y1
-  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2;
+  const tickLength = viewConfiguration.value.horizonChartHeight + viewConfiguration.value.snippetHorizonChartGap*2 + viewConfiguration.value.timeBarHeightOuter / 2;
   const tickData = {
     path: [
       [tickX, tickY],
@@ -2605,7 +2606,7 @@ function createExemplarImageKeyFramesLayer(
 
         // Add tick marks ------------------------------------------------
         const [x1, y1] = destination;
-        const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
+        const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2 + viewConfiguration.value.timeBarHeightOuter / 2;
         const beforeAfterMarginY = 4;
 
         // Helper function to create a tick mark
@@ -2708,7 +2709,7 @@ function createExemplarImageKeyFramesLayer(
       // Add tick mark for this snippet.
       const [x1, y1, , ] = destination;
       const tickX = x1 + snippetDestWidth / 2;
-      const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2;
+      const tickLength = viewConfig.horizonChartHeight + viewConfig.snippetHorizonChartGap * 2 + viewConfiguration.value.timeBarHeightOuter / 2;
       tickData.push({
         path: [
           [tickX, y1],
