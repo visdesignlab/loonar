@@ -93,7 +93,7 @@ def createEnvFile(configFileName, envFileName, useDid=False):
     base_url = buildConfig.get('generalSettings.baseUrl')
     environment = buildConfig.get('generalSettings.environment')
 
-    buildConfig.set('USE_HTTP', use_http)
+    buildConfig.set('USE_HTTP', use_http) 
 
     if environment != 'local':
         if use_http:
