@@ -27,8 +27,8 @@ export const useConfigStore = defineStore('configStore', () => {
     }
 
     let wsServerUrl = envWSPort
-        ? `${httpValue}${envServerUrl}:${envWSPort}`
-        : `${httpValue}${envServerUrl}`;
+        ? `${envServerUrl}:${envWSPort}`
+        : `${envServerUrl}`;
 
     if (!wsServerUrl.endsWith('/data')) {
         wsServerUrl += '/data';
