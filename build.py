@@ -111,6 +111,9 @@ def createEnvFile(configFileName, envFileName, useDid=False):
     buildConfig.set('VITE_ENVIRONMENT', environment)
     buildConfig.set('VITE_SERVER_URL', f'{base_url}/data')
 
+    localPort = buildConfig.get("generalSettings.local_port")
+    buildConfig.set("LOCAL_PORT", localPort)
+
     # --------------------------------------------------------------
     # MYSQL SETTINGS -----------------------------------------------
     # --------------------------------------------------------------
