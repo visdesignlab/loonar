@@ -10,8 +10,8 @@ services:
         VITE_USE_HTTP: ${USE_HTTP}
         VITE_ENVIRONMENT: ${VITE_ENVIRONMENT}
         VITE_SERVER_URL: ${VITE_SERVER_URL}
-        DATA_PORT: ${DATA_PORT}
-        WS_PORT: ${WS_PORT}
+        VITE_DATA_PORT: ${VITE_DATA_PORT}
+        VITE_WS_PORT: ${VITE_WS_PORT}
         NGINX_FILE: ${NGINX_FILE}
     ports:
       - "${LOCAL_PORT_1:-80}:${LOCAL_PORT_2:-80}"

@@ -7,8 +7,8 @@ export const useConfigStore = defineStore('configStore', () => {
             : 'production';
     const useHttp = import.meta.env.VITE_USE_HTTP?.toLowerCase() === 'true';
     const envServerUrl = import.meta.env.VITE_SERVER_URL;
-    const envDataPort = import.meta.env.DATA_PORT;
-    const envWSPort = import.meta.env.WS_PORT;
+    const envDataPort = import.meta.env.VITE_DATA_PORT;
+    const envWSPort = import.meta.env.VITE_WS_PORT;
 
     let httpValue = 'http://';
     let wsValue = 'ws://';

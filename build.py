@@ -116,10 +116,10 @@ def createEnvFile(configFileName, envFileName, useDid=False):
     localPort2 = buildConfig.get("generalSettings.local_port_2")
     buildConfig.set("LOCAL_PORT_2", localPort2)
 
-    data_port = buildConfig.get("generalSettings.data_port")
-    buildConfig.set("DATA_PORT", data_port)
-    ws_port = buildConfig.get("generalSettings.ws_port")
-    buildConfig.set("WS_PORT", ws_port)
+    vite_data_port = buildConfig.get("generalSettings.vite_data_port")
+    buildConfig.set("VITE_DATA_PORT", vite_data_port)
+    ws_port = buildConfig.get("generalSettings.vite_ws_port")
+    buildConfig.set("VITE_WS_PORT", ws_port)
 
     # --------------------------------------------------------------
     # MYSQL SETTINGS -----------------------------------------------
