@@ -7,6 +7,8 @@ export const useConfigStore = defineStore('configStore', () => {
             : 'production';
     const useHttp = import.meta.env.VITE_USE_HTTP?.toLowerCase() === 'true';
     const envServerUrl = import.meta.env.VITE_SERVER_URL;
+    const envDataPort = import.meta.env.DATA_PORT;
+    const envWSPort = import.meta.env.WS_PORT;
 
     let httpValue = 'http://';
     let wsValue = 'ws://';
@@ -16,9 +18,16 @@ export const useConfigStore = defineStore('configStore', () => {
     }
 
     // Used to retrieve static files hosted by data store (local or MinIO)
-    const serverUrl = `${httpValue}${envServerUrl}`;
+    const serverUrl = envDataPort
+        ? `${httpValue}${envServerUrl}:${envDataPort}`
+        : `${httpValue}${envServerUrl}`;
+
+    const wsServerUrl = envWSPort
+        ? `${httpValue}${envServerUrl}:${envWSPort}`
+        : `${httpValue}${envServerUrl}`;
+
     // Location of websocket for DuckDb as specified in NGINX
-    const duckDbWebSocketUrl = `${wsValue}${envServerUrl.replace(
+    const duckDbWebSocketUrl = `${wsValue}${wsServerUrl.replace(
         '/data',
         '/ws/'
     )}`;
