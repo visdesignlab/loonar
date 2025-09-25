@@ -45,8 +45,6 @@ export const useConfigStore = defineStore('configStore', () => {
 
     // let duckDbDataLocation =
     //     environment === 'local' ? 'data:9000' : 'minio:9000/data';
-    const duckDbDataLocation = `${serverUrl}/data`;
-    const duckDbUrl = `${httpValue}${duckDbDataLocation}`;
     const entryPointFilename = '/aa_index.json';
 
     function getFileUrl(path: string): string {
@@ -58,7 +56,7 @@ export const useConfigStore = defineStore('configStore', () => {
     function getDuckDbFileUrl(path: string): string {
         // Trims any leading slashes from path
         const trimmedPath = path.replace(/^\/+/, '');
-        return `${duckDbUrl}/${trimmedPath}`;
+        return `${serverUrl}/${trimmedPath}`;
     }
 
     return {
@@ -68,7 +66,6 @@ export const useConfigStore = defineStore('configStore', () => {
         serverUrl,
         duckDbWebSocketUrl,
         apiUrl,
-        duckDbUrl,
         entryPointFilename,
         getFileUrl,
         getDuckDbFileUrl,
