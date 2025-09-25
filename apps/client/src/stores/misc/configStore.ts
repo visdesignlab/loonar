@@ -45,7 +45,7 @@ export const useConfigStore = defineStore('configStore', () => {
 
     // let duckDbDataLocation =
     //     environment === 'local' ? 'data:9000' : 'minio:9000/data';
-    const duckDbDataLocation = 'client/data';
+    const duckDbDataLocation = `${serverUrl}/data`;
     const duckDbUrl = `${httpValue}${duckDbDataLocation}`;
     const entryPointFilename = '/aa_index.json';
 
