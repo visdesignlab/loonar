@@ -1473,7 +1473,7 @@ function createSidewaysHistogramLayer(): any[] | null {
         const horizonHistogramGap = viewConfiguration.value.horizonHistogramGap;
         const conditionGroupTextData: HistogramTextData[] = [
             {
-                coordinates: [histogramBaseLineX + conditionFontSize / 2, conditionGroupMiddleY],
+                coordinates: [histogramBaseLineX + 20, conditionGroupMiddleY],
                 conditionOne,
                 conditionTwo,
             },
