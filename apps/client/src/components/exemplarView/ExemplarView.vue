@@ -2423,7 +2423,7 @@ function computeDestination(cell: Cell, exemplar: ExemplarTrack, destY: number):
 
 // TODO: this is reusing the same cache across multiple layers which technically could have a clash if there is an identical snippet across different layers.
 // Updated createExemplarImageKeyFramesLayer() with enhanced debugging:
-let hoveredCoordinate = <[number, number] | null>null;
+let hoveredCoordinate = null as [number, number] | null;
 function createExemplarImageKeyFramesLayer(
   pixelSource: PixelSource<any>,
   exemplar: ExemplarTrack
@@ -3053,7 +3053,10 @@ const fillColor = (exemplar: ExemplarTrack | undefined) => {
     const hexColor = conditionSelectorStore.conditionColorMap[conditionKeyValue];
     
     if (!hexColor) {
-        console.error(`No color found for key: "${conditionKey}" in colorMap:`, conditionSelectorStore.conditionColorMap);
+        console.error(
+            `No color found for key: "${conditionKey.value}" in colorMap:`,
+            conditionSelectorStore.conditionColorMap
+        );
         return [0, 0, 0];
     }
     else return hexToRgb(hexColor);
