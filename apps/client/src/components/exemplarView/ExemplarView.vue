@@ -307,7 +307,6 @@ function handleScroll(delta: number) {
     safeRenderDeckGL();
 }
 
-
 // Fully re-load data & initialize Deck.gl when experiment data is loaded, selected attribute / aggregation, and filters.
 watch(
     [
@@ -3393,10 +3392,27 @@ function getSegmentationBounds(
     segmentationPolygon: Feature,
     sourceBBox: BBox
 ): { topCrop: number; bottomCrop: number } | null {
-    if (!segmentationPolygon?.geometry?.coordinates) return null;
+    // Type guard: only proceed if geometry is Polygon or MultiPolygon
+    const geometry = segmentationPolygon?.geometry;
+    if (
+        !geometry ||
+        !(geometry.type === 'Polygon' || geometry.type === 'MultiPolygon')
+    ) {
+        return null;
+    }
 
     // Get all Y coordinates from the segmentation polygon
-    const coordinates = segmentationPolygon.geometry.coordinates[0]; // First ring of polygon
+    // For Polygon, coordinates is number[][][]
+    // For MultiPolygon, coordinates is number[][][][]
+    let coordinates: number[][];
+    if (geometry.type === 'Polygon') {
+        coordinates = geometry.coordinates[0];
+    } else if (geometry.type === 'MultiPolygon') {
+        // Use the first polygon's first ring
+        coordinates = geometry.coordinates[0][0];
+    } else {
+        return null;
+    }
     const yCoordinates = coordinates.map((coord: number[]) => coord[1]);
 
     // Find min and max Y within the segmentation
@@ -3407,10 +3423,37 @@ function getSegmentationBounds(
     const [sourceLeft, sourceTop, sourceRight, sourceBottom] = sourceBBox;
     const sourceHeight = sourceTop - sourceBottom;
 
-    // Calculate crop ratios (0 = no crop, 1 = full crop)
-    // Top crop: how much to crop from the top
+    // Calculate the natural segmentation height
+    const naturalSegmentationHeight = segmentationMaxY - segmentationMinY;
+
+    // Get max allowed height from view configuration
+    const maxAllowedHeight = viewConfiguration.value.snippetDisplayHeight;
+
+    // If natural segmentation height exceeds max, we need to crop further
+    if (naturalSegmentationHeight > maxAllowedHeight) {
+        // Calculate how much we need to crop to fit within max height
+        const excessHeight = naturalSegmentationHeight - maxAllowedHeight;
+        const halfExcess = excessHeight / 2;
+
+        // Apply additional cropping equally from top and bottom
+        const adjustedSegmentationMinY = segmentationMinY + halfExcess;
+        const adjustedSegmentationMaxY = segmentationMaxY - halfExcess;
+
+        // Calculate crop ratios based on adjusted bounds
+        const topCrop = Math.max(
+            0,
+            (sourceTop - adjustedSegmentationMaxY) / sourceHeight
+        );
+        const bottomCrop = Math.max(
+            0,
+            (adjustedSegmentationMinY - sourceBottom) / sourceHeight
+        );
+
+        return { topCrop, bottomCrop };
+    }
+
+    // Original logic for cases where segmentation fits within max height
     const topCrop = Math.max(0, (sourceTop - segmentationMaxY) / sourceHeight);
-    // Bottom crop: how much to crop from the bottom
     const bottomCrop = Math.max(
         0,
         (segmentationMinY - sourceBottom) / sourceHeight
@@ -3753,7 +3796,7 @@ const isExemplarViewReady = computed(() => {
             id="exemplar-deckgl-canvas"
             ref="deckGlContainer"
         ></canvas>
-         <!-- Histogram Tooltip -->
+        <!-- Histogram Tooltip -->
         <div
             v-if="histogramTooltip?.visible"
             class="histogram-tooltip"
