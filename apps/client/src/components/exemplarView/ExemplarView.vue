@@ -2245,14 +2245,15 @@ function createCellImageLayer(
                 source[3] + sourceHeight * bottomCrop, // crop from bottom
             ];
 
-            // Apply proportional cropping to destination
+            // Apply cropping to destination - BOTTOM ALIGNED
             const destHeight =
-                imageSnippetDestination[1] - imageSnippetDestination[3]; // top - bottom
+                imageSnippetDestination[1] - imageSnippetDestination[3];
+            const croppedDestHeight = destHeight * (1 - topCrop - bottomCrop);
             croppedDestination = [
                 imageSnippetDestination[0], // left unchanged
-                imageSnippetDestination[1] - destHeight * topCrop, // crop from top
+                imageSnippetDestination[1], // top unchanged (bottom-aligned)
                 imageSnippetDestination[2], // right unchanged
-                imageSnippetDestination[3] + destHeight * bottomCrop, // crop from bottom
+                imageSnippetDestination[1] - croppedDestHeight, // bottom = top - cropped height
             ];
         }
     }
@@ -2301,23 +2302,44 @@ function createCellImageLayer(
                 source[3] + sourceHeight * bottomCrop, // crop from bottom
             ];
 
-            // Apply proportional cropping to destination
+            // Apply cropping to destination - BOTTOM ALIGNED
             const destHeight =
-                imageSnippetDestination[1] - imageSnippetDestination[3]; // top - bottom
+                imageSnippetDestination[1] - imageSnippetDestination[3];
+            const croppedDestHeight = destHeight * (1 - topCrop - bottomCrop);
             croppedDestination = [
                 imageSnippetDestination[0], // left unchanged
-                imageSnippetDestination[1] - destHeight * topCrop, // crop from top
+                imageSnippetDestination[1], // top unchanged (bottom-aligned)
                 imageSnippetDestination[2], // right unchanged
-                imageSnippetDestination[3] + destHeight * bottomCrop, // crop from bottom
+                imageSnippetDestination[1] - croppedDestHeight, // bottom = top - cropped height
             ];
         }
     }
 
-    // Calculate the destination coordinates for the segmentation.
-    const [x, y] = [imageSnippetDestination[0], imageSnippetDestination[1]];
-
-    // Push the current cell's segmentation data to the segmentationData array.
     const imageSegmentationData = [];
+
+    // Calculate adjusted offset for segmentation (bottom-aligned)
+    const [x, y] = [croppedDestination[0], croppedDestination[1]]; // x = left, y = top
+    const croppedWidth = croppedDestination[2] - croppedDestination[0];
+    const croppedHeight = croppedDestination[1] - croppedDestination[3]; // top - bottom
+
+    const adjustedOffset = [
+        x + croppedWidth / 2, // center horizontally
+        y - croppedHeight / 2, // center vertically from top
+    ];
+
+    // Calculate destHeight and crop bounds for offset adjustment
+    let topCrop = 0;
+    let bottomCrop = 0;
+    if (cellSegmentationPolygon) {
+        const cropBounds = getSegmentationBounds(
+            cellSegmentationPolygon,
+            source
+        );
+        if (cropBounds) {
+            topCrop = cropBounds.topCrop;
+            bottomCrop = cropBounds.bottomCrop;
+        }
+    }
 
     imageSegmentationData.push({
         // @ts-ignore coordinates does exist on geometry
@@ -2325,7 +2347,7 @@ function createCellImageLayer(
         hovered: cell.isHovered,
         selected: cell.isSelected,
         center: [cell.x, cell.y],
-        offset: [x + snippetDestWidth / 2, y - snippetDestHeight / 2],
+        offset: adjustedOffset,
     });
 
     const combinedSnippetSegmentationLayer: combinedSnippetSegmentationLayer = {
@@ -2393,11 +2415,11 @@ function createCellImageLayer(
         data: [
             {
                 polygon: [
-                    [imageSnippetDestination[0], imageSnippetDestination[1]],
-                    [imageSnippetDestination[2], imageSnippetDestination[1]],
-                    [imageSnippetDestination[2], imageSnippetDestination[3]],
-                    [imageSnippetDestination[0], imageSnippetDestination[3]],
-                    [imageSnippetDestination[0], imageSnippetDestination[1]],
+                    [croppedDestination[0], croppedDestination[1]], // ✅ Using cropped
+                    [croppedDestination[2], croppedDestination[1]], // ✅ Using cropped
+                    [croppedDestination[2], croppedDestination[3]], // ✅ Using cropped
+                    [croppedDestination[0], croppedDestination[3]], // ✅ Using cropped
+                    [croppedDestination[0], croppedDestination[1]], // ✅ Using cropped
                 ],
             },
         ],
@@ -2640,8 +2662,14 @@ function computeDestination(
     const snippetDestHeight = viewConfig.snippetDisplayHeight;
     const x1 = cx - snippetDestWidth / 2;
     const x2 = x1 + snippetDestWidth;
-    const y1 = destY;
-    const y2 = y1 - snippetDestHeight;
+
+    // Add padding to top and bottom
+    const padding = 4; // pixels of padding
+
+    // Bottom-align: y1 (top) is fixed at destY + padding, y2 (bottom) is destY - height - padding
+    const y1 = destY + padding; // top edge with padding
+    const y2 = destY - snippetDestHeight - padding; // bottom edge with padding
+
     return [x1, y1, x2, y2];
 }
 
@@ -2714,18 +2742,12 @@ function createExemplarImageKeyFramesLayer(
             frame.toString()
         );
         if (!segmentationPolygon) return;
-        const [destX, destY] = [dest[0], dest[1]];
 
         const cellSelected = selectedCellsInfo.value.some(
             ([, selectedCell]) =>
                 selectedCell.frame === cell.frame &&
                 selectedCell.time === cell.time
         );
-
-        // Calculate destHeight and crop bounds
-        const destHeight = dest[1] - dest[3]; // top - bottom
-        let topCrop = 0;
-        let bottomCrop = 0;
 
         // Get crop bounds if segmentation exists
         const source = getBBoxAroundPoint(
@@ -2735,18 +2757,22 @@ function createExemplarImageKeyFramesLayer(
             viewConfig.snippetSourceSize
         );
 
+        let topCrop = 0;
+        let bottomCrop = 0;
         const cropBounds = getSegmentationBounds(segmentationPolygon, source);
         if (cropBounds) {
             topCrop = cropBounds.topCrop;
             bottomCrop = cropBounds.bottomCrop;
         }
 
+        // Use the cropped destination dimensions directly (dest is already cropped when passed from getCroppedDestination)
+        const croppedDestWidth = dest[2] - dest[0];
+        const croppedDestHeight = dest[1] - dest[3];
+
+        // Bottom-aligned offset calculation using the already-cropped destination
         const adjustedOffset = [
-            destX + snippetDestWidth / 2,
-            destY -
-                snippetDestHeight / 2 +
-                (destHeight * topCrop) / 2 -
-                (destHeight * bottomCrop) / 2,
+            dest[0] + croppedDestWidth / 2, // center horizontally on cropped destination
+            dest[1] - croppedDestHeight / 2, // center vertically on cropped destination
         ];
 
         exemplarSegmentationData.push({
@@ -2822,9 +2848,9 @@ function createExemplarImageKeyFramesLayer(
                     destination;
                 prevCellDisplayDest = [
                     hoveredX1 - snippetDestWidth - margin, // left of hovered cell
-                    hoveredY1,
+                    hoveredY1, // same top level as hovered
                     hoveredX1 - margin,
-                    hoveredY2,
+                    hoveredY2, // same bottom as hovered
                 ];
             }
 
@@ -2833,9 +2859,9 @@ function createExemplarImageKeyFramesLayer(
                     destination;
                 nextCellDisplayDest = [
                     hoveredX2 + margin, // right of hovered cell
-                    hoveredY1,
+                    hoveredY1, // same top level as hovered
                     hoveredX2 + margin + snippetDestWidth,
-                    hoveredY2,
+                    hoveredY2, // same bottom as hovered
                 ];
             }
 
@@ -2845,73 +2871,134 @@ function createExemplarImageKeyFramesLayer(
                 [nextCellDisplayDest, nextCell || cell],
                 [destination, cell],
             ];
+            const createCroppedSelection = (
+                cell: Cell,
+                displayDestination: BBox
+            ) => {
+                const baseSource = getBBoxAroundPoint(
+                    cell.x,
+                    cell.y,
+                    viewConfig.snippetSourceSize,
+                    viewConfig.snippetSourceSize
+                );
 
-            // Push selections for previous, current and next locations using display positions
+                const segmentationPolygon = getCellSegmentationPolygon(
+                    exemplar.locationId,
+                    exemplar.trackId.toString(),
+                    cell.frame.toString()
+                );
+
+                let croppedSource = baseSource;
+                let croppedDestination = displayDestination;
+
+                if (segmentationPolygon) {
+                    const cropBounds = getSegmentationBounds(
+                        segmentationPolygon,
+                        baseSource
+                    );
+                    if (cropBounds) {
+                        const { topCrop, bottomCrop } = cropBounds;
+
+                        // Crop source
+                        const sourceHeight = baseSource[1] - baseSource[3];
+                        croppedSource = [
+                            baseSource[0],
+                            baseSource[1] - sourceHeight * topCrop,
+                            baseSource[2],
+                            baseSource[3] + sourceHeight * bottomCrop,
+                        ];
+
+                        // Crop destination (bottom-aligned)
+                        const destHeight =
+                            displayDestination[1] - displayDestination[3];
+                        const croppedDestHeight =
+                            destHeight * (1 - topCrop - bottomCrop);
+                        croppedDestination = [
+                            displayDestination[0], // left unchanged
+                            displayDestination[1], // top unchanged (bottom-aligned)
+                            displayDestination[2], // right unchanged
+                            displayDestination[1] - croppedDestHeight, // bottom = top - cropped height
+                        ];
+                    }
+                }
+
+                return {
+                    c: 0,
+                    t: cell.frame - 1,
+                    z: 0,
+                    snippets: [
+                        {
+                            source: croppedSource,
+                            destination: croppedDestination,
+                        },
+                    ],
+                };
+            };
+
             const selections_to_add = [];
 
             if (prevCell) {
-                selections_to_add.push({
-                    c: 0,
-                    t: prevCell.frame - 1,
-                    z: 0,
-                    snippets: [
-                        {
-                            source: getBBoxAroundPoint(
-                                prevCell.x,
-                                prevCell.y,
-                                viewConfig.snippetSourceSize,
-                                viewConfig.snippetSourceSize
-                            ),
-                            destination: prevCellDisplayDest, // use display position
-                        },
-                    ],
-                });
+                selections_to_add.push(
+                    createCroppedSelection(prevCell, prevCellDisplayDest)
+                );
             }
 
-            selections_to_add.push({
-                c: 0,
-                t: cell.frame - 1,
-                z: 0,
-                snippets: [
-                    {
-                        source: getBBoxAroundPoint(
-                            cell.x,
-                            cell.y,
-                            viewConfig.snippetSourceSize,
-                            viewConfig.snippetSourceSize
-                        ),
-                        destination: destination,
-                    },
-                ],
-            });
+            selections_to_add.push(createCroppedSelection(cell, destination));
 
             if (nextCell) {
-                selections_to_add.push({
-                    c: 0,
-                    t: nextCell.frame - 1,
-                    z: 0,
-                    snippets: [
-                        {
-                            source: getBBoxAroundPoint(
-                                nextCell.x,
-                                nextCell.y,
-                                viewConfig.snippetSourceSize,
-                                viewConfig.snippetSourceSize
-                            ),
-                            destination: nextCellDisplayDest, // use display position
-                        },
-                    ],
-                });
+                selections_to_add.push(
+                    createCroppedSelection(nextCell, nextCellDisplayDest)
+                );
             }
 
             selections.push(...selections_to_add);
 
-            // Add segmentation using display positions
-            addSegmentation(cell.frame, destination, true, cell);
+            // Add segmentation using cropped display positions
+            const getCroppedDestination = (cell: Cell, originalDest: BBox) => {
+                const segmentationPolygon = getCellSegmentationPolygon(
+                    exemplar.locationId,
+                    exemplar.trackId.toString(),
+                    cell.frame.toString()
+                );
+
+                if (segmentationPolygon) {
+                    const baseSource = getBBoxAroundPoint(
+                        cell.x,
+                        cell.y,
+                        viewConfig.snippetSourceSize,
+                        viewConfig.snippetSourceSize
+                    );
+                    const cropBounds = getSegmentationBounds(
+                        segmentationPolygon,
+                        baseSource
+                    );
+                    if (cropBounds) {
+                        const { topCrop, bottomCrop } = cropBounds;
+                        const destHeight = originalDest[1] - originalDest[3];
+                        const croppedDestHeight =
+                            destHeight * (1 - topCrop - bottomCrop);
+                        return [
+                            originalDest[0], // left unchanged
+                            originalDest[1], // top unchanged (bottom-aligned)
+                            originalDest[2], // right unchanged
+                            originalDest[1] - croppedDestHeight, // bottom = top - cropped height
+                        ] as BBox;
+                    }
+                }
+                return originalDest;
+            };
+
+            // Add segmentation using cropped display positions
+            addSegmentation(
+                cell.frame,
+                getCroppedDestination(cell, destination),
+                true,
+                cell
+            );
             if (prevCell) {
                 addSegmentation(
                     prevCell.frame,
-                    prevCellDisplayDest,
+                    getCroppedDestination(prevCell, prevCellDisplayDest),
                     true,
                     prevCell
                 );
@@ -2919,7 +3006,7 @@ function createExemplarImageKeyFramesLayer(
             if (nextCell) {
                 addSegmentation(
                     nextCell.frame,
-                    nextCellDisplayDest,
+                    getCroppedDestination(nextCell, nextCellDisplayDest),
                     true,
                     nextCell
                 );
@@ -2939,9 +3026,11 @@ function createExemplarImageKeyFramesLayer(
                 timelineDest: [number, number, number, number],
                 isMain: boolean = false
             ) => {
-                const [tickDestX1] = timelineDest;
+                const [tickDestX1, tickDestY1, ,] = timelineDest; // Get top Y
                 const tickX = tickDestX1 + snippetDestWidth / 2;
-                const tickY = isMain ? y1 : y1 + beforeAfterMarginY;
+                const tickY = isMain
+                    ? tickDestY1
+                    : tickDestY1 - beforeAfterMarginY; // Start from top
 
                 return {
                     path: [
@@ -3055,6 +3144,7 @@ function createExemplarImageKeyFramesLayer(
             : []),
     ];
 
+    // In Loop 2: Process non-hovered keyframes
     for (const { index, nearestDistance } of keyFrames) {
         const cell = exemplar.data[index];
         const nearestDistanceWidth = convertDurationToWidth(nearestDistance);
@@ -3066,6 +3156,41 @@ function createExemplarImageKeyFramesLayer(
             rectsOverlap(destination, bbox)
         );
         if (!cellCollisionDetected) {
+            // Calculate cropped destination for segmentation positioning
+            const getCroppedDestinationForKeyframe = (originalDest: BBox) => {
+                const segmentationPolygon = getCellSegmentationPolygon(
+                    exemplar.locationId,
+                    exemplar.trackId.toString(),
+                    cell.frame.toString()
+                );
+
+                if (segmentationPolygon) {
+                    const baseSource = getBBoxAroundPoint(
+                        cell.x,
+                        cell.y,
+                        viewConfig.snippetSourceSize,
+                        viewConfig.snippetSourceSize
+                    );
+                    const cropBounds = getSegmentationBounds(
+                        segmentationPolygon,
+                        baseSource
+                    );
+                    if (cropBounds) {
+                        const { topCrop, bottomCrop } = cropBounds;
+                        const destHeight = originalDest[1] - originalDest[3];
+                        const croppedDestHeight =
+                            destHeight * (1 - topCrop - bottomCrop);
+                        return [
+                            originalDest[0], // left unchanged
+                            originalDest[1], // top unchanged (bottom-aligned)
+                            originalDest[2], // right unchanged
+                            originalDest[1] - croppedDestHeight, // bottom = top - cropped height
+                        ] as BBox;
+                    }
+                }
+                return originalDest;
+            };
+
             // Normal keyframe selection and segmentation.
             selections.push({
                 c: 0,
@@ -3131,13 +3256,13 @@ function createExemplarImageKeyFramesLayer(
                                     const { topCrop, bottomCrop } = cropBounds;
                                     const destHeight =
                                         baseDestination[1] - baseDestination[3];
+                                    const croppedDestHeight =
+                                        destHeight * (1 - topCrop - bottomCrop);
                                     return [
-                                        baseDestination[0],
-                                        baseDestination[1] -
-                                            destHeight * topCrop,
-                                        baseDestination[2],
-                                        baseDestination[3] +
-                                            destHeight * bottomCrop,
+                                        baseDestination[0], // left unchanged
+                                        baseDestination[1], // top unchanged (bottom-aligned)
+                                        baseDestination[2], // right unchanged
+                                        baseDestination[1] - croppedDestHeight, // bottom = top - cropped height
                                     ];
                                 }
                             }
@@ -3146,10 +3271,17 @@ function createExemplarImageKeyFramesLayer(
                     },
                 ],
             });
-            addSegmentation(cell.frame, destination, false, cell);
 
-            // Add tick mark for this snippet.
-            const [x1, y1, ,] = destination;
+            // Use cropped destination for segmentation positioning
+            addSegmentation(
+                cell.frame,
+                getCroppedDestinationForKeyframe(destination),
+                false,
+                cell
+            );
+
+            // Add tick mark for this snippet - use top of destination
+            const [x1, y1, ,] = destination; // y1 is the top
             const tickX = x1 + snippetDestWidth / 2;
             const tickLength =
                 viewConfig.horizonChartHeight +
@@ -3157,7 +3289,7 @@ function createExemplarImageKeyFramesLayer(
                 viewConfiguration.value.timeBarHeightOuter / 2;
             tickData.push({
                 path: [
-                    [tickX, y1],
+                    [tickX, y1], // Start from top of destination
                     [tickX, y1 + tickLength],
                 ],
                 hovered: false,
