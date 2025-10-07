@@ -174,6 +174,14 @@ const deckGlContainer = ref<HTMLCanvasElement | null>(null);
 const { width: deckGlWidth, height: deckGlHeight } =
     useElementSize(deckGlContainer);
 
+const histogramTooltip = ref<{
+    visible: boolean;
+    x: number;
+    y: number;
+    content: string;
+    conditionGroupKey: ExemplarTrack;
+} | null>(null);
+
 // View state (sizing, scrolling, etc.) -------------------------------------------------------
 
 watch([deckGlHeight, deckGlWidth], () => {
@@ -298,6 +306,7 @@ function handleScroll(delta: number) {
     });
     safeRenderDeckGL();
 }
+
 
 // Fully re-load data & initialize Deck.gl when experiment data is loaded, selected attribute / aggregation, and filters.
 watch(
@@ -510,6 +519,8 @@ onBeforeUnmount(() => {
     }
     // Reset exemplarDataInitialized on unmount
     exemplarDataInitialized.value = false;
+    // Clear tooltip
+    histogramTooltip.value = null;
 });
 
 // Add a new function to handle deselection when clicking empty space
@@ -1651,13 +1662,18 @@ function handleHistogramHover(
     histogramData: any[]
 ) {
     // When the pointer leaves the polygon (info.index === -1) or no coordinate,
-    // clear the temporary pin.
+    // clear the temporary pin and tooltip.
     if (!info.coordinate || info.index === -1) {
         hoveredPin.value = null;
-        hoveredPinLabel.value = null;
+        histogramTooltip.value = null;
         updatePinsLayer(conditionGroupKey);
         return;
     }
+
+    // Get mouse coordinates from the original event
+    const mouseX = event?.srcEvent?.clientX || 0;
+    const mouseY = event?.srcEvent?.clientY || 0;
+
     // Otherwise, compute the pin position based on the mouse coordinate.
     const hoveredY = info.coordinate[1];
     let { horizonHistogramGap: hGap, histogramWidth: histWidth } =
@@ -1681,7 +1697,7 @@ function handleHistogramHover(
     );
 
     if (binIndex === -1) {
-        hoveredPinLabel.value = null;
+        histogramTooltip.value = null;
         updatePinsLayer(conditionGroupKey);
         return;
     }
@@ -1694,10 +1710,13 @@ function handleHistogramHover(
         (Math.trunc(x * 1000) / 1000).toFixed(2)
     );
 
-    // Set the temporary label: positioned 10 pixels left of the pin circle.
-    hoveredPinLabel.value = {
-        text: `Cell Count: ${count}\n --- \n${histogramYAxisLabel.value} between:\n[${minStr}, ${maxStr}]`,
-        position: [-(x0 + fixedLineLength), hoveredY + 10],
+    // Set the tooltip content and position
+    histogramTooltip.value = {
+        visible: true,
+        x: mouseX + 15, // Offset from mouse cursor
+        y: mouseY - 10,
+        content: `Cell Count: ${count}\n --- \n${histogramYAxisLabel.value} between:\n[${minStr}, ${maxStr}]`,
+        conditionGroupKey,
     };
 
     updatePinsLayer(conditionGroupKey);
@@ -1784,39 +1803,6 @@ function updatePinsLayer(conditionGroupKey: ExemplarTrack) {
     }
 
     const pinLayers = createPinLayers(allPins, conditionGroupKey);
-
-    // If a hoveredPinLabel exists, add a TextLayer.
-    if (hoveredPinLabel.value) {
-        let { histogramWidth: histWidth, histogramTooltipFontSize: fontSize } =
-            viewConfiguration.value;
-        histWidth = histWidth;
-        const maxWidth = (histWidth / fontSize) * 0.7;
-        pinLayers.push(
-            new TextLayer({
-                id: `histogram-tooltip-text-${uniqueExemplarKey(
-                    conditionGroupKey
-                )}`,
-                data: [hoveredPinLabel.value],
-                getPosition: (d: {
-                    text: string;
-                    position: [number, number];
-                }) => d.position,
-                getText: (d: { text: string }) => d.text,
-                sizeScale: 1,
-                sizeUnits: 'pixels',
-                sizeMaxPixels: fontSize,
-                getColor: (d: any) => [0, 0, 0],
-                getTextAnchor: (d: any) => 'start',
-                getAlignmentBaseline: (d: any) => 'top',
-                background: true,
-                getBackgroundColor: [255, 255, 255, 160],
-                billboard: true,
-                wordBreak: 'break-word',
-                maxWidth,
-                getSize: () => fontSize,
-            })
-        );
-    }
 
     deckgl.value.setProps({
         layers: [...deckGLLayers, ...pinLayers],
@@ -3767,6 +3753,19 @@ const isExemplarViewReady = computed(() => {
             id="exemplar-deckgl-canvas"
             ref="deckGlContainer"
         ></canvas>
+         <!-- Histogram Tooltip -->
+        <div
+            v-if="histogramTooltip?.visible"
+            class="histogram-tooltip"
+            :style="{
+                left: `${histogramTooltip.x}px`,
+                top: `${histogramTooltip.y}px`,
+            }"
+        >
+            <div class="tooltip-content">
+                {{ histogramTooltip.content }}
+            </div>
+        </div>
     </div>
 </template>
 
@@ -3783,5 +3782,25 @@ const isExemplarViewReady = computed(() => {
     justify-content: center;
     align-items: center;
     gap: 1em;
+}
+
+.histogram-tooltip {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #333;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    max-width: 200px;
+    white-space: pre-line;
+    font-family: monospace;
+}
+
+.tooltip-content {
+    line-height: 1.4;
 }
 </style>
