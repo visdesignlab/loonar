@@ -34,7 +34,10 @@ const imagesCount = computed(() =>
 </script>
 
 <template>
-    <div class="basic-info-counts q-gutter-sm row items-center">
+    <div
+        class="basic-info-counts q-gutter-sm row items-center"
+        style="margin-right: 30px"
+    >
         <span class="text-caption"
             >Cells: <strong>{{ cellsCount }}</strong></span
         >
@@ -47,6 +50,7 @@ const imagesCount = computed(() =>
         <span class="text-caption"
             >Images: <strong>{{ imagesCount }}</strong></span
         >
+        <span class="divider"> | </span>
     </div>
 </template>
 
@@ -60,5 +64,12 @@ const imagesCount = computed(() =>
     strong {
         margin-left: 4px;
     }
+}
+
+/* lighter divider that works in dark & light themes */
+.divider {
+    opacity: 0.3;
+    margin-left: 6px;
+    margin-right: 6px;
 }
 </style>
