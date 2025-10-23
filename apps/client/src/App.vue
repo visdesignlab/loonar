@@ -7,6 +7,7 @@ import { useProvenanceStore } from '@/stores/misc/provenanceStore';
 import { onKeyStroke } from '@vueuse/core';
 import { router } from '@/router';
 import LBtn from './components/custom/LBtn.vue';
+import BasicInfoCounts from '@/components/BasicInfoCounts.vue';
 
 const $q = useQuasar();
 const provenanceStore = useProvenanceStore();
@@ -60,6 +61,7 @@ onBeforeMount(() => {
         >
             <q-toolbar>
                 <q-toolbar-title>Loon</q-toolbar-title>
+                <BasicInfoCounts />
                 <l-btn
                     @click="router.push('/')"
                     type="basic"
