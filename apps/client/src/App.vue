@@ -60,8 +60,10 @@ onBeforeMount(() => {
             :class="globalSettings.darkMode ? 'bg-grey-9' : 'bg-white'"
         >
             <q-toolbar>
-                <q-toolbar-title>Loon</q-toolbar-title>
-                <BasicInfoCounts />
+                <q-toolbar-title class="row items-center no-wrap">
+                    <span>Loon</span>
+                    <BasicInfoCounts class="q-ml-sm" />
+                </q-toolbar-title>
                 <l-btn
                     @click="router.push('/')"
                     type="basic"
