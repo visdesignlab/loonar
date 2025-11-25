@@ -28,7 +28,12 @@ export interface ExperimentMetadata {
     // can precompute min/max for each column across experiments
     locationMetadataList: LocationMetadata[];
     compositeTabularDataFilename?: string;
+    // how the segmentation files are saved
+    // split by cell (default), split by frame
+    segmentationGrouping?: SegmentationGroupingOptions;
 }
+
+export type SegmentationGroupingOptions = 'CellFiles' | 'FrameFiles';
 
 export type Tags = Record<string, string>;
 
@@ -80,6 +85,14 @@ export const useDatasetSelectionStore = defineStore(
             }
             return null;
         });
+
+        const segmentationGrouping = computed<SegmentationGroupingOptions>(() => {
+            // TODO: calc based on currentExperimentMetadata
+            if (!currentExperimentMetadata.value) {
+                return 'CellFiles'
+            }
+            return currentExperimentMetadata.value.segmentationGrouping ?? 'CellFiles';
+        })
 
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
@@ -406,6 +419,7 @@ export const useDatasetSelectionStore = defineStore(
             compTableName,
             aggTableName,
             shownSelectedLocationIds,
+            segmentationGrouping,
         };
     }
 );
