@@ -12,6 +12,7 @@ import CellTrackView from './components/CellTrackView.vue';
 import LooneageViewGL from './components/LooneageViewGL.vue';
 import LooneageViewSettingsSidebar from './components/LooneageViewSettingsSidebar.vue';
 import LooneageViewSettingsToolbar from './components/LooneageViewSettingsToolbar.vue';
+import BasicInfo from './components/BasicInfo.vue';
 import SimpleTable from './components/SimpleTable.vue';
 import ImageViewer from './components/ImageViewer.vue';
 import ImageViewerSettingsSidebar from './components/ImageViewerSettingsSidebar.vue';
@@ -90,6 +91,7 @@ createApp(App)
     .component('LooneageViewGL', LooneageViewGL)
     .component('LooneageViewSettingsSidebar', LooneageViewSettingsSidebar)
     .component('LooneageViewSettingsToolbar', LooneageViewSettingsToolbar)
+    .component('BasicInfo', BasicInfo)
     .component('SimpleTable', SimpleTable)
     .component('NoDataSplash', NoDataSplash)
     .component('StubView', StubView)

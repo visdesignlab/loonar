@@ -363,6 +363,12 @@ export const useGridstackLayoutStore = defineStore(
                 noPadding: true,
             },
             {
+                component: 'BasicInfo',
+                displayName: 'Overview',
+                id: 'BasicInfo',
+                icon: 'info',
+            },
+            {
                 component: 'TrrackVisWrapper',
                 displayName: 'History',
                 id: 'TrrackVisWrapper',
