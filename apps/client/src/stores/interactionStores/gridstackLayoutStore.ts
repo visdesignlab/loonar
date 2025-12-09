@@ -262,115 +262,127 @@ export const useGridstackLayoutStore = defineStore(
         //     },
         // ];
 
-        function setEqualItems(items: Item[]): LayoutItem[] {
-            const layoutItems: LayoutItem[] = [];
-            const height = 10;
-            const w = 6;
-            let x = 0;
-            let y = 0;
-            let first = true; // the first item should be double height.
-            let i = 0;
-            for (const item of items) {
-                const h = first ? 2 * height : height;
-                const thisY = i % 2 === 1 || first ? y : y + 10;
-                const layoutItem: LayoutItem = { ...item, x, y: thisY, w, h };
-                x = (x + 6) % 12;
-                if (x === 0) {
-                    y += 10;
-                }
-                layoutItems.push(layoutItem);
-                first = false;
-                i++;
-            }
-
-            return layoutItems;
-        }
-        const allEqualItems: LayoutItem[] = setEqualItems([
+        const allEqualItems: LayoutItem[] = [
             {
                 component: 'ConditionSelector',
                 displayName: 'Condition Selector',
-                id: 'ConditionSelector',
+                h: 20,
                 icon: 'apps',
+                id: 'ConditionSelector',
                 noPadding: true,
+                w: 6,
+                x: 0,
+                y: 0,
             },
             {
                 component: 'ExemplarView',
                 displayName: 'Exemplar View',
-                id: 'ExemplarView',
-                icon: 'location_on',
-                noPadding: true,
+                h: 10,
                 hideOverflow: true,
+                icon: 'location_on',
+                id: 'ExemplarView',
+                noPadding: true,
                 sidebar: 'ExemplarViewSettingsSidebar',
                 toolbar: 'ExemplarViewSettingsToolbar',
+                w: 6,
+                x: 6,
+                y: 0,
             },
             {
                 component: 'LooneageViewGL',
                 displayName: 'Looneage',
-                id: 'LooneageViewGL',
-                icon: 'account_tree',
-                noPadding: true,
+                h: 10,
                 hideOverflow: true,
+                icon: 'account_tree',
+                id: 'LooneageViewGL',
+                noPadding: true,
                 sidebar: 'LooneageViewSettingsSidebar',
                 toolbar: 'LooneageViewSettingsToolbar',
+                w: 6,
+                x: 0,
+                y: 20,
             },
             {
                 component: 'AggregateLineChart',
                 displayName: 'Line Chart',
-                id: 'AggregateLineChart',
+                h: 10,
                 icon: 'timeline',
+                id: 'AggregateLineChart',
+                noPadding: true,
                 sidebar: 'AggregateLineChartSettingsSidebar',
                 toolbar: 'AggregateLineChartSettingsToolbar',
-                noPadding: true,
+                w: 6,
+                x: 6,
+                y: 10,
             },
             {
                 component: 'SimpleTable',
                 displayName: 'Lineages',
+                h: 10,
+                icon: 'table_chart',
                 id: 'SimpleTable-lineage',
+                noPadding: true,
                 props: {
                     attributeLevel: 'lineage',
                 },
-                icon: 'table_chart',
-                noPadding: true,
+                w: 6,
+                x: 0,
+                y: 30,
             },
             {
                 component: 'ImageViewer',
                 displayName: 'Images',
-                id: 'ImageViewer',
-                noPadding: true,
+                h: 10,
                 hideOverflow: true,
                 icon: 'image',
+                id: 'ImageViewer',
+                noPadding: true,
                 sidebar: 'ImageViewerSettingsSidebar',
                 toolbar: 'ImageViewerSettingsToolbar',
+                w: 6,
+                x: 6,
+                y: 20,
             },
             {
                 component: 'SimpleTable',
                 displayName: 'Tracks',
+                h: 10,
+                icon: 'table_chart',
                 id: 'SimpleTable-track',
+                noPadding: true,
                 props: {
                     attributeLevel: 'track',
                 },
-                icon: 'table_chart',
-                noPadding: true,
+                w: 6,
+                x: 0,
+                y: 40,
             },
             {
                 component: 'SimpleTable',
                 displayName: 'Cells',
+                h: 10,
+                icon: 'table_chart',
                 id: 'SimpleTable-cell',
+                noPadding: true,
                 props: {
                     attributeLevel: 'cell',
                 },
-                icon: 'table_chart',
-                noPadding: true,
+                w: 6,
+                x: 6,
+                y: 30,
             },
-
             {
                 component: 'TrrackVisWrapper',
                 displayName: 'History',
-                id: 'TrrackVisWrapper',
+                h: 10,
                 icon: 'history',
+                id: 'TrrackVisWrapper',
                 noPadding: true,
+                w: 6,
+                x: 0,
+                y: 50,
             },
-        ]);
+        ];
 
         const defaultId = 'system_layout_0';
 
@@ -399,6 +411,7 @@ export const useGridstackLayoutStore = defineStore(
             initialItems: cloneDeep(allEqualItems),
             currentItems: cloneDeep(allEqualItems),
         };
+        console.log('Default layout object:', allEqualLayout);
 
         const currentLayoutId = useStorage<string>(
             'currentLayoutId',
@@ -456,12 +469,14 @@ export const useGridstackLayoutStore = defineStore(
             newLayout.value.name = 'My Custom Layout';
             userLayoutOptions.value.push(newLayout.value);
             currentLayoutId.value = newLayout.value.id;
+            console.log('Created new layout:', newLayout.value);
         }
         function updateCurrent(): void {
             if (currentLayout.value == null) return;
             currentLayout.value.initialItems = cloneDeep(
                 currentLayout.value.currentItems
             );
+            console.log('Saved current layout:', currentLayout.value);
         }
         function deleteLayout(index: number): void {
 
