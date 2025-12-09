@@ -290,7 +290,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
     # Optionally send std error to subprocess.PIPE and then take STDERR and log to error file
 
 
-def build_containers(env_file, disable_spinner=False):
+def build_containers(env_file, disable_spinner=False, services=None):
     global stop_spinner
     if not disable_spinner:
         stop_spinner = False
@@ -300,8 +300,12 @@ def build_containers(env_file, disable_spinner=False):
     else:
         print("Building containers...")
 
-    process = run_command(f"docker-compose -f .build-files/docker-compose.yml"
-                          f" --env-file {env_file} build")
+    service_string = ""
+    if services is not None:
+        service_string = " ".join(services)
+
+    command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} build {service_string}"
+    process = run_command(command)
     process.wait()  # Wait for the build to complete
 
     if not disable_spinner:
@@ -322,7 +326,7 @@ def follow_all_logs(logs_path, services, verbose=False, detached=False):
         log_thread.start()
 
 
-def start_containers(env_file, disable_spinner=False):
+def start_containers(env_file, disable_spinner=False, services=None):
     global stop_spinner
     if not disable_spinner:
         stop_spinner = False
@@ -331,8 +335,13 @@ def start_containers(env_file, disable_spinner=False):
         spinner_thread.start()
     else:
         print("Starting containers...")
-    process = run_command(f"docker-compose -f .build-files/docker-compose.yml"
-                          f" --env-file {env_file} up -d")
+
+    service_string = ""
+    if services is not None:
+        service_string = " ".join(services)
+
+    command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} up -d {service_string}"
+    process = run_command(command)
 
     process.wait()  # Wait for the containers to start
 
@@ -469,7 +478,7 @@ if __name__ == "__main__":
             createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
-                services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
+                services = ["client", "data", "duckdb"]
             else:
                 services = ["db", "client", "server", "minio", "celery", "redis", "duckdb"]
 
@@ -498,8 +507,8 @@ if __name__ == "__main__":
             signal.signal(signal.SIGINT, cleanup_and_exit)
 
             # Build, run, then follow all logs. Begin monitoring process
-            build_containers(f'.build-files/{args.env_file}', args.disable_spinner)
-            start_containers(f'.build-files/{args.env_file}', args.disable_spinner)
+            build_containers(f'.build-files/{args.env_file}', args.disable_spinner, services)
+            start_containers(f'.build-files/{args.env_file}', args.disable_spinner, services)
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 

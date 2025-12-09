@@ -60,6 +60,7 @@ onBeforeMount(() => {
         >
             <q-toolbar>
                 <q-toolbar-title>Loon</q-toolbar-title>
+                <BasicInfoCounts />
                 <l-btn
                     @click="router.push('/')"
                     type="basic"
