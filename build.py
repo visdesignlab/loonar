@@ -305,7 +305,6 @@ def build_containers(env_file, disable_spinner=False, services=None):
         service_string = " ".join(services)
 
     command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} build {service_string}"
-    print(f"DEBUG: Executing command: {command}")
     process = run_command(command)
     process.wait()  # Wait for the build to complete
 
@@ -342,7 +341,6 @@ def start_containers(env_file, disable_spinner=False, services=None):
         service_string = " ".join(services)
 
     command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} up -d {service_string}"
-    print(f"DEBUG: Executing command: {command}")
     process = run_command(command)
 
     process.wait()  # Wait for the containers to start
@@ -483,9 +481,6 @@ if __name__ == "__main__":
                 services = ["client", "data", "duckdb"]
             else:
                 services = ["db", "client", "server", "minio", "celery", "redis", "duckdb"]
-
-            print(f"DEBUG: buildConfig.local = {buildConfig.local}")
-            print(f"DEBUG: Selected services = {services}")
 
             # Get current time and create unique logs path
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
