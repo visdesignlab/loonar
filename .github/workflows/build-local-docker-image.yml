@@ -24,7 +24,7 @@ jobs:
       - name: tag the docker image
         id: tag-docker-images
         run: |
-          docker tag local-loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/local-loon:${{ github.event.pull_request.title }}
+          docker tag local-loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/local-loon:pr-${{ github.event.pull_request.number }}
           docker tag local-loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/local-loon:latest
       - name: push the docker image
         id: push-docker-image
