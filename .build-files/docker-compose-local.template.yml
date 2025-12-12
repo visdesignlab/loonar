@@ -15,6 +15,9 @@ services:
         NGINX_FILE: ${NGINX_FILE}
     ports:
       - "${LOCAL_PORT_1:-80}:${LOCAL_PORT_2:-80}"
+    depends_on:
+      - server
+      - celery
     env_file:
       - path: ${DOCKER_ENV_FILE} # relative to docker compose (has to be in same directory)
         required: true
@@ -29,7 +32,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_ENV_FILE=/app/.env
+      DJANGO_ENV_FILE: "/app/.env"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery:
     build:
@@ -37,11 +45,27 @@ services:
       dockerfile: ./.build-files/Dockerfile.celery # relatvie to build context
       args:
         DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
-    command: [ "celery", "--app", "celery_app", "worker", "--loglevel", "info", "--without-heartbeat", "-c", "4" ]
+    command:
+      [
+        "celery",
+        "--app",
+        "celery_app",
+        "worker",
+        "--loglevel",
+        "info",
+        "--without-heartbeat",
+        "-c",
+        "4",
+      ]
     # Docker Compose does not set the TTY width, which causes Celery errors
     tty: false
     environment:
       DJANGO_ENV_FILE: "/app/.env"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # MySQL service. Has healthcheck which uses mysqladmin to ping before reporting healthy.
   db:
@@ -56,7 +80,17 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_ROOT_PASSWORD}" ]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DATABASE_ROOT_PASSWORD}",
+        ]
       timeout: 20s
       retries: 10
     env_file:
@@ -68,7 +102,7 @@ services:
     ports:
       - "6379:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
