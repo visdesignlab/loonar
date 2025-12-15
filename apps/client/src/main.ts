@@ -13,7 +13,6 @@ import LooneageViewGL from './components/LooneageViewGL.vue';
 import LooneageViewSettingsSidebar from './components/LooneageViewSettingsSidebar.vue';
 import LooneageViewSettingsToolbar from './components/LooneageViewSettingsToolbar.vue';
 import BasicInfo from './components/BasicInfo.vue';
-import BasicInfoCounts from './components/BasicInfoCounts.vue';
 import SimpleTable from './components/SimpleTable.vue';
 import ImageViewer from './components/ImageViewer.vue';
 import ImageViewerSettingsSidebar from './components/ImageViewerSettingsSidebar.vue';
@@ -93,7 +92,6 @@ createApp(App)
     .component('LooneageViewSettingsSidebar', LooneageViewSettingsSidebar)
     .component('LooneageViewSettingsToolbar', LooneageViewSettingsToolbar)
     .component('BasicInfo', BasicInfo)
-    .component('BasicInfoCounts', BasicInfoCounts)
     .component('SimpleTable', SimpleTable)
     .component('NoDataSplash', NoDataSplash)
     .component('StubView', StubView)
