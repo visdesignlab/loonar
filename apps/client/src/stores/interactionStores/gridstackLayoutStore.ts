@@ -483,7 +483,6 @@ export const useGridstackLayoutStore = defineStore(
             currentLayout.value.initialItems = cloneDeep(
                 currentLayout.value.currentItems
             );
-            console.log('Saved current layout:', currentLayout.value);
         }
         function deleteLayout(index: number): void {
 
