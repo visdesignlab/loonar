@@ -476,7 +476,6 @@ export const useGridstackLayoutStore = defineStore(
             newLayout.value.name = 'My Custom Layout';
             userLayoutOptions.value.push(newLayout.value);
             currentLayoutId.value = newLayout.value.id;
-            console.log('Created new layout:', newLayout.value);
         }
         function updateCurrent(): void {
             if (currentLayout.value == null) return;
