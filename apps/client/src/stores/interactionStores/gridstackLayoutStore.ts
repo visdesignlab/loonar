@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneDeep } from 'lodash-es';
+import { useDatasetSelectionStore } from '../dataStores/datasetSelectionUntrrackedStore';
 export interface LayoutItem {
     // gridstack properties plus my own
     component: string;
@@ -262,158 +263,172 @@ export const useGridstackLayoutStore = defineStore(
         //     },
         // ];
 
-        function setEqualItems(items: Item[]): LayoutItem[] {
-            const layoutItems: LayoutItem[] = [];
-            const height = 10;
-            const w = 6;
-            let x = 0;
-            let y = 0;
-            let first = true; // the first item should be double height.
-            let i = 0;
-            for (const item of items) {
-                const h = first ? 2 * height : height;
-                const thisY = i % 2 === 1 || first ? y : y + 10;
-                const layoutItem: LayoutItem = { ...item, x, y: thisY, w, h };
-                x = (x + 6) % 12;
-                if (x === 0) {
-                    y += 10;
+        const datasetSelectionStore = useDatasetSelectionStore();
+
+        const allEqualItems = computed<LayoutItem[]>(() => {
+            const items: LayoutItem[] = [
+                {
+                    component: 'ConditionSelector',
+                    displayName: 'Condition Selector',
+                    h: 20,
+                    icon: 'apps',
+                    id: 'ConditionSelector',
+                    noPadding: true,
+                    w: 6,
+                    x: 0,
+                    y: 10,
+                },
+                {
+                    component: 'ExemplarView',
+                    displayName: 'Exemplar View',
+                    h: 10,
+                    hideOverflow: true,
+                    icon: 'location_on',
+                    id: 'ExemplarView',
+                    noPadding: true,
+                    sidebar: 'ExemplarViewSettingsSidebar',
+                    toolbar: 'ExemplarViewSettingsToolbar',
+                    w: 6,
+                    x: 6,
+                    y: 0,
+                },
+                {
+                    component: 'LooneageViewGL',
+                    displayName: 'Looneage',
+                    h: 10,
+                    hideOverflow: true,
+                    icon: 'account_tree',
+                    id: 'LooneageViewGL',
+                    noPadding: true,
+                    sidebar: 'LooneageViewSettingsSidebar',
+                    toolbar: 'LooneageViewSettingsToolbar',
+                    w: 6,
+                    x: 0,
+                    y: 0,
+                },
+                {
+                    component: 'AggregateLineChart',
+                    displayName: 'Line Chart',
+                    h: 10,
+                    icon: 'timeline',
+                    id: 'AggregateLineChart',
+                    noPadding: true,
+                    sidebar: 'AggregateLineChartSettingsSidebar',
+                    toolbar: 'AggregateLineChartSettingsToolbar',
+                    w: 6,
+                    x: 6,
+                    y: 10,
+                },
+                {
+                    component: 'SimpleTable',
+                    displayName: 'Lineages',
+                    h: 10,
+                    icon: 'table_chart',
+                    id: 'SimpleTable-lineage',
+                    noPadding: true,
+                    props: {
+                        attributeLevel: 'lineage',
+                    },
+                    w: 6,
+                    x: 0,
+                    y: 30,
+                },
+                {
+                    component: 'ImageViewer',
+                    displayName: 'Images',
+                    h: 10,
+                    hideOverflow: true,
+                    icon: 'image',
+                    id: 'ImageViewer',
+                    noPadding: true,
+                    sidebar: 'ImageViewerSettingsSidebar',
+                    toolbar: 'ImageViewerSettingsToolbar',
+                    w: 6,
+                    x: 6,
+                    y: 20,
+                },
+                {
+                    component: 'SimpleTable',
+                    displayName: 'Tracks',
+                    h: 10,
+                    icon: 'table_chart',
+                    id: 'SimpleTable-track',
+                    noPadding: true,
+                    props: {
+                        attributeLevel: 'track',
+                    },
+                    w: 6,
+                    x: 0,
+                    y: 40,
+                },
+                {
+                    component: 'SimpleTable',
+                    displayName: 'Cells',
+                    h: 10,
+                    icon: 'table_chart',
+                    id: 'SimpleTable-cell',
+                    noPadding: true,
+                    props: {
+                        attributeLevel: 'cell',
+                    },
+                    w: 6,
+                    x: 6,
+                    y: 30,
+                },
+                {
+                    component: 'TrrackVisWrapper',
+                    displayName: 'History',
+                    h: 10,
+                    icon: 'history',
+                    id: 'TrrackVisWrapper',
+                    noPadding: true,
+                    w: 6,
+                    x: 0,
+                    y: 50,
+                },
+            ];
+
+            const locationCount =
+                datasetSelectionStore.currentExperimentMetadata
+                    ?.locationMetadataList.length ?? 0;
+
+            if (locationCount > 20) {
+                const conditionSelector = items.find(
+                    (item) => item.id === 'ConditionSelector'
+                );
+                const looneageView = items.find(
+                    (item) => item.id === 'LooneageViewGL'
+                );
+
+                if (conditionSelector && looneageView) {
+                    conditionSelector.y = 0;
+                    looneageView.y = 20;
                 }
-                layoutItems.push(layoutItem);
-                first = false;
-                i++;
             }
 
-            return layoutItems;
-        }
-        const allEqualItems: LayoutItem[] = setEqualItems([
-            {
-                component: 'ConditionSelector',
-                displayName: 'Condition Selector',
-                id: 'ConditionSelector',
-                icon: 'apps',
-                noPadding: true,
-            },
-            {
-                component: 'ExemplarView',
-                displayName: 'Exemplar View',
-                id: 'ExemplarView',
-                icon: 'location_on',
-                noPadding: true,
-                hideOverflow: true,
-                sidebar: 'ExemplarViewSettingsSidebar',
-                toolbar: 'ExemplarViewSettingsToolbar',
-            },
-            {
-                component: 'LooneageViewGL',
-                displayName: 'Looneage',
-                id: 'LooneageViewGL',
-                icon: 'account_tree',
-                noPadding: true,
-                hideOverflow: true,
-                sidebar: 'LooneageViewSettingsSidebar',
-                toolbar: 'LooneageViewSettingsToolbar',
-            },
-            {
-                component: 'AggregateLineChart',
-                displayName: 'Line Chart',
-                id: 'AggregateLineChart',
-                icon: 'timeline',
-                sidebar: 'AggregateLineChartSettingsSidebar',
-                toolbar: 'AggregateLineChartSettingsToolbar',
-                noPadding: true,
-            },
-            {
-                component: 'SimpleTable',
-                displayName: 'Lineages',
-                id: 'SimpleTable-lineage',
-                props: {
-                    attributeLevel: 'lineage',
-                },
-                icon: 'table_chart',
-                noPadding: true,
-            },
-            {
-                component: 'ImageViewer',
-                displayName: 'Images',
-                id: 'ImageViewer',
-                noPadding: true,
-                hideOverflow: true,
-                icon: 'image',
-                sidebar: 'ImageViewerSettingsSidebar',
-                toolbar: 'ImageViewerSettingsToolbar',
-            },
-            {
-                component: 'SimpleTable',
-                displayName: 'Tracks',
-                id: 'SimpleTable-track',
-                props: {
-                    attributeLevel: 'track',
-                },
-                icon: 'table_chart',
-                noPadding: true,
-            },
-            {
-                component: 'SimpleTable',
-                displayName: 'Cells',
-                id: 'SimpleTable-cell',
-                props: {
-                    attributeLevel: 'cell',
-                },
-                icon: 'table_chart',
-                noPadding: true,
-            },
-            {
-                component: 'BasicInfo',
-                displayName: 'Overview',
-                id: 'BasicInfo',
-                icon: 'info',
-            },
-            {
-                component: 'TrrackVisWrapper',
-                displayName: 'History',
-                id: 'TrrackVisWrapper',
-                icon: 'history',
-                noPadding: true,
-            },
-        ]);
+            return items;
+        });
 
         const defaultId = 'system_layout_0';
 
-        // const smallImageLayout: Layout = {
-        //     name: 'Small Image',
-        //     editable: false,
-        //     editing: false,
-        //     id: defaultId,
-        //     initialItems: cloneDeep(smallImageItems),
-        //     currentItems: cloneDeep(smallImageItems),
-        // };
-        // const largeImageLayout: Layout = {
-        //     name: 'Large Image',
-        //     editable: false,
-        //     editing: false,
-        //     id: 'system_layout_1',
-        //     initialItems: cloneDeep(largeImageItems),
-        //     currentItems: cloneDeep(largeImageItems),
-        // };
-
-        const allEqualLayout: Layout = {
+        const allEqualLayout = computed<Layout>(() => ({
             name: 'Default',
             editable: false,
             editing: false,
             id: defaultId,
-            initialItems: cloneDeep(allEqualItems),
-            currentItems: cloneDeep(allEqualItems),
-        };
+            initialItems: cloneDeep(allEqualItems.value),
+            currentItems: cloneDeep(allEqualItems.value),
+        }));
+
+        // console.log('Default layout object:', allEqualLayout.value);
 
         const currentLayoutId = useStorage<string>(
             'currentLayoutId',
             defaultId
         );
 
-        const systemLayoutOptions = ref<Layout[]>([
-            // smallImageLayout,
-            // largeImageLayout,
-            allEqualLayout,
+        const systemLayoutOptions = computed<Layout[]>(() => [
+            allEqualLayout.value,
         ]);
         const userLayoutOptions = useStorage<Layout[]>('userLayoutOptions', []);
         const allLayouts = computed<Map<string, Layout>>(() => {
