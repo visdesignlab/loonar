@@ -940,17 +940,20 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const visibleConditionGroupsCount = ref(15);
     const LOAD_INCREMENT = 5;
 
+    // Cache the sorted groups to avoid re-sorting on every render/scroll
+    const sortedExemplarGroups = computed(() => {
+        return sortExemplarsByCondition(exemplarTracks.value);
+    });
+
     function loadMoreConditionGroups() {
-        const sortedGroups = sortExemplarsByCondition(exemplarTracks.value);
-        if (visibleConditionGroupsCount.value < sortedGroups.length) {
+        if (visibleConditionGroupsCount.value < sortedExemplarGroups.value.length) {
             visibleConditionGroupsCount.value += LOAD_INCREMENT;
         }
     }
 
     // This is the subset of tracks that should actually be rendered
     const visibleExemplarTracks = computed(() => {
-        const sortedGroups = sortExemplarsByCondition(exemplarTracks.value);
-        const visibleGroups = sortedGroups.slice(0, visibleConditionGroupsCount.value);
+        const visibleGroups = sortedExemplarGroups.value.slice(0, visibleConditionGroupsCount.value);
         // Flatten array of arrays
         return visibleGroups.flatMap(group => group);
     });
