@@ -342,6 +342,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         } finally {
             // After fetching, we've finished loading.
             exemplarDataLoaded.value = true;
+            // Reset pagination
+            visibleConditionGroupsCount.value = 15;
         }
     }
     
@@ -934,6 +936,25 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
+    // Pagination logic
+    const visibleConditionGroupsCount = ref(15);
+    const LOAD_INCREMENT = 5;
+
+    function loadMoreConditionGroups() {
+        const sortedGroups = sortExemplarsByCondition(exemplarTracks.value);
+        if (visibleConditionGroupsCount.value < sortedGroups.length) {
+            visibleConditionGroupsCount.value += LOAD_INCREMENT;
+        }
+    }
+
+    // This is the subset of tracks that should actually be rendered
+    const visibleExemplarTracks = computed(() => {
+        const sortedGroups = sortExemplarsByCondition(exemplarTracks.value);
+        const visibleGroups = sortedGroups.slice(0, visibleConditionGroupsCount.value);
+        // Flatten array of arrays
+        return visibleGroups.flatMap(group => group);
+    });
+
     // const getHistogramDataComputed = computed(() => histogramData.value);
     const conditionHistogramsComputed = computed(
         () => conditionHistograms.value
@@ -944,6 +965,8 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getExemplarTracks,
         getExemplarImageUrls,
         exemplarTracks,
+        visibleExemplarTracks, // Export the visible tracks
+        loadMoreConditionGroups, // Export the load more action
         viewConfiguration,
         snippetZoom,
         exemplarHeight,
@@ -965,5 +988,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
         horizonChartScheme,
+        visibleConditionGroupsCount, // for debugging if needed
     };
 });
