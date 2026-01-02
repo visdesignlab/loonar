@@ -60,6 +60,56 @@ const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
 const { highlightedCellIds, unfilteredTrackIds } =
     storeToRefs(mosaicSelectionStore);
+const { isPlaying, sizeT, isReverse } = storeToRefs(imageViewerStoreUntrracked);
+const { playbackSpeed } = storeToRefs(imageViewerStore);
+
+let playbackInterval: number | null = null;
+watch(isPlaying, (playing) => {
+    if (playing) {
+        if (playbackInterval) clearInterval(playbackInterval);
+        playbackInterval = window.setInterval(() => {
+            if (isReverse.value) {
+                if (imageViewerStore.frameNumber <= 1) {
+                    isPlaying.value = false;
+                } else {
+                    imageViewerStore.stepBackwards();
+                }
+            } else {
+                if (imageViewerStore.frameNumber >= sizeT.value) {
+                    isPlaying.value = false;
+                } else {
+                    imageViewerStore.stepForwards(sizeT.value);
+                }
+            }
+        }, 1000 / playbackSpeed.value);
+    } else {
+        if (playbackInterval) {
+            clearInterval(playbackInterval);
+            playbackInterval = null;
+        }
+    }
+});
+
+watch(playbackSpeed, (speed) => {
+    if (isPlaying.value) {
+        if (playbackInterval) clearInterval(playbackInterval);
+        playbackInterval = window.setInterval(() => {
+            if (isReverse.value) {
+                if (imageViewerStore.frameNumber <= 1) {
+                    isPlaying.value = false;
+                } else {
+                    imageViewerStore.stepBackwards();
+                }
+            } else {
+                if (imageViewerStore.frameNumber >= sizeT.value) {
+                    isPlaying.value = false;
+                } else {
+                    imageViewerStore.stepForwards(sizeT.value);
+                }
+            }
+        }, 1000 / speed);
+    }
+});
 
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =

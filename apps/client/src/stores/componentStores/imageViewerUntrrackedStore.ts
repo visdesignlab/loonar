@@ -15,7 +15,16 @@ export const useImageViewerStoreUntrracked = defineStore(
         const sizeC = ref<number>(1);
 
         const isPlaying = ref<boolean>(false);
+        const isReverse = ref<boolean>(false);
 
-        return { contrastLimitSlider, sizeX, sizeY, sizeT, sizeC, isPlaying };
+        return {
+            contrastLimitSlider,
+            sizeX,
+            sizeY,
+            sizeT,
+            sizeC,
+            isPlaying,
+            isReverse,
+        };
     }
 );

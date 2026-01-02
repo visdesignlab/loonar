@@ -12,43 +12,19 @@ const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const globalSettings = useGlobalSettings();
 const eventBusStore = useEventBusStore();
-const { contrastLimitSlider, isPlaying, sizeT, sizeC } = storeToRefs(
+const { contrastLimitSlider, isPlaying, sizeT, sizeC, isReverse } = storeToRefs(
     imageViewerStoreUntrracked
 );
 const { playbackSpeed } = storeToRefs(imageViewerStore);
 
-let playbackInterval: number | null = null;
-
-watch(isPlaying, (playing) => {
-    if (playing) {
-        if (playbackInterval) clearInterval(playbackInterval);
-        playbackInterval = window.setInterval(() => {
-            if (imageViewerStore.frameNumber >= sizeT.value) {
-                imageViewerStore.frameNumber = 1;
-            } else {
-                imageViewerStore.stepForwards(sizeT.value);
-            }
-        }, 1000 / playbackSpeed.value);
+function togglePlay(reverse: boolean) {
+    if (isPlaying.value && isReverse.value === reverse) {
+        isPlaying.value = false;
     } else {
-        if (playbackInterval) {
-            clearInterval(playbackInterval);
-            playbackInterval = null;
-        }
+        isReverse.value = reverse;
+        isPlaying.value = true;
     }
-});
-
-watch(playbackSpeed, (speed) => {
-    if (isPlaying.value) {
-        if (playbackInterval) clearInterval(playbackInterval);
-        playbackInterval = window.setInterval(() => {
-            if (imageViewerStore.frameNumber >= sizeT.value) {
-                imageViewerStore.frameNumber = 1;
-            } else {
-                imageViewerStore.stepForwards(sizeT.value);
-            }
-        }, 1000 / speed);
-    }
-});
+}
 
 watch(
     contrastLimitSlider,
@@ -79,8 +55,8 @@ watch(
             >{{ imageViewerStore.frameNumber }} / {{ sizeT }}</span
         >
     </div>
-    <div class="flex row no-wrap q-mt-sm q-mb-sm">
-        <q-btn-group outline rounded class="q-mr-md">
+    <div class="flex row no-wrap q-mt-sm q-mb-sm items-center">
+        <q-btn-group outline rounded class="q-mr-sm">
             <q-btn
                 @click="imageViewerStore.stepBackwards"
                 size="sm"
@@ -88,35 +64,27 @@ watch(
                 round
                 title="previous frame"
                 icon="arrow_left"
+                :disable="imageViewerStore.frameNumber <= 1"
             />
             <q-btn
-                @click="isPlaying = !isPlaying"
+                @click="togglePlay(true)"
                 size="sm"
                 outline
                 round
-                :title="isPlaying ? 'pause' : 'play'"
-                :icon="isPlaying ? 'pause' : 'play_arrow'"
-            >
-                <q-menu anchor="bottom middle" self="top middle">
-                    <div
-                        class="row no-wrap items-center q-pa-md"
-                        style="min-width: 200px"
-                    >
-                        <span class="q-mr-sm text-caption">Speed (fps):</span>
-                        <q-slider
-                            v-model="playbackSpeed"
-                            :min="1"
-                            :max="60"
-                            label
-                            dense
-                            class="col"
-                        />
-                        <span class="q-ml-sm text-caption">{{
-                            playbackSpeed
-                        }}</span>
-                    </div>
-                </q-menu>
-            </q-btn>
+                :title="isPlaying && isReverse ? 'pause' : 'play backwards'"
+                :icon="isPlaying && isReverse ? 'pause' : 'play_arrow'"
+                :class="isPlaying && isReverse ? '' : 'rotate-180'"
+                :disable="imageViewerStore.frameNumber <= 1"
+            />
+            <q-btn
+                @click="togglePlay(false)"
+                size="sm"
+                outline
+                round
+                :title="isPlaying && !isReverse ? 'pause' : 'play forwards'"
+                :icon="isPlaying && !isReverse ? 'pause' : 'play_arrow'"
+                :disable="imageViewerStore.frameNumber >= sizeT"
+            />
             <q-btn
                 @click="() => imageViewerStore.stepForwards(sizeT - 1)"
                 size="sm"
@@ -124,16 +92,29 @@ watch(
                 round
                 title="next frame"
                 icon="arrow_right"
+                :disable="imageViewerStore.frameNumber >= sizeT"
             />
         </q-btn-group>
         <q-slider
-            class="force-repeat"
+            class="force-repeat col box-grow"
             v-model="imageViewerStore.frameNumber"
             :min="1"
             :max="sizeT"
             label
             :dark="globalSettings.darkMode"
         />
+    </div>
+    <div class="row no-wrap items-center q-mb-sm">
+        <span class="q-mr-sm text-caption">FPS:</span>
+        <q-slider
+            v-model="playbackSpeed"
+            :min="1"
+            :max="60"
+            label
+            dense
+            class="col"
+        />
+        <span class="q-ml-sm text-caption">{{ playbackSpeed }}</span>
     </div>
     <template v-if="sizeC > 1">
         <div class="flex row no-wrap">
