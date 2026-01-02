@@ -12,8 +12,43 @@ const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const globalSettings = useGlobalSettings();
 const eventBusStore = useEventBusStore();
-const { sizeT, sizeC } = storeToRefs(imageViewerStoreUntrracked);
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const { contrastLimitSlider, isPlaying, sizeT, sizeC } = storeToRefs(
+    imageViewerStoreUntrracked
+);
+const { playbackSpeed } = storeToRefs(imageViewerStore);
+
+let playbackInterval: number | null = null;
+
+watch(isPlaying, (playing) => {
+    if (playing) {
+        if (playbackInterval) clearInterval(playbackInterval);
+        playbackInterval = window.setInterval(() => {
+            if (imageViewerStore.frameNumber >= sizeT.value) {
+                imageViewerStore.frameNumber = 1;
+            } else {
+                imageViewerStore.stepForwards(sizeT.value);
+            }
+        }, 1000 / playbackSpeed.value);
+    } else {
+        if (playbackInterval) {
+            clearInterval(playbackInterval);
+            playbackInterval = null;
+        }
+    }
+});
+
+watch(playbackSpeed, (speed) => {
+    if (isPlaying.value) {
+        if (playbackInterval) clearInterval(playbackInterval);
+        playbackInterval = window.setInterval(() => {
+            if (imageViewerStore.frameNumber >= sizeT.value) {
+                imageViewerStore.frameNumber = 1;
+            } else {
+                imageViewerStore.stepForwards(sizeT.value);
+            }
+        }, 1000 / speed);
+    }
+});
 
 watch(
     contrastLimitSlider,
@@ -54,6 +89,34 @@ watch(
                 title="previous frame"
                 icon="arrow_left"
             />
+            <q-btn
+                @click="isPlaying = !isPlaying"
+                size="sm"
+                outline
+                round
+                :title="isPlaying ? 'pause' : 'play'"
+                :icon="isPlaying ? 'pause' : 'play_arrow'"
+            >
+                <q-menu anchor="bottom middle" self="top middle">
+                    <div
+                        class="row no-wrap items-center q-pa-md"
+                        style="min-width: 200px"
+                    >
+                        <span class="q-mr-sm text-caption">Speed (fps):</span>
+                        <q-slider
+                            v-model="playbackSpeed"
+                            :min="1"
+                            :max="60"
+                            label
+                            dense
+                            class="col"
+                        />
+                        <span class="q-ml-sm text-caption">{{
+                            playbackSpeed
+                        }}</span>
+                    </div>
+                </q-menu>
+            </q-btn>
             <q-btn
                 @click="() => imageViewerStore.stepForwards(sizeT - 1)"
                 size="sm"
