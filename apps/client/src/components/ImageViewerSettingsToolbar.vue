@@ -11,7 +11,16 @@ const cellMetaData = useCellMetaData();
 const imageViewerStore = useImageViewerStore();
 const eventBusStore = useEventBusStore();
 const globalSettings = useGlobalSettings();
-const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
+const { sizeT, isPlaying, isReverse } = storeToRefs(imageViewerStoreUntrracked);
+
+function togglePlay(reverse: boolean) {
+    if (isPlaying.value && isReverse.value === reverse) {
+        isPlaying.value = false;
+    } else {
+        isReverse.value = reverse;
+        isPlaying.value = true;
+    }
+}
 </script>
 
 <template>
@@ -31,6 +40,25 @@ const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
                 round
                 title="previous frame"
                 icon="arrow_left"
+            />
+            <q-btn
+                @click="togglePlay(true)"
+                size="sm"
+                outline
+                round
+                :title="isPlaying && isReverse ? 'pause' : 'play backwards'"
+                :icon="isPlaying && isReverse ? 'pause' : 'play_arrow'"
+                :class="isPlaying && isReverse ? '' : 'rotate-180'"
+                :disable="imageViewerStore.frameNumber <= 1"
+            />
+            <q-btn
+                @click="togglePlay(false)"
+                size="sm"
+                outline
+                round
+                :title="isPlaying && !isReverse ? 'pause' : 'play forwards'"
+                :icon="isPlaying && !isReverse ? 'pause' : 'play_arrow'"
+                :disable="imageViewerStore.frameNumber >= sizeT"
             />
             <q-btn
                 @click="() => imageViewerStore.stepForwards(sizeT - 1)"

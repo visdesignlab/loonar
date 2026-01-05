@@ -12,8 +12,19 @@ const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const globalSettings = useGlobalSettings();
 const eventBusStore = useEventBusStore();
-const { sizeT, sizeC } = storeToRefs(imageViewerStoreUntrracked);
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const { contrastLimitSlider, isPlaying, sizeT, sizeC, isReverse } = storeToRefs(
+    imageViewerStoreUntrracked
+);
+const { playbackSpeed } = storeToRefs(imageViewerStore);
+
+function togglePlay(reverse: boolean) {
+    if (isPlaying.value && isReverse.value === reverse) {
+        isPlaying.value = false;
+    } else {
+        isReverse.value = reverse;
+        isPlaying.value = true;
+    }
+}
 
 watch(
     contrastLimitSlider,
@@ -36,16 +47,29 @@ watch(
 </script>
 
 <template>
-    <div class="flex row no-wrap">
-        <q-badge outline :color="globalSettings.normalizedBlack"
-            >Frame:</q-badge
-        >
-        <span class="text-caption q-ml-sm"
-            >{{ imageViewerStore.frameNumber }} / {{ sizeT }}</span
-        >
+    <div class="row no-wrap items-center justify-between q-mb-xs">
+        <div class="row no-wrap items-center">
+            <q-badge outline :color="globalSettings.normalizedBlack"
+                >Frame:</q-badge
+            >
+            <span class="text-caption q-ml-sm"
+                >{{ imageViewerStore.frameNumber }} / {{ sizeT }}</span
+            >
+        </div>
+        <q-btn
+            @click="eventBusStore.emitter.emit('resetImageView')"
+            icon="center_focus_strong"
+            outline
+            dense
+            size="sm"
+            flat
+            color="grey-7"
+            title="Reset View"
+        />
     </div>
-    <div class="flex row no-wrap q-mt-sm q-mb-sm">
-        <q-btn-group outline rounded class="q-mr-md">
+
+    <div class="row no-wrap items-center justify-between q-mb-xs">
+        <q-btn-group outline rounded>
             <q-btn
                 @click="imageViewerStore.stepBackwards"
                 size="sm"
@@ -53,6 +77,26 @@ watch(
                 round
                 title="previous frame"
                 icon="arrow_left"
+                :disable="imageViewerStore.frameNumber <= 1"
+            />
+            <q-btn
+                @click="togglePlay(true)"
+                size="sm"
+                outline
+                round
+                :title="isPlaying && isReverse ? 'pause' : 'play backwards'"
+                :icon="isPlaying && isReverse ? 'pause' : 'play_arrow'"
+                :class="isPlaying && isReverse ? '' : 'rotate-180'"
+                :disable="imageViewerStore.frameNumber <= 1"
+            />
+            <q-btn
+                @click="togglePlay(false)"
+                size="sm"
+                outline
+                round
+                :title="isPlaying && !isReverse ? 'pause' : 'play forwards'"
+                :icon="isPlaying && !isReverse ? 'pause' : 'play_arrow'"
+                :disable="imageViewerStore.frameNumber >= sizeT"
             />
             <q-btn
                 @click="() => imageViewerStore.stepForwards(sizeT - 1)"
@@ -61,10 +105,28 @@ watch(
                 round
                 title="next frame"
                 icon="arrow_right"
+                :disable="imageViewerStore.frameNumber >= sizeT"
             />
         </q-btn-group>
+
+        <div class="row no-wrap items-center">
+            <span class="text-caption q-mr-xs">FPS:</span>
+            <q-input
+                class="q-pl-md"
+                dense
+                v-model.number="playbackSpeed"
+                type="number"
+                :step="2"
+                :dark="globalSettings.darkMode"
+                :min="1"
+                :max="60"
+            />
+        </div>
+    </div>
+
+    <div class="row no-wrap q-mb-md">
         <q-slider
-            class="force-repeat"
+            class="force-repeat col"
             v-model="imageViewerStore.frameNumber"
             :min="1"
             :max="sizeT"
@@ -72,17 +134,19 @@ watch(
             :dark="globalSettings.darkMode"
         />
     </div>
+
     <template v-if="sizeC > 1">
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack"
-                >Channel:</q-badge
-            >
-            <span class="text-caption q-ml-sm"
-                >{{ imageViewerStore.selectedChannel }} / {{ sizeC - 1 }}</span
-            >
-        </div>
-        <div class="flex row no-wrap q-mt-sm q-mb-sm">
-            <q-btn-group outline rounded class="q-mr-md">
+        <div class="row no-wrap items-center justify-between q-mb-xs">
+            <div class="row no-wrap items-center">
+                <q-badge outline :color="globalSettings.normalizedBlack"
+                    >Channel:</q-badge
+                >
+                <span class="text-caption q-ml-sm"
+                    >{{ imageViewerStore.selectedChannel }} /
+                    {{ sizeC - 1 }}</span
+                >
+            </div>
+            <q-btn-group outline rounded>
                 <q-btn
                     @click="imageViewerStore.stepChannelBackwards"
                     size="sm"
@@ -102,8 +166,10 @@ watch(
                     icon="arrow_right"
                 />
             </q-btn-group>
+        </div>
+        <div class="flex row no-wrap q-mt-sm q-mb-sm">
             <q-slider
-                class="force-repeat"
+                class="force-repeat col"
                 v-model="imageViewerStore.selectedChannel"
                 :min="0"
                 :max="sizeC - 1"
@@ -112,12 +178,6 @@ watch(
             />
         </div>
     </template>
-    <q-btn
-        @click="eventBusStore.emitter.emit('resetImageView')"
-        icon="center_focus_strong"
-        outline
-        >Reset View</q-btn
-    >
     <q-separator class="q-mt-md q-mb-md" />
     <!-- <q-badge outline :color="globalSettings.normalizedBlack">Layers:</q-badge> -->
     <div class="flex column">
@@ -172,4 +232,10 @@ watch(
     </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+:deep(.small-input .q-field__control),
+:deep(.small-input .q-field__marginal) {
+    height: 30px;
+    min-height: 30px;
+}
+</style>
