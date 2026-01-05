@@ -62,54 +62,49 @@ const { highlightedCellIds, unfilteredTrackIds } =
     storeToRefs(mosaicSelectionStore);
 const { isPlaying, sizeT, isReverse } = storeToRefs(imageViewerStoreUntrracked);
 const { playbackSpeed } = storeToRefs(imageViewerStore);
-
 let playbackInterval: number | null = null;
-watch(isPlaying, (playing) => {
-    if (playing) {
-        if (playbackInterval) clearInterval(playbackInterval);
-        playbackInterval = window.setInterval(() => {
-            if (isReverse.value) {
-                if (imageViewerStore.frameNumber <= 1) {
-                    isPlaying.value = false;
-                } else {
-                    imageViewerStore.stepBackwards();
-                }
-            } else {
-                if (imageViewerStore.frameNumber >= sizeT.value) {
-                    isPlaying.value = false;
-                } else {
-                    imageViewerStore.stepForwards(sizeT.value);
-                }
-            }
-        }, 1000 / playbackSpeed.value);
+
+const stopPlayback = () => {
+    if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+    }
+};
+const tick = () => {
+    if (isReverse.value) {
+        if (imageViewerStore.frameNumber <= 1) {
+            // Stop if we reach the first frame
+            isPlaying.value = false;
+        } else {
+            imageViewerStore.stepBackwards();
+        }
     } else {
-        if (playbackInterval) {
-            clearInterval(playbackInterval);
-            playbackInterval = null;
+        if (imageViewerStore.frameNumber >= sizeT.value) {
+            // Stop if we reach the last frame
+            isPlaying.value = false;
+        } else {
+            imageViewerStore.stepForwards(sizeT.value); 
         }
     }
+};
+const startPlayback = () => {
+    // Ensure only one interval is running
+    stopPlayback();
+    if (!isPlaying.value) return;
+    // Start the interval
+    playbackInterval = window.setInterval(tick, 1000 / playbackSpeed.value);
+};
+
+// If playback started or stopped 
+watch(isPlaying, (playing) => {
+    if (playing) startPlayback();
+    else stopPlayback();
+});
+// If playback speed changed while playing, restart playback
+watch(playbackSpeed, () => {
+    if (isPlaying.value) startPlayback();
 });
 
-watch(playbackSpeed, (speed) => {
-    if (isPlaying.value) {
-        if (playbackInterval) clearInterval(playbackInterval);
-        playbackInterval = window.setInterval(() => {
-            if (isReverse.value) {
-                if (imageViewerStore.frameNumber <= 1) {
-                    isPlaying.value = false;
-                } else {
-                    imageViewerStore.stepBackwards();
-                }
-            } else {
-                if (imageViewerStore.frameNumber >= sizeT.value) {
-                    isPlaying.value = false;
-                } else {
-                    imageViewerStore.stepForwards(sizeT.value);
-                }
-            }
-        }, 1000 / speed);
-    }
-});
 
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
