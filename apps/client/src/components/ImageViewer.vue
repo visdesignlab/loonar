@@ -16,7 +16,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
-import { clamp } from 'lodash-es';
+import { clamp, debounce } from 'lodash-es';
 import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -60,6 +60,8 @@ const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
 const { highlightedCellIds, unfilteredTrackIds } =
     storeToRefs(mosaicSelectionStore);
+
+
 
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
@@ -241,17 +243,36 @@ watch(
 );
 
 function createBaseImageLayer(): typeof ImageLayer {
-    // If createNewLayer is false, we should reuse the existing imageLayer
-    const id = imageLayer.value?.id ?? 'base-image-layer';
+    // If refresh triggered, generate new unique ID
+    if (refreshBaseImageLayer.value) {
+        currentImageLayerId.value = `base-image-layer-${Date.now()}`;
+    }
+    const layerId = currentImageLayerId.value;
+
     return new ImageLayer({
         loader: pixelSource.value,
-        id,
+        id: layerId,
         contrastLimits: contrastLimit.value,
         selections: imageViewerStore.selections,
         channelsVisible: [true],
         extensions: [colormapExtension],
         // @ts-ignore
         colormap: imageViewerStore.colormap,
+        onViewportLoad: () => {
+            // When the new layer loads:
+            if (refreshBaseImageLayer.value) {
+                refreshBaseImageLayer.value = false;
+            }
+
+            // Remove any old layers
+            const index = imageLayers.value.findIndex(
+                (l: any) => l.id === layerId
+            );
+            if (index !== -1) {
+                // Keep this layer and anything newer
+                imageLayers.value = imageLayers.value.slice(index);
+            }
+        },
     });
 }
 
@@ -566,22 +587,33 @@ const currentCellMap = computed<Map<string, Cell>>(() => {
 
 function createTrajectoryGhostLayer(): TripsLayer {
     return new TripsLayer({
-    id: 'trips-layer',
-    data: currentTrackArray.value,
-    pickable: false,
-    getWidth: 3,
-    getPath: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
-    getTimestamps: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
-    getColor: [152, 78, 163],
-    opacity: 0.6,
-    rounded: true,
-    fadeTrail: true,
-    trailLength: imageViewerStore.effectiveTrailLength,
-    currentTime: imageViewerStore.frameNumber,
+        id: 'trips-layer',
+        data: currentTrackArray.value,
+        pickable: false,
+        getWidth: 3,
+        getPath: (d: Track) =>
+            d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
+        getTimestamps: (d: Track) =>
+            d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
+        getColor: [152, 78, 163],
+        opacity: 0.6,
+        rounded: true,
+        fadeTrail: true,
+        trailLength: imageViewerStore.effectiveTrailLength,
+        currentTime: imageViewerStore.frameNumber,
     });
 }
 
-const imageLayer = ref();
+const imageLayers = ref<(typeof ImageLayer)[]>([]);
+const currentImageLayerId = ref('base-image-layer');
+
+// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error
+const refreshBaseImageLayer = ref<boolean>(false);
+const updateBaseImageLayer = debounce(() => {
+    refreshBaseImageLayer.value = true;
+    renderDeckGL();
+}, 300);
+watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
 
 function renderDeckGL(): void {
     if (deckgl == null) return;
@@ -592,8 +624,25 @@ function renderDeckGL(): void {
     const layers = [];
     if (imageViewerStore.showImageLayer) {
         if (pixelSource.value == null) return;
-        imageLayer.value = createBaseImageLayer();
-        layers.push(imageLayer.value);
+        // Layer Swapping Logic
+        const newLayer = createBaseImageLayer();
+
+        // If we list has no layers, just add it
+        if (imageLayers.value.length === 0) {
+            imageLayers.value.push(newLayer);
+        } else {
+            // Update layer if same id. If different (refresh triggered), push it (overlay until loaded).
+            const lastLayer = imageLayers.value[
+                imageLayers.value.length - 1
+            ] as any;
+            if (lastLayer.id === (newLayer as any).id) {
+                imageLayers.value[imageLayers.value.length - 1] = newLayer;
+            } else {
+                imageLayers.value.push(newLayer);
+            }
+        }
+
+        layers.push(...imageLayers.value);
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
@@ -701,7 +750,14 @@ watch(triggerRecenter, () => {
 
 watch(darkMode, renderDeckGL);
 watch(currentTrackArray, renderDeckGL);
-watch(dataPointSelection.$state, renderDeckGL);
+watch(() => dataPointSelection.selectedTrackId, renderDeckGL);
+watch(() => dataPointSelection.selectedLineageId, renderDeckGL);
+watch(
+    () => dataPointSelection.currentFrameIndex,
+    () => {
+        renderDeckGL();
+    }
+);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
 watch(highlightedCellIds, renderDeckGL);
