@@ -16,7 +16,7 @@ import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUn
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
-import { clamp, debounce } from 'lodash-es';
+import { clamp } from 'lodash-es';
 import Pool from '../util/Pool';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { useGlobalSettings } from '@/stores/componentStores/globalSettingsStore';
@@ -174,24 +174,23 @@ onMounted(() => {
 
 const loader = ref<any | null>(null);
 const pixelSource = ref<any | null>(null);
-watch(currentLocationMetadata, async () => {
-    if (currentLocationMetadata.value?.imageDataFilename == null) return;
+watch(currentLocationMetadata, async (newVal) => {
+    if (newVal?.imageDataFilename == null) return;
     if (deckgl == null) return;
-    // if (contrastLimitSlider == null) return;
-    // renderLoadingDeckGL();
-    // imageViewerStore.frameIndex = 0;
-    pixelSource.value = null;
+    // Capture the filename we are trying to load
+    const targetFilename = newVal.imageDataFilename;
 
-    const fullImageUrl = configStore.getFileUrl(
-        currentLocationMetadata.value.imageDataFilename
-    );
-    loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
-    imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
-    imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
-    imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
-    imageViewerStoreUntrracked.sizeC = loader.value.metadata.Pixels.SizeC;
+    const fullImageUrl = configStore.getFileUrl(targetFilename);
+    const newLoader = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
 
-    const raster: PixelData = await loader.value.data[0].getRaster({
+    // Atomic update of state
+    loader.value = newLoader;
+    imageViewerStoreUntrracked.sizeX = newLoader.metadata.Pixels.SizeX;
+    imageViewerStoreUntrracked.sizeY = newLoader.metadata.Pixels.SizeY;
+    imageViewerStoreUntrracked.sizeT = newLoader.metadata.Pixels.SizeT;
+    imageViewerStoreUntrracked.sizeC = newLoader.metadata.Pixels.SizeC;
+
+    const raster: PixelData = await newLoader.data[0].getRaster({
         selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
@@ -202,7 +201,7 @@ watch(currentLocationMetadata, async () => {
     // const contrastLimits: [number, number][] = [
     //     channelStats.contrastLimits as [number, number],
     // ];
-    pixelSource.value = loader.value.data[0] as PixelSource<any>;
+    pixelSource.value = newLoader.data[0] as PixelSource<any>;
     renderDeckGL();
     // TODO: this is causing a minor visual bug, the loading is offset before the image is loaded.
     // but this is better than the image being offset for now.
@@ -243,10 +242,7 @@ watch(
 
 function createBaseImageLayer(): typeof ImageLayer {
     // If createNewLayer is false, we should reuse the existing imageLayer
-    let id = imageLayer.value?.id ?? 'base-image-layer';
-    if (refreshBaseImageLayer.value) {
-        id = `base-image-layer-${imageViewerStore.frameNumber}`;
-    }
+    const id = imageLayer.value?.id ?? 'base-image-layer';
     return new ImageLayer({
         loader: pixelSource.value,
         id,
@@ -256,18 +252,11 @@ function createBaseImageLayer(): typeof ImageLayer {
         extensions: [colormapExtension],
         // @ts-ignore
         colormap: imageViewerStore.colormap,
-        // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => {
-        //     console.log('image viewport load');
-        // },
     });
 }
 
 function createSegmentationsLayer(): typeof GeoJsonLayer {
-    const folderUrl = configStore.getFileUrl(
-        datasetSelectionStore.currentLocationMetadata?.segmentationsFolder ??
-            'UNKNOWN'
-    );
+
 
     const hoverColorWithAlpha = colors.hovered.rgba;
     hoverColorWithAlpha[3] = 128;
@@ -594,14 +583,6 @@ function createTrajectoryGhostLayer(): TripsLayer {
 
 const imageLayer = ref();
 
-// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
-const refreshBaseImageLayer = ref<boolean>(false);
-const updateBaseImageLayer = debounce(() => {
-    refreshBaseImageLayer.value = true;
-    renderDeckGL();
-}, 300);
-watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
-
 function renderDeckGL(): void {
     if (deckgl == null) return;
     if (!cellMetaData.dataInitialized) {
@@ -613,8 +594,6 @@ function renderDeckGL(): void {
         if (pixelSource.value == null) return;
         imageLayer.value = createBaseImageLayer();
         layers.push(imageLayer.value);
-        // No need to refresh unless debounce is called above.
-        refreshBaseImageLayer.value = false;
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
