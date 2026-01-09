@@ -10,20 +10,28 @@
 
 .heroSection {
   --box-margin: 4rem;
-  margin: var(--box-margin);
+  margin: 0;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
   padding: 0;
-  min-height: calc(100vh - (var(--box-margin) * 2));
-  width: calc(100% - (var(--box-margin) * 2));
-  margin-bottom: 0.5rem; /* Reduce space below the video */
+  min-height: 100vh;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  /* Reduce space below the video */
   background: white;
 }
 
 /* Responsive min-height for heroSection */
-@media (max-height: 820px), (max-height: 760px), (max-height: 700px), (max-height: 640px), (max-height: 580px), (max-height: 520px) {
-  .heroSection { min-height: calc(100vh - (var(--box-margin) * 2)); }
+@media (max-height: 820px),
+(max-height: 760px),
+(max-height: 700px),
+(max-height: 640px),
+(max-height: 580px),
+(max-height: 520px) {
+  .heroSection {
+    min-height: 100vh;
+  }
 }
 
 /* --- Hero Video --- */
@@ -36,6 +44,16 @@
   background: #000;
   pointer-events: none;
 }
+
+.heroVideoWrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 100px 50px white;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .heroVideo {
   width: 100%;
   height: 100%;
@@ -49,8 +67,9 @@
 /* --- Hero Content Overlay --- */
 .heroContent {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: var(--box-margin);
+  left: var(--box-margin);
+  width: fit-content;
   z-index: 2;
   max-width: 800px;
   background: white;
@@ -78,6 +97,7 @@
   align-items: flex-start;
   margin-top: 0;
 }
+
 .headline {
   text-align: right;
   display: flex;
@@ -87,12 +107,15 @@
   font-size: 3.5rem;
   margin: 0;
 }
+
 .headline .smallerFont {
   font-size: 2.8rem;
 }
+
 .headlineLine {
   font-weight: 600;
 }
+
 /* --- Button Row --- */
 .buttonRow {
   display: flex;
@@ -103,11 +126,13 @@
   margin: 1.5rem 0 0 0;
   padding: 0;
 }
+
 .buttonRow :global(.button) {
   padding: 0.2rem 0.5rem;
   border-radius: 3px;
   font-size: 1.1rem;
 }
+
 .buttonRow :global(.button.button--primary) {
   --btn-gray: #5a5a5a;
   background: transparent;
@@ -115,12 +140,14 @@
   color: var(--btn-gray);
   box-shadow: none;
 }
+
 .buttonRow :global(.button.button--primary:hover),
 .buttonRow :global(.button.button--primary:focus) {
   background: var(--ifm-color-primary);
   border-color: var(--ifm-color-primary);
   color: #fff;
 }
+
 .buttonRow :global(.button.button--primary:active) {
   background: var(--ifm-color-primary-dark);
   border-color: var(--ifm-color-primary-dark);
@@ -133,6 +160,7 @@
   font-size: 0.85em;
   transition: transform 0.25s ease;
 }
+
 .buttonRow :global(.button:hover) .arrow {
   transform: translateY(-4px);
   animation: arrowBounce 0.6s ease;
@@ -140,44 +168,62 @@
 
 /* --- Bottom Description --- */
 .descriptionSection {
-  --box-margin: 0; /* Remove horizontal margins */
-  margin: 1rem 0 0 0; /* Only keep vertical margins */
-  position: relative; /* Ensure stacking context */
-  overflow: visible; /* Allow the blur to extend beyond the section */
+  --box-margin: 0;
+  /* Remove horizontal margins */
+  margin: 1rem 0 0 0;
+  /* Only keep vertical margins */
+  position: relative;
+  /* Ensure stacking context */
+  overflow: visible;
+  /* Allow the blur to extend beyond the section */
   box-sizing: border-box;
   padding: 0;
-  width: 100%; /* Make the section span the full width of the screen */
-  z-index: 2; /* Place it above the hero section */
+  width: 100%;
+  /* Make the section span the full width of the screen */
+  z-index: 2;
+  /* Place it above the hero section */
 }
 
 .descriptionContent {
-  z-index: 3; /* Ensure it is above the ::before pseudo-element */
+  z-index: 3;
+  /* Ensure it is above the ::before pseudo-element */
   position: relative;
   background: white;
-  border-radius: 0; /* Remove border radius to match full width */
-  isolation: isolate; /* Create a new stacking context */
+  border-radius: 0;
+  /* Remove border radius to match full width */
+  isolation: isolate;
+  /* Create a new stacking context */
   font-size: 1.25rem;
-  text-align: center; /* Center-align all text */
+  text-align: center;
+  /* Center-align all text */
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center-align content horizontally */
-  justify-content: center; /* Center-align content vertically */
-  line-height: 2; /* Increase vertical spacing between sentences */
-  color: black; /* Default text color */
+  align-items: center;
+  /* Center-align content horizontally */
+  justify-content: center;
+  /* Center-align content vertically */
+  line-height: 2;
+  /* Increase vertical spacing between sentences */
+  color: black;
+  /* Default text color */
 }
 
 .descriptionContent::before {
   content: "";
   position: absolute;
-  top: -50%; /* Extend the blur effect above the section */
+  top: -50%;
+  /* Extend the blur effect above the section */
   left: 0;
   right: 0;
-  height: 50%; /* Only cover the top portion */
+  height: 50%;
+  /* Only cover the top portion */
   border-radius: inherit;
   background: white;
-  z-index: -1; /* Place it behind the content but above the hero section */
+  z-index: -1;
+  /* Place it behind the content but above the hero section */
   filter: blur(15px);
-  transform: scale(1.25); /* Extend the blur effect */
+  transform: scale(1.25);
+  /* Extend the blur effect */
   pointer-events: none;
 }
 
@@ -203,131 +249,178 @@
   width: auto;
   opacity: 0.85;
 }
+
 .logoImgJudson {
   height: 44px;
   width: auto;
   opacity: 0.85;
 }
+
 .logoImgNIH {
   height: 40px;
   width: auto;
   opacity: 0.85;
 }
+
 .logoImgZangle {
   height: 38px;
   width: auto;
   opacity: 0.85;
 }
+
 /* --- Responsive Styles --- */
 @media screen and (max-width: 996px) {
-  .headline { font-size: 2.2rem; }
-  .heroSection { padding: 2rem; }
-  .heroHeader { flex-direction: column; align-items: flex-start; }
+  .headline {
+    font-size: 2.2rem;
+  }
+
+  .heroSection {
+    padding: 2rem;
+  }
+
+  .heroHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media screen and (max-width: 620px) {
-  .headline { font-size: 1.5rem; }
+  .headline {
+    font-size: 1.5rem;
+  }
 }
 
 /* Light Mode Styles */
 [data-theme='light'] .descriptionContent {
-  background: white; /* Light background color */
-  color: black; /* Dark text color for light mode */
+  background: white;
+  /* Light background color */
+  color: black;
+  /* Dark text color for light mode */
 }
 
 [data-theme='light'] .descriptionContent a {
-  color: #007acc; /* Adjust link color for better contrast in light mode */
+  color: #007acc;
+  /* Adjust link color for better contrast in light mode */
 }
 
 [data-theme='light'] .descriptionContent::before {
-  background: white; /* Match the light background color */
+  background: white;
+  /* Match the light background color */
 }
 
 [data-theme='light'] .logoRow {
-  background: white; /* Match the light mode background color of descriptionContent */
+  background: white;
+  /* Match the light mode background color of descriptionContent */
 }
 
 [data-theme='light'] .pageWrapper {
-  background: white; /* Light background color */
+  background: white;
+  /* Light background color */
 }
+
 [data-theme='light'] .heroContent {
-  background: white; /* Light background color */
-  color: black; /* Dark text color for light mode */
+  background: white;
+  /* Light background color */
+  color: black;
+  /* Dark text color for light mode */
 }
 
 [data-theme='light'] .heroContent::before {
-  background: white; /* Match the light background color */
+  background: white;
+  /* Match the light background color */
 }
 
 [data-theme='light'] .buttonRow :global(.button.button--primary) {
   background: transparent;
-  border: 3px solid #5a5a5a; /* Gray border for light mode */
-  color: #5a5a5a; /* Gray text color for light mode */
+  border: 3px solid #5a5a5a;
+  /* Gray border for light mode */
+  color: #5a5a5a;
+  /* Gray text color for light mode */
 }
 
 [data-theme='light'] .buttonRow :global(.button.button--primary:hover),
 [data-theme='light'] .buttonRow :global(.button.button--primary:focus) {
-  background: var(--ifm-color-primary); /* Primary color on hover */
+  background: var(--ifm-color-primary);
+  /* Primary color on hover */
   border-color: var(--ifm-color-primary);
-  color: #fff; /* White text on hover */
+  color: #fff;
+  /* White text on hover */
 }
 
 [data-theme='light'] .buttonRow :global(.button.button--primary:active) {
-  background: var(--ifm-color-primary-dark); /* Darker primary color on active */
+  background: var(--ifm-color-primary-dark);
+  /* Darker primary color on active */
   border-color: var(--ifm-color-primary-dark);
 }
 
 /* Dark Mode Styles */
 @media (prefers-color-scheme: dark) {
   .descriptionContent {
-    background: #1e1e1e; /* Dark background color */
-    color: #f5f5f5; /* Light text color for dark mode */
+    background: #1e1e1e;
+    /* Dark background color */
+    color: #f5f5f5;
+    /* Light text color for dark mode */
   }
 
   .descriptionContent a {
-    color: #9ecbff; /* Adjust link color for better contrast in dark mode */
+    color: #9ecbff;
+    /* Adjust link color for better contrast in dark mode */
   }
 
   .descriptionContent::before {
-    background: #1e1e1e; /* Match the dark background color */
+    background: #1e1e1e;
+    /* Match the dark background color */
   }
 
   .logoRow {
-    background: #1e1e1e; /* Match the dark mode background color of descriptionContent */
+    background: #1e1e1e;
+    /* Match the dark mode background color of descriptionContent */
   }
 
   .pageWrapper {
-    background: #1e1e1e; /* Ensure the background behind the logoRow matches */
+    background: #1e1e1e;
+    /* Ensure the background behind the logoRow matches */
   }
+
   .heroContent {
-    background: #1e1e1e; /* Dark background color */
-    color: #f5f5f5; /* Light text color for dark mode */
+    background: #1e1e1e;
+    /* Dark background color */
+    color: #f5f5f5;
+    /* Light text color for dark mode */
   }
 
   .heroContent::before {
-    background: #1e1e1e; /* Match the dark background color */
+    background: #1e1e1e;
+    /* Match the dark background color */
   }
 
   .buttonRow :global(.button.button--primary) {
     background: transparent;
-    border: 3px solid #f5f5f5; /* Light border for dark mode */
-    color: #f5f5f5; /* Light text color for dark mode */
+    border: 3px solid #f5f5f5;
+    /* Light border for dark mode */
+    color: #f5f5f5;
+    /* Light text color for dark mode */
   }
 
   .buttonRow :global(.button.button--primary:hover),
   .buttonRow :global(.button.button--primary:focus) {
-    background: var(--ifm-color-primary); /* Primary color on hover */
+    background: var(--ifm-color-primary);
+    /* Primary color on hover */
     border-color: var(--ifm-color-primary);
-    color: #000; /* Dark text on hover */
+    color: #000;
+    /* Dark text on hover */
   }
 
   .buttonRow :global(.button.button--primary:active) {
-    background: var(--ifm-color-primary-dark); /* Darker primary color on active */
+    background: var(--ifm-color-primary-dark);
+    /* Darker primary color on active */
     border-color: var(--ifm-color-primary-dark);
   }
 }
+
 html[data-theme='dark'] .footer,
 html[data-theme='dark'] .footer__copyright,
 html[data-theme='dark'] .footer a {
-  color: #f5f5f5 !important; /* Light text color */
+  color: #f5f5f5 !important;
+  /* Light text color */
 }
