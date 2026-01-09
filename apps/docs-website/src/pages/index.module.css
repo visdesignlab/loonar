@@ -45,6 +45,15 @@
   pointer-events: none;
 }
 
+.heroVideoWrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 100px 50px white;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .heroVideo {
   width: 100%;
   height: 100%;
