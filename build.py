@@ -290,7 +290,7 @@ def follow_logs(service_name, logs_path, verbose=False, detached=False):
     # Optionally send std error to subprocess.PIPE and then take STDERR and log to error file
 
 
-def build_containers(env_file, disable_spinner=False, services=None):
+def build_containers(env_file, disable_spinner=False):
     global stop_spinner
     if not disable_spinner:
         stop_spinner = False
@@ -326,7 +326,7 @@ def follow_all_logs(logs_path, services, verbose=False, detached=False):
         log_thread.start()
 
 
-def start_containers(env_file, disable_spinner=False, services=None):
+def start_containers(env_file, disable_spinner=False):
     global stop_spinner
     if not disable_spinner:
         stop_spinner = False
@@ -478,7 +478,7 @@ if __name__ == "__main__":
             createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
-                services = ["client", "data", "duckdb"]
+                services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
             else:
                 services = ["db", "client", "server", "minio", "celery", "redis", "duckdb"]
 
@@ -507,8 +507,8 @@ if __name__ == "__main__":
             signal.signal(signal.SIGINT, cleanup_and_exit)
 
             # Build, run, then follow all logs. Begin monitoring process
-            build_containers(f'.build-files/{args.env_file}', args.disable_spinner, services)
-            start_containers(f'.build-files/{args.env_file}', args.disable_spinner, services)
+            build_containers(f'.build-files/{args.env_file}', args.disable_spinner)
+            start_containers(f'.build-files/{args.env_file}', args.disable_spinner)
             print(f"Visit {http_value}{base_url} to view application.\n")
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 

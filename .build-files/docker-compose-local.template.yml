@@ -15,6 +15,9 @@ services:
         NGINX_FILE: ${NGINX_FILE}
     ports:
       - "${LOCAL_PORT_1:-80}:${LOCAL_PORT_2:-80}"
+    depends_on:
+      - server
+      - celery
     env_file:
       - path: ${DOCKER_ENV_FILE} # relative to docker compose (has to be in same directory)
         required: true

@@ -56,6 +56,13 @@ export const useConfigStore = defineStore('configStore', () => {
     function getDuckDbFileUrl(path: string): string {
         // Trims any leading slashes from path
         const trimmedPath = path.replace(/^\/+/, '');
+
+        // In local Docker environment, DuckDB container cannot access 'localhost'
+        // It must use the docker service name 'client'
+        if (environment === 'local') {
+            return `http://client/data/${trimmedPath}`;
+        }
+
         return `${serverUrl}/${trimmedPath}`;
     }
 
