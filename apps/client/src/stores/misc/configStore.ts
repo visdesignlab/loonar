@@ -63,7 +63,10 @@ export const useConfigStore = defineStore('configStore', () => {
             return `http://client/data/${trimmedPath}`;
         }
 
-        return `${serverUrl}/${trimmedPath}`;
+        // In production, DuckDB container also cannot reliably access the public URL (loopback/hairpin NAT)
+        // Use the internal minio service directly
+        return `http://minio:9000/data/${trimmedPath}`;
+
     }
 
     return {
