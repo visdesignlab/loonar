@@ -63,7 +63,7 @@ watch(
         />
     </div>
 
-    <div class="row no-wrap items-center justify-between q-mb-xs">
+    <div class="row no-wrap items-center justify-between q-mb-xs q-mt-sm">
         <q-btn-group outline rounded>
             <q-btn
                 @click="imageViewerStore.stepBackwards"
@@ -95,17 +95,36 @@ watch(
         </q-btn-group>
 
         <div class="row no-wrap items-center">
-            <span class="text-caption q-mr-xs">FPS:</span>
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="playbackSpeed"
-                type="number"
-                :step="2"
-                :dark="globalSettings.darkMode"
-                :min="1"
-                :max="60"
-            />
+            <span class="text-caption q-ml-sm q-mr-xs">Speed:</span>
+            <q-btn-group outline rounded>
+                <q-btn
+                    @click="playbackSpeed = 3"
+                    size="sm"
+                    outline
+                    :color="playbackSpeed === 3 ? 'primary' : 'grey-7'"
+                    title="Slow"
+                    label="0.5x"
+                    padding="sm 10px"
+                />
+                <q-btn
+                    @click="playbackSpeed = 10"
+                    size="sm"
+                    outline
+                    :color="playbackSpeed === 10 ? 'primary' : 'grey-7'"
+                    title="Medium"
+                    label="1x"
+                    padding="xs 10px"
+                />
+                <q-btn
+                    @click="playbackSpeed = 45"
+                    size="sm"
+                    outline
+                    :color="playbackSpeed === 45 ? 'primary' : 'grey-7'"
+                    title="Fast"
+                    label="2x"
+                    padding="sm 10px"
+                />
+            </q-btn-group>
         </div>
     </div>
 
