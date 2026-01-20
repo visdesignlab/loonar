@@ -11,15 +11,10 @@ const cellMetaData = useCellMetaData();
 const imageViewerStore = useImageViewerStore();
 const eventBusStore = useEventBusStore();
 const globalSettings = useGlobalSettings();
-const { sizeT, isPlaying, isReverse } = storeToRefs(imageViewerStoreUntrracked);
+const { sizeT, isPlaying } = storeToRefs(imageViewerStoreUntrracked);
 
-function togglePlay(reverse: boolean) {
-    if (isPlaying.value && isReverse.value === reverse) {
-        isPlaying.value = false;
-    } else {
-        isReverse.value = reverse;
-        isPlaying.value = true;
-    }
+function togglePlay() {
+    isPlaying.value = !isPlaying.value;
 }
 </script>
 
@@ -39,25 +34,15 @@ function togglePlay(reverse: boolean) {
                 outline
                 round
                 title="previous frame"
-                icon="arrow_left"
+                icon="chevron_left"
             />
             <q-btn
-                @click="togglePlay(true)"
+                @click="togglePlay"
                 size="sm"
                 outline
                 round
-                :title="isPlaying && isReverse ? 'pause' : 'play backwards'"
-                :icon="isPlaying && isReverse ? 'pause' : 'play_arrow'"
-                :class="isPlaying && isReverse ? '' : 'rotate-180'"
-                :disable="imageViewerStore.frameNumber <= 1"
-            />
-            <q-btn
-                @click="togglePlay(false)"
-                size="sm"
-                outline
-                round
-                :title="isPlaying && !isReverse ? 'pause' : 'play forwards'"
-                :icon="isPlaying && !isReverse ? 'pause' : 'play_arrow'"
+                :title="isPlaying ? 'pause' : 'play'"
+                :icon="isPlaying ? 'pause' : 'play_arrow'"
                 :disable="imageViewerStore.frameNumber >= sizeT"
             />
             <q-btn
@@ -66,7 +51,7 @@ function togglePlay(reverse: boolean) {
                 outline
                 round
                 title="next frame"
-                icon="arrow_right"
+                icon="chevron_right"
             />
         </q-btn-group>
         <q-slider

@@ -60,7 +60,7 @@ const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
 const { highlightedCellIds, unfilteredTrackIds } =
     storeToRefs(mosaicSelectionStore);
-const { isPlaying, sizeT, isReverse } = storeToRefs(imageViewerStoreUntrracked);
+const { isPlaying, sizeT } = storeToRefs(imageViewerStoreUntrracked);
 const { playbackSpeed } = storeToRefs(imageViewerStore);
 let playbackInterval: number | null = null;
 
@@ -71,20 +71,11 @@ const stopPlayback = () => {
     }
 };
 const tick = () => {
-    if (isReverse.value) {
-        if (imageViewerStore.frameNumber <= 1) {
-            // Stop if we reach the first frame
-            isPlaying.value = false;
-        } else {
-            imageViewerStore.stepBackwards();
-        }
+    if (imageViewerStore.frameNumber >= sizeT.value) {
+        // Stop if we reach the last frame
+        isPlaying.value = false;
     } else {
-        if (imageViewerStore.frameNumber >= sizeT.value) {
-            // Stop if we reach the last frame
-            isPlaying.value = false;
-        } else {
-            imageViewerStore.stepForwards(sizeT.value); 
-        }
+        imageViewerStore.stepForwards(sizeT.value); 
     }
 };
 const startPlayback = () => {

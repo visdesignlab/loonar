@@ -12,18 +12,13 @@ const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const globalSettings = useGlobalSettings();
 const eventBusStore = useEventBusStore();
-const { contrastLimitSlider, isPlaying, sizeT, sizeC, isReverse } = storeToRefs(
+const { contrastLimitSlider, isPlaying, sizeT, sizeC } = storeToRefs(
     imageViewerStoreUntrracked
 );
 const { playbackSpeed } = storeToRefs(imageViewerStore);
 
-function togglePlay(reverse: boolean) {
-    if (isPlaying.value && isReverse.value === reverse) {
-        isPlaying.value = false;
-    } else {
-        isReverse.value = reverse;
-        isPlaying.value = true;
-    }
+function togglePlay() {
+    isPlaying.value = !isPlaying.value;
 }
 
 watch(
@@ -76,26 +71,16 @@ watch(
                 outline
                 round
                 title="previous frame"
-                icon="arrow_left"
+                icon="chevron_left"
                 :disable="imageViewerStore.frameNumber <= 1"
             />
             <q-btn
-                @click="togglePlay(true)"
+                @click="togglePlay"
                 size="sm"
                 outline
                 round
-                :title="isPlaying && isReverse ? 'pause' : 'play backwards'"
-                :icon="isPlaying && isReverse ? 'pause' : 'play_arrow'"
-                :class="isPlaying && isReverse ? '' : 'rotate-180'"
-                :disable="imageViewerStore.frameNumber <= 1"
-            />
-            <q-btn
-                @click="togglePlay(false)"
-                size="sm"
-                outline
-                round
-                :title="isPlaying && !isReverse ? 'pause' : 'play forwards'"
-                :icon="isPlaying && !isReverse ? 'pause' : 'play_arrow'"
+                :title="isPlaying ? 'pause' : 'play'"
+                :icon="isPlaying ? 'pause' : 'play_arrow'"
                 :disable="imageViewerStore.frameNumber >= sizeT"
             />
             <q-btn
@@ -104,7 +89,7 @@ watch(
                 outline
                 round
                 title="next frame"
-                icon="arrow_right"
+                icon="chevron_right"
                 :disable="imageViewerStore.frameNumber >= sizeT"
             />
         </q-btn-group>
