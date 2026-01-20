@@ -23,12 +23,23 @@ export const useImageViewerStoreUntrracked = defineStore(
         const sizeT = ref<number>(1);
         const sizeC = ref<number>(1);
 
+        function initializeContrastLimits(limits: [number, number]) {
+            if (
+                contrastLimitSlider.value.min === 0 &&
+                contrastLimitSlider.value.max === 0
+            ) {
+                contrastLimitSlider.value.min = limits[0];
+                contrastLimitSlider.value.max = limits[1];
+            }
+        }
+
         return {
             contrastLimitSlider,
             sizeX,
             sizeY,
             sizeT,
             sizeC,
+            initializeContrastLimits,
         };
     }
 );
