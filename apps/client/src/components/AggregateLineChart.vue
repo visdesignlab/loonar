@@ -19,7 +19,6 @@ import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrracke
 import CellSnippetsLayer from './layers/CellSnippetsLayer';
 import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
-import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useLooneageViewStore } from '@/stores/componentStores/looneageViewStore';
 import { Deck, OrthographicView } from '@deck.gl/core/typed';
 import {
@@ -47,12 +46,9 @@ const dataPointSelection = useDataPointSelection();
 const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const datasetSelectionStore = useDatasetSelectionStore();
-const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const looneageViewStore = useLooneageViewStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
-const { contrastLimitSlider, lastExperimentFilename } = storeToRefs(
-    imageViewerStoreUntrracked
-);
+const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
 let {
     customXRangeMin,
     customXRangeMax,
@@ -290,17 +286,12 @@ watch(currentLocationMetadata, async () => {
     if (testRaster.value == null) return;
     const copy = testRaster.value.data.slice();
     const channelStats = getChannelStats(copy);
-    const currentName =
-        datasetSelectionTrrackedStore.currentExperimentFilename;
-    const isNewExperiment = currentName !== lastExperimentFilename.value;
     if (
-        isNewExperiment ||
-        (contrastLimitSlider.value.min === 0 &&
-            contrastLimitSlider.value.max === 0)
+        contrastLimitSlider.value.min === 0 &&
+        contrastLimitSlider.value.max === 0
     ) {
         contrastLimitSlider.value.min = channelStats.contrastLimits[0];
         contrastLimitSlider.value.max = channelStats.contrastLimits[1];
-        lastExperimentFilename.value = currentName;
     }
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
