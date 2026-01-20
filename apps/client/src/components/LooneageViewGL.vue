@@ -93,7 +93,9 @@ const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const datasetSelectionStore = useDatasetSelectionStore();
 const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const { contrastLimitSlider, lastExperimentFilename } = storeToRefs(
+    imageViewerStoreUntrracked
+);
 const { frameNumber } = storeToRefs(imageViewerStore);
 const { selectedTrack, selectedLineage } = storeToRefs(cellMetaData);
 const eventBusStore = useEventBusStore();
@@ -271,8 +273,18 @@ watch(currentLocationMetadata, async () => {
     if (testRaster.value == null) return;
     const copy = testRaster.value.data.slice();
     const channelStats = getChannelStats(copy);
-    contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+    const currentName =
+        datasetSelectionTrrackedStore.currentExperimentFilename;
+    const isNewExperiment = currentName !== lastExperimentFilename.value;
+    if (
+        isNewExperiment ||
+        (contrastLimitSlider.value.min === 0 &&
+            contrastLimitSlider.value.max === 0)
+    ) {
+        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        lastExperimentFilename.value = currentName;
+    }
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
 

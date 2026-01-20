@@ -13,6 +13,7 @@ import { useDataPointSelection } from '@/stores/interactionStores/dataPointSelec
 import { useImageViewerStore } from '@/stores/componentStores/imageViewerTrrackedStore';
 import { useImageViewerStoreUntrracked } from '@/stores/componentStores/imageViewerUntrrackedStore';
 import { useDatasetSelectionStore } from '@/stores/dataStores/datasetSelectionUntrrackedStore';
+import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useDataPointSelectionUntrracked } from '@/stores/interactionStores/dataPointSelectionUntrrackedStore';
 import { useSegmentationStore } from '@/stores/dataStores/segmentationStore';
 import { useEventBusStore } from '@/stores/misc/eventBusStore';
@@ -52,9 +53,12 @@ const dataPointSelection = useDataPointSelection();
 const imageViewerStore = useImageViewerStore();
 const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const datasetSelectionStore = useDatasetSelectionStore();
+const datasetSelectionTrrackedStore = useDatasetSelectionTrrackedStore();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const { contrastLimitSlider, lastExperimentFilename } = storeToRefs(
+    imageViewerStoreUntrracked
+);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
@@ -195,8 +199,18 @@ watch(currentLocationMetadata, async () => {
         selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
-    contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+    const currentName =
+        datasetSelectionTrrackedStore.currentExperimentFilename;
+    const isNewExperiment = currentName !== lastExperimentFilename.value;
+    if (
+        isNewExperiment ||
+        (contrastLimitSlider.value.min === 0 &&
+            contrastLimitSlider.value.max === 0)
+    ) {
+        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        lastExperimentFilename.value = currentName;
+    }
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
     // const contrastLimits: [number, number][] = [
@@ -232,8 +246,18 @@ watch(
             selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
         });
         const channelStats = getChannelStats(raster.data);
-        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        const currentName =
+            datasetSelectionTrrackedStore.currentExperimentFilename;
+        const isNewExperiment = currentName !== lastExperimentFilename.value;
+        if (
+            isNewExperiment ||
+            (contrastLimitSlider.value.min === 0 &&
+                contrastLimitSlider.value.max === 0)
+        ) {
+            contrastLimitSlider.value.min = channelStats.contrastLimits[0];
+            contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+            lastExperimentFilename.value = currentName;
+        }
         imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
         imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
         renderDeckGL();
