@@ -145,10 +145,7 @@ const {
     selectedVar1,
     horizonChartSettings,
     histogramYAxisLabel,
-    visibleExemplarTracks,
-    visibleConditionGroupsCount,
 } = storeToRefs(exemplarViewStore);
-const { loadMoreConditionGroups } = exemplarViewStore;
 const imageViewerStore = useImageViewerStore();
 const selectedAttributeName = computed(() => exemplarViewStore.getAttributeName());
 
@@ -299,15 +296,6 @@ function handleScroll(delta: number) {
         scrollExtent.value.min,
         scrollExtent.value.max
     );
-
-    // Check if we are near the bottom of the scroll extent
-    const buffer = 500; // pixels
-    if (viewStateMirror.value.target[1] >= scrollExtent.value.max - buffer) {
-        // Trigger load more
-        loadMoreConditionGroups();
-        // Since visible tracks changed, we need to recalculate Y offsets
-        // This will happen in renderDeckGL
-    }
 
     const newViewState = cloneDeep(viewStateMirror.value);
     deckgl.value.setProps({
@@ -460,12 +448,6 @@ watch(
     { immediate: false } // We don't need to run this immediately on mount
 );
 
-// Watch for changes in visible tracks (pagination) to re-render
-watch(visibleExemplarTracks, () => {
-    safeRenderDeckGL();
-});
-
-
 
 // Main rendering function for DeckGL -------------------------------------------------------------------
 let deckGLLayers: any[] = [];
@@ -546,7 +528,7 @@ const exemplarRenderInfo = ref(new Map<string, ExemplarRenderInfo>());
 
 // Finds the exemplar tracks that are currently on screen.
 const exemplarTracksOnScreen = computed(() => {
-    return visibleExemplarTracks.value.filter((exemplar: ExemplarTrack) => {
+    return exemplarTracks.value.filter((exemplar: ExemplarTrack) => {
         const renderInfo = exemplarRenderInfo.value.get(
             uniqueExemplarKey(exemplar)
         );
@@ -592,9 +574,9 @@ const bottomYOffset = computed(() => {
 function recalculateExemplarYOffsets(): void {
     exemplarRenderInfo.value.clear();
     let yOffset = 0;
-    let lastExemplar = visibleExemplarTracks.value[0];
-    for (let i = 0; i < visibleExemplarTracks.value.length; i++) {
-        const exemplar = visibleExemplarTracks.value[i];
+    let lastExemplar = exemplarTracks.value[0];
+    for (let i = 0; i < exemplarTracks.value.length; i++) {
+        const exemplar = exemplarTracks.value[i];
         yOffset += exemplarHeight.value;
         if (i !== 0) {
             if (isEqual(exemplar.tags, lastExemplar.tags)) {
@@ -696,7 +678,7 @@ watch(
 // Populate cellSegmentationData with all segmentation data for all cells in exemplar tracks ONCE.
 async function getCellSegmentationData() {
     // For every cell from every exemplar track, get its segmentation and location and push that to the cellSegmentationData
-    for (const exemplar of visibleExemplarTracks.value) {
+    for (const exemplar of exemplarTracks.value) {
         if (!exemplar.data || exemplar.data.length === 0) continue;
         // For every exemplar track, iterate through its cells to get segmentation and location
         for (const cell of exemplar.data) {

@@ -342,8 +342,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         } finally {
             // After fetching, we've finished loading.
             exemplarDataLoaded.value = true;
-            // Reset pagination
-            visibleConditionGroupsCount.value = 15;
         }
     }
     
@@ -936,28 +934,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         }
     }
 
-    // Pagination logic
-    const visibleConditionGroupsCount = ref(15);
-    const LOAD_INCREMENT = 5;
-
-    // Cache the sorted groups to avoid re-sorting on every render/scroll
-    const sortedExemplarGroups = computed(() => {
-        return sortExemplarsByCondition(exemplarTracks.value);
-    });
-
-    function loadMoreConditionGroups() {
-        if (visibleConditionGroupsCount.value < sortedExemplarGroups.value.length) {
-            visibleConditionGroupsCount.value += LOAD_INCREMENT;
-        }
-    }
-
-    // This is the subset of tracks that should actually be rendered
-    const visibleExemplarTracks = computed(() => {
-        const visibleGroups = sortedExemplarGroups.value.slice(0, visibleConditionGroupsCount.value);
-        // Flatten array of arrays
-        return visibleGroups.flatMap(group => group);
-    });
-
     // const getHistogramDataComputed = computed(() => histogramData.value);
     const conditionHistogramsComputed = computed(
         () => conditionHistograms.value
@@ -968,8 +944,6 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         getExemplarTracks,
         getExemplarImageUrls,
         exemplarTracks,
-        visibleExemplarTracks, // Export the visible tracks
-        loadMoreConditionGroups, // Export the load more action
         viewConfiguration,
         snippetZoom,
         exemplarHeight,
@@ -991,6 +965,5 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         histogramDomains: histogramDomainsComputed,
         exemplarDataLoaded, // export the loading state
         horizonChartScheme,
-        visibleConditionGroupsCount, // for debugging if needed
     };
 });
