@@ -231,8 +231,9 @@ watch(currentLocationMetadata, async () => {
         selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
-    contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+    imageViewerStoreUntrracked.initializeContrastLimits(
+        channelStats.contrastLimits as [number, number]
+    );
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
     // const contrastLimits: [number, number][] = [
@@ -268,8 +269,9 @@ watch(
             selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
         });
         const channelStats = getChannelStats(raster.data);
-        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        imageViewerStoreUntrracked.initializeContrastLimits(
+            channelStats.contrastLimits as [number, number]
+        );
         imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
         imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
         renderDeckGL();
