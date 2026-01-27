@@ -97,6 +97,8 @@ watch(playbackSpeed, () => {
 });
 
 
+
+
 const deckGlContainer = ref(null);
 const { width: containerWidth, height: containerHeight } =
     useElementSize(deckGlContainer);
@@ -210,24 +212,23 @@ onMounted(() => {
 
 const loader = ref<any | null>(null);
 const pixelSource = ref<any | null>(null);
-watch(currentLocationMetadata, async () => {
-    if (currentLocationMetadata.value?.imageDataFilename == null) return;
+watch(currentLocationMetadata, async (newVal) => {
+    if (newVal?.imageDataFilename == null) return;
     if (deckgl == null) return;
-    // if (contrastLimitSlider == null) return;
-    // renderLoadingDeckGL();
-    // imageViewerStore.frameIndex = 0;
-    pixelSource.value = null;
+    // Capture the filename we are trying to load
+    const targetFilename = newVal.imageDataFilename;
 
-    const fullImageUrl = configStore.getFileUrl(
-        currentLocationMetadata.value.imageDataFilename
-    );
-    loader.value = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
-    imageViewerStoreUntrracked.sizeX = loader.value.metadata.Pixels.SizeX;
-    imageViewerStoreUntrracked.sizeY = loader.value.metadata.Pixels.SizeY;
-    imageViewerStoreUntrracked.sizeT = loader.value.metadata.Pixels.SizeT;
-    imageViewerStoreUntrracked.sizeC = loader.value.metadata.Pixels.SizeC;
+    const fullImageUrl = configStore.getFileUrl(targetFilename);
+    const newLoader = await loadOmeTiff(fullImageUrl, { pool: new Pool() });
 
-    const raster: PixelData = await loader.value.data[0].getRaster({
+    // Atomic update of state
+    loader.value = newLoader;
+    imageViewerStoreUntrracked.sizeX = newLoader.metadata.Pixels.SizeX;
+    imageViewerStoreUntrracked.sizeY = newLoader.metadata.Pixels.SizeY;
+    imageViewerStoreUntrracked.sizeT = newLoader.metadata.Pixels.SizeT;
+    imageViewerStoreUntrracked.sizeC = newLoader.metadata.Pixels.SizeC;
+
+    const raster: PixelData = await newLoader.data[0].getRaster({
         selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
@@ -239,7 +240,7 @@ watch(currentLocationMetadata, async () => {
     // const contrastLimits: [number, number][] = [
     //     channelStats.contrastLimits as [number, number],
     // ];
-    pixelSource.value = loader.value.data[0] as PixelSource<any>;
+    pixelSource.value = newLoader.data[0] as PixelSource<any>;
     renderDeckGL();
     // TODO: this is causing a minor visual bug, the loading is offset before the image is loaded.
     // but this is better than the image being offset for now.
@@ -280,32 +281,41 @@ watch(
 );
 
 function createBaseImageLayer(): typeof ImageLayer {
-    // If createNewLayer is false, we should reuse the existing imageLayer
-    let id = imageLayer.value?.id ?? 'base-image-layer';
+    // If refresh triggered, generate new unique ID
     if (refreshBaseImageLayer.value) {
-        id = `base-image-layer-${imageViewerStore.frameNumber}`;
+        currentImageLayerId.value = `base-image-layer-${Date.now()}`;
     }
+    const layerId = currentImageLayerId.value;
+
     return new ImageLayer({
         loader: pixelSource.value,
-        id,
+        id: layerId,
         contrastLimits: contrastLimit.value,
         selections: imageViewerStore.selections,
         channelsVisible: [true],
         extensions: [colormapExtension],
         // @ts-ignore
         colormap: imageViewerStore.colormap,
-        // onClick: () => console.log('click in base image layer'),
-        // onViewportLoad: () => {
-        //     console.log('image viewport load');
-        // },
+        onViewportLoad: () => {
+            // When the new layer loads:
+            if (refreshBaseImageLayer.value) {
+                refreshBaseImageLayer.value = false;
+            }
+
+            // Remove any old layers
+            const index = imageLayers.value.findIndex(
+                (l: any) => l.id === layerId
+            );
+            if (index !== -1) {
+                // Keep this layer and anything newer
+                imageLayers.value = imageLayers.value.slice(index);
+            }
+        },
     });
 }
 
 function createSegmentationsLayer(): typeof GeoJsonLayer {
-    const folderUrl = configStore.getFileUrl(
-        datasetSelectionStore.currentLocationMetadata?.segmentationsFolder ??
-            'UNKNOWN'
-    );
+
 
     const hoverColorWithAlpha = colors.hovered.rgba;
     hoverColorWithAlpha[3] = 128;
@@ -615,24 +625,27 @@ const currentCellMap = computed<Map<string, Cell>>(() => {
 
 function createTrajectoryGhostLayer(): TripsLayer {
     return new TripsLayer({
-    id: 'trips-layer',
-    data: currentTrackArray.value,
-    pickable: false,
-    getWidth: 3,
-    getPath: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
-    getTimestamps: (d: Track) => d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
-    getColor: [152, 78, 163],
-    opacity: 0.6,
-    rounded: true,
-    fadeTrail: true,
-    trailLength: imageViewerStore.effectiveTrailLength,
-    currentTime: imageViewerStore.frameNumber,
+        id: 'trips-layer',
+        data: currentTrackArray.value,
+        pickable: false,
+        getWidth: 3,
+        getPath: (d: Track) =>
+            d.cells.map((cell: Cell) => cellMetaData.getPosition(cell)),
+        getTimestamps: (d: Track) =>
+            d.cells.map((cell: Cell) => cellMetaData.getFrame(cell)),
+        getColor: [152, 78, 163],
+        opacity: 0.6,
+        rounded: true,
+        fadeTrail: true,
+        trailLength: imageViewerStore.effectiveTrailLength,
+        currentTime: imageViewerStore.frameNumber,
     });
 }
 
-const imageLayer = ref();
+const imageLayers = ref<(typeof ImageLayer)[]>([]);
+const currentImageLayerId = ref('base-image-layer');
 
-// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error,
+// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error
 const refreshBaseImageLayer = ref<boolean>(false);
 const updateBaseImageLayer = debounce(() => {
     refreshBaseImageLayer.value = true;
@@ -649,10 +662,25 @@ function renderDeckGL(): void {
     const layers = [];
     if (imageViewerStore.showImageLayer) {
         if (pixelSource.value == null) return;
-        imageLayer.value = createBaseImageLayer();
-        layers.push(imageLayer.value);
-        // No need to refresh unless debounce is called above.
-        refreshBaseImageLayer.value = false;
+        // Layer Swapping Logic
+        const newLayer = createBaseImageLayer();
+
+        // If we list has no layers, just add it
+        if (imageLayers.value.length === 0) {
+            imageLayers.value.push(newLayer);
+        } else {
+            // Update layer if same id. If different (refresh triggered), push it (overlay until loaded).
+            const lastLayer = imageLayers.value[
+                imageLayers.value.length - 1
+            ] as any;
+            if (lastLayer.id === (newLayer as any).id) {
+                imageLayers.value[imageLayers.value.length - 1] = newLayer;
+            } else {
+                imageLayers.value.push(newLayer);
+            }
+        }
+
+        layers.push(...imageLayers.value);
     }
     if (imageViewerStore.showCellBoundaryLayer) {
         layers.push(createSegmentationsLayer());
@@ -760,7 +788,14 @@ watch(triggerRecenter, () => {
 
 watch(darkMode, renderDeckGL);
 watch(currentTrackArray, renderDeckGL);
-watch(dataPointSelection.$state, renderDeckGL);
+watch(() => dataPointSelection.selectedTrackId, renderDeckGL);
+watch(() => dataPointSelection.selectedLineageId, renderDeckGL);
+watch(
+    () => dataPointSelection.currentFrameIndex,
+    () => {
+        renderDeckGL();
+    }
+);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
 watch(highlightedCellIds, renderDeckGL);
