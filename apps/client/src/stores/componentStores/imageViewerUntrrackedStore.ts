@@ -26,6 +26,7 @@ export const useImageViewerStoreUntrracked = defineStore(
         const sizeY = ref<number>(1);
         const sizeT = ref<number>(1);
         const sizeC = ref<number>(1);
+        const isImageLoading = ref<boolean>(false);
 
         function initializeContrastLimits(limits: [number, number]) {
             // If the contrast limit slider is not initialized (0, 0), initialize it
@@ -47,6 +48,7 @@ export const useImageViewerStoreUntrracked = defineStore(
             sizeC,
             initializeContrastLimits,
             isPlaying,
+            isImageLoading
         };
     }
 );
