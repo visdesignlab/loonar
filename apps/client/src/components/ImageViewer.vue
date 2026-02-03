@@ -301,7 +301,7 @@ function createBaseImageLayer(): typeof ImageLayer {
         // @ts-ignore
         colormap: imageViewerStore.colormap,
         onViewportLoad: () => {
-            // When the new layer loads:
+            // Updated state to indicate loading finished
             if (refreshBaseImageLayer.value) {
                 refreshBaseImageLayer.value = false;
             }
@@ -318,13 +318,13 @@ function createBaseImageLayer(): typeof ImageLayer {
             // Image loading complete
             isImageLoading.value = false;
             lastLoadedFrame.value = imageViewerStore.frameNumber;
+            // Force re-render to remove old layers from the canvas
+            renderDeckGL();
         },
     });
 }
 
 function createSegmentationsLayer(): typeof GeoJsonLayer {
-
-
     const hoverColorWithAlpha = colors.hovered.rgba;
     hoverColorWithAlpha[3] = 128;
     // @ts-ignore
@@ -682,20 +682,13 @@ function renderDeckGL(): void {
         if (pixelSource.value == null) return;
         // Layer Swapping Logic
         const newLayer = createBaseImageLayer();
+        const lastLayer = imageLayers.value[imageLayers.value.length - 1];
 
-        // If we list has no layers, just add it
-        if (imageLayers.value.length === 0) {
-            imageLayers.value.push(newLayer);
+        // If same id (state update), replace. If different (refresh), push (overlay).
+        if (lastLayer && (lastLayer as any).id === (newLayer as any).id) {
+            imageLayers.value[imageLayers.value.length - 1] = newLayer;
         } else {
-            // Update layer if same id. If different (refresh triggered), push it (overlay until loaded).
-            const lastLayer = imageLayers.value[
-                imageLayers.value.length - 1
-            ] as any;
-            if (lastLayer.id === (newLayer as any).id) {
-                imageLayers.value[imageLayers.value.length - 1] = newLayer;
-            } else {
-                imageLayers.value.push(newLayer);
-            }
+            imageLayers.value.push(newLayer);
         }
 
         layers.push(...imageLayers.value);
@@ -808,12 +801,7 @@ watch(darkMode, renderDeckGL);
 watch(currentTrackArray, renderDeckGL);
 watch(() => dataPointSelection.selectedTrackId, renderDeckGL);
 watch(() => dataPointSelection.selectedLineageId, renderDeckGL);
-watch(
-    () => dataPointSelection.currentFrameIndex,
-    () => {
-        renderDeckGL();
-    }
-);
+watch(() => dataPointSelection.currentFrameIndex, renderDeckGL);
 watch(imageViewerStore.$state, renderDeckGL);
 watch(contrastLimitSlider, renderDeckGL);
 watch(highlightedCellIds, renderDeckGL);
