@@ -29,6 +29,7 @@ export const useImageViewerStore = defineStore('imageViewerStore', () => {
         'cubehelix',
         'rainbow',
     ];
+    const playbackSpeed = ref<number>(10);
     // all options: https://github.com/glslify/glsl-colormap#glsl-colormap
     const contrastLimitSliderDebounced = ref<{ min: number; max: number }>({
         // TODO: this is also a bit problematic
@@ -117,5 +118,6 @@ export const useImageViewerStore = defineStore('imageViewerStore', () => {
         showCellBoundaryLayer,
         showTrailLayer,
         showLineageLayer,
+        playbackSpeed,
     };
 });

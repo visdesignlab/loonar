@@ -286,8 +286,9 @@ watch(currentLocationMetadata, async () => {
     if (testRaster.value == null) return;
     const copy = testRaster.value.data.slice();
     const channelStats = getChannelStats(copy);
-    contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+    imageViewerStoreUntrracked.initializeContrastLimits(
+        channelStats.contrastLimits as [number, number]
+    );
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
 

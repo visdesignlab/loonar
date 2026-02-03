@@ -8,6 +8,7 @@ import {
 import { keysToString, stringToKeys } from '@/util/conChartStringFunctions';
 import { useNotificationStore } from '../misc/notificationStore';
 import { isEmpty } from 'lodash-es';
+import { findOptimalAxes } from '@/util/axisOptimizer';
 
 export type Axis = 'x-axis' | 'y-axis';
 
@@ -110,10 +111,10 @@ export const useConditionSelectorStore = defineStore(
         watch(
             currentExperimentTags,
             (newExperimentTags) => {
-                const tagKeys = Object.keys(newExperimentTags);
-                if (tagKeys.length > 1) {
-                    selectedXTag.value = tagKeys[0];
-                    selectedYTag.value = tagKeys[1];
+                const optimalAxes = findOptimalAxes(newExperimentTags);
+                if (optimalAxes) {
+                    selectedXTag.value = optimalAxes[0];
+                    selectedYTag.value = optimalAxes[1];
                 }
             },
             { immediate: true }

@@ -60,6 +60,42 @@ const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
 const { highlightedCellIds, unfilteredTrackIds } =
     storeToRefs(mosaicSelectionStore);
+const { isPlaying, sizeT } = storeToRefs(imageViewerStoreUntrracked);
+const { playbackSpeed } = storeToRefs(imageViewerStore);
+let playbackInterval: number | null = null;
+
+const stopPlayback = () => {
+    if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+    }
+};
+const tick = () => {
+    if (imageViewerStore.frameNumber >= sizeT.value) {
+        // Stop if we reach the last frame
+        isPlaying.value = false;
+    } else {
+        imageViewerStore.stepForwards(sizeT.value); 
+    }
+};
+const startPlayback = () => {
+    // Ensure only one interval is running
+    stopPlayback();
+    if (!isPlaying.value) return;
+    // Start the interval
+    playbackInterval = window.setInterval(tick, 1000 / playbackSpeed.value);
+};
+
+// If playback started or stopped 
+watch(isPlaying, (playing) => {
+    if (playing) startPlayback();
+    else stopPlayback();
+});
+// If playback speed changed while playing, restart playback
+watch(playbackSpeed, () => {
+    if (isPlaying.value) startPlayback();
+});
+
 
 
 
@@ -199,8 +235,9 @@ watch(currentLocationMetadata, async (newVal) => {
         selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
     });
     const channelStats = getChannelStats(raster.data);
-    contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-    contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+    imageViewerStoreUntrracked.initializeContrastLimits(
+        channelStats.contrastLimits as [number, number]
+    );
     imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
     imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
     // const contrastLimits: [number, number][] = [
@@ -237,8 +274,9 @@ watch(
             selection: { c: imageViewerStore.selectedChannel, t: 0, z: 0 },
         });
         const channelStats = getChannelStats(raster.data);
-        contrastLimitSlider.value.min = channelStats.contrastLimits[0];
-        contrastLimitSlider.value.max = channelStats.contrastLimits[1];
+        imageViewerStoreUntrracked.initializeContrastLimits(
+            channelStats.contrastLimits as [number, number]
+        );
         imageViewerStore.contrastLimitExtentSlider.min = channelStats.domain[0];
         imageViewerStore.contrastLimitExtentSlider.max = channelStats.domain[1];
         renderDeckGL();

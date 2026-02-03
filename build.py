@@ -300,8 +300,12 @@ def build_containers(env_file, disable_spinner=False):
     else:
         print("Building containers...")
 
-    process = run_command(f"docker-compose -f .build-files/docker-compose.yml"
-                          f" --env-file {env_file} build")
+    service_string = ""
+    if services is not None:
+        service_string = " ".join(services)
+
+    command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} build {service_string}"
+    process = run_command(command)
     process.wait()  # Wait for the build to complete
 
     if not disable_spinner:
@@ -331,8 +335,13 @@ def start_containers(env_file, disable_spinner=False):
         spinner_thread.start()
     else:
         print("Starting containers...")
-    process = run_command(f"docker-compose -f .build-files/docker-compose.yml"
-                          f" --env-file {env_file} up -d")
+
+    service_string = ""
+    if services is not None:
+        service_string = " ".join(services)
+
+    command = f"docker-compose -f .build-files/docker-compose.yml --env-file {env_file} up -d {service_string}"
+    process = run_command(command)
 
     process.wait()  # Wait for the containers to start
 

@@ -11,7 +11,11 @@ const cellMetaData = useCellMetaData();
 const imageViewerStore = useImageViewerStore();
 const eventBusStore = useEventBusStore();
 const globalSettings = useGlobalSettings();
-const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
+const { sizeT, isPlaying } = storeToRefs(imageViewerStoreUntrracked);
+
+function togglePlay() {
+    isPlaying.value = !isPlaying.value;
+}
 </script>
 
 <template>
@@ -30,7 +34,16 @@ const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
                 outline
                 round
                 title="previous frame"
-                icon="arrow_left"
+                icon="chevron_left"
+            />
+            <q-btn
+                @click="togglePlay"
+                size="sm"
+                outline
+                round
+                :title="isPlaying ? 'pause' : 'play'"
+                :icon="isPlaying ? 'pause' : 'play_arrow'"
+                :disable="imageViewerStore.frameNumber >= sizeT"
             />
             <q-btn
                 @click="() => imageViewerStore.stepForwards(sizeT - 1)"
@@ -38,7 +51,7 @@ const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
                 outline
                 round
                 title="next frame"
-                icon="arrow_right"
+                icon="chevron_right"
             />
         </q-btn-group>
         <q-slider
