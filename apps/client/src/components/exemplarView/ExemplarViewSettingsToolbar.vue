@@ -100,12 +100,49 @@ function applySelections() {
 
   plotDialogOpen.value = false;
 }
+const initialSizeRatio = ref(
+  exemplarViewStore.viewConfiguration.horizonChartHeight /
+    exemplarViewStore.viewConfiguration.snippetDisplayHeight
+);
+// Add time bar ratio
+const initialTimeBarRatio = ref(
+  exemplarViewStore.viewConfiguration.timeBarHeightOuter /
+    exemplarViewStore.viewConfiguration.snippetDisplayHeight
+);
+
+const combinedSize = computed<number>({
+  get: () => exemplarViewStore.viewConfiguration.snippetDisplayHeight,
+  set: (val: number) => {
+    // Clamp
+    const size = Math.min(320, Math.max(8, Math.round(val)));
+    exemplarViewStore.viewConfiguration.snippetDisplayHeight = size;
+    exemplarViewStore.viewConfiguration.snippetDisplayWidth = size; // keep square
+    exemplarViewStore.viewConfiguration.horizonChartHeight = Math.max(
+      4,
+      Math.round(size * initialSizeRatio.value)
+    );
+    // Update time bar height (clamp 2-50 like slider)
+    exemplarViewStore.viewConfiguration.timeBarHeightOuter = Math.min(
+      50,
+      Math.max(2, Math.round(size * initialTimeBarRatio.value))
+    );
+  }
+});
 </script>
 
 <template>
   <div class="settings-toolbar">
-    <q-btn
+    <q-badge outline class="q-mr-sm" color="black">Size</q-badge>
+    <q-slider
+      v-model="combinedSize"
+      :min="8"
+      :max="320"
+      :dark="globalSettings.darkMode"
+      style="width:80px"
       class="q-mr-sm"
+    />
+    <q-space />
+    <q-btn
       size="12px"
       flat
       dense

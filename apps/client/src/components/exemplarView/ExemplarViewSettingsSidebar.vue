@@ -16,6 +16,12 @@ const globalSettings = useGlobalSettings();
 const exemplarViewStore = useExemplarViewStore();
 const { horizonChartSettings, histogramBinCount} = storeToRefs(exemplarViewStore);
 
+// Accordion states
+const imageSnippetsOpen = ref(false);
+const histogramsOpen = ref(false);
+const marginsOpen = ref(false);
+const textOpen = ref(false);
+
 // Horizon Chart ---------------
 const horizonSettingsModal = ref(false);
 const colorSchemeOptions = [
@@ -44,21 +50,22 @@ interface SliderMapping {
     min: number;
     max: number;
     step?: number;
+    category: 'imageSnippets' | 'histograms' | 'margins' | 'text';
 }
 
 // View Configuration Sliders -------------------
 const sliderMappings: Record<string, SliderMapping> = {
-    'Horizon Chart Height': { key: 'horizonChartHeight', min: 4, max: 240 },
-    'Time Bar Height (Outer)': { key: 'timeBarHeightOuter', min: 2, max: 50 },
-    'Snippet Source Size': { key: 'snippetSourceSize', min: 8, max: 320, step: 2 },
-    'Snippet-Horizon Gap': { key: 'snippetHorizonChartGap', min: 0, max: 50 },
-    'Between Exemplar Gap': { key: 'betweenExemplarGap', min: 0, max: 100 },
-    'Between Condition Gap': { key: 'betweenConditionGap', min: 0, max: 200 },
-    'Margin': { key: 'margin', min: 0, max: 500 },
-    'Horizon-Histogram Gap': { key: 'horizonHistogramGap', min: exemplarViewStore.viewConfiguration.histogramFontSize * 2, max: 200 },
-    'Histogram Width': { key: 'histogramWidth', min: 50, max: 800 },
-    'Histogram Font Size': { key: 'histogramFontSize', min: 8, max: 48 },
-    'Histogram Tooltip Font Size': { key: 'histogramTooltipFontSize', min: 8, max: 36 }
+    'Horizon Chart Height': { key: 'horizonChartHeight', min: 4, max: 240, category: 'imageSnippets' },
+    'Time Bar Height (Outer)': { key: 'timeBarHeightOuter', min: 2, max: 50, category: 'imageSnippets' },
+    'Snippet Source Size': { key: 'snippetSourceSize', min: 8, max: 320, step: 2, category: 'imageSnippets' },
+    'Snippet-Horizon Gap': { key: 'snippetHorizonChartGap', min: 0, max: 50, category: 'margins' },
+    'Between Exemplar Gap': { key: 'betweenExemplarGap', min: 0, max: 100, category: 'margins' },
+    'Between Condition Gap': { key: 'betweenConditionGap', min: 0, max: 200, category: 'margins' },
+    'Margin': { key: 'margin', min: 0, max: 500, category: 'margins' },
+    'Horizon-Histogram Gap': { key: 'horizonHistogramGap', min: exemplarViewStore.viewConfiguration.histogramFontSize * 2, max: 200, category: 'margins' },
+    'Histogram Width': { key: 'histogramWidth', min: 50, max: 800, category: 'histograms' },
+    'Histogram Font Size': { key: 'histogramFontSize', min: 8, max: 48, category: 'text' },
+    'Histogram Tooltip Font Size': { key: 'histogramTooltipFontSize', min: 8, max: 36, category: 'text' }
 };
 
 // Generate slider configs dynamically
@@ -68,6 +75,7 @@ const sliderConfigs = computed((): {
   min: number;
   max: number;
   step: number;
+  category: string;
 }[] => [
      // Special case for snippet display size (controls both height and width)
      {
@@ -75,7 +83,8 @@ const sliderConfigs = computed((): {
          model: snippetDisplaySize,
          min: 8,
          max: 320,
-         step: 1
+         step: 1,
+         category: 'imageSnippets'
      },
      // Generate all other view configuration sliders
      ...Object.entries(sliderMappings).map(([label, config]) => ({
@@ -86,9 +95,16 @@ const sliderConfigs = computed((): {
          }),
          min: config.min,
          max: config.max,
-         step: config.step ?? 1
+         step: config.step ?? 1,
+         category: config.category
      }))
 ]);
+
+// Categorized sliders
+const imageSnippetSliders = computed(() => sliderConfigs.value.filter(config => config.category === 'imageSnippets'));
+const histogramSliders = computed(() => sliderConfigs.value.filter(config => config.category === 'histograms'));
+const marginSliders = computed(() => sliderConfigs.value.filter(config => config.category === 'margins'));
+const textSliders = computed(() => sliderConfigs.value.filter(config => config.category === 'text'));
 </script>
 
 <template>
@@ -194,34 +210,154 @@ const sliderConfigs = computed((): {
         v-model="exemplarViewStore.viewConfiguration.spaceKeyFramesEvenly"
         :dark="globalSettings.darkMode"
     />
-    <!-- Dynamic slider sections -->
-    <q-card-section 
-        v-for="config in sliderConfigs" 
-        :key="config.label"
-        class="q-pl-none q-pr-none"
+
+    <!-- Image Snippets Accordion -->
+    <q-expansion-item
+        v-model="imageSnippetsOpen"
+        icon="image"
+        label="Image Snippets"
+        :dark="globalSettings.darkMode"
+        class="q-mt-md"
     >
-        <div class="flex row no-wrap">
-            <q-badge outline :color="globalSettings.normalizedBlack">
-                {{ config.label }}:
-            </q-badge>
-            <q-input
-                class="q-pl-md"
-                dense
-                v-model.number="config.model.value"
-                type="number"
+        <q-card-section 
+            v-for="config in imageSnippetSliders" 
+            :key="config.label"
+            class="q-pl-none q-pr-none"
+        >
+            <div class="flex row no-wrap">
+                <q-badge outline :color="globalSettings.normalizedBlack">
+                    {{ config.label }}:
+                </q-badge>
+                <q-input
+                    class="q-pl-md"
+                    dense
+                    v-model.number="config.model.value"
+                    type="number"
+                    :step="config.step"
+                    :dark="globalSettings.darkMode"
+                />
+            </div>
+            <q-slider
+                v-model="config.model.value"
+                :min="config.min"
+                :max="config.max"
                 :step="config.step"
+                label
                 :dark="globalSettings.darkMode"
             />
-        </div>
-        <q-slider
-            v-model="config.model.value"
-            :min="config.min"
-            :max="config.max"
-            :step="config.step"
-            label
-            :dark="globalSettings.darkMode"
-        />
-    </q-card-section>
+        </q-card-section>
+    </q-expansion-item>
+
+    <!-- Histograms Accordion -->
+    <q-expansion-item
+        v-model="histogramsOpen"
+        icon="bar_chart"
+        label="Histograms"
+        :dark="globalSettings.darkMode"
+        class="q-mt-sm"
+    >
+        <q-card-section 
+            v-for="config in histogramSliders" 
+            :key="config.label"
+            class="q-pl-none q-pr-none"
+        >
+            <div class="flex row no-wrap">
+                <q-badge outline :color="globalSettings.normalizedBlack">
+                    {{ config.label }}:
+                </q-badge>
+                <q-input
+                    class="q-pl-md"
+                    dense
+                    v-model.number="config.model.value"
+                    type="number"
+                    :step="config.step"
+                    :dark="globalSettings.darkMode"
+                />
+            </div>
+            <q-slider
+                v-model="config.model.value"
+                :min="config.min"
+                :max="config.max"
+                :step="config.step"
+                label
+                :dark="globalSettings.darkMode"
+            />
+        </q-card-section>
+    </q-expansion-item>
+
+    <!-- Margins Accordion -->
+    <q-expansion-item
+        v-model="marginsOpen"
+        icon="margin"
+        label="Margins"
+        :dark="globalSettings.darkMode"
+        class="q-mt-sm"
+    >
+        <q-card-section 
+            v-for="config in marginSliders" 
+            :key="config.label"
+            class="q-pl-none q-pr-none"
+        >
+            <div class="flex row no-wrap">
+                <q-badge outline :color="globalSettings.normalizedBlack">
+                    {{ config.label }}:
+                </q-badge>
+                <q-input
+                    class="q-pl-md"
+                    dense
+                    v-model.number="config.model.value"
+                    type="number"
+                    :step="config.step"
+                    :dark="globalSettings.darkMode"
+                />
+            </div>
+            <q-slider
+                v-model="config.model.value"
+                :min="config.min"
+                :max="config.max"
+                :step="config.step"
+                label
+                :dark="globalSettings.darkMode"
+            />
+        </q-card-section>
+    </q-expansion-item>
+
+    <!-- Text Accordion -->
+    <q-expansion-item
+        v-model="textOpen"
+        icon="text_fields"
+        label="Text"
+        :dark="globalSettings.darkMode"
+        class="q-mt-sm"
+    >
+        <q-card-section 
+            v-for="config in textSliders" 
+            :key="config.label"
+            class="q-pl-none q-pr-none"
+        >
+            <div class="flex row no-wrap">
+                <q-badge outline :color="globalSettings.normalizedBlack">
+                    {{ config.label }}:
+                </q-badge>
+                <q-input
+                    class="q-pl-md"
+                    dense
+                    v-model.number="config.model.value"
+                    type="number"
+                    :step="config.step"
+                    :dark="globalSettings.darkMode"
+                />
+            </div>
+            <q-slider
+                v-model="config.model.value"
+                :min="config.min"
+                :max="config.max"
+                :step="config.step"
+                label
+                :dark="globalSettings.darkMode"
+            />
+        </q-card-section>
+    </q-expansion-item>
 </template>
 
 <style scoped lang="scss">
