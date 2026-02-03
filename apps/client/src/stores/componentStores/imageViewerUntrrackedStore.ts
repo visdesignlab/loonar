@@ -13,7 +13,8 @@ export const useImageViewerStoreUntrracked = defineStore(
         const sizeY = ref<number>(1);
         const sizeT = ref<number>(1);
         const sizeC = ref<number>(1);
+        const isImageLoading = ref<boolean>(false);
 
-        return { contrastLimitSlider, sizeX, sizeY, sizeT, sizeC };
+        return { contrastLimitSlider, sizeX, sizeY, sizeT, sizeC, isImageLoading };
     }
 );

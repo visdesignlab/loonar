@@ -54,7 +54,7 @@ const imageViewerStoreUntrracked = useImageViewerStoreUntrracked();
 const datasetSelectionStore = useDatasetSelectionStore();
 const dataPointSelectionUntrracked = useDataPointSelectionUntrracked();
 const { currentLocationMetadata } = storeToRefs(datasetSelectionStore);
-const { contrastLimitSlider } = storeToRefs(imageViewerStoreUntrracked);
+const { contrastLimitSlider, isImageLoading } = storeToRefs(imageViewerStoreUntrracked);
 const eventBusStore = useEventBusStore();
 const looneageViewStore = useLooneageViewStore();
 const mosaicSelectionStore = useMosaicSelectionStore();
@@ -176,7 +176,10 @@ onMounted(() => {
 
 const loader = ref<any | null>(null);
 const pixelSource = ref<any | null>(null);
+// Track loading state for image fetching
+
 watch(currentLocationMetadata, async (newVal) => {
+    isImageLoading.value = true;
     if (newVal?.imageDataFilename == null) return;
     if (deckgl == null) return;
     // Capture the filename we are trying to load
@@ -213,6 +216,7 @@ watch(currentLocationMetadata, async (newVal) => {
 watch(
     () => imageViewerStore.selectedChannel,
     async () => {
+        isImageLoading.value = true;
         if (currentLocationMetadata.value?.imageDataFilename == null) return;
         if (deckgl == null) return;
         if (loader.value == null) return;
@@ -272,6 +276,9 @@ function createBaseImageLayer(): typeof ImageLayer {
                 // Keep this layer and anything newer
                 imageLayers.value = imageLayers.value.slice(index);
             }
+
+            // Image loading complete
+            isImageLoading.value = false;
         },
     });
 }
@@ -613,7 +620,13 @@ const updateBaseImageLayer = debounce(() => {
     refreshBaseImageLayer.value = true;
     renderDeckGL();
 }, 300);
-watch(() => imageViewerStore.frameNumber, updateBaseImageLayer);
+watch(
+    () => imageViewerStore.frameNumber,
+    () => {
+        isImageLoading.value = true;
+        updateBaseImageLayer();
+    }
+);
 
 function renderDeckGL(): void {
     if (deckgl == null) return;
@@ -769,16 +782,18 @@ function clearSelection() {
 </script>
 
 <template>
-    <canvas
-        id="super-cool-unique-id"
-        ref="deckGlContainer"
-        :class="
-            dataPointSelectionUntrracked.hoveredTrackId !== null
-                ? 'force-default-cursor'
-                : ''
-        "
-        @reset-image-view="resetView"
-    ></canvas>
+    <div class="image-viewer-container">
+        <canvas
+            id="super-cool-unique-id"
+            ref="deckGlContainer"
+            :class="
+                dataPointSelectionUntrracked.hoveredTrackId !== null
+                    ? 'force-default-cursor'
+                    : ''
+            "
+            @reset-image-view="resetView"
+        ></canvas>
+    </div>
 </template>
 
 <style lang="scss">
@@ -790,5 +805,12 @@ function clearSelection() {
 
 .force-default-cursor {
     cursor: default !important;
+}
+
+
+.image-viewer-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
 }
 </style>

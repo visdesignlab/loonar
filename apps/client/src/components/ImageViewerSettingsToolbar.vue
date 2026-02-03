@@ -53,6 +53,14 @@ const { sizeT } = storeToRefs(imageViewerStoreUntrracked);
         <span class="text-caption q-ml-sm no-break"
             >{{ imageViewerStore.frameNumber }} / {{ sizeT }}</span
         >
+        <q-chip
+            v-if="imageViewerStoreUntrracked.isImageLoading"
+            dense
+            size="sm"
+            icon="hourglass_empty"
+            label="Loading..."
+            class="q-px-sm q-ml-sm"
+        />
     </template>
 </template>
 <style scoped lang="scss">
