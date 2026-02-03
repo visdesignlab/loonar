@@ -36,6 +36,9 @@ function onClickLocation(location: any) {
 }
 
 const shortExpName = computed<string>(() => {
+    if (datasetSelectionStore.currentExperimentMetadata?.name) {
+        return datasetSelectionStore.currentExperimentMetadata.name;
+    }
     let shortName = datasetSelectionTrrackedStore.currentExperimentFilename;
     if (shortName === null) return '';
     shortName = shortName.split('.')[0];
@@ -99,7 +102,9 @@ function onSelectExperiment() {
                     }
                 "
                 :dark="globalSettings.darkMode"
-                ><q-item-section>{{ location.id }}</q-item-section></q-item
+                ><q-item-section>{{
+                    location.name ?? location.id
+                }}</q-item-section></q-item
             >
         </q-list>
     </div>

@@ -44,7 +44,7 @@ export interface LocationMetadata {
     imageDataFilename?: string;
     segmentationsFolder?: string;
     tags?: Tags;
-    // name?: string; // user friendly name
+    name?: string; // user friendly name
     // condition?: string; // experimental condition // TODO: - does this need to be an array
     // plate?: string;
     // well?: string;
@@ -284,7 +284,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                            location.id
+                        location.id
                         ]
                     ) {
                         return location;
