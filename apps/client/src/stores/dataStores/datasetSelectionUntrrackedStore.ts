@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { asyncComputed } from '@vueuse/core';
+import { useRoute } from 'vue-router';
 import * as vg from '@uwdata/vgplot';
 
 import { computedAsync } from '@vueuse/core';
@@ -70,6 +71,8 @@ export const useDatasetSelectionStore = defineStore(
         const experimentDataInitialized = computed(() => {
             return experimentDataLoaded.value;
         });
+
+        const route = useRoute();
         let controller: AbortController;
 
         const compTableName = computed(() => {
@@ -96,6 +99,10 @@ export const useDatasetSelectionStore = defineStore(
 
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
+            // Access dependencies synchronously to ensure tracking
+            const query = route.query;
+            const currentFilename = datasetSelectionTrrackedStore.currentExperimentFilename;
+
             if (configStore.serverUrl == null) return null;
             const fullURL = configStore.getFileUrl(
                 configStore.entryPointFilename
@@ -136,7 +143,20 @@ export const useDatasetSelectionStore = defineStore(
             vg.coordinator().databaseConnector(connector);
 
             const data = await response.json();
-            return data.experiments;
+
+            // --- Show all experiments if show-experiments is in query ---
+            const allExperiments = data.experiments;
+
+            if (
+                'show-experiments' in query ||
+                currentFilename == null
+            ) {
+                return allExperiments;
+            } else {
+                return [
+                    currentFilename,
+                ];
+            }
         }, [refreshTime.value]);
 
         // Sets location Metadata
