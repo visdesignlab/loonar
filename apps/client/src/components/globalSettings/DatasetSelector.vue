@@ -99,7 +99,9 @@ function onSelectExperiment() {
                     }
                 "
                 :dark="globalSettings.darkMode"
-                ><q-item-section>{{ location.id }}</q-item-section></q-item
+                ><q-item-section>{{
+                    location.name ?? location.id
+                }}</q-item-section></q-item
             >
         </q-list>
     </div>
