@@ -24,10 +24,11 @@ jobs:
       - name: tag the docker image
         id: tag-docker-images
         run: |
-          docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:${{ github.event.pull_request.title }}
+          # Updated to use auto-incrementing run_number
+          docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:v1.${{ github.run_number }}
           docker tag loon:latest ${{ secrets.DOCKERHUB_USERNAME }}/loon:latest
       - name: push the docker image
         id: push-docker-image
         run: |
-          docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:${{ github.event.pull_request.title }}
+          docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:v1.${{ github.run_number }}
           docker push ${{secrets.DOCKERHUB_USERNAME}}/loon:latest
