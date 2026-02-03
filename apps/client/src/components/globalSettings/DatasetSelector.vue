@@ -36,6 +36,9 @@ function onClickLocation(location: any) {
 }
 
 const shortExpName = computed<string>(() => {
+    if (datasetSelectionStore.currentExperimentMetadata?.name) {
+        return datasetSelectionStore.currentExperimentMetadata.name;
+    }
     let shortName = datasetSelectionTrrackedStore.currentExperimentFilename;
     if (shortName === null) return '';
     shortName = shortName.split('.')[0];
