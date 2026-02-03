@@ -279,6 +279,7 @@ function createBaseImageLayer(): typeof ImageLayer {
 
             // Image loading complete
             isImageLoading.value = false;
+            lastLoadedFrame.value = imageViewerStore.frameNumber;
         },
     });
 }
@@ -614,16 +615,20 @@ function createTrajectoryGhostLayer(): TripsLayer {
 const imageLayers = ref<(typeof ImageLayer)[]>([]);
 const currentImageLayerId = ref('base-image-layer');
 
-// Once the user has stopped scrolling on frame number for 300ms, the createBaseImageLayer is refreshed to avoid lag error
 const refreshBaseImageLayer = ref<boolean>(false);
 const updateBaseImageLayer = debounce(() => {
     refreshBaseImageLayer.value = true;
     renderDeckGL();
 }, 300);
+
+const lastLoadedFrame = ref<number>(imageViewerStore.frameNumber);
+
 watch(
     () => imageViewerStore.frameNumber,
-    () => {
-        isImageLoading.value = true;
+    (newFrame) => {
+        if (Math.abs(newFrame - lastLoadedFrame.value) > 7) {
+            isImageLoading.value = true;
+        }
         updateBaseImageLayer();
     }
 );
