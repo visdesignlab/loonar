@@ -178,3 +178,32 @@ If a configuration gets stuck, environment variables aren't updating, or you nee
   ```bash
   python3 build.py -osi --config-file .build-files/config-standard.json
   ```
+
+---
+
+## 6. TrueNAS SCALE Deployment
+
+TrueNAS SCALE is a Debian-based NAS operating system (e.g., Debian 12 Bookworm) that supports hosting containerized workloads via its "Apps" ecosystem. In the case of Loonar, the deployment leverages a "Docker-in-Docker" (or orchestration-from-within) strategy.
+
+### The `loon` Orchestrator App
+In the TrueNAS UI, Loonar is deployed as a single Custom App using the image `lukeschreiber/loon-tests:latest`. Rather than being the application itself, this container functions as the **orchestrator**. 
+
+To do this, it requires two critical host path mounts:
+1. **`/var/run/docker.sock`**: Mounted directly from the TrueNAS host. This gives the `loon` container the ability to communicate with the host's Docker daemon.
+2. **`/app/data`**: Mounted from a ZFS dataset (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`).
+
+#### Crucial Environment Variables
+The TrueNAS app configuration also passes heavily specific environment variables to this orchestrator container, which `build.py` intercepts to generate the final orchestration configs:
+- **`MINIOSETTINGS_SOURCEVOLUMELOCATION`**: Explicitly passes the ZFS path on the TrueNAS host (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`) down to the Docker Compose template, so the spawned MinIO container knows *exactly* which host path to natively mount.
+- **`VITE_SERVER_URL`**: Defines the TrueNAS machine's actual static IP (e.g., `155.98.10.25`), injecting this into the Vite build step so the React client knows where to make HTTP API requests.
+- **`VITE_DATA_PORT`** & **`VITE_WS_PORT`**: Sets explicit ports for MinIO data access (e.g., `9000`) and websocket connections (`9001`).
+- **`LOCAL_PORT_1`** & **`LOCAL_PORT_2`**: Provides port mapping configurations (e.g., `80` and `9001`) that get routed or managed by the NGINX reversed proxy depending on if HTTPS is enforced.
+
+*(Note on Restart Policy: The orchestrator app's restart policy is typically set to "No" because once it successfully triggers `docker-compose up -d` against the host socket, its job is effectively complete).*
+
+### How It Works
+When the `loon` app container starts, it executes `build.py`, which generates the `.env` and `docker-compose.yml` natively within the container. 
+Because the container has access to the host's Docker socket (which requires host `root` or `docker` group permissions given the `srw-rw---- 1 root docker` socket ownership), when `docker-compose up -d` is executed internally, the *actual* Loonar containers (`client`, `server`, `celery`, `minio`, `redis`, `db`, `duckdb`) are spun up directly on the TrueNAS host alongside the `loon` app, rather than nested inside it.
+
+This is why examining the host directory (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`) will reveal the persistent data natively written by the `minio` container—such as `.minio.sys`, the `data` bucket, the central `aa_index.json`, and dynamically written experiment folders (`Constance`, `Rebecca`, `Sophie`, etc.). Meanwhile, the orchestrating `docker-compose.yml` and `.env` files remain hidden securely inside the ephemeral orchestrator container.
+
