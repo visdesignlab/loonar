@@ -370,7 +370,55 @@ def check_containers_status(services, detached=False):
             capture_output=True,
             text=True
         )
-        running_services = result.stdout.strip().split('\n')
+        running_services = [s for s in result.stdout.strip().split('\n') if s]
+
+        # Check for crashed/exited services to provide immediate feedback
+        exited_result = subprocess.run(
+            [
+                "docker-compose",
+                "-f",
+                ".build-files/docker-compose.yml",
+                "ps",
+                "--services",
+                "--filter",
+                "status=exited"
+            ],
+            capture_output=True,
+            text=True
+        )
+        exited_services = [s for s in exited_result.stdout.strip().split('\n') if s]
+
+        if exited_services:
+            error_msg = f"\nCRITICAL ERROR: The following containers crashed/exited during startup: {exited_services}"
+            print(error_msg)
+            logging.error(error_msg)
+            
+            for service in exited_services:
+                header = f"\n--- LOGS FOR CRASHED SERVICE: {service} ---"
+                print(header)
+                logging.error(header)
+                
+                log_result = subprocess.run(
+                    ["docker-compose", "-f", ".build-files/docker-compose.yml", "logs", service],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if log_result.stdout:
+                    print(log_result.stdout.strip())
+                    logging.error(log_result.stdout.strip())
+                if log_result.stderr:
+                    print(log_result.stderr.strip())
+                    logging.error(log_result.stderr.strip())
+                
+                print("-" * 40)
+                logging.error("-" * 40)
+            
+            abort_msg = "\nStartup aborted due to crashed containers. Please review the logs above."
+            print(abort_msg)
+            logging.error(abort_msg)
+            sys.exit(1)
+
         number_of_services = len(services)
         if len(running_services) == number_of_services:  # Number of containers
             print("All containers are running.")
