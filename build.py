@@ -81,7 +81,7 @@ def createComposeFile(local=False, nfs=False):
     shutil.copy(docker_compose_template, '.build-files/docker-compose.yml')
 
 
-def createEnvFile(configFileName, envFileName, useDid=False):
+def createEnvFile(configFileName, envFileName, useDid=False, showExperiments=False):
     buildConfig = BuildConfig.BuildConfig(configFileName, envFileName)
     buildConfig.reportErrors()
 
@@ -110,6 +110,7 @@ def createEnvFile(configFileName, envFileName, useDid=False):
 
     buildConfig.set('VITE_ENVIRONMENT', environment)
     buildConfig.set('VITE_SERVER_URL', f'{base_url}/data')
+    buildConfig.set('VITE_SHOW_EXPERIMENTS', str(showExperiments).lower())
 
     localPort1 = buildConfig.get("generalSettings.local_port_1")
     buildConfig.set("LOCAL_PORT_1", localPort1)
@@ -390,14 +391,16 @@ def cleanup_and_exit(signal=None, frame=None):
     sys.exit(0)
 
 
-def prepare_dev(buildConfig):
+def prepare_dev(buildConfig, showExperiments=False):
     vite_server_url = f"{buildConfig.get('generalSettings.baseUrl')}/data"
     vite_use_http = f"{buildConfig.get('generalSettings.useHttp')}"
     vite_environment = f"{buildConfig.get('generalSettings.environment')}"
+    vite_show_experiments = str(showExperiments).lower()
 
     outString = f"VITE_SERVER_URL={vite_server_url}\n" \
                 f"VITE_USE_HTTP={vite_use_http}\n" \
-                f"VITE_ENVIRONMENT={vite_environment}\n"
+                f"VITE_ENVIRONMENT={vite_environment}\n" \
+                f"VITE_SHOW_EXPERIMENTS={vite_show_experiments}\n"
 
     fullEnvFileName = 'apps/client/.env'
     with open(fullEnvFileName, 'w') as outF:
@@ -445,6 +448,8 @@ if __name__ == "__main__":
                         help="Generates .env file for client environment.")
     parser.add_argument("-i", "--use-did", action="store_true", required=False,
                         help="Flag to specify that this build script is running in a DiD setup.")
+    parser.add_argument("--show-experiments", action="store_true", required=False,
+                        help="Enable experiment switching in the UI.")
 
     args = parser.parse_args()
 
@@ -464,7 +469,7 @@ if __name__ == "__main__":
                 print('No client .env file found.')
                 pass
 
-            buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
+            buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did, args.show_experiments)
 
             use_http = buildConfig.get('generalSettings.useHttp')
             if use_http:
@@ -478,7 +483,7 @@ if __name__ == "__main__":
             createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
-                services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
+                services = ["client", "data", "duckdb"]
             else:
                 services = ["db", "client", "server", "minio", "celery", "redis", "duckdb"]
 
@@ -513,7 +518,7 @@ if __name__ == "__main__":
             follow_all_logs(logs_path, services, args.verbose, args.detached)
 
             if args.prepare_dev:
-                prepare_dev(buildConfig)
+                prepare_dev(buildConfig, args.show_experiments)
 
             check_containers_status(services, args.detached)
         else:
@@ -522,5 +527,5 @@ if __name__ == "__main__":
         if args.overwrite:
             config_file_name = overwrite_config(config_file_name)
 
-        buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did)
+        buildConfig = createEnvFile(config_file_name, args.env_file, args.use_did, args.show_experiments)
         createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)

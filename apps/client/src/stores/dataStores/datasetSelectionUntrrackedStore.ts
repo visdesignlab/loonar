@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { asyncComputed } from '@vueuse/core';
-import { useRoute } from 'vue-router';
+
 import * as vg from '@uwdata/vgplot';
 
 import { computedAsync } from '@vueuse/core';
@@ -72,7 +72,6 @@ export const useDatasetSelectionStore = defineStore(
             return experimentDataLoaded.value;
         });
 
-        const route = useRoute();
         let controller: AbortController;
 
         const compTableName = computed(() => {
@@ -100,7 +99,6 @@ export const useDatasetSelectionStore = defineStore(
         // Generate Experiment List
         const experimentFilenameList = asyncComputed<string[]>(async () => {
             // Access dependencies synchronously to ensure tracking
-            const query = route.query;
             const currentFilename = datasetSelectionTrrackedStore.currentExperimentFilename;
 
             if (configStore.serverUrl == null) return null;
@@ -144,18 +142,13 @@ export const useDatasetSelectionStore = defineStore(
 
             const data = await response.json();
 
-            // --- Show all experiments if show-experiments is in query ---
             const allExperiments = data.experiments;
+            const showExperiments = import.meta.env.VITE_SHOW_EXPERIMENTS === 'true';
 
-            if (
-                'show-experiments' in query ||
-                currentFilename == null
-            ) {
+            if (showExperiments || currentFilename == null) {
                 return allExperiments;
             } else {
-                return [
-                    currentFilename,
-                ];
+                return [currentFilename];
             }
         }, [refreshTime.value]);
 
@@ -304,7 +297,7 @@ export const useDatasetSelectionStore = defineStore(
                     .locationMetadataList) {
                     if (
                         datasetSelectionTrrackedStore.selectedLocationIds[
-                            location.id
+                        location.id
                         ]
                     ) {
                         return location;
