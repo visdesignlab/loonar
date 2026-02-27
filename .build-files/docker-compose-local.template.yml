@@ -41,3 +41,4 @@ services:
 
 volumes:
   duckdb-data:
+  migrations_volume:
