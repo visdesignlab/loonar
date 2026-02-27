@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { asyncComputed } from '@vueuse/core';
-
+import { useRoute } from 'vue-router';
 import * as vg from '@uwdata/vgplot';
 
 import { computedAsync } from '@vueuse/core';
@@ -45,7 +45,7 @@ export interface LocationMetadata {
     imageDataFilename?: string;
     segmentationsFolder?: string;
     tags?: Tags;
-    // name?: string; // user friendly name
+    name?: string; // user friendly name
     // condition?: string; // experimental condition // TODO: - does this need to be an array
     // plate?: string;
     // well?: string;
@@ -71,7 +71,6 @@ export const useDatasetSelectionStore = defineStore(
         const experimentDataInitialized = computed(() => {
             return experimentDataLoaded.value;
         });
-
         let controller: AbortController;
 
         const compTableName = computed(() => {
@@ -97,11 +96,9 @@ export const useDatasetSelectionStore = defineStore(
         })
 
         // Generate Experiment List
+        const route = useRoute();
         const experimentFilenameList = asyncComputed<string[]>(async () => {
-            // Access dependencies synchronously to ensure tracking
-            const currentFilename = datasetSelectionTrrackedStore.currentExperimentFilename;
-
-            if (configStore.serverUrl == null) return null;
+            if (configStore.serverUrl == null) return [];
             const fullURL = configStore.getFileUrl(
                 configStore.entryPointFilename
             );
@@ -120,12 +117,12 @@ export const useDatasetSelectionStore = defineStore(
                     `Could not access ${fullURL}. "${error.message}"`
                 );
             });
-            if (response == null) return;
+            if (response == null) return [];
             if (!response.ok) {
                 handleFetchEntryError(
                     `Server Error. "${response.status}: ${response.statusText}"`
                 );
-                return;
+                return [];
             }
             fetchingEntryFile.value = false;
             serverUrlValid.value = true;
@@ -141,15 +138,33 @@ export const useDatasetSelectionStore = defineStore(
             vg.coordinator().databaseConnector(connector);
 
             const data = await response.json();
+            const rawExperiments: (string | { filename: string; 'visible-by-default'?: boolean })[] = data.experiments;
 
-            const allExperiments = data.experiments;
-            const showExperiments = import.meta.env.VITE_SHOW_EXPERIMENTS === 'true';
+            // Normalize entries: extract filename from objects, pass strings through
+            const allFilenames = rawExperiments.map((entry) =>
+                typeof entry === 'string' ? entry : entry.filename
+            );
 
-            if (showExperiments || currentFilename == null) {
-                return allExperiments;
-            } else {
-                return [currentFilename];
+            // If experiment visibility control is not enabled, show all experiments
+            const visibilityControlEnabled =
+                import.meta.env.VITE_EXPERIMENT_VISIBILITY_CONTROL === 'true';
+            if (!visibilityControlEnabled) {
+                return allFilenames;
             }
+
+            // If show-all-experiments URL param is present, show all
+            if ('show-all-experiments' in route.query) {
+                return allFilenames;
+            }
+
+            // Filter to only visible-by-default experiments
+            return rawExperiments
+                .filter((entry) =>
+                    typeof entry === 'object' && entry['visible-by-default'] === true
+                )
+                .map((entry) =>
+                    typeof entry === 'string' ? entry : entry.filename
+                );
         }, [refreshTime.value]);
 
         // Sets location Metadata
