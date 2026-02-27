@@ -54,6 +54,30 @@ In the root of the repository, run the following following command:
 python3 build.py --prepare-dev
 ```
 
+### Prepare Development Environment and Run Separately with Experiment Visibility Control
+
+Experiment visibility control allows users to control which experiments are visible to them. You specify which experiments are visible to users in the `aa_index.json` file.
+
+```bash
+python3 build.py --prepare-dev --experiment-visibility-control
+```
+
+Experiment visibility control example:
+
+```json
+{
+  "experiments": [
+    {
+      "filename": "Data Discovery - Automated Cell Lineage Tracking.json",
+      "visible-by-default": true
+    },
+    "Quality Control - Cancer Triggering Microenvironments.json",
+    "Communication - Tumorigenic Cell States.json"
+  ]
+}
+```
+
+
 This will generate the necessary environment file in the client directory while still running the rest of the container. Then, the development server can be started separately by the following:
 
 ```bash
@@ -109,6 +133,7 @@ The build script will do its best to validate the config before starting the doc
 | -o, --overwrite       | When set, any settings in your configuration file which are present as environment variables in the current session will be overwritten.         | -o                             |
 | -s, --disable-spinner | When set, disables inline spinner                                                                                                                | -s                             |
 | --prepare-dev         | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server.           | --prepare-dev                  |
+| --experiment-visibility-control | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server. | --experiment-visibility-control|
 
 In the repository, you will see two docker directories: `docker` and `docker-local`. The main deployment will use the `docker` directory. The `docker-local` directory is a separate local version of Loon which we will discuss shortly. Below are some examples.
 
