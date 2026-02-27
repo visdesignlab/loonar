@@ -485,7 +485,7 @@ if __name__ == "__main__":
             createComposeFile(local=buildConfig.local, nfs=buildConfig.nfs)
 
             if buildConfig.local:
-                services = ["client", "data", "duckdb"]
+                services = ["db", "client", "server", "data", "celery", "redis", "duckdb"]
             else:
                 services = ["db", "client", "server", "minio", "celery", "redis", "duckdb"]
 
