@@ -107,77 +107,50 @@ MinIO is the backbone of the unstructured and processed data.
 Loonar runs via Docker Compose in the background, making standard Linux/Docker commands your primary diagnostic tools.
 
 ### 1. Checking Container Statuses
-To see if any containers failed to start or continually restart (e.g., failing healthchecks):
+To see if any containers failed to start or are in a restart loop:
+- **Standard**: `docker-compose -f .build-files/docker-compose.yml ps`
+- **TrueNAS**: `docker ps -a`
+
+### 2. Viewing Live Logs (Standard Deployment)
+To see the stream of standard output/errors from the containers:
 ```bash
-docker-compose -f .build-files/docker-compose.yml ps
-```
-Or use native Docker commands:
-```bash
-docker ps -a
+docker-compose -f .build-files/docker-compose.yml logs -f [service]
 ```
 
-### 2. Viewing Live Logs
-To see the stream of standard output/errors from the containers, use the `logs` command.
-- **All containers simultaneously:**
-  ```bash
-  docker-compose -f .build-files/docker-compose.yml logs -f
-  ```
-- **Specific containers (Most common for backend/celery errors):**
-  ```bash
-  docker-compose -f .build-files/docker-compose.yml logs -f server
-  docker-compose -f .build-files/docker-compose.yml logs -f celery
-  docker-compose -f .build-files/docker-compose.yml logs -f minio
-  docker-compose -f .build-files/docker-compose.yml logs -f db
-  ```
-  *(Press `Ctrl+C` to exit the log stream. Omit `-f` if you only want to print recent logs and exit).*
+### 3. Viewing Live Logs (TrueNAS SCALE)
+On TrueNAS, the compose context is internal to the orchestrator. High-level `docker` commands are the primary tool:
+- **Detailed Logs**: `docker logs -f [container-name]` (e.g., `docker logs -f server-1`)
+- **Container Names**: Typically `server-1`, `db-1`, `celery-1`, `client-1`, `minio-1`, `redis-1`, `duckdb-1`.
 
-### 3. Reviewing Historical Logs (via `build.py`)
-When you initialize the application via `build.py`, it automatically spins off detached log files. 
-- You can find them in the `logs/` directory in the project root:
+### 4. Interactive Shells & Internal Debugging (TrueNAS Commands)
+Sometimes you need to inspect the inner state of the application:
+- **Enter a Container Bash Shell:**
   ```bash
-  ls -l logs/
-  ```
-- View the overall output log or specific service logs from the latest run:
-  ```bash
-  cat logs/logs_<TIMESTAMP>/out.log
-  tail -f logs/logs_<TIMESTAMP>/server.log
-  ```
-
-### 4. Interactive Shells & Internal Debugging
-Sometimes you need to inspect the inner state of the application.
-- **Enter the Server (Django) Container Bash Shell:**
-  ```bash
-  docker-compose -f .build-files/docker-compose.yml exec server /bin/bash
+  docker exec -it server-1 /bin/bash
   ```
 - **Access the Django Interactive Python Shell:**
   ```bash
-  docker-compose -f .build-files/docker-compose.yml exec server python manage.py shell
+  docker exec -it server-1 python manage.py shell
   ```
 - **Inspect the Database (MySQL):**
   ```bash
-  docker-compose -f .build-files/docker-compose.yml exec db mysql -u root -p
-  # Provide DATABASE_ROOT_PASSWORD from your .build-files/.env file
+  docker exec -it db-1 mysql -u root -p
+  # Provide DATABASE_ROOT_PASSWORD from your config
   ```
 - **Inspect the Celery/Redis Queue:**
   ```bash
-  docker-compose -f .build-files/docker-compose.yml exec redis redis-cli
+  docker exec -it redis-1 redis-cli
   ```
 
-### 5. Rebuilding & Restarting
-If a configuration gets stuck, environment variables aren't updating, or you need to force a reboot:
+### 5. Rebuilding & Restarting (TrueNAS Commands)
 - **Restart a single service:**
   ```bash
-  docker-compose -f .build-files/docker-compose.yml restart server
+  docker restart server-1
   ```
-- **Tear down completely and clean up (Stops all containers):**
-  ```bash
-  docker-compose -f .build-files/docker-compose.yml down
-  # You can also use: python3 build.py --down
-  ```
-- **Rebuild and restart all containers:**
-  ```bash
-  python3 build.py -osi --config-file .build-files/config-standard.json
-  ```
+- **Tear down completely (TrueNAS App UI):**
+  Stop the Loonar app in the TrueNAS "Apps" tab.
+- **Force Rebuild/Restart:**
+  Restart the `loon` orchestrator app in TrueNAS; it will re-trigger the `build.py` sequence and update containers.
 
 ---
 
@@ -239,9 +212,15 @@ Getting Loonar fully operational on TrueNAS (or any Docker-based deployment) req
 
 A single-command health report that checks every layer of the stack in sequence.
 
-**Usage:**
+**Usage (Linux/Standard):**
 ```bash
 bash .build-files/loon-doctor.sh
+```
+
+**Usage (TrueNAS SCALE):**
+Since the script is internal to the orchestrator image, run it via a temporary container:
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock lukeschreiber/loon-tests:latest bash .build-files/loon-doctor.sh
 ```
 
 **What it checks (in order):**
@@ -298,12 +277,12 @@ The Django server startup now runs through four structured phases, each with `[P
 
 1. **`ENVIRONMENT CHECK`** — Verifies `/app/.env` is mounted and contains critical variables like `DATABASE_NAME`.
 2. **`DATABASE CONNECTIVITY`** — Waits for the MySQL port to be reachable (up to 30 retries) before proceeding.
-3. **`MIGRATIONS`** — Runs `makemigrations` and `migrate` with each line prefixed and timestamped. On success, prints the current migration state via `showmigrations`.
+3. **`MIGRATIONS`** — Runs `makemigrations` and `migrate` with each line prefixed and timestamped.
 4. **`STARTUP`** — Launches the Django server.
 
-View these logs with:
+View these logs with (TrueNAS):
 ```bash
-docker-compose -f .build-files/docker-compose.yml logs server
+docker logs server-1
 ```
 
 ### 7.3 Post-Startup Validation in `build.py`
@@ -318,18 +297,15 @@ This validation prints directly to the terminal and is also written to the log f
 
 ### 7.4 Troubleshooting Quick Reference
 
-| Symptom | Diagnostic Output | Root Cause | Fix |
+| Symptom | TrueNAS Diagnostic | Root Cause | Fix |
 |---------|-------------------|------------|-----|
-| MinIO container keeps restarting | `HEALTHCHECK FAIL: /data directory is not writable` | ZFS dataset permissions | `chown -R 1000:1000 /mnt/<dataset>` or set `userGroupPermissions` in config |
-| MinIO health returns non-200 | `HEALTHCHECK FAIL: MinIO API returned HTTP 503` | MinIO still initializing or disk full | Wait for startup; check `df -h` on the ZFS dataset |
-| Server crashes on startup | `[SERVER] FAIL: DATABASE_NAME not found in .env` | `.env` not generated or not mounted | Re-run `build.py`; check `DOCKER_ENV_FILE` in compose |
-| Server hangs waiting for DB | `Attempt 30/30 — database not ready` | MySQL not started or wrong port | Check `docker-compose logs db`; verify `DATABASE_ROOT_PASSWORD` |
-| `aa_index.json` returns 404 via NGINX | `[WARN] NGINX /data proxy returned 404` | No experiments uploaded yet, or MinIO bucket missing | Upload an experiment; or check MinIO volume mount |
-| `aa_index.json` is invalid JSON | `[FAIL] aa_index.json exists but is NOT valid JSON` | Corrupted write (disk full, interrupted) | Re-upload any experiment to regenerate the file |
-| Experiment file missing | `[FAIL] Experiment file 'X.json' NOT found in MinIO` | Data deleted but index not updated | Re-upload the experiment or manually rebuild `aa_index.json` |
-| Client returns 502/503 | `[FAIL] NGINX client returned HTTP 502` | Server or MinIO not ready when NGINX started | `docker-compose restart client` after other services are healthy |
-| Docker socket access denied | `Cannot query Docker Compose` | Orchestrator container lacks socket mount | Mount `/var/run/docker.sock` in TrueNAS app config |
-| NFS mount failure | `minio` container exits immediately | Wrong `nfsVersion`, `ipAddress`, or `sourceVolumeLocation` | Run `df -h` on TrueNAS to verify NFS path; check `minioSettings` |
+| MinIO container keeps restarting | `docker logs minio-1` | ZFS permissions | `chown -R 1000:1000` on the dataset |
+| MinIO health returns non-200 | `docker logs minio-1` | MinIO initializing / disk full | Wait for startup; check `df -h` |
+| Server crashes on startup | `docker logs server-1` | `.env` or config missing | Restart the `loon` orchestrator app |
+| Server hangs waiting for DB | `docker logs db-1` | MySQL not started / crash | Check `db-1` logs for permission errors |
+| `aa_index.json` returns 404 | `docker logs client-1` | No experiments uploaded | Upload an experiment to initialize |
+| Client returns 502/503 | `docker logs client-1` | Server not ready | `docker restart client-1` |
+| Docker socket access denied| `docker logs loon-1` | Incorrect App permissions | Mount `/var/run/docker.sock` in App config |
 
 ### 7.5 Recommended Debugging Workflow
 
@@ -342,14 +318,14 @@ When Loonar isn't working on TrueNAS, follow this sequence:
 
 2. **Focus on the first `[FAIL]`** — failures are listed in dependency order, so the first failure is usually the root cause.
 
-3. **Check the relevant container logs:**
+3. **Check the relevant container logs (TrueNAS):**
    ```bash
-   docker-compose -f .build-files/docker-compose.yml logs <failed-service>
+   docker logs <container-name>  # e.g., server-1, db-1, minio-1
    ```
 
 4. **After fixing, restart the affected service:**
    ```bash
-   docker-compose -f .build-files/docker-compose.yml restart <service>
+   docker restart <container-name>
    ```
 
 5. **Re-run the doctor to confirm the fix:**
