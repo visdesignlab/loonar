@@ -459,6 +459,101 @@ def strip_ansi_escape_codes(text):
     return ansi_escape.sub('', text)
 
 
+def validate_deployment(base_url, use_http):
+    """
+    Post-startup sanity checks. Runs after all containers report healthy.
+    Verifies the data pipeline is actually working end-to-end.
+    """
+    import urllib.request
+    import urllib.error
+
+    http_value = 'http://' if use_http else 'https://'
+    compose_file = '.build-files/docker-compose.yml'
+
+    print("\n" + "=" * 60)
+    print("POST-STARTUP VALIDATION")
+    print("=" * 60)
+
+    failures = 0
+
+    # --- Check 1: MinIO health via direct port ---
+    try:
+        minio_url = 'http://localhost:9000/minio/health/live'
+        req = urllib.request.urlopen(minio_url, timeout=5)
+        if req.getcode() == 200:
+            logging.info("[VALIDATE] PASS: MinIO health endpoint is reachable.")
+            print("[PASS] MinIO health endpoint (port 9000) is reachable.")
+        else:
+            logging.warning(f"[VALIDATE] WARN: MinIO health returned {req.getcode()}.")
+            print(f"[WARN] MinIO health returned HTTP {req.getcode()}.")
+    except Exception as e:
+        logging.error(f"[VALIDATE] FAIL: Cannot reach MinIO on port 9000: {e}")
+        print(f"[FAIL] Cannot reach MinIO on port 9000: {e}")
+        print(f"       Fix: docker-compose -f {compose_file} logs minio")
+        failures += 1
+
+    # --- Check 2: aa_index.json through NGINX proxy ---
+    try:
+        index_url = f'{http_value}{base_url}/data/aa_index.json'
+        req = urllib.request.urlopen(index_url, timeout=5)
+        if req.getcode() == 200:
+            content = req.read().decode('utf-8')
+            try:
+                index_data = json.loads(content)
+                exp_count = len(index_data.get('experiments', []))
+                logging.info(f"[VALIDATE] PASS: aa_index.json reachable, {exp_count} experiment(s).")
+                print(f"[PASS] aa_index.json is reachable via NGINX proxy ({exp_count} experiment(s)).")
+            except json.JSONDecodeError:
+                logging.error("[VALIDATE] FAIL: aa_index.json exists but is not valid JSON.")
+                print("[FAIL] aa_index.json exists but is not valid JSON.")
+                failures += 1
+        else:
+            logging.warning(f"[VALIDATE] WARN: aa_index.json returned HTTP {req.getcode()}.")
+            print(f"[WARN] aa_index.json returned HTTP {req.getcode()}.")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            logging.info("[VALIDATE] INFO: aa_index.json not found (404). Expected on fresh deployment.")
+            print("[INFO] aa_index.json not found (HTTP 404). Expected on fresh deployment.")
+        else:
+            logging.error(f"[VALIDATE] FAIL: aa_index.json request failed: HTTP {e.code}")
+            print(f"[FAIL] aa_index.json request failed: HTTP {e.code}")
+            failures += 1
+    except Exception as e:
+        logging.warning(f"[VALIDATE] WARN: Cannot reach aa_index.json via proxy: {e}")
+        print(f"[WARN] Cannot reach aa_index.json via NGINX proxy: {e}")
+        print("       This may be expected if the client port is mapped differently (TrueNAS).")
+
+    # --- Check 3: Django API ---
+    try:
+        api_url = f'{http_value}{base_url}/api/'
+        req = urllib.request.urlopen(api_url, timeout=5)
+        logging.info(f"[VALIDATE] PASS: Django API is responding (HTTP {req.getcode()}).")
+        print(f"[PASS] Django API is responding (HTTP {req.getcode()}).")
+    except urllib.error.HTTPError as e:
+        # 404 is fine — it means Django is running but no root API view exists
+        if e.code in (404, 301):
+            logging.info(f"[VALIDATE] PASS: Django API is responding (HTTP {e.code}).")
+            print(f"[PASS] Django API is responding (HTTP {e.code}).")
+        else:
+            logging.error(f"[VALIDATE] FAIL: Django API returned HTTP {e.code}.")
+            print(f"[FAIL] Django API returned HTTP {e.code}.")
+            print(f"       Fix: docker-compose -f {compose_file} logs server")
+            failures += 1
+    except Exception as e:
+        logging.error(f"[VALIDATE] FAIL: Cannot reach Django API: {e}")
+        print(f"[FAIL] Cannot reach Django API: {e}")
+        print(f"       Fix: docker-compose -f {compose_file} logs server")
+        failures += 1
+
+    print("")
+    if failures == 0:
+        print("✔ Post-startup validation passed.")
+    else:
+        print(f"✘ {failures} validation failure(s). Review items above.")
+        print(f"  For full diagnostics, run: bash .build-files/loon-doctor.sh")
+    print("=" * 60 + "\n")
+
+
 def spinner(msg):
     """ Display a spinning cursor to indicate ongoing processes. """
     spinner_chars = ['|', '/', '-', '\\']
@@ -564,6 +659,9 @@ if __name__ == "__main__":
                 prepare_dev(buildConfig)
 
             check_containers_status(services, args.detached)
+
+            # Post-startup validation: verify MinIO, aa_index.json, and Django API
+            validate_deployment(base_url, use_http)
         else:
             cleanup_and_exit()
     else:

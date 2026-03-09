@@ -192,12 +192,25 @@ To do this, it requires two critical host path mounts:
 1. **`/var/run/docker.sock`**: Mounted directly from the TrueNAS host. This gives the `loon` container the ability to communicate with the host's Docker daemon.
 2. **`/app/data`**: Mounted from a ZFS dataset (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`).
 
-#### Crucial Environment Variables
-The TrueNAS app configuration also passes heavily specific environment variables to this orchestrator container, which `build.py` intercepts to generate the final orchestration configs:
-- **`MINIOSETTINGS_SOURCEVOLUMELOCATION`**: Explicitly passes the ZFS path on the TrueNAS host (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`) down to the Docker Compose template, so the spawned MinIO container knows *exactly* which host path to natively mount.
-- **`VITE_SERVER_URL`**: Defines the TrueNAS machine's actual static IP (e.g., `155.98.10.25`), injecting this into the Vite build step so the React client knows where to make HTTP API requests.
-- **`VITE_DATA_PORT`** & **`VITE_WS_PORT`**: Sets explicit ports for MinIO data access (e.g., `9000`) and websocket connections (`9001`).
-- **`LOCAL_PORT_1`** & **`LOCAL_PORT_2`**: Provides port mapping configurations (e.g., `80` and `9001`) that get routed or managed by the NGINX reversed proxy depending on if HTTPS is enforced.
+#### Environment Variables & Current Status
+The TrueNAS app configuration passes specific environment variables to the orchestrator. Below are the current settings as of the latest deployment:
+
+| Variable | Current Value | Description |
+| :--- | :--- | :--- |
+| `MINIOSETTINGS_SOURCEVOLUMELOCATION` | `/mnt/NAS_RAID_1/NAS_RAID_1_DS1/data` | The ZFS host path where MinIO data is stored. Points to the actual data directory on the NAS. |
+| `LOCAL_PORT_1` | `9001` | The host port mapped to the internal websocket and MinIO console services. |
+| `LOCAL_PORT_2` | `80` | The primary host port for HTTP traffic, routed via the NGINX reverse proxy. |
+| `VITE_SERVER_URL` | `155.98.10.25` | The static IP of the TrueNAS host, used by the frontend to locate the backend API. |
+| `VITE_DATA_PORT` | `9000` | The port dedicated to MinIO S3-compatible API access. |
+| `VITE_WS_PORT` | `9001` | The port used for websocket connections to the analytical processing units. |
+
+#### Storage Configuration
+Two critical host path mounts are required for the "Docker-in-Docker" orchestration to function correctly:
+
+| Type | Host Path | Mount Path | Description |
+| :--- | :--- | :--- | :--- |
+| Host Path | `/mnt/NAS_RAID_1/NAS_RAID_1_DS1` | `/app/data` | The root dataset providing persistent storage for all experiment data, database files, and logs. |
+| Host Path | `/var/run/docker.sock` | `/var/run/docker.sock` | The Unix socket for the host's Docker daemon, enabling the orchestrator to manage containers natively on the host. |
 
 *(Note on Restart Policy: The orchestrator app's restart policy is typically set to "No" because once it successfully triggers `docker-compose up -d` against the host socket, its job is effectively complete).*
 
@@ -207,3 +220,145 @@ Because the container has access to the host's Docker socket (which requires hos
 
 This is why examining the host directory (e.g., `/mnt/NAS_RAID_1/NAS_RAID_1_DS1`) will reveal the persistent data natively written by the `minio` container—such as `.minio.sys`, the `data` bucket, the central `aa_index.json`, and dynamically written experiment folders (`Constance`, `Rebecca`, `Sophie`, etc.). Meanwhile, the orchestrating `docker-compose.yml` and `.env` files remain hidden securely inside the ephemeral orchestrator container.
 
+### Updating the Orchestrator Image
+To update the `loon` orchestrator image (e.g., after modifying `build.py` or diagnostic scripts), build and push it to Docker Hub using `buildx` for cross-platform compatibility (required for high-performance TrueNAS systems):
+
+```bash
+docker buildx build --platform linux/amd64 -f .build-files/Dockerfile.loon.minio -t lukeschreiber/loon-tests:latest --push .
+```
+
+---
+
+---
+
+## 7. Deployment Diagnostics & Debugging
+
+Getting Loonar fully operational on TrueNAS (or any Docker-based deployment) requires every layer of the stack to be healthy: Docker → MySQL → Redis → MinIO → Django → NGINX → Client. A failure at any point silently breaks the pipeline. This section documents the comprehensive diagnostic tools built into Loonar to surface every issue clearly.
+
+### 7.1 The `loon-doctor.sh` Diagnostic Script
+
+A single-command health report that checks every layer of the stack in sequence.
+
+**Usage:**
+```bash
+bash .build-files/loon-doctor.sh
+```
+
+**What it checks (in order):**
+
+| # | Check | What It Validates | Common TrueNAS Failure |
+|---|-------|------------------|----------------------|
+| 1 | Docker Compose | All expected containers are running | Docker socket not mounted |
+| 2 | MySQL | Database is alive, `loon` DB exists | DB container crash on startup |
+| 3 | Redis | Broker responds to `PING` | Redis OOM or port conflict |
+| 4 | MinIO API | Health endpoint returns 200 | ZFS permissions, NFS mount failure |
+| 5 | MinIO Bucket | `/data/data` directory exists | Volume not mounted, first deploy |
+| 6 | `aa_index.json` | File exists, is valid JSON, lists experiments | Corrupted write, no uploads yet |
+| 7 | Experiment Files | Each file in `aa_index.json` exists in MinIO | Deleted data, partial upload |
+| 8 | NGINX Proxy | Client serves on port 80, `/data` proxy works | Port mapping mismatch |
+| 9 | Django API | Server responds on port 8000 | Migration failure, missing `.env` |
+
+Each check prints a timestamped `[PASS]`, `[FAIL]`, or `[WARN]` with a human-readable explanation of what went wrong and how to fix it. At the end, a summary reports total failures and warnings.
+
+**Example output (healthy):**
+```
+━━━ 1. Docker Compose — Container Status ━━━
+2025-03-09 10:00:01 [PASS] Container 'client' is running.
+2025-03-09 10:00:01 [PASS] Container 'server' is running.
+...
+━━━ SUMMARY ━━━
+✔ All checks passed. Loonar deployment looks healthy.
+```
+
+**Example output (failure):**
+```
+━━━ 4. MinIO — API Health ━━━
+2025-03-09 10:00:05 [FAIL] MinIO health endpoint returned: 000
+     ↳ Fix: Run 'docker-compose -f .build-files/docker-compose.yml logs minio' for details.
+     ↳ Common cause on TrueNAS: ZFS dataset permissions or NFS mount failure.
+```
+
+### 7.2 Enhanced Container Logging
+
+#### MinIO Healthcheck (`minio-healthcheck.sh`)
+
+The Docker Compose healthcheck for MinIO now performs three validations:
+1. **API liveness** — Curls `http://minio:9000/minio/health/live` with verbose error output on failure.
+2. **Directory existence** — Verifies `/data` exists inside the container (catches missing volume mounts).
+3. **Write access** — Attempts to create and remove a probe file in `/data` (catches ZFS/NFS permission issues).
+
+All messages are timestamped. On failure, the healthcheck logs the specific cause and a fix suggestion, visible via:
+```bash
+docker-compose -f .build-files/docker-compose.yml logs minio
+```
+
+#### Server Entrypoint (`server-entrypoint.sh`)
+
+The Django server startup now runs through four structured phases, each with `[PASS]`/`[FAIL]` output:
+
+1. **`ENVIRONMENT CHECK`** — Verifies `/app/.env` is mounted and contains critical variables like `DATABASE_NAME`.
+2. **`DATABASE CONNECTIVITY`** — Waits for the MySQL port to be reachable (up to 30 retries) before proceeding.
+3. **`MIGRATIONS`** — Runs `makemigrations` and `migrate` with each line prefixed and timestamped. On success, prints the current migration state via `showmigrations`.
+4. **`STARTUP`** — Launches the Django server.
+
+View these logs with:
+```bash
+docker-compose -f .build-files/docker-compose.yml logs server
+```
+
+### 7.3 Post-Startup Validation in `build.py`
+
+After all containers pass their Docker healthchecks, `build.py` automatically runs a `validate_deployment()` step that verifies the data pipeline works end-to-end:
+
+1. **MinIO health** — Confirms the MinIO API is reachable from the host on port 9000.
+2. **`aa_index.json`** — Fetches the index file through the NGINX proxy, validates it's valid JSON, and reports the experiment count.
+3. **Django API** — Confirms the server responds on `/api/`.
+
+This validation prints directly to the terminal and is also written to the log file. If any check fails, it suggests the exact `docker-compose logs` command to run.
+
+### 7.4 Troubleshooting Quick Reference
+
+| Symptom | Diagnostic Output | Root Cause | Fix |
+|---------|-------------------|------------|-----|
+| MinIO container keeps restarting | `HEALTHCHECK FAIL: /data directory is not writable` | ZFS dataset permissions | `chown -R 1000:1000 /mnt/<dataset>` or set `userGroupPermissions` in config |
+| MinIO health returns non-200 | `HEALTHCHECK FAIL: MinIO API returned HTTP 503` | MinIO still initializing or disk full | Wait for startup; check `df -h` on the ZFS dataset |
+| Server crashes on startup | `[SERVER] FAIL: DATABASE_NAME not found in .env` | `.env` not generated or not mounted | Re-run `build.py`; check `DOCKER_ENV_FILE` in compose |
+| Server hangs waiting for DB | `Attempt 30/30 — database not ready` | MySQL not started or wrong port | Check `docker-compose logs db`; verify `DATABASE_ROOT_PASSWORD` |
+| `aa_index.json` returns 404 via NGINX | `[WARN] NGINX /data proxy returned 404` | No experiments uploaded yet, or MinIO bucket missing | Upload an experiment; or check MinIO volume mount |
+| `aa_index.json` is invalid JSON | `[FAIL] aa_index.json exists but is NOT valid JSON` | Corrupted write (disk full, interrupted) | Re-upload any experiment to regenerate the file |
+| Experiment file missing | `[FAIL] Experiment file 'X.json' NOT found in MinIO` | Data deleted but index not updated | Re-upload the experiment or manually rebuild `aa_index.json` |
+| Client returns 502/503 | `[FAIL] NGINX client returned HTTP 502` | Server or MinIO not ready when NGINX started | `docker-compose restart client` after other services are healthy |
+| Docker socket access denied | `Cannot query Docker Compose` | Orchestrator container lacks socket mount | Mount `/var/run/docker.sock` in TrueNAS app config |
+| NFS mount failure | `minio` container exits immediately | Wrong `nfsVersion`, `ipAddress`, or `sourceVolumeLocation` | Run `df -h` on TrueNAS to verify NFS path; check `minioSettings` |
+
+### 7.5 Recommended Debugging Workflow
+
+When Loonar isn't working on TrueNAS, follow this sequence:
+
+1. **Run the doctor first:**
+   ```bash
+   bash .build-files/loon-doctor.sh
+   ```
+
+2. **Focus on the first `[FAIL]`** — failures are listed in dependency order, so the first failure is usually the root cause.
+
+3. **Check the relevant container logs:**
+   ```bash
+   docker-compose -f .build-files/docker-compose.yml logs <failed-service>
+   ```
+
+4. **After fixing, restart the affected service:**
+   ```bash
+   docker-compose -f .build-files/docker-compose.yml restart <service>
+   ```
+
+5. **Re-run the doctor to confirm the fix:**
+   ```bash
+   bash .build-files/loon-doctor.sh
+   ```
+
+6. **For a full rebuild after config changes:**
+   ```bash
+   python3 build.py -osi --config-file .build-files/config-standard.json
+   ```
+   The post-startup validation will run automatically.
