@@ -12,8 +12,8 @@ services:
         VITE_SERVER_URL: ${VITE_SERVER_URL}
         NGINX_FILE: ${NGINX_FILE}
     ports:
-      - "80:80"
-      - "443:443"
+      - "${LOCAL_PORT_2}:80"
+      - "${LOCAL_PORT_1}:443"
     volumes:
       - ${SSL_MAPPING:-/dev/null:/dev/null}
     depends_on:
@@ -30,6 +30,9 @@ services:
       dockerfile: ./.build-files/Dockerfile.server # relatvie to build context
       args:
         DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
+    env_file:
+      - path: ${DOCKER_ENV_FILE}
+        required: true
     ports:
       - "8000:8000"
     environment:
@@ -50,6 +53,9 @@ services:
       dockerfile: ./.build-files/Dockerfile.celery # relatvie to build context
       args:
         DOCKER_ENV_FILE: ${DOCKER_ENV_FILE}
+    env_file:
+      - path: ${DOCKER_ENV_FILE}
+        required: true
     command:
       [
         "celery",
@@ -93,13 +99,15 @@ services:
           "mysqladmin",
           "ping",
           "-h",
-          "localhost",
+          "127.0.0.1",
           "-u",
           "root",
           "-p${DATABASE_ROOT_PASSWORD}",
         ]
+      interval: 5s
       timeout: 20s
-      retries: 10
+      retries: 20
+      start_period: 30s
     env_file:
       - path: ${DOCKER_ENV_FILE} # relative to docker compose (has to be in same directory)
         required: true
@@ -137,10 +145,16 @@ services:
       retries: 5
     volumes:
       - minio_data:/data
+    env_file:
+      - path: ${DOCKER_ENV_FILE}
+        required: true
   duckdb:
     build:
       context: ../ # relative to docker compose
       dockerfile: ./.build-files/Dockerfile.duckdb # relative to build context
+    env_file:
+      - path: ${DOCKER_ENV_FILE}
+        required: true
     ports:
       - "3000:3000"
     volumes:

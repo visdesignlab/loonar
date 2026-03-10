@@ -195,7 +195,7 @@ def createEnvFile(configFileName, envFileName, useDid=False):
     buildConfig.set('DEBUG', True)
     buildConfig.set('ALLOWED_HOST', f"'{base_url}'")
     buildConfig.set('SECRET_KEY',
-                    '"django-insecure-z2^vruu347=0e-qyh%&k)%*j9(hgubj$layg&k$-vwb1u+mp93"'
+                    '"django-insecure-z2^vruu347=0e-qyh%&k)%*j9(hgubj$$layg&k$$-vwb1u+mp93"'
                     )
     localVolumeLocation = buildConfig.get('localDataSettings.sourceVolumeLocation')
     buildConfig.set('LOCAL_DATA_VOLUME_LOCATION', localVolumeLocation)

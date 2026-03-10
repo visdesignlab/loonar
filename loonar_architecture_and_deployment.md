@@ -172,7 +172,7 @@ The TrueNAS app configuration passes specific environment variables to the orche
 | :--- | :--- | :--- |
 | `MINIOSETTINGS_SOURCEVOLUMELOCATION` | `/mnt/NAS_RAID_1/NAS_RAID_1_DS1/data` | The ZFS host path where MinIO data is stored. Points to the actual data directory on the NAS. |
 | `LOCAL_PORT_1` | `9001` | The host port mapped to the internal websocket and MinIO console services. |
-| `LOCAL_PORT_2` | `80` | The primary host port for HTTP traffic, routed via the NGINX reverse proxy. |
+| `LOCAL_PORT_2` | `8888` | The primary host port for HTTP traffic, routed via the NGINX reverse proxy. |
 | `VITE_SERVER_URL` | `155.98.10.25` | The static IP of the TrueNAS host, used by the frontend to locate the backend API. |
 | `VITE_DATA_PORT` | `9000` | The port dedicated to MinIO S3-compatible API access. |
 | `VITE_WS_PORT` | `9001` | The port used for websocket connections to the analytical processing units. |

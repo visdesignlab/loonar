@@ -89,7 +89,7 @@ fi
 header "2. MySQL — Database Connectivity"
 # =============================================================================
 
-DB_PING=$(docker-compose -f "$COMPOSE_FILE" exec -T db mysqladmin ping -h localhost -u root -p"${DATABASE_ROOT_PASSWORD:-root_pass}" 2>&1)
+DB_PING=$(docker-compose -f "$COMPOSE_FILE" exec -T db mysqladmin ping -h 127.0.0.1 -u root -p"${DATABASE_ROOT_PASSWORD:-root_pass}" 2>&1)
 if echo "$DB_PING" | grep -qi "alive"; then
     pass "MySQL is alive and responding to ping."
 else
@@ -125,7 +125,7 @@ fi
 header "4. MinIO — API Health"
 # =============================================================================
 
-MINIO_HEALTH=$(docker-compose -f "$COMPOSE_FILE" exec -T minio curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:9000/minio/health/live 2>&1)
+MINIO_HEALTH=$(docker-compose -f "$COMPOSE_FILE" exec -T minio curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:9000/minio/health/live 2>&1 | tail -c 3)
 if [ "$MINIO_HEALTH" = "200" ]; then
     pass "MinIO health endpoint returned 200 OK."
 else

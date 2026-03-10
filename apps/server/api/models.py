@@ -78,7 +78,7 @@ class Location(models.Model):
     tabular_data_filename = models.CharField(max_length=255)
     images_data_filename = models.CharField(max_length=255)
     segmentations_folder = models.CharField(max_length=255)
-    tags = models.JSONField(default={})
+    tags = models.JSONField(default=dict)
 
     def __str__(self):
         return f"{self.experiment}_{self.name}"

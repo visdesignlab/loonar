@@ -48,16 +48,14 @@ DB_PORT="${DATABASE_PORT:-3306}"
 log "Waiting for database at $DB_HOST:$DB_PORT..."
 
 RETRY=0
-MAX_RETRIES=30
+MAX_RETRIES=90
 while ! python -c "
 import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(2)
 try:
-    s.connect(('$DB_HOST', $DB_PORT))
+    s = socket.create_connection(('$DB_HOST', $DB_PORT), timeout=2)
     s.close()
     exit(0)
-except:
+except Exception as e:
     exit(1)
 " 2>/dev/null; do
     RETRY=$((RETRY + 1))
