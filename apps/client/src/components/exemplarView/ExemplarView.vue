@@ -2269,36 +2269,6 @@ function createCellImageLayer(
         configurable: true,
     });
 
-    // Apply segmentation-based cropping if segmentation exists
-    if (cellSegmentationPolygon) {
-        const cropBounds = getSegmentationBounds(
-            cellSegmentationPolygon,
-            source
-        );
-        if (cropBounds) {
-            const { topCrop, bottomCrop } = cropBounds;
-
-            // Apply cropping to source
-            const sourceHeight = source[1] - source[3]; // top - bottom
-            croppedSource = [
-                source[0], // left unchanged
-                source[1] - sourceHeight * topCrop, // crop from top
-                source[2], // right unchanged
-                source[3] + sourceHeight * bottomCrop, // crop from bottom
-            ];
-
-            // Apply cropping to destination - BOTTOM ALIGNED
-            const destHeight =
-                imageSnippetDestination[1] - imageSnippetDestination[3];
-            const croppedDestHeight = destHeight * (1 - topCrop - bottomCrop);
-            croppedDestination = [
-                imageSnippetDestination[0], // left unchanged
-                imageSnippetDestination[1], // top unchanged (bottom-aligned)
-                imageSnippetDestination[2], // right unchanged
-                imageSnippetDestination[1] - croppedDestHeight, // bottom = top - cropped height
-            ];
-        }
-    }
 
     const imageSegmentationData = [];
 
@@ -3422,35 +3392,6 @@ function getSegmentationBounds(
     // Calculate source image bounds
     const [sourceLeft, sourceTop, sourceRight, sourceBottom] = sourceBBox;
     const sourceHeight = sourceTop - sourceBottom;
-
-    // Calculate the natural segmentation height
-    const naturalSegmentationHeight = segmentationMaxY - segmentationMinY;
-
-    // Get max allowed height from view configuration
-    const maxAllowedHeight = viewConfiguration.value.snippetDisplayHeight;
-
-    // If natural segmentation height exceeds max, we need to crop further
-    if (naturalSegmentationHeight > maxAllowedHeight) {
-        // Calculate how much we need to crop to fit within max height
-        const excessHeight = naturalSegmentationHeight - maxAllowedHeight;
-        const halfExcess = excessHeight / 2;
-
-        // Apply additional cropping equally from top and bottom
-        const adjustedSegmentationMinY = segmentationMinY + halfExcess;
-        const adjustedSegmentationMaxY = segmentationMaxY - halfExcess;
-
-        // Calculate crop ratios based on adjusted bounds
-        const topCrop = Math.max(
-            0,
-            (sourceTop - adjustedSegmentationMaxY) / sourceHeight
-        );
-        const bottomCrop = Math.max(
-            0,
-            (adjustedSegmentationMinY - sourceBottom) / sourceHeight
-        );
-
-        return { topCrop, bottomCrop };
-    }
 
     // Original logic for cases where segmentation fits within max height
     const topCrop = Math.max(0, (sourceTop - segmentationMaxY) / sourceHeight);
