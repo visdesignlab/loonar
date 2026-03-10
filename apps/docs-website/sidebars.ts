@@ -26,12 +26,14 @@ const sidebars: SidebarsConfig = {
         id: "getting-started-with-loon/index",
       },
       items: [
-        {type: "category", label: "Prepare Your Data", link: {type: "doc", id: "getting-started-with-loon/data",}, items: [
-        "getting-started-with-loon/trackmate-data",]},
+        {
+          type: "category", label: "Prepare Your Data", link: { type: "doc", id: "getting-started-with-loon/data", }, items: [
+            "getting-started-with-loon/trackmate-data",]
+        },
         "getting-started-with-loon/quickstart",
-        { 
-          type: "category", 
-          label: "Extra Resources", 
+        {
+          type: "category",
+          label: "Extra Resources",
           link: { type: "generated-index" },
           items: [
             "troubleshooting-docker",
@@ -44,7 +46,16 @@ const sidebars: SidebarsConfig = {
       type: "html",
       value: '<hr style="border: 0.5px solid #ddd; margin: 0.5rem 0;" />',
     },
-    "version-log",
+    {
+      type: "doc",
+      id: "status-and-versions",
+      label: "Status & Versions",
+    },
+    {
+      type: "doc",
+      id: "publications",
+      label: "Publications",
+    },
     "help-develop-loon/index",
     "contact-us",
   ],
