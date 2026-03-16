@@ -34,6 +34,9 @@ RUN yarn run build
 # Create new image
 FROM nginx:alpine
 
+# Install openssl for generating self-signed fallback certificates if needed
+RUN apk add --no-cache openssl
+
 # From build step, copy dist directory
 COPY --from=build-step /app/dist /usr/share/nginx/html
 ARG NGINX_FILE
