@@ -185,6 +185,11 @@ def createEnvFile(configFileName, envFileName, useDid=False):
                         buildConfig.get('nginxSettings.targetVolumeLocation'))
         buildConfig.set('SSL_SOURCE_MOUNTED_DIRECTORY',
                         buildConfig.get('nginxSettings.sourceVolumeLocation'))
+    else:
+        buildConfig.set('SSL_MAPPING', '')
+        buildConfig.set('SSL_CERT_FILE', 'dummy.crt')
+        buildConfig.set('SSL_KEY_FILE', 'dummy.key')
+        buildConfig.set('SSL_TARGET_MOUNTED_DIRECTORY', '/etc/certs')
 
     # --------------------------------------------------------------
     # OTHER SETTINGS -----------------------------------------------
@@ -195,7 +200,7 @@ def createEnvFile(configFileName, envFileName, useDid=False):
     buildConfig.set('DEBUG', True)
     buildConfig.set('ALLOWED_HOST', f"'{base_url}'")
     buildConfig.set('SECRET_KEY',
-                    '"django-insecure-z2^vruu347=0e-qyh%&k)%*j9(hgubj$$layg&k$$-vwb1u+mp93"'
+                    '"django-insecure-z2^vruu347=0e-qyh%&k)%*j9(hgubjxxlayg&kxx-vwb1u+mp93"'
                     )
     localVolumeLocation = buildConfig.get('localDataSettings.sourceVolumeLocation')
     buildConfig.set('LOCAL_DATA_VOLUME_LOCATION', localVolumeLocation)

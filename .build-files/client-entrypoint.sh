@@ -11,11 +11,22 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Ensure SSL certificates exist, otherwise generate a self-signed fallback
+CERT_PATH="${SSL_TARGET_MOUNTED_DIRECTORY}/${SSL_CERT_FILE}"
+KEY_PATH="${SSL_TARGET_MOUNTED_DIRECTORY}/${SSL_KEY_FILE}"
+
+if [ ! -f "$CERT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
+    echo "SSL Certificates not found at ${CERT_PATH} or ${KEY_PATH}. Generating self-signed fallback..."
+    mkdir -p "${SSL_TARGET_MOUNTED_DIRECTORY}"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout "$KEY_PATH" \
+        -out "$CERT_PATH" \
+        -subj "/C=US/ST=State/L=City/O=Organization/OU=Department/CN=localhost"
+    echo "Fallback certificates generated."
+fi
+
 # Print the final nginx.conf for debugging purposes
 echo "Generated /etc/nginx/nginx.conf:"
-# cat /etc/nginx/nginx.conf
-
-
 # Start NGINX with logging
 echo "Starting NGINX..."
 nginx -g 'daemon off;'
