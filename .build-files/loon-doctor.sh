@@ -125,7 +125,7 @@ fi
 header "4. MinIO — API Health"
 # =============================================================================
 
-MINIO_HEALTH=$(docker-compose -f "$COMPOSE_FILE" exec -T minio curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:9000/minio/health/live 2>&1 | tail -c 3)
+MINIO_HEALTH=$(docker-compose -f "$COMPOSE_FILE" exec -T minio curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:9000/minio/health/live 2>/dev/null)
 if [ "$MINIO_HEALTH" = "200" ]; then
     pass "MinIO health endpoint returned 200 OK."
 else
@@ -239,7 +239,7 @@ header "8. NGINX — Client Proxy Check"
 # =============================================================================
 
 # Check if we can reach the client on port 80
-CLIENT_CHECK=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:80/ 2>&1)
+CLIENT_CHECK=$(docker-compose -f "$COMPOSE_FILE" exec -T client curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:80/ 2>/dev/null)
 if [ "$CLIENT_CHECK" = "200" ]; then
     pass "NGINX client is serving on port 80."
 else
@@ -249,7 +249,7 @@ else
 fi
 
 # Check if /data proxy works (MinIO through NGINX)
-DATA_PROXY_CHECK=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:80/data/aa_index.json 2>&1)
+DATA_PROXY_CHECK=$(docker-compose -f "$COMPOSE_FILE" exec -T client curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:80/data/aa_index.json 2>/dev/null)
 if [ "$DATA_PROXY_CHECK" = "200" ]; then
     pass "NGINX /data proxy → MinIO is working (aa_index.json reachable)."
 elif [ "$DATA_PROXY_CHECK" = "404" ]; then
@@ -265,7 +265,7 @@ fi
 header "9. Django — Server API Check"
 # =============================================================================
 
-API_CHECK=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8000/api/ 2>&1)
+API_CHECK=$(docker-compose -f "$COMPOSE_FILE" exec -T server curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8000/api/ 2>/dev/null)
 if [ "$API_CHECK" = "200" ] || [ "$API_CHECK" = "301" ] || [ "$API_CHECK" = "404" ]; then
     pass "Django server is responding on port 8000 (HTTP $API_CHECK)."
 else
