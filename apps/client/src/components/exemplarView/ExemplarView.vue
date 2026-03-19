@@ -71,6 +71,7 @@ import { schemeReds, schemeBlues } from 'd3-scale-chromatic';
 interface ExemplarRenderInfo {
     yOffset: number;
     onScreen: boolean;
+    snippetHeight: number; // actual max cropped snippet height for this exemplar
 }
 
 interface combinedSnippetSegmentationLayer {
@@ -365,6 +366,7 @@ watch(
 
         // Fetch all segmentations
         await getCellSegmentationData();
+        cacheExemplarSnippetHeights();
         horizonChartSettings.value.default = true;
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
@@ -585,6 +587,69 @@ const bottomYOffset = computed(() => {
     );
 });
 
+/**
+ * Computes the maximum cropped snippet height for a given exemplar track.
+ * Iterates through all cells, checks segmentation crop bounds, and returns
+ * the tallest cropped image height. Falls back to full snippetDisplayHeight
+ * if no segmentation data is available.
+ */
+function getExemplarMaxSnippetHeight(exemplar: ExemplarTrack): number {
+    const viewConfig = viewConfiguration.value;
+    const fullHeight = viewConfig.snippetDisplayHeight;
+    let maxHeight = 0;
+
+    if (!exemplar.data || exemplar.data.length === 0) {
+        return fullHeight;
+    }
+
+    for (const cell of exemplar.data) {
+        const segmentationPolygon = getCellSegmentationPolygon(
+            exemplar.locationId,
+            exemplar.trackId.toString(),
+            cell.frame.toString()
+        );
+        if (segmentationPolygon) {
+            const source = getBBoxAroundPoint(
+                cell.x,
+                cell.y,
+                viewConfig.snippetSourceSize,
+                viewConfig.snippetSourceSize
+            );
+            const cropBounds = getSegmentationBounds(segmentationPolygon, source);
+            if (cropBounds) {
+                const croppedHeight = fullHeight * (1 - cropBounds.topCrop - cropBounds.bottomCrop);
+                maxHeight = Math.max(maxHeight, croppedHeight);
+            } else {
+                maxHeight = Math.max(maxHeight, fullHeight);
+            }
+        } else {
+            // No segmentation — use full height
+            maxHeight = Math.max(maxHeight, fullHeight);
+        }
+    }
+
+    // Ensure a reasonable minimum height
+    return Math.max(maxHeight, 10);
+}
+
+// Cached per-exemplar snippet heights (computed once on data load, not per render frame)
+const cachedSnippetHeights = ref(new Map<string, number>());
+
+/**
+ * Precomputes and caches max snippet heights for all exemplar tracks.
+ * Should be called once when exemplar data or segmentation data loads.
+ */
+function cacheExemplarSnippetHeights(): void {
+    cachedSnippetHeights.value.clear();
+    for (const exemplar of exemplarTracks.value) {
+        const key = uniqueExemplarKey(exemplar);
+        cachedSnippetHeights.value.set(key, getExemplarMaxSnippetHeight(exemplar));
+    }
+}
+
+// Small margin between exemplar tracks within the same condition
+const betweenExemplarMargin = 4;
+
 // Finds the exemplar tracks Y-values on screen.
 function recalculateExemplarYOffsets(): void {
     exemplarRenderInfo.value.clear();
@@ -592,16 +657,21 @@ function recalculateExemplarYOffsets(): void {
     let lastExemplar = exemplarTracks.value[0];
     for (let i = 0; i < exemplarTracks.value.length; i++) {
         const exemplar = exemplarTracks.value[i];
-        yOffset += exemplarHeight.value;
+        const key = uniqueExemplarKey(exemplar);
+        const snippetHeight = cachedSnippetHeights.value.get(key) ?? viewConfiguration.value.snippetDisplayHeight;
+        const trackHeight = snippetHeight +
+            viewConfiguration.value.snippetHorizonChartGap +
+            viewConfiguration.value.horizonChartHeight +
+            viewConfiguration.value.horizonTimeBarGap +
+            viewConfiguration.value.timeBarHeightOuter;
+        yOffset += trackHeight;
         if (i !== 0) {
             if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                yOffset += viewConfiguration.value.betweenExemplarGap;
+                yOffset += viewConfiguration.value.betweenExemplarGap + betweenExemplarMargin;
             } else {
                 yOffset += viewConfiguration.value.betweenConditionGap;
             }
         }
-        const key = uniqueExemplarKey(exemplar);
-        // TODO: calc onscreen
         const viewBBox = viewportBBox();
         const lastYOffset =
             exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))
@@ -612,7 +682,7 @@ function recalculateExemplarYOffsets(): void {
             viewBBox[3],
             viewBBox[1]
         );
-        exemplarRenderInfo.value.set(key, { yOffset, onScreen });
+        exemplarRenderInfo.value.set(key, { yOffset, onScreen, snippetHeight });
         lastExemplar = exemplar;
     }
 }
@@ -684,6 +754,7 @@ watch(
             // clear old segmentations and fetch them for the new tracks
             cellSegmentationData.value = [];
             await getCellSegmentationData();
+            cacheExemplarSnippetHeights();
             // repaint
             safeRenderDeckGL();
         }
@@ -1343,7 +1414,13 @@ function createSidewaysHistogramLayer(): any[] | null {
             exemplarRenderInfo.value.get(
                 uniqueExemplarKey(group[group.length - 1])
             )?.yOffset ?? 0;
-        const groupTop = firstOffset - exemplarHeight.value;
+        const firstSnippetHeight = exemplarRenderInfo.value.get(uniqueExemplarKey(conditionGroupKey))?.snippetHeight ?? viewConfiguration.value.snippetDisplayHeight;
+        const firstTrackHeight = firstSnippetHeight +
+            viewConfiguration.value.snippetHorizonChartGap +
+            viewConfiguration.value.horizonChartHeight +
+            viewConfiguration.value.horizonTimeBarGap +
+            viewConfiguration.value.timeBarHeightOuter;
+        const groupTop = firstOffset - firstTrackHeight;
         const groupBottom = lastOffset;
         const groupHeight = groupBottom - groupTop;
         const binWidth = groupHeight / histogramDataForGroup.length;
@@ -2162,15 +2239,15 @@ function createCellImageLayer(
     const snippetDestWidth = scaleForConstantVisualSize(
         viewConfig.snippetDisplayWidth
     );
-    const snippetDestHeight = viewConfig.snippetDisplayHeight;
 
     // Compute the destination Y coordinate.
     // Start with a fallback equal to the base horizon chart height.
     let destY = viewConfig.horizonChartHeight;
     if (exemplarTracks.value && exemplarTracks.value.length > 0) {
         const key = uniqueExemplarKey(exemplar);
+        const renderInfo = exemplarRenderInfo.value.get(key);
         // Get the yOffset for the current exemplar from the render info map.
-        const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+        const yOffset = renderInfo?.yOffset ?? 0;
         if (yOffset !== undefined && yOffset !== null) {
             // Adjust destY to position the snippet above the main horizon chart.
             destY =
@@ -2667,13 +2744,13 @@ function createExemplarImageKeyFramesLayer(
     const snippetDestWidth = scaleForConstantVisualSize(
         viewConfig.snippetDisplayWidth
     );
-    const snippetDestHeight = viewConfig.snippetDisplayHeight;
 
     // Calculate destination Y from the yOffset of the current exemplar.
     let destY = viewConfig.horizonChartHeight; // fallback
 
     const key = uniqueExemplarKey(exemplar);
-    const yOffset = exemplarRenderInfo.value.get(key)?.yOffset ?? 0;
+    const renderInfo = exemplarRenderInfo.value.get(key);
+    const yOffset = renderInfo?.yOffset ?? 0;
     if (yOffset !== undefined && yOffset !== null) {
         destY =
             yOffset -
@@ -3443,6 +3520,19 @@ watch(
     (newTrackId, oldTrackId) => {
         if (newTrackId !== oldTrackId && exemplarDataInitialized.value) {
             // Force re-render when selected exemplar changes
+            safeRenderDeckGL();
+        }
+    }
+);
+// Watch size configurations to recompute snippet heights and re-render
+watch(
+    () => [
+        viewConfiguration.value.snippetSourceSize,
+        viewConfiguration.value.snippetDisplayHeight
+    ],
+    () => {
+        if (exemplarDataInitialized.value) {
+            cacheExemplarSnippetHeights();
             safeRenderDeckGL();
         }
     }
