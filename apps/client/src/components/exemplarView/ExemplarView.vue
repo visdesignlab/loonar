@@ -367,6 +367,7 @@ watch(
         // Fetch all segmentations
         await getCellSegmentationData();
         cacheExemplarSnippetHeights();
+        calculateExemplarYOffsets_Cached();
         horizonChartSettings.value.default = true;
         // Initialize Deck.gl if not already initialized -----------------
         if (!deckgl.value) {
@@ -473,7 +474,7 @@ const selectedCellImageTickMarkLayers = ref<any[]>([]);
 async function renderDeckGL(): Promise<void> {
     if (!deckgl.value) return;
     // Find which exemplar tracks are currently on screen.
-    recalculateExemplarYOffsets();
+    updateExemplarVisibility();
 
     // Create deck gl Layers ----------------------------------------------
     deckGLLayers = [];
@@ -651,9 +652,10 @@ function cacheExemplarSnippetHeights(): void {
 const betweenExemplarMargin = 4;
 
 // Finds the exemplar tracks Y-values on screen.
-function recalculateExemplarYOffsets(): void {
+function calculateExemplarYOffsets_Cached(): void {
     exemplarRenderInfo.value.clear();
     let yOffset = 0;
+    if (exemplarTracks.value.length === 0) return;
     let lastExemplar = exemplarTracks.value[0];
     for (let i = 0; i < exemplarTracks.value.length; i++) {
         const exemplar = exemplarTracks.value[i];
@@ -672,17 +674,31 @@ function recalculateExemplarYOffsets(): void {
                 yOffset += viewConfiguration.value.betweenConditionGap;
             }
         }
-        const viewBBox = viewportBBox();
-        const lastYOffset =
-            exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))
-                ?.yOffset ?? yOffset;
-        const onScreen = overlaps1D(
-            lastYOffset,
-            yOffset,
-            viewBBox[3],
-            viewBBox[1]
-        );
-        exemplarRenderInfo.value.set(key, { yOffset, onScreen, snippetHeight });
+        
+        exemplarRenderInfo.value.set(key, { yOffset, onScreen: false, snippetHeight });
+        lastExemplar = exemplar;
+    }
+}
+
+// Quickly updates the onScreen property of exemplarRenderInfo by checking current viewport bounds.
+function updateExemplarVisibility(): void {
+    const viewBBox = viewportBBox();
+    if (exemplarTracks.value.length === 0) return;
+    let lastExemplar = exemplarTracks.value[0];
+    for (let i = 0; i < exemplarTracks.value.length; i++) {
+        const exemplar = exemplarTracks.value[i];
+        const key = uniqueExemplarKey(exemplar);
+        const renderInfo = exemplarRenderInfo.value.get(key);
+        if (renderInfo) {
+             const currentYOffset = renderInfo.yOffset;
+             const lastYOffset = exemplarRenderInfo.value.get(uniqueExemplarKey(lastExemplar))?.yOffset ?? currentYOffset;
+             renderInfo.onScreen = overlaps1D(
+                 lastYOffset,
+                 currentYOffset,
+                 viewBBox[3],
+                 viewBBox[1]
+             );
+        }
         lastExemplar = exemplar;
     }
 }
@@ -743,7 +759,7 @@ async function loadPixelSources() {
 // Getting Segmentation Data ------------------------------------------------------------------------------------
 
 // Segmentation Data for current tracks
-let cellSegmentationData = ref<LocationSegmentation[]>([]);
+let cellSegmentationData = ref(new Map<string, Feature>());
 
 watch(
     () => exemplarViewStore.exemplarDataLoaded,
@@ -752,9 +768,10 @@ watch(
             // reload your tiffs and segmentation for the new tracks
             await loadPixelSources();
             // clear old segmentations and fetch them for the new tracks
-            cellSegmentationData.value = [];
+            cellSegmentationData.value.clear();
             await getCellSegmentationData();
             cacheExemplarSnippetHeights();
+            calculateExemplarYOffsets_Cached();
             // repaint
             safeRenderDeckGL();
         }
@@ -774,10 +791,8 @@ async function getCellSegmentationData() {
                     exemplar.locationId
                 );
             if (segmentation) {
-                cellSegmentationData.value.push({
-                    location: exemplar.locationId,
-                    segmentation: segmentation,
-                });
+                const key = `${exemplar.locationId}-${exemplar.trackId}-${cell.frame}`;
+                cellSegmentationData.value.set(key, segmentation);
             }
         }
     }
@@ -789,13 +804,7 @@ function getCellSegmentationPolygon(
     trackId: string,
     frame: string
 ): Feature | undefined {
-    const cellSegmentation = cellSegmentationData.value?.find(
-        (locationSegmentation) =>
-            locationSegmentation?.location == location &&
-            locationSegmentation?.segmentation?.properties?.id == trackId &&
-            locationSegmentation?.segmentation?.properties?.frame == frame
-    );
-    return cellSegmentation ? cellSegmentation.segmentation : undefined;
+    return cellSegmentationData.value.get(`${location}-${trackId}-${frame}`);
 }
 
 // Horizon Chart Layer ------------------------------------------------------------------------------------------
@@ -2070,16 +2079,22 @@ function computeRealTimePoint(
     if (estimatedTime > exemplar.maxTime) {
         return exemplar.maxTime;
     }
-    // Use reduce to find the closest time value
-    return exemplar.data.reduce(
-        (prev, curr) =>
-            estimatedTime > curr.time &&
-            Math.abs(curr.time - estimatedTime) <
-                Math.abs(prev.time - estimatedTime)
-                ? curr
-                : prev,
-        exemplar.data[0]
-    ).time;
+
+    // Binary search to find the closest time value
+    let low = 0;
+    let high = exemplar.data.length - 1;
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const midTime = exemplar.data[mid].time;
+        if (midTime === estimatedTime) return midTime;
+        if (midTime < estimatedTime) low = mid + 1;
+        else high = mid - 1;
+    }
+
+    const lowTime = low < exemplar.data.length ? exemplar.data[low].time : Infinity;
+    const highTime = high >= 0 ? exemplar.data[high].time : -Infinity;
+    return Math.abs(lowTime - estimatedTime) < Math.abs(highTime - estimatedTime) ? lowTime : highTime;
 }
 
 // The currently selected exemplar, its currently selected value, and selected image layers.
@@ -3533,6 +3548,7 @@ watch(
     () => {
         if (exemplarDataInitialized.value) {
             cacheExemplarSnippetHeights();
+            calculateExemplarYOffsets_Cached();
             safeRenderDeckGL();
         }
     }
@@ -3580,6 +3596,7 @@ watch(
         exemplarTracks.value,
     ],
     () => {
+        calculateExemplarYOffsets_Cached();
         safeRenderDeckGL();
     },
     { deep: true }
@@ -3616,6 +3633,7 @@ watch(
     () => exemplarViewStore.viewConfiguration,
     () => {
         if (exemplarDataInitialized.value) {
+            calculateExemplarYOffsets_Cached();
             renderDeckGL();
         }
     },
