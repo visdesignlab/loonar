@@ -2509,6 +2509,12 @@ function valueExtent(track: ExemplarTrack): number {
 }
 
 const keyframeOrderLookup = ref<Map<string, KeyframeInfo[]>>();
+
+/**
+ * Returns the order of keyframes for a given exemplar track.
+ * @param exemplarTrack The exemplar track to get the keyframe order for.
+ * @returns The order of keyframes for the given exemplar track.
+ */
 function getKeyFrameOrder(exemplarTrack: ExemplarTrack): KeyframeInfo[] {
     // duplicated and modified from similar function in looneageview
     const uniqueKey = uniqueExemplarKey(exemplarTrack);
