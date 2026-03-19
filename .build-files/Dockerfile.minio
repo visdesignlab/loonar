@@ -8,4 +8,8 @@ RUN chmod +x /minio-healthcheck.sh
 
 # Continue with the CMD or ENTRYPOINT as in the original image
 # This is optional and typically not needed as the base image should have this set
-CMD ["minio", "server", "--address", ":9000", "--console-address", ":9001", "/data"]
+# Reset the entrypoint set by the base image so we can run a shell command
+ENTRYPOINT []
+
+# Automatically create the 'data' bucket directory before starting
+CMD ["sh", "-c", "mkdir -p /data/data && exec minio server --address :9000 --console-address :9001 /data"]

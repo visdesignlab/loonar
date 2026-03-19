@@ -16,6 +16,7 @@ services:
       - "${LOCAL_PORT_1}:443"
     volumes:
       - ${SSL_MAPPING:-/dev/null:/dev/null}
+      - ${MINIO_VOLUME_LOCATION}:/nas_data:ro
     depends_on:
       - server
       - celery

@@ -313,7 +313,8 @@ When Loonar isn't working on TrueNAS, follow this sequence:
 
 1. **Run the doctor first:**
    ```bash
-   bash .build-files/loon-doctor.sh
+   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock lukeschreiber/loon-tests:latest bash .build-files/loon-doctor.sh
+
    ```
 
 2. **Focus on the first `[FAIL]`** — failures are listed in dependency order, so the first failure is usually the root cause.
@@ -330,7 +331,7 @@ When Loonar isn't working on TrueNAS, follow this sequence:
 
 5. **Re-run the doctor to confirm the fix:**
    ```bash
-   bash .build-files/loon-doctor.sh
+   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock lukeschreiber/loon-tests:latest bash .build-files/loon-doctor.sh
    ```
 
 6. **For a full rebuild after config changes:**
