@@ -2426,7 +2426,7 @@ function createCellImageLayer(
     const selectedColorWithAlpha = globalSettings.normalizedSelectedRgba;
     combinedSnippetSegmentationLayer.snippetSegmentationLayer =
         new SnippetSegmentationLayer({
-            id: 'cell-boundary-layer-' + exemplar.trackId + '-' + Date.now(),
+            id: `hovered-cell-boundary-layer-${exemplar.trackId}-${cell.frame}`,
             data: imageSegmentationData,
             getPolygon: (d: any) => d.polygon,
             getCenter: (d: any) => d.center,
@@ -2479,8 +2479,7 @@ function createCellImageLayer(
         lineWidthUnits: 'pixels',
     });
     // Create the tick mark layer using the tick data.
-    // Use the modified createTickMarkLayer function to ensure unique IDs.
-    const cellImageTickMarkLayer = createTickMarkLayer([tickData]);
+    const cellImageTickMarkLayer = createTickMarkLayer([tickData], `hovered-tick-marks-layer-${exemplar.trackId}-${cell.frame}`);
 
     return {
         tickMarkLayer: cellImageTickMarkLayer,
@@ -2490,18 +2489,12 @@ function createCellImageLayer(
     };
 }
 
-// Add this near the top of your <script setup> block:
-let tickMarkLayerCounter = 0;
-
-// … later, replace your existing createTickMarkLayer with:
-
-function createTickMarkLayer(rawData: any): LineLayer {
+function createTickMarkLayer(rawData: any, layerId: string): LineLayer {
     // ensure we always hand deck.gl an array
     const data = Array.isArray(rawData) ? rawData : [rawData];
 
     return new LineLayer({
-        // use an ever‐incrementing counter instead of Date.now()
-        id: `snippet-tick-marks-layer-${tickMarkLayerCounter++}`,
+        id: layerId,
         data,
         pickable: false,
         getSourcePosition: (d: any) => d.path[0],
@@ -3405,9 +3398,7 @@ function createExemplarImageKeyFramesLayer(
     // Cell Segmentation Outline within boundaries (non-hovered)
     combinedSnippetSegmentationLayer.snippetSegmentationOutlineLayer =
         new SnippetSegmentationOutlineLayer({
-            id: `snippet-segmentation-outline-key-frame-layer-${
-                exemplar.trackId
-            }-${Date.now()}`,
+            id: `snippet-segmentation-outline-key-frame-layer-${exemplar.trackId}`,
             data: exemplarSegmentationData,
             getPath: (d: any) => d.polygon[0],
             getColor: (d: any) => {
@@ -3433,7 +3424,7 @@ function createExemplarImageKeyFramesLayer(
     // Cell segmentation out-of boundaries (non-hovered)
     combinedSnippetSegmentationLayer.snippetSegmentationLayer =
         new SnippetSegmentationLayer({
-            id: 'cell-boundary-layer-' + exemplar.trackId + '-' + Date.now(),
+            id: `cell-boundary-key-frame-layer-${exemplar.trackId}`,
             data: exemplarSegmentationData,
             getPolygon: (d: any) => d.polygon,
             getCenter: (d: any) => d.center,
@@ -3448,7 +3439,7 @@ function createExemplarImageKeyFramesLayer(
             filled: false, // Only fill if not showing image
         });
 
-    const keyFrameTickMarkLayer = createTickMarkLayer(tickData);
+    const keyFrameTickMarkLayer = createTickMarkLayer(tickData, `key-frame-tick-marks-layer-${exemplar.trackId}`);
 
     return {
         cellImageLayer: snippetLayer,
