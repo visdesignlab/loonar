@@ -2377,6 +2377,7 @@ function createCellImageLayer(
     // Calculate destHeight and crop bounds for offset adjustment
     let topCrop = 0;
     let bottomCrop = 0;
+    let croppedSourceCenterY = cell.y;
     if (cellSegmentationPolygon) {
         const cropBounds = getSegmentationBounds(
             cellSegmentationPolygon,
@@ -2385,6 +2386,10 @@ function createCellImageLayer(
         if (cropBounds) {
             topCrop = cropBounds.topCrop;
             bottomCrop = cropBounds.bottomCrop;
+            const sourceHeight = source[1] - source[3];
+            const croppedSourceTop = source[1] - (sourceHeight * topCrop);
+            const croppedSourceBottom = source[3] + (sourceHeight * bottomCrop);
+            croppedSourceCenterY = (croppedSourceTop + croppedSourceBottom) / 2;
         }
     }
 
@@ -2393,7 +2398,7 @@ function createCellImageLayer(
         polygon: cellSegmentationPolygon?.geometry?.coordinates,
         hovered: cell.isHovered,
         selected: cell.isSelected,
-        center: [cell.x, cell.y],
+        center: [cell.x, croppedSourceCenterY],
         offset: adjustedOffset,
     });
 
@@ -2805,10 +2810,15 @@ function createExemplarImageKeyFramesLayer(
 
         let topCrop = 0;
         let bottomCrop = 0;
+        let croppedSourceCenterY = cell.y;
         const cropBounds = getSegmentationBounds(segmentationPolygon, source);
         if (cropBounds) {
             topCrop = cropBounds.topCrop;
             bottomCrop = cropBounds.bottomCrop;
+            const sourceHeight = source[1] - source[3];
+            const croppedSourceTop = source[1] - (sourceHeight * topCrop);
+            const croppedSourceBottom = source[3] + (sourceHeight * bottomCrop);
+            croppedSourceCenterY = (croppedSourceTop + croppedSourceBottom) / 2;
         }
 
         // Use the cropped destination dimensions directly (dest is already cropped when passed from getCroppedDestination)
@@ -2826,7 +2836,7 @@ function createExemplarImageKeyFramesLayer(
             polygon: segmentationPolygon.geometry.coordinates,
             hovered: hovered,
             selected: cellSelected,
-            center: [cell.x, cell.y],
+            center: [cell.x, croppedSourceCenterY],
             offset: adjustedOffset,
         });
     }
