@@ -668,10 +668,11 @@ function calculateExemplarYOffsets_Cached(): void {
             viewConfiguration.value.timeBarHeightOuter;
         yOffset += trackHeight;
         if (i !== 0) {
+            const extraMargin = viewConfiguration.value.timeBarHeightOuter / 2;
             if (isEqual(exemplar.tags, lastExemplar.tags)) {
-                yOffset += viewConfiguration.value.betweenExemplarGap + betweenExemplarMargin;
+                yOffset += viewConfiguration.value.betweenExemplarGap + betweenExemplarMargin + extraMargin;
             } else {
-                yOffset += viewConfiguration.value.betweenConditionGap;
+                yOffset += viewConfiguration.value.betweenConditionGap + extraMargin;
             }
         }
         
