@@ -2526,6 +2526,9 @@ function constructGeometry(track: ExemplarTrack): number[] {
     return constructGeometryBase(track.data, cellMetaData.timestep);
 }
 
+/**
+ * Create the layers for the exemplar image key frames (not the hovered ones)
+ */
 function createExemplarImageKeyFrameLayers(): (
     | CellSnippetsLayer
     | SnippetSegmentationOutlineLayer
