@@ -169,7 +169,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
     const filterWhereClause = computed(() => {
         return aggFilPredString.value;
     });
-    
+
     // Selected attributes and aggregations
     const { selectedXTag, selectedYTag } = storeToRefs(conditionSelectorStore);
     type AttrOption = string | { label?: string; value?: string };
@@ -225,7 +225,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
         horizonTimeBarGap: 5,
         timeBarHeightOuter: 6,
         timeBarHeightInner: 2,
-        betweenExemplarGap: 0,
+        betweenExemplarGap: 4,
         betweenConditionGap: 60,
         horizonHistogramGap: 150,
         histogramWidth: 80,
@@ -346,7 +346,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             exemplarDataLoaded.value = true;
         }
     }
-    
+
     function getAttributeName(): string {
         const aggLabel = selectedAggregation.value.label;
         const aggFunc = aggregateFunctions[aggLabel];
@@ -408,11 +408,11 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
             );
             return;
         }
-    
+
         const aggTableName = `${currentExperimentMetadata.value.name}_composite_experiment_cell_metadata_aggregate`;
         const aggAttribute = getAggregateAttributeName();
         const whereClause = filterWhereClause.value ? `WHERE ${filterWhereClause.value}` : '';
-    
+
         try {
             // 1) Get global min and max value of the aggregated attribute.
             const domainQuery = `
@@ -429,23 +429,23 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 console.error('Error during domainQuery:', error);
                 throw error;
             }
-    
+
             if (!domainResult || domainResult.length === 0) {
                 console.warn('No results returned from domainQuery.');
                 return;
             }
             const { min_attr, max_attr } = domainResult[0];
-    
+
             // Fill in histogramDomains with the global min and max aggregated values.
             const minX = typeof min_attr === 'bigint' ? Number(min_attr) : min_attr;
             const maxX = typeof max_attr === 'bigint' ? Number(max_attr) : max_attr;
-    
+
             histogramDomains.value.minX = minX;
             histogramDomains.value.maxX = maxX;
-    
+
             // Build bin ranges (we store these in histogramDomains).
             const binSize = (max_attr - min_attr) / histogramBinCount.value;
-    
+
             histogramDomains.value.histogramBinRanges = Array.from(
                 { length: histogramBinCount.value },
                 (_, i) => ({
@@ -472,7 +472,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 GROUP BY c1, c2, bin_index
                 ORDER BY c1, c2, bin_index;
             `;
-    
+
             let histogramBinCounts;
             try {
                 histogramBinCounts = await timedVgQuery('histogramConditionQuery', histogramConditionQuery);
@@ -480,16 +480,16 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 console.error('Error during histogramConditionQuery:', error);
                 throw error;
             }
-    
+
             if (!histogramBinCounts || histogramBinCounts.length === 0) {
                 console.warn('No histogram counts found.');
                 conditionHistograms.value = [];
                 return;
             }
-    
+
             // 4) Build a Map from "conditionKey" -> counts array
             const binCountsMap = new Map<string, number[]>();
-    
+
             for (const { c1, c2, bin_index, count } of histogramBinCounts) {
                 const conditionKey = `${c1}__${c2}`;
                 if (!binCountsMap.has(conditionKey)) {
@@ -499,7 +499,7 @@ export const useExemplarViewStore = defineStore('ExemplarViewStore', () => {
                 const safeCount = typeof count === 'bigint' ? Number(count) : count;
                 binCountsMap.get(conditionKey)![safeBinIndex] = safeCount;
             }
-    
+
             conditionHistograms.value = Array.from(binCountsMap.entries()).map(
                 ([key, counts]) => {
                     const [conditionOne, conditionTwo] = key.split('__');
