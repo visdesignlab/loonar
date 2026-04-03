@@ -40,7 +40,7 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = [env('ALLOWED_HOST', default='')]
+ALLOWED_HOSTS = [env('ALLOWED_HOST', default=''), 'localhost:8000', '127.0.0.1:8000', 'localhost', '127.0.0.1']
 
 
 MINIO_ENABLED = env.bool('MINIO_ENABLED', default=True)
@@ -65,6 +65,7 @@ if MINIO_ENABLED is True:
     INSTALLED_APPS.append("minio_storage")
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -72,7 +73,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "server.urls"
@@ -171,3 +171,5 @@ if MINIO_ENABLED is True:
     MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
     MINIO_STORAGE_MEDIA_URL = SITE_PREFIX + env('MINIO_STORAGE_MEDIA_URL')
     MINIO_STORAGE_STATIC_URL = SITE_PREFIX + env('MINIO_STORAGE_STATIC_URL')
+else:
+    MEDIA_ROOT = '/app/data'

@@ -216,11 +216,26 @@ class FinishExperimentView(APIView):
         experiment_names = [name + '.json' for name in
                             Experiment.objects.values_list('name', flat=True)]
 
-        index_file = {"experiments": experiment_names}
+        index_file_name = 'aa_index.json'
+        
+        existing_permissions = {}
+        if default_storage.exists(index_file_name):
+            with default_storage.open(index_file_name, 'r') as f:
+                content = json.loads(f.read())
+                for exp in content.get('experiments', []):
+                    if isinstance(exp, dict) and 'filename' in exp:
+                        existing_permissions[exp['filename']] = exp.get('users', [])
+        
+        experiments_data = []
+        for name in experiment_names:
+            if name in existing_permissions:
+                experiments_data.append({"filename": name, "users": existing_permissions[name]})
+            else:
+                experiments_data.append(name)
+
+        index_file = {"experiments": experiments_data}
         json_index_file = json.dumps(index_file, indent=4)
         json_index_file_bytes = json_index_file.encode('utf-8')
-
-        index_file_name = 'aa_index.json'
 
         if default_storage.exists(index_file_name):
             default_storage.delete(index_file_name)
@@ -268,4 +283,88 @@ class VerifyExperimentNameView(APIView):
         if exists:
             return Response({'status': 'FAILED'})
 
+        return Response({'status': 'SUCCESS'})
+
+from django.conf import settings # type: ignore
+
+PASSWORDS_FILE = os.path.join(settings.BASE_DIR, 'passwords.json')
+
+def load_passwords():
+    if os.path.exists(PASSWORDS_FILE):
+        with open(PASSWORDS_FILE, 'r') as f:
+            return json.load(f)
+    return {"admin": "admin"}
+
+class LoginAuthView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        passwords = load_passwords()
+        
+        if passwords.get(username) == password:
+            return Response({'status': 'SUCCESS'})
+        return Response({'status': 'FAILED'}, status=401)
+
+class ListUsersView(APIView):
+    def get(self, request):
+        passwords = load_passwords()
+        users = list(passwords.keys())
+        return Response({'users': users})
+
+class AdminDataView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        passwords = load_passwords()
+        if username != 'admin' or passwords.get('admin') != password:
+            return Response({'status': 'UNAUTHORIZED'}, status=401)
+        
+        aa_index = {"experiments": []}
+        if default_storage.exists('aa_index.json'):
+            with default_storage.open('aa_index.json', 'r') as file:
+                aa_index = json.loads(file.read())
+        
+        return Response({
+            'users': passwords,
+            'aa_index': aa_index
+        })
+
+class AdminUpdateView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        passwords = load_passwords()
+        if username != 'admin' or passwords.get('admin') != password:
+            return Response({'status': 'UNAUTHORIZED'}, status=401)
+            
+        new_users_dict = request.data.get('users', {})
+        new_experiment_permissions = request.data.get('permissions', {})
+        
+        if 'admin' not in new_users_dict:
+            new_users_dict['admin'] = passwords.get('admin', 'admin')
+            
+        with open(PASSWORDS_FILE, 'w') as f:
+            json.dump(new_users_dict, f, indent=4)
+            
+        index_file_name = 'aa_index.json'
+        if default_storage.exists(index_file_name):
+            with default_storage.open(index_file_name, 'r') as f:
+                content = json.loads(f.read())
+            
+            new_experiments = []
+            for exp in content.get('experiments', []):
+                filename = exp['filename'] if isinstance(exp, dict) else exp
+                if filename in new_experiment_permissions:
+                    new_experiments.append({
+                        "filename": filename,
+                        "users": new_experiment_permissions[filename]
+                    })
+                else:
+                    new_experiments.append(filename)
+            
+            index_file = {"experiments": new_experiments}
+            json_index_file_bytes = json.dumps(index_file, indent=4).encode('utf-8')
+            default_storage.delete(index_file_name)
+            default_storage.save(index_file_name, ContentFile(json_index_file_bytes))
+            
         return Response({'status': 'SUCCESS'})

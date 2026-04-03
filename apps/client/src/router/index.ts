@@ -17,6 +17,10 @@ const routes: RouteRecordRaw[] = [
         path: '/upload',
         component: UploadPage,
     },
+    {
+        path: '/admin',
+        component: () => import('../pages/AdminPage.vue'),
+    },
     // Always leave this as last one,
     // but you can also remove it
     {
