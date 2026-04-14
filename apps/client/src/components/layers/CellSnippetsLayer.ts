@@ -83,6 +83,7 @@ interface SnippetData {
     source: BBox;
     destination: BBox;
     data: TypedArray;
+    channelData?: any;
 }
 
 interface InFlightRequest {
@@ -128,11 +129,13 @@ class CellSnippetsLayer extends CompositeLayer {
                 const key = this.getSnippetKey(c, t, z, snippet.source);
                 if (this.props.cache.has(key)) {
                     const snippetData = this.props.cache.get(key);
+                    const channelData = this.props.cache.get(`${key}-channelData`);
                     newData.push({
                         index: { c, t, z },
                         source: snippet.source,
                         destination: snippet.destination,
                         data: snippetData,
+                        channelData,
                     });
                     continue;
                 }
@@ -233,7 +236,13 @@ class CellSnippetsLayer extends CompositeLayer {
                             snippet.source
                         );
                         const key = this.getSnippetKey(c, t, z, snippet.source);
+                        const channelData = {
+                            data: [snippetData],
+                            width: snippet.source[2] - snippet.source[0],
+                            height: snippet.source[1] - snippet.source[3],
+                        };
                         this.props.cache.set(key, snippetData);
+                        this.props.cache.set(`${key}-channelData`, channelData);
 
                         loadedData.push({
                             data: snippetData,
@@ -244,6 +253,7 @@ class CellSnippetsLayer extends CompositeLayer {
                                 t,
                                 z,
                             },
+                            channelData,
                         });
                     }
                     inFlightRequests.delete(selectionKey);
@@ -344,11 +354,7 @@ class CellSnippetsLayer extends CompositeLayer {
                 colormap: this.props.colormap,
                 dtype,
                 bounds: snippet.destination,
-                channelData: {
-                  data: [snippet.data],
-                  width: snippet.source[2] - snippet.source[0],
-                  height: snippet.source[1] - snippet.source[3],
-                }
+                channelData: snippet.channelData
               })
             );
           }
