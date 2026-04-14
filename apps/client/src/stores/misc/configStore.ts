@@ -39,7 +39,12 @@ export const useConfigStore = defineStore('configStore', () => {
         '/data',
         '/ws/'
     )}`;
-    const apiUrl = `${httpValue}${envServerUrl.replace('/data', '/api')}`;
+    
+    let apiUrl = `${httpValue}${envServerUrl.replace('/data', '/api')}`;
+    if (environment === 'local') {
+        const hostOnly = envServerUrl.split(':')[0];
+        apiUrl = `${httpValue}${hostOnly}:8000/api`;
+    }
 
     // Environment based location of data retrieval for DuckDb
 

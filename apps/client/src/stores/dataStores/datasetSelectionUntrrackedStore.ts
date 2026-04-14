@@ -8,6 +8,7 @@ import { computedAsync } from '@vueuse/core';
 import { useCellMetaData } from '@/stores/dataStores/cellMetaDataStore';
 import { useDatasetSelectionTrrackedStore } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 import { useConfigStore } from '../misc/configStore';
+import { useAuthStore } from '../misc/authStore';
 import type { TextTransforms } from '@/util/datasetLoader';
 import type { SelectedLocationIds } from '@/stores/dataStores/datasetSelectionTrrackedStore';
 
@@ -99,6 +100,11 @@ export const useDatasetSelectionStore = defineStore(
         const route = useRoute();
         const experimentFilenameList = asyncComputed<string[]>(async () => {
             if (configStore.serverUrl == null) return [];
+            
+            // Re-trigger computed whenever current user login state changes
+            const authStore = useAuthStore();
+            const currentUser = authStore.currentUser; 
+
             const fullURL = configStore.getFileUrl(
                 configStore.entryPointFilename
             );
@@ -136,36 +142,24 @@ export const useDatasetSelectionStore = defineStore(
 
             // Initialize Duckdb Socket Connection
             vg.coordinator().databaseConnector(connector);
-
+            
             const data = await response.json();
-            const rawExperiments: (string | { filename: string; 'visible-by-default'?: boolean })[] = data.experiments;
-
-            // Normalize entries: extract filename from objects, pass strings through
-            const allFilenames = rawExperiments.map((entry) =>
-                typeof entry === 'string' ? entry : entry.filename
-            );
-
-            // If experiment visibility control is not enabled, show all experiments
-            const visibilityControlEnabled =
-                import.meta.env.VITE_EXPERIMENT_VISIBILITY_CONTROL === 'true';
-            if (!visibilityControlEnabled) {
-                return allFilenames;
-            }
-
-            // If show-all-experiments URL param is present, show all
-            if ('show-all-experiments' in route.query) {
-                return allFilenames;
-            }
-
-            // Filter to only visible-by-default experiments
+            const rawExperiments = (data.experiments || []) as (string | { filename: string; users?: string[] })[];
+            
             return rawExperiments
-                .filter((entry) =>
-                    typeof entry === 'object' && entry['visible-by-default'] === true
-                )
+                .filter((entry) => {
+                    // Plain string entries (no gating metadata) → always visible
+                    if (typeof entry === 'string') return true;
+                    // Admin sees everything
+                    if (currentUser === 'admin') return true;
+                    // Object entries: only visible if user is in the users list
+                    if (!entry.users || entry.users.length === 0) return false;
+                    return currentUser != null && entry.users.includes(currentUser);
+                })
                 .map((entry) =>
                     typeof entry === 'string' ? entry : entry.filename
                 );
-        }, [refreshTime.value]);
+        }, []);
 
         // Sets location Metadata
         const currentExperimentMetadata =

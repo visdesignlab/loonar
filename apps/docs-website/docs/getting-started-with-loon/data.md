@@ -83,16 +83,16 @@ This removes the time burden of uploading to your server, however!
 >
 > #### `aa_index.json` File Example:
 >
+> Experiments can be listed as a simple string (publicly visible) or an object with a `users` array (visible only to those users and administrators).
+>
 > ```json
 > {
 >   "experiments": [
->     "experiment_1.json",
->     "experiment_2.json",
->     "experiment_3.json",
->     "experiment_4.json",
->     "experiment_5.json",
->     "experiment_6.json",
->     "experiment_7.json",
+>     {
+>       "filename": "restricted_experiment.json",
+>       "users": ["lab", "jess"]
+>     },
+>     "public_experiment.json"
 >   ]
 > }
 > ```

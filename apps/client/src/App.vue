@@ -7,9 +7,12 @@ import { useProvenanceStore } from '@/stores/misc/provenanceStore';
 import { onKeyStroke } from '@vueuse/core';
 import { router } from '@/router';
 import LBtn from './components/custom/LBtn.vue';
+import LoginModal from './components/auth/LoginModal.vue';
+import { useAuthStore } from '@/stores/misc/authStore';
 
 const $q = useQuasar();
 const provenanceStore = useProvenanceStore();
+const authStore = useAuthStore();
 
 onKeyStroke(['z', 'Z'], (e: KeyboardEvent) => {
     if (globalSettings.usingMac && !e.metaKey) return;
@@ -26,6 +29,8 @@ onKeyStroke(['z', 'Z'], (e: KeyboardEvent) => {
 });
 
 const globalSettings = useGlobalSettings();
+const showLoginModal = ref(false);
+
 watch(
     () => globalSettings.darkMode,
     (newDarkMode: boolean) => {
@@ -71,8 +76,25 @@ onBeforeMount(() => {
                     type="basic"
                     label="Upload"
                 />
+                <q-btn
+                    v-if="authStore.currentUser === 'admin'"
+                    @click="router.push('/admin')"
+                    flat
+                    label="Admin"
+                    class="q-ml-sm"
+                />
+                <q-btn 
+                    flat 
+                    round 
+                    dense 
+                    icon="account_circle" 
+                    class="q-ml-sm" 
+                    @click="showLoginModal = true" 
+                    :color="globalSettings.darkMode ? 'white' : 'black'"
+                />
             </q-toolbar>
         </q-header>
+        <LoginModal v-model="showLoginModal" />
         <GlobalSettingsView></GlobalSettingsView>
         <q-page-container>
             <q-page>

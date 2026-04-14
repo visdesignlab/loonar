@@ -54,28 +54,33 @@ In the root of the repository, run the following following command:
 python3 build.py --prepare-dev
 ```
 
-### Prepare Development Environment and Run Separately with Experiment Visibility Control
+### User Authentication & Experiment Gating
 
-Experiment visibility control allows users to control which experiments are visible to them. You specify which experiments are visible to users in the `aa_index.json` file.
+Loon supports user-based access control. You can manage users and define which experiments are visible to specific users.
 
-```bash
-python3 build.py --prepare-dev --experiment-visibility-control
-```
+#### Managing Users
+Admin users can manage accounts and passwords via the **Admin Control Panel** accessible at `/admin` within the application.
 
-Experiment visibility control example:
+#### Gating Experiments
+Access is defined in the `aa_index.json` file using the `users` array. Experiments can be either public (string) or gated (object with `users` array).
 
+Example `aa_index.json`:
 ```json
 {
   "experiments": [
     {
-      "filename": "Data Discovery - Automated Cell Lineage Tracking.json",
-      "visible-by-default": true
+      "filename": "restricted_experiment.json",
+      "users": ["lab", "jess"]
     },
-    "Quality Control - Cancer Triggering Microenvironments.json",
-    "Communication - Tumorigenic Cell States.json"
+    "public_experiment.json"
   ]
 }
 ```
+
+Experiments are filtered as follows:
+- **Plain string**: Visible to everyone.
+- **Admin**: Sees all experiments regardless of gating.
+- **Gated (users list)**: Only visible to listed users and administrators.
 
 
 This will generate the necessary environment file in the client directory while still running the rest of the container. Then, the development server can be started separately by the following:
@@ -133,7 +138,6 @@ The build script will do its best to validate the config before starting the doc
 | -o, --overwrite       | When set, any settings in your configuration file which are present as environment variables in the current session will be overwritten.         | -o                             |
 | -s, --disable-spinner | When set, disables inline spinner                                                                                                                | -s                             |
 | --prepare-dev         | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server.           | --prepare-dev                  |
-| --experiment-visibility-control | When set, will create the `.env` file based on the current configuration that is required to run a separate client development server. | --experiment-visibility-control|
 
 In the repository, you will see two docker directories: `docker` and `docker-local`. The main deployment will use the `docker` directory. The `docker-local` directory is a separate local version of Loon which we will discuss shortly. Below are some examples.
 

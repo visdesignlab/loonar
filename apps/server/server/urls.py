@@ -17,7 +17,15 @@ Including another URLconf
 
 from django.contrib import admin  # type: ignore
 from django.urls import path, include  # type: ignore
-from api.views import FinishExperimentView, ProcessDataView, VerifyExperimentNameView
+from api.views import (
+    FinishExperimentView, 
+    ProcessDataView, 
+    VerifyExperimentNameView,
+    LoginAuthView,
+    ListUsersView,
+    AdminDataView,
+    AdminUpdateView
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -28,5 +36,9 @@ urlpatterns = [
     path('api/verifyExperimentName/<str:experiment_name>',
          VerifyExperimentNameView.as_view(),
          name="verify-experiment-name"
-         )
+         ),
+    path('api/login/', LoginAuthView.as_view(), name="login-auth"),
+    path('api/users/', ListUsersView.as_view(), name="list-users"),
+    path('api/admin/data/', AdminDataView.as_view(), name="admin-data"),
+    path('api/admin/update/', AdminUpdateView.as_view(), name="admin-update"),
 ]
